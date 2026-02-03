@@ -1,10 +1,6 @@
 name: Release Docker Images Version Manual(NPU)
 on:
   workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'B Version tag or release date tag'
-        required: false
 
 jobs:
   build:
