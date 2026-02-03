@@ -4,7 +4,7 @@ on:
     inputs:
       tag_name:
         description: 'B Version tag or release date tag'
-        required: true
+        required: false
 
 jobs:
   build:
