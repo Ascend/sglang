@@ -6,6 +6,11 @@ on:
     paths:
     - "./github/workflows/release-docker-npu-version-manual.yml"
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'image tag_name'
+        required: true
+        type: string
 
 jobs:
   build:
