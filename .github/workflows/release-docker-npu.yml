@@ -2,14 +2,14 @@ name: Release Docker Images (NPU)
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: 'image tag_name'
+      tag_suffix:
+        description: 'tag_suffix,for example:B021,release20260203'
         required: true
         type: string
 
 jobs:
   build:
-    runs-on: ubuntu-22.04-arm
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         cann_version: ["8.5.0"]
@@ -33,7 +33,7 @@ jobs:
         with:
           registry: swr.cn-southwest-2.myhuaweicloud.com
           images: base_image/dockerhub/lmsysorg/sglang
-          tags: ${{ github.event.inputs.tag_name }}
+          tags: ${{ matrix.cann_version + '-' + matrix.device_type + '-' + github.event.inputs.tag_suffix }}
 
       - name: Log into docker hub
         uses: docker/login-action@v3
