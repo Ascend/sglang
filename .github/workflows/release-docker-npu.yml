@@ -29,14 +29,13 @@ jobs:
 
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}" >> $GITHUB_ENV  
+          echo "FULL_TAG=cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}" >> $GITHUB_ENV  
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          registry: swr.cn-southwest-2.myhuaweicloud.com
-          images: base_image/dockerhub/lmsysorg/sglang
+          images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
           tags: ${{ env.FULL_TAG }}
 
       - name: Log into docker hub
