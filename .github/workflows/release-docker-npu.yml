@@ -41,7 +41,7 @@ jobs:
 
       - name: Log into docker hub
         uses: docker/login-action@v3
-        if: ${{ github.repository == 'sgl-project/sglang' && github.event_name != 'pull_request' }}
+        if: ${{ github.repository == 'Ascend/sglang' }}
         with:
           registry: swr.cn-southwest-2.myhuaweicloud.com
           username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
