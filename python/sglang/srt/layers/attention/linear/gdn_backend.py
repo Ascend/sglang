@@ -38,6 +38,7 @@ elif is_npu():
         causal_conv1d_fn_npu,
         causal_conv1d_update_npu,
     )
+
     fused_gdn_gating = fused_gdn_gating_npu
     causal_conv1d_fn = causal_conv1d_fn_npu
     causal_conv1d_update = causal_conv1d_update_npu
