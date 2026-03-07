@@ -1222,18 +1222,18 @@ class Indexer(MultiPlatformOp):
             and not forward_batch.forward_mode.is_draft_extend()
         )
 
-        if not hasattr(forward_batch, "npu_indexer_sin_cos_cache"):
-            cos_sin = self.rotary_emb.cos_sin_cache[positions]
-            cos, sin = cos_sin.chunk(2, dim=-1)
-            cos = cos.repeat(1, 2).view(-1, 1, 1, self.rope_head_dim)
-            sin = sin.repeat(1, 2).view(-1, 1, 1, self.rope_head_dim)
-            forward_batch.npu_indexer_sin_cos_cache = (sin, cos)
-        else:
-            sin, cos = forward_batch.npu_indexer_sin_cos_cache
-
         bs = q_lora.shape[0]
 
         if self.rotary_emb.is_neox_style:
+            if not hasattr(forward_batch, "npu_indexer_sin_cos_cache"):
+                cos_sin = self.rotary_emb.cos_sin_cache[positions]
+                cos, sin = cos_sin.chunk(2, dim=-1)
+                cos = cos.repeat(1, 2).view(-1, 1, 1, self.rope_head_dim)
+                sin = sin.repeat(1, 2).view(-1, 1, 1, self.rope_head_dim)
+                forward_batch.npu_indexer_sin_cos_cache = (sin, cos)
+            else:
+                sin, cos = forward_batch.npu_indexer_sin_cos_cache
+
             if self.alt_stream is not None:
                 self.alt_stream.wait_stream(torch.npu.current_stream())
                 with torch.npu.stream(self.alt_stream):
@@ -1338,6 +1338,9 @@ class Indexer(MultiPlatformOp):
                 dim=-1,
             )  # [bs, 64 + 64]
 
+            if layer_id == 0:
+                self.rotary_emb.sin_cos_cache = self.rotary_emb.cos_sin_cache.index_select(0, positions)
+                
             k_pe = k_pe.unsqueeze(1)
             q_pe, k_pe = self.rotary_emb(positions, q_pe, k_pe)
             k_pe = k_pe.squeeze(1)
