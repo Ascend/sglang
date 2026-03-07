@@ -4218,3 +4218,87 @@ def bind_to_closest_numa_node_cuda():
     if is_numa_available() and nvgpu_available():
         node_id = get_current_device_numa_node_cuda()
         numa_bind_to_node(node_id)
+
+
+share_stream = None
+routed_stream = None
+
+
+def get_share_stream():
+    """
+    Cache Management Operation(CMO).
+    Launch a new stream to prefetch the weight of matmul when running other
+    AIV or communication kernels, aiming to overlap the memory access time.
+    """
+    global share_stream
+    return share_stream
+
+
+def set_share_stream(stream):
+    global share_stream
+    share_stream = stream
+    torch.npu.set_stream_limit(share_stream, 8, 16)
+
+
+def get_routed_stream():
+    """
+    Cache Management Operation(CMO).
+    Launch a new stream to prefetch the weight of matmul when running other
+    AIV or communication kernels, aiming to overlap the memory access time.
+    """
+    global routed_stream
+    return routed_stream
+
+
+def set_routed_stream(stream):
+    global routed_stream
+    routed_stream = stream
+    torch.npu.set_stream_limit(routed_stream, 16, 32)
+
+
+def wait_share_stream():
+    stream = get_share_stream()
+    if stream is not None:
+        cur_stream = torch.get_device_module().current_stream()
+        cur_stream.wait_stream(stream)
+
+
+def wait_routed_stream():
+    stream = get_routed_stream()
+    if stream is not None:
+        cur_stream = torch.get_device_module().current_stream()
+        cur_stream.wait_stream(stream)
+
+
+def process_shared_expert(hidden_states, forward_func):
+    """
+    PREFETCH_MAX_SIZE: maximum size (bytes) for each prefetch operation.
+    This affects the time spent in prefetch:
+        time ≈ PREFETCH_MAX_SIZE / system_bandwidth
+    """
+    # import torch_npu
+    stream = get_share_stream()
+    if stream is None:
+        stream = torch.get_device_module().Stream()
+        set_share_stream(stream)
+    stream.wait_stream(torch.get_device_module().current_stream())
+    with torch.get_device_module().stream(stream):
+        shared_output = forward_func(hidden_states)
+    return shared_output
+
+
+def process_routed_expert(hidden_states, topk_output, forward_func):
+    """
+    PREFETCH_MAX_SIZE: maximum size (bytes) for each prefetch operation.
+    This affects the time spent in prefetch:
+        time ≈ PREFETCH_MAX_SIZE / system_bandwidth
+    """
+    # import torch_npu
+    stream = get_routed_stream()
+    if stream is None:
+        stream = torch.get_device_module().Stream()
+        set_routed_stream(stream)
+    stream.wait_stream(torch.get_device_module().current_stream())
+    with torch.get_device_module().stream(stream):
+        shared_output = forward_func(hidden_states, topk_output)
+    return shared_output

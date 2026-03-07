@@ -1287,6 +1287,17 @@ class Indexer(MultiPlatformOp):
             else:
                 x = x.view(-1, self.hidden_size)
                 weights = self.weights_proj(x.float())[0].to(torch.bfloat16)
+            if envs.SGLANG_NPU_USE_MULTI_STREAM.get():
+                indexer_weight_stream = get_indexer_weight_stream()
+                indexer_weight_stream.wait_stream(torch.npu.current_stream())
+                with torch.npu.stream(indexer_weight_stream):
+                    x = x.view(-1, self.hidden_size)
+                    weights = self.weights_proj(x.float())[0].to(torch.bfloat16)
+                    weights.record_stream(indexer_weight_stream)
+                    weights_event = indexer_weight_stream.record_event()
+            else:
+                x = x.view(-1, self.hidden_size)
+                weights = self.weights_proj(x.float())[0].to(torch.bfloat16)
 
             k_proj = self.wk(x)[0]  # [b, s, 7168] @ [7168, 128] = [b, s, 128]
             k = self.k_norm(k_proj)
@@ -1301,7 +1312,25 @@ class Indexer(MultiPlatformOp):
                 [self.rope_head_dim, self.head_dim - self.rope_head_dim],
                 dim=-1,
             )  # [bs, 64 + 64]
+            k_proj = self.wk(x)[0]  # [b, s, 7168] @ [7168, 128] = [b, s, 128]
+            k = self.k_norm(k_proj)
+            if (
+                _use_ag_after_qlora
+                and layer_scatter_modes.layer_input_mode == ScatterMode.SCATTERED
+                and layer_scatter_modes.attn_mode == ScatterMode.TP_ATTN_FULL
+            ):
+                k = scattered_to_tp_attn_full(k, forward_batch)
+            k_pe, k_nope = torch.split(
+                k,
+                [self.rope_head_dim, self.head_dim - self.rope_head_dim],
+                dim=-1,
+            )  # [bs, 64 + 64]
 
+            k_pe = k_pe.view(-1, 1, 1, self.rope_head_dim)
+            k_pe = torch.ops.npu.npu_rotary_mul(k_pe, cos, sin).view(
+                bs, 1, self.rope_head_dim
+            )  # [bs, 1, d]
+            k = torch.cat([k_pe, k_nope.unsqueeze(1)], dim=-1)  # [bs, 1, 128]
             k_pe = k_pe.view(-1, 1, 1, self.rope_head_dim)
             k_pe = torch.ops.npu.npu_rotary_mul(k_pe, cos, sin).view(
                 bs, 1, self.rope_head_dim
@@ -1412,6 +1441,7 @@ class Indexer(MultiPlatformOp):
 
         past_key_states = forward_batch.token_to_kv_pool.get_index_k_buffer(layer_id)
 
+        if self.rotary_emb.is_neox_style and self.alt_stream is not None:
         if self.rotary_emb.is_neox_style and self.alt_stream is not None:
             torch.npu.current_stream().wait_event(q_rope_event)
         if envs.SGLANG_NPU_USE_MULTI_STREAM.get():
