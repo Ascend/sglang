@@ -1309,6 +1309,15 @@ class Indexer(MultiPlatformOp):
             k = torch.cat([k_pe, k_nope.unsqueeze(1)], dim=-1)  # [bs, 1, 128]
 
         else:
+            ### Multi-stream procedure
+            # 1. wq_b matmul & wk matmul @ current_stream
+            # 2. q_rope&q_nope slice -> k_norm -> k_rope&k_nope slice -> rotary_emb -> q_concat&k_concat @ current_stream;
+            #    weights_proj matmul @ alt_stream
+
+            q_lora = (q_lora, dynamic_scale) if dynamic_scale is not None else q_lora
+            q = self.wq_b(q_lora)[0]  # [bs, 1536] @ [1536, 64 * 128] = [bs, 64 * 128]
+            k_proj = self.wk(x)[0]  # [b, s, 7168] @ [7168, 128] = [b, s, 128]
+
             if envs.SGLANG_NPU_USE_MULTI_STREAM.get():
                 indexer_weight_stream = get_indexer_weight_stream()
                 indexer_weight_stream.wait_stream(torch.npu.current_stream())
@@ -1321,8 +1330,6 @@ class Indexer(MultiPlatformOp):
                 x = x.view(-1, self.hidden_size)
                 weights = self.weights_proj(x.float())[0].to(torch.bfloat16)
 
-            q_lora = (q_lora, dynamic_scale) if dynamic_scale is not None else q_lora
-            q = self.wq_b(q_lora)[0]  # [bs, 1536] @ [1536, 64 * 128] = [bs, 64 * 128]
             q = q.view(bs, self.n_heads, self.head_dim)  # [bs, 64, 128]
             q_pe, q_nope = torch.split(
                 q,
@@ -1330,7 +1337,6 @@ class Indexer(MultiPlatformOp):
                 dim=-1,
             )  # [bs, 64, 64 + 64]
 
-            k_proj = self.wk(x)[0]  # [b, s, 7168] @ [7168, 128] = [b, s, 128]
             k = self.k_norm(k_proj)
             k_pe, k_nope = torch.split(
                 k,
@@ -1339,8 +1345,10 @@ class Indexer(MultiPlatformOp):
             )  # [bs, 64 + 64]
 
             if layer_id == 0:
-                self.rotary_emb.sin_cos_cache = self.rotary_emb.cos_sin_cache.index_select(0, positions)
-                
+                self.rotary_emb.sin_cos_cache = (
+                    self.rotary_emb.cos_sin_cache.index_select(0, positions)
+                )
+
             k_pe = k_pe.unsqueeze(1)
             q_pe, k_pe = self.rotary_emb(positions, q_pe, k_pe)
             k_pe = k_pe.squeeze(1)
