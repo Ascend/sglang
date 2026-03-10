@@ -123,12 +123,13 @@ def npu_format_cast(
     if envs.SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT.get():
         return tensor
 
-    import torch_npu
+    if tensor.device == torch.device("cpu"):
+        return torch.ops.npu.npu_format_cast(tensor.npu(), acl_format.value).cpu()
+    else:
+        tmp = torch_npu.npu_format_cast(tensor, acl_format.value)
+        tensor.untyped_storage().resize_(0)
 
-    tmp = torch_npu.npu_format_cast(tensor, acl_format.value)
-    tensor.untyped_storage().resize_(0)
-
-    return tmp
+        return tmp
 
 
 def get_indexer_weight_stream():
