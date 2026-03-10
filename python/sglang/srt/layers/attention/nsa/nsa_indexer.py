@@ -1316,19 +1316,27 @@ class Indexer(MultiPlatformOp):
 
             q_lora = (q_lora, dynamic_scale) if dynamic_scale is not None else q_lora
             q = self.wq_b(q_lora)[0]  # [bs, 1536] @ [1536, 64 * 128] = [bs, 64 * 128]
+
+            if envs.SGLANG_NPU_USE_MULTI_STREAM.get():
+                current_stream = torch.npu.current_stream()
+                indexer_weight_stream = get_indexer_weight_stream()
+                indexer_weight_stream.wait_stream(current_stream)
+                with torch.npu.stream(indexer_weight_stream):
+                    x_fp32 = x.to(torch.float32)
+            else:
+                x_fp32 = x.to(torch.float32)
+
             k_proj = self.wk(x)[0]  # [b, s, 7168] @ [7168, 128] = [b, s, 128]
 
             if envs.SGLANG_NPU_USE_MULTI_STREAM.get():
-                indexer_weight_stream = get_indexer_weight_stream()
+                current_stream.wait_stream(indexer_weight_stream)
                 indexer_weight_stream.wait_stream(torch.npu.current_stream())
                 with torch.npu.stream(indexer_weight_stream):
-                    x = x.view(-1, self.hidden_size)
-                    weights = self.weights_proj(x.float())[0].to(torch.bfloat16)
-                    weights.record_stream(indexer_weight_stream)
-                    weights_event = indexer_weight_stream.record_event()
+                    x_fp32 = x_fp32.view(-1, self.hidden_size)
+                    weights = self.weights_proj(x_fp32)[0]
             else:
-                x = x.view(-1, self.hidden_size)
-                weights = self.weights_proj(x.float())[0].to(torch.bfloat16)
+                x_fp32 = x_fp32.view(-1, self.hidden_size)
+                weights = self.weights_proj(x_fp32)[0]
 
             q = q.view(bs, self.n_heads, self.head_dim)  # [bs, 64, 128]
             q_pe, q_nope = torch.split(
@@ -1422,7 +1430,7 @@ class Indexer(MultiPlatformOp):
         if self.rotary_emb.is_neox_style and self.alt_stream is not None:
             torch.npu.current_stream().wait_event(q_rope_event)
         if envs.SGLANG_NPU_USE_MULTI_STREAM.get():
-            torch.npu.current_stream().wait_event(weights_event)
+            torch.npu.current_stream().wait_stream(indexer_weight_stream)
         if (
             _use_ag_after_qlora
             and layer_scatter_modes.layer_input_mode == ScatterMode.SCATTERED
@@ -1455,7 +1463,7 @@ class Indexer(MultiPlatformOp):
             topk_indices = torch_npu.npu_lightning_indexer(
                 query=q.view(-1, self.n_heads, self.head_dim),
                 key=past_key_states,
-                weights=weights,
+                weights=weights.to(torch.bfloat16),
                 actual_seq_lengths_query=actual_seq_lengths_q.to(torch.int32),
                 actual_seq_lengths_key=actual_seq_lengths_kv.to(k.device).to(
                     torch.int32
