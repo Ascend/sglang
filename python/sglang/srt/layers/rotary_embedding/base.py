@@ -37,6 +37,7 @@ if _is_cuda:
 
 if _is_npu:
     import torch_npu
+    from sgl_kernel_npu.norm.fused_rope_qk_mqa import fused_rope_qk_mqa
 
 
 class RotaryEmbedding(MultiPlatformOp):
@@ -71,10 +72,10 @@ class RotaryEmbedding(MultiPlatformOp):
             and not (_is_npu)
             and not (_is_musa)
         ):
-            # rotary_embedding from sglang.jit_kernel.pos_enc and vllm._custom_ops has the same implementation.
+            # rotary_embedding from sglang.jit_kernel.rope and vllm._custom_ops has the same implementation.
             # TODO: Test on different devices and remove this conditional.
             if _is_cuda:
-                from sglang.jit_kernel.pos_enc import rotary_embedding
+                from sglang.jit_kernel.rope import rotary_embedding
             elif _is_hip:
                 from sgl_kernel import rotary_embedding
             else:
@@ -199,9 +200,15 @@ class RotaryEmbedding(MultiPlatformOp):
 
         if offsets is not None:
             positions = positions + offsets
+
         positions = positions.flatten()
         num_tokens = positions.shape[0]
-        cos_sin = self.cos_sin_cache.index_select(0, positions)
+
+        if hasattr(self, "sin_cos_cache"):
+            cos_sin = self.sin_cos_cache
+        else:
+            cos_sin = self.cos_sin_cache.index_select(0, positions)
+
         cos, sin = cos_sin.chunk(2, dim=-1)
 
         query_shape = query.shape
@@ -233,8 +240,25 @@ class RotaryEmbedding(MultiPlatformOp):
         assert (
             fused_set_kv_buffer_arg is None
         ), "fused_set_kv_buffer_arg is not supported for npu implementation"
-        if query.dtype == torch.bfloat16 and self.cos_sin_cache.dtype == torch.float:
-            return self.forward_native(positions, query, key, offsets)
+        if (
+            query.dtype == torch.bfloat16
+            and self.cos_sin_cache.dtype == torch.float
+            or key.ndim == 3
+        ):
+            if query.shape[0] * query.shape[1] < 65535:
+                if hasattr(self, "sin_cos_cache"):
+                    cos_sin = self.sin_cos_cache
+                else:
+                    cos_sin = self.cos_sin_cache.index_select(0, positions)
+                return fused_rope_qk_mqa(
+                    query,
+                    key,
+                    cos_sin,
+                    self.rotary_dim,
+                    self.is_neox_style,
+                )
+            else:
+                return self.forward_native(positions, query, key, offsets)
         if self.is_neox_style:
             rotary_mode = "half"
         else:
