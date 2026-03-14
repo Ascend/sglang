@@ -286,7 +286,7 @@ class Glm4MoeAttention(nn.Module):
             return hidden_states, forward_batch, None
         qkv, _ = self.qkv_proj(hidden_states)
 
-        if not _is_npu or forward_batch.forward_mode.is_extend():
+        if not _is_npu or forward_batch.forward_mode.is_extend_or_draft_extend_or_mixed():
             q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
             if self.use_qk_norm:
                 q, k = apply_qk_norm(
