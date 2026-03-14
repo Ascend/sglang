@@ -20,6 +20,7 @@ from typing import Iterable, Optional, Tuple
 import os
 import torch
 from torch import nn
+from safetensors.torch import load_file
 from transformers import PretrainedConfig
 
 from sglang.srt.configs.model_config import is_deepseek_nsa
@@ -100,6 +101,12 @@ class DeepseekModelNextN(nn.Module):
 
         self.eh_proj = nn.Linear(2 * config.hidden_size, config.hidden_size, bias=False)
 
+        self.rot_weight = None
+        rot_weight_path = get_global_server_args().model_path + "/rot.safetensors"
+        if os.path.isfile(rot_weight_path):
+            self.rot_weight = load_file(rot_weight_path)
+            self.rot_weight = self.rot_weight["rot.weight"].npu()
+
         self.alt_stream = (
             torch.cuda.Stream()
             if _is_cuda or envs.SGLANG_NPU_USE_MULTI_STREAM.get()
@@ -158,7 +165,8 @@ class DeepseekModelNextN(nn.Module):
                 torch.cat(
                     (
                         self.enorm(hidden_states),
-                        self.hnorm(forward_batch.spec_info.hidden_states),
+                        self.hnorm(forward_batch.spec_info.hidden_states if self.rot_weight is None 
+                        else torch.matmul(forward_batch.spec_info.hidden_states, self.rot_weight)),
                     ),
                     dim=-1,
                 )
