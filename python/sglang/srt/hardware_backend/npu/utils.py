@@ -126,7 +126,7 @@ def npu_format_cast(
     if tensor.device == torch.device("cpu"):
         return torch.ops.npu.npu_format_cast(tensor.npu(), acl_format.value).cpu()
     else:
-        tmp = torch_npu.npu_format_cast(tensor, acl_format.value)
+        tmp = torch.ops.npu.npu_format_cast(tensor, acl_format.value)
         tensor.untyped_storage().resize_(0)
 
         return tmp
