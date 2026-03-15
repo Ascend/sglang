@@ -577,7 +577,6 @@ class MambaAttnBackendBase(AttentionBackend):
             return ForwardMetadata(
                 query_start_loc=self.query_start_loc_list[bs - 1],
                 mamba_cache_indices=self.state_indices_list[bs - 1],
-                actual_seq_lengths=self.actual_seq_lens_list[bs - 1],
                 mamba_cache_indices_gdn=self.state_indices_list_gdn[bs - 1],
             )
 
@@ -1034,5 +1033,7 @@ class HybridLinearAttnBackend(AttentionBackend):
     def get_verify_buffers_to_fill_after_draft(self):
         return [None, None]
 
-    def update_mamba_state_after_draft(self):
+    def update_verify_buffers_to_fill_after_draft(
+        self, spec_info: SpecInput, cuda_graph_bs: Optional[int]
+    ):
         pass
