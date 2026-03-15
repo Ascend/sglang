@@ -572,7 +572,7 @@ def move_intermediate_cache_dynamic_h_block_v1(intermediate_state_cache, valid_t
     # print(f"{intermediate_state_cache.shape}, {valid_tensor=}, {last_steps_tensor=}")
     # 4. 启动 Kernel
     # 注意：这里我们不再需要 pid_h 和 pid_v 作为 program_id
-    # 所有的分块逻辑都在 Kernel 内部通过循环实现Collapse commentComment on lines R426 to R576gemini-code-assist[bot] commented on Mar 12, 2026 gemini-code-assist[bot]on Mar 12, 2026ContributorMore actions
+    # 所有的分块逻辑都在 Kernel 内部通过循环实现
     move_cache_dynamic_last_kernel_h_block_v1[grid](
         cache_ptr=intermediate_state_cache,
         valid_indices_ptr=valid_tensor,
