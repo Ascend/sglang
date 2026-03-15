@@ -831,7 +831,7 @@ class AscendAttnBackend(AttentionBackend):
                 )
                 return attn_out
 
-            if self.use_fia or layer.qk_head_dim == 256:
+            if self.use_fia:
                 """FIA will support multi-bs in the later version of CANN"""
                 q = q.reshape(-1, layer.tp_q_head_num, layer.qk_head_dim)
                 num_token_padding = q.shape[0]
