@@ -67,6 +67,7 @@ from sglang.srt.utils import (
     is_cpu,
     is_flashinfer_available,
     is_hip,
+    is_npu,
     next_power_of_2,
     round_up,
 )
@@ -96,6 +97,9 @@ def create_moe_dispatcher(moe_runner_config: MoeRunnerConfig) -> BaseDispatcher:
     if a2a_backend.is_none():
         return StandardDispatcher(moe_runner_config)
     elif a2a_backend.is_deepep() or a2a_backend.is_mooncake() or a2a_backend.is_mori():
+        # if is_npu():
+        #     import os
+        #     os.environ["SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK"] = "256" # for npufusedmoe, while mtp use deepep
         return MaybeTboDeepEPDispatcher(
             group=(
                 get_tp_group().device_group
