@@ -211,7 +211,6 @@ class DeepseekModelNextN(nn.Module):
                     hidden_states,
                     self.pcp_size,
                     forward_batch,
-                    torch.cuda.current_stream(),
                 )
 
         os.environ["SGLANG_DEEPEP_BF16_DISPATCH"] = "0"

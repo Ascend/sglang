@@ -772,7 +772,6 @@ class AscendAttnBackend(AttentionBackend):
         mask: torch.Tensor,
         layer: torch.nn.Module,
     ):
-        kv_mask_idx = kv_mask_idx.to(k_nope.device)
         attn_output = torch.zeros(
             q_nope.shape[0],
             layer.tp_q_head_num,
@@ -811,7 +810,6 @@ class AscendAttnBackend(AttentionBackend):
         # nomask
         if kv_nomask_idx.shape[0] == 0:
             return attn_output, attn_lse
-        kv_nomask_idx = kv_nomask_idx.to(k_nope.device)
         k_nope_nomask = torch.index_select(k_nope, 0, kv_nomask_idx)
         value_nomask = torch.index_select(value, 0, kv_nomask_idx)
         k_pe_nomask = torch.index_select(k_pe, 0, kv_nomask_idx)
@@ -949,7 +947,6 @@ class AscendAttnBackend(AttentionBackend):
         has_no_mask = kv_nomask_idx.shape[0] != 0
 
         if has_no_mask:
-            kv_nomask_idx = kv_nomask_idx.to(k.device)
             k_nomask = torch.index_select(k, 0, kv_nomask_idx)
             v_nomask = torch.index_select(v, 0, kv_nomask_idx)
             nomask_out, nomask_lse = torch.ops.npu.npu_fused_infer_attention_score(
@@ -971,7 +968,6 @@ class AscendAttnBackend(AttentionBackend):
                 actual_seq_lengths=q_seqlens[0],
             )
 
-        kv_mask_idx = kv_mask_idx.to(k.device)
         k_mask = torch.index_select(k, 0, kv_mask_idx)
         v_mask = torch.index_select(v, 0, kv_mask_idx)
 
@@ -1269,13 +1265,6 @@ class AscendAttnBackend(AttentionBackend):
                         layer=layer,
                         forward_batch=forward_batch,
                     )
-                    # attn_output = self.forward_fia_pcp(
-                    #     q=q,
-                    #     k=k.reshape(-1, layer.tp_k_head_num, layer.qk_head_dim),
-                    #     v=v.reshape(-1, layer.tp_v_head_num, layer.v_head_dim),
-                    #     layer=layer,
-                    #     forward_batch=forward_batch,
-                    # )
                 else:
                     q = q.reshape(-1, layer.tp_q_head_num, layer.qk_head_dim)
                     num_token_padding = q.shape[0]

@@ -526,7 +526,7 @@ def prepare_input_dp_with_cp_dsa(
     cp_rank,
     cp_size,
     device,
-    is_gqa,
+    is_gqa=False,
 ):
     if is_nsa_prefill_cp_round_robin_split():
         return True
@@ -620,10 +620,6 @@ def prepare_input_dp_with_cp_dsa(
     head_end_global = prefix_offsets[head_chunk_id + 1]
     tail_start_global = prefix_offsets[tail_chunk_id]
     tail_end_global = prefix_offsets[tail_chunk_id + 1]
-    kv_len_prev = head_start_global
-    kv_len_next = tail_start_global
-    actual_seq_q_prev = split_list[head_chunk_id]
-    actual_seq_q_next = split_list[tail_chunk_id]
     kv_len_prev = head_start_global
     kv_len_next = tail_start_global
     actual_seq_q_prev = split_list[head_chunk_id]
