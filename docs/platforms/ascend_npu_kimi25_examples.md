@@ -81,7 +81,7 @@ python -m sglang.launch_server --skip-server-warmup \
     --enable-dp-attention --dp-size 16 --moe-a2a-backend deepep --deepep-mode auto \
     --cuda-graph-bs 1 2 4 6 \
     --speculative-algorithm EAGLE3 \
-    --speculative-draft-model-path /home/zkk/weights/Kimi-K25-eagle3 \
+    --speculative-draft-model-path /xxx/Kimi-K25-eagle3 \
     --speculative-num-steps 3 \
     --speculative-eagle-topk 1 \
     --speculative-num-draft-tokens 4 \
@@ -126,7 +126,7 @@ python -m sglang.launch_server --skip-server-warmup  \
     --enable-multimodal --mm-attention-backend ascend_attn --sampling-backend ascend \
     --enable-dp-attention --dp-size 16 --enable-dp-lm-head \
     --moe-a2a-backend deepep --deepep-mode auto \
-    --cuda-graph-bs 1 2 4 8 --disable-radix-cache
+    --cuda-graph-bs 1 2 4 8
 ```
 
 
@@ -173,8 +173,8 @@ do
     then
         echo "${MIX_IP[$i]}"
 
-		export HCCL_SOCKET_IFNAME=enp196s0f0
-		export GLOO_SOCKET_IFNAME=enp196s0f0
+		export HCCL_SOCKET_IFNAME=xxx
+		export GLOO_SOCKET_IFNAME=xxx
 
         python -m sglang.launch_server --model-path ${MODEL_PATH} \
 		--host ${MIX_IP[$i]} --port 8100 --skip-server-warmup \
