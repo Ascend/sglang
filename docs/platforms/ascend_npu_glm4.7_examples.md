@@ -19,9 +19,9 @@ The dependencies required for the NPU runtime environment have been integrated i
 
 ```{code-block} bash
 #Atlas 800 A3
-docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-a3-glm5
+docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:0.5.9.rc1-npu-a3
 #Atlas 800 A2
-docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-910b-glm5
+docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:0.5.9.rc1-npu-910b
 
 #start container
 docker run -itd --shm-size=16g --privileged=true --name ${NAME} \
