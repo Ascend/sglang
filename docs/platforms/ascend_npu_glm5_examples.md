@@ -9,7 +9,7 @@ The GLM (General Language Model) series is an open-source bilingual large langua
 ### Model Weight
 
 - `GLM-5.0`(BF16 version): [Download model weight](https://www.modelscope.cn/models/ZhipuAI/GLM-5).
-- `GLM-5.0-w4a8`(Quantized version without mtp): [Download model weight](https://modelers.cn/models/Eco-Tech/GLM-5-w4a8).
+- `GLM-5.0-w4a8`(Quantized version without mtp): [Download model weight](https://www.modelscope.cn/models/Eco-Tech/GLM-5-w4a8).
 - You can use [msmodelslim](https://gitcode.com/Ascend/msmodelslim) to quantify the model naively.
 
 
@@ -19,9 +19,9 @@ The dependencies required for the NPU runtime environment have been integrated i
 
 ```{code-block} bash
 #Atlas 800 A3
-docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-a3-glm5
+docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:0.5.9.rc1-npu-a3
 #Atlas 800 A2
-docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-910b-glm5
+docker pull swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:0.5.9.rc1-npu-910b
 
 #start container
 docker run -itd --shm-size=16g --privileged=true --name ${NAME} \
@@ -53,10 +53,10 @@ docker run -itd --shm-size=16g --privileged=true --name ${NAME} \
 swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${TAG}
 ```
 
-Note: Using this image, you need to update transformers to main branch
+Note: Using this image, you need to update transformers versions >= 5.2.0 to support GLM-5.
 ``` shell
 # reinstall transformers
-pip install git+https://github.com/huggingface/transformers.git
+pip install "transformers>=5.2.0"
 ```
 
 ## Deployment
@@ -89,9 +89,8 @@ export STREAMS_PER_DEVICE=32
 export SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT=600
 export SGLANG_ENABLE_SPEC_V2=1
 export SGLANG_ENABLE_OVERLAP_PLAN_STREAM=1
-export SGLANG_NPU_USE_MULTI_STREAM=1
-export HCCL_BUFFSIZE=1000
-export HCCL_OP_EXPANSION_MODE=AIV
+export SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK=16
+export HCCL_BUFFSIZE=3000
 export HCCL_SOCKET_IFNAME=lo
 export GLOO_SOCKET_IFNAME=lo
 
@@ -100,28 +99,30 @@ python3 -m sglang.launch_server \
         --attention-backend ascend \
         --device npu \
         --tp-size 16 --nnodes 1 --node-rank 0 \
-        --chunked-prefill-size 16384 --max-prefill-tokens 280000 \
+        --dp-size 4 --enable-dp-attention \
+        --chunked-prefill-size -1 --max-prefill-tokens 280000 \
         --trust-remote-code \
         --host 127.0.0.1 \
-        --mem-fraction-static 0.7 \
+        --mem-fraction-static 0.6 \
         --port 8000 \
         --served-model-name glm-5 \
-        --cuda-graph-bs 16 \
+        --cuda-graph-max-bs 16 \
         --quantization modelslim \
-        --moe-a2a-backend deepep --deepep-mode auto
+        --moe-a2a-backend deepep --deepep-mode auto \
+        --speculative-algorithm NEXTN \
+        --speculative-num-steps 3 \
+        --speculative-eagle-topk 1 \
+        --speculative-num-draft-tokens 4 
 ```
 
-### Multi-node Deployment
 
-- `GLM-5-bf16`: require at least 2 Atlas 800 A3 (64G × 16).
+### Prefill-Decode Disaggregation
 
-**A3 series**
+- Use 4 Atlas 800 A3 (64G × 16) to deploy `GLM-5-w4a8` Quantized model in Prefill-Decode Disaggregation mode.
 
-Modify the IP of 2 nodes, then run the same scripts on two nodes.
-
-**node 0/1**
-
+1. Prefill:
 ```shell
+# high performance cpu
 echo performance | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 sysctl -w vm.swappiness=0
 sysctl -w kernel.numa_balancing=0
@@ -138,14 +139,6 @@ unset ASCEND_LAUNCH_BLOCKING
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 source /usr/local/Ascend/nnal/atb/set_env.sh
 
-export STREAMS_PER_DEVICE=32
-export SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT=600
-export SGLANG_ENABLE_SPEC_V2=1
-export SGLANG_ENABLE_OVERLAP_PLAN_STREAM=1
-export SGLANG_NPU_USE_MULTI_STREAM=1
-export HCCL_BUFFSIZE=1000
-export HCCL_OP_EXPANSION_MODE=AIV
-
 # Run command ifconfig on two nodes, find out which inet addr has same IP with your node IP. That is your public interface, which should be added here
 export HCCL_SOCKET_IFNAME=lo
 export GLOO_SOCKET_IFNAME=lo
@@ -153,13 +146,17 @@ export GLOO_SOCKET_IFNAME=lo
 
 P_IP=('your ip1' 'your ip2')
 P_MASTER="${P_IP[0]}:your port"
-export SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT=600
-
-export SGLANG_ENABLE_SPEC_V2=1
-export SGLANG_ENABLE_OVERLAP_PLAN_STREAM=1
 
 LOCAL_HOST1=`hostname -I|awk -F " " '{print$1}'`
 LOCAL_HOST2=`hostname -I|awk -F " " '{print$2}'`
+
+export STREAMS_PER_DEVICE=32
+export SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT=600
+export SGLANG_NPU_USE_MULTI_STREAM=1
+export HCCL_BUFFSIZE=1200
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+export ASCEND_MF_STORE_URL="tcp://${P_IP[0]}:mf port"
+
 for i in "${!P_IP[@]}";
 do
     if [[ "$LOCAL_HOST1" == "${P_IP[$i]}" || "$LOCAL_HOST2" == "${P_IP[$i]}" ]];
@@ -167,16 +164,29 @@ do
         echo "${P_IP[$i]}"
         python3 -m sglang.launch_server \
         --model-path $MODEL_PATH \
+        --disaggregation-mode prefill \
+        --disaggregation-bootstrap-port 8998 \
+        --disaggregation-transfer-backend ascend \
+        --quantization modelslim \
         --attention-backend ascend \
         --device npu \
+        --max-running-requests 96 \
         --tp-size 32 --nnodes 2 --node-rank $i --dist-init-addr $P_MASTER \
-        --chunked-prefill-size 16384 --max-prefill-tokens 131072 \
+        --dp-size 32 --enable-dp-attention \
+        --chunked-prefill-size 524288 \
         --trust-remote-code \
-        --host 127.0.0.1 \
-        --mem-fraction-static 0.8\
+        --host ${P_IP[$i]} \
+        --mem-fraction-static 0.72 \
         --port 8000 \
         --served-model-name glm-5 \
-        --cuda-graph-max-bs 16 \
+        --moe-a2a-backend deepep --deepep-mode normal \
+        --speculative-algorithm NEXTN \
+        --speculative-num-steps 1 \
+        --speculative-eagle-topk 1 \
+        --speculative-num-draft-tokens 2 \
+        --disable-shared-experts-fusion \
+        --disable-cuda-graph \
+        --dtype bfloat16 \
         --disable-radix-cache
         NODE_RANK=$i
         break
@@ -185,9 +195,91 @@ done
 
 ```
 
-### Prefill-Decode Disaggregation
 
-Not test yet.
+2. Decode:
+```shell
+# high performance cpu
+echo performance | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+sysctl -w vm.swappiness=0
+sysctl -w kernel.numa_balancing=0
+sysctl -w kernel.sched_migration_cost_ns=50000
+# bind cpu
+export SGLANG_SET_CPU_AFFINITY=1
+
+unset https_proxy
+unset http_proxy
+unset HTTPS_PROXY
+unset HTTP_PROXY
+unset ASCEND_LAUNCH_BLOCKING
+# cann
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+
+# Run command ifconfig on two nodes, find out which inet addr has same IP with your node IP. That is your public interface, which should be added here
+export HCCL_SOCKET_IFNAME=lo
+export GLOO_SOCKET_IFNAME=lo
+
+P_IP=('your ip1' 'your ip2')
+D_IP=('your ip3' 'your ip4')
+D_MASTER="${D_IP[0]}:your port"
+
+LOCAL_HOST1=`hostname -I|awk -F " " '{print$1}'`
+LOCAL_HOST2=`hostname -I|awk -F " " '{print$2}'`
+
+export STREAMS_PER_DEVICE=32
+export SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT=600
+export SGLANG_NPU_USE_MULTI_STREAM=1
+export SGLANG_ENABLE_SPEC_V2=1
+export SGLANG_ENABLE_OVERLAP_PLAN_STREAM=1
+export SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK=64
+export SGLANG_SCHEDULER_SKIP_ALL_GATHER=1
+export TASK_QUEUE_ENABLE=0
+export HCCL_BUFFSIZE=650
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+export ASCEND_MF_STORE_URL="tcp://${P_IP[0]}:mf port"
+
+for i in "${!D_IP[@]}";
+do
+    if [[ "$LOCAL_HOST1" == "${D_IP[$i]}" || "$LOCAL_HOST2" == "${D_IP[$i]}" ]];
+    then
+        echo "${D_IP[$i]}"
+        python3 -m sglang.launch_server \
+        --model-path $MODEL_PATH \
+        --disaggregation-mode decode \
+        --disaggregation-transfer-backend ascend \
+        --quantization modelslim \
+        --attention-backend ascend \
+        --device npu \
+        --max-running-requests 128 \
+        --tp-size 32 --ep-size 32 \
+        --nnodes 2 --node-rank $i --dist-init-addr $D_MASTER \
+        --dp-size 32 --enable-dp-attention \
+        --trust-remote-code \
+        --host ${D_IP[$i]} \
+        --mem-fraction-static 0.84 \
+        --port 8001 \
+        --served-model-name glm-5 \
+        --moe-a2a-backend deepep --deepep-mode low_latency \
+        --enable-dp-lm-head \
+        --moe-dense-tp 1 \
+        --cuda-graph-bs 1 2 4 8 10 12 14 16 \
+        --watchdog-timeout 9000 \
+        --context-length 180000 \
+        --speculative-algorithm NEXTN \
+        --speculative-num-steps 3 \
+        --speculative-eagle-topk 1 \
+        --speculative-num-draft-tokens 4 \
+        --tokenizer-worker-num 4 \
+        --prefill-round-robin-balance \
+        --disable-shared-experts-fusion \
+        --dtype bfloat16 \
+        --load-balance-method round_robin
+        NODE_RANK=$i
+        break
+    fi
+done
+
+```
 
 ### Using Benchmark
 
