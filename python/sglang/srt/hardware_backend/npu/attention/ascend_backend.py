@@ -1257,6 +1257,7 @@ class AscendAttnBackend(AttentionBackend):
                 return attn_out
 
             if self.use_fia:
+                q = q.reshape(-1, layer.tp_q_head_num, layer.qk_head_dim)
                 if use_pcp(forward_batch):
                     attn_output = self.forward_ring_pcp(
                         q=q,
@@ -1265,8 +1266,10 @@ class AscendAttnBackend(AttentionBackend):
                         layer=layer,
                         forward_batch=forward_batch,
                     )
+                    attn_output = attn_output.view(
+                    -1, layer.tp_q_head_num * layer.v_head_dim
+                )
                 else:
-                    q = q.reshape(-1, layer.tp_q_head_num, layer.qk_head_dim)
                     num_token_padding = q.shape[0]
                     q, k, v = [
                         data[: forward_batch.num_token_non_padded_cpu] for data in [q, k, v]
@@ -1284,20 +1287,20 @@ class AscendAttnBackend(AttentionBackend):
                         scale=layer.scaling,
                         sparse_mode=3,
                     )
-                attn_output = attn_output.view(
+                    attn_output = attn_output.view(
                     -1, layer.tp_q_head_num * layer.v_head_dim
-                )
-                if num_token_padding != forward_batch.num_token_non_padded_cpu:
-                    attn_output = torch.cat(
-                        [
-                            attn_output,
-                            attn_output.new_zeros(
-                                num_token_padding - attn_output.shape[0],
-                                *attn_output.shape[1:],
-                            ),
-                        ],
-                        dim=0,
                     )
+                    if num_token_padding != forward_batch.num_token_non_padded_cpu:
+                        attn_output = torch.cat(
+                            [
+                                attn_output,
+                                attn_output.new_zeros(
+                                    num_token_padding - attn_output.shape[0],
+                                    *attn_output.shape[1:],
+                                ),
+                            ],
+                            dim=0,
+                        )
             else:
                 causal = True
                 if (
