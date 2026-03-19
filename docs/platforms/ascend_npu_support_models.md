@@ -86,22 +86,22 @@ You are welcome to enable various models based on your business requirements.
 
 | Models                                    | Model Family             |               A2 Supported               |               A3 Supported               |
 |-------------------------------------------|--------------------------|:----------------------------------------:|:----------------------------------------:|
-| 	intfloat/e5-mistral-7b-instruct          | E5 (Llama/Mistral based) | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	iic/gte_Qwen2-1.5B-instruct              | GTE-Qwen2                | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	Qwen/Qwen3-Embedding-8B                  | Qwen3-Embedding          | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	Alibaba-NLP/gme-Qwen2-VL-2B-Instruct     | GME (Multimodal)         | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	AI-ModelScope/clip-vit-large-patch14-336 | CLIP                     | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	BAAI/bge-large-en-v1.5                   | BGE                      | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  intfloat/e5-mistral-7b-instruct          | E5 (Llama/Mistral based) | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  iic/gte_Qwen2-1.5B-instruct              | GTE-Qwen2                | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  Qwen/Qwen3-Embedding-8B                  | Qwen3-Embedding          | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  Alibaba-NLP/gme-Qwen2-VL-2B-Instruct     | GME (Multimodal)         | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  AI-ModelScope/clip-vit-large-patch14-336 | CLIP                     | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  BAAI/bge-large-en-v1.5                   | BGE                      | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
 
 ## Reward Models
 
 | Models                                         | Model Family              | A2 Supported                             |               A3 Supported               |
 |------------------------------------------------|---------------------------|------------------------------------------|:----------------------------------------:|
-| 	Skywork/Skywork-Reward-Llama-3.1-8B-v0.2      | Llama3.1 Reward           | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	Shanghai_AI_Laboratory/internlm2-7b-reward    | InternLM 2 Reward         | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	Qwen/Qwen2.5-Math-RM-72B                      | Qwen2.5 Reward - Math     | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	Howeee/Qwen2.5-1.5B-apeach                    | Qwen2.5 Reward - Sequence | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
-| 	AI-ModelScope/Skywork-Reward-Gemma-2-27B-v0.2 | Gemma 2-27B Reward        | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  Skywork/Skywork-Reward-Llama-3.1-8B-v0.2      | Llama3.1 Reward           | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  Shanghai_AI_Laboratory/internlm2-7b-reward    | InternLM 2 Reward         | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  Qwen/Qwen2.5-Math-RM-72B                      | Qwen2.5 Reward - Math     | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  Howeee/Qwen2.5-1.5B-apeach                    | Qwen2.5 Reward - Sequence | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
+|  AI-ModelScope/Skywork-Reward-Gemma-2-27B-v0.2 | Gemma 2-27B Reward        | **<span style="color: green;">√</span>** | **<span style="color: green;">√</span>** |
 
 ## Rerank Models
 
