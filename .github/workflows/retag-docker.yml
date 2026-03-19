@@ -12,7 +12,7 @@ on:
 
 jobs:
   retag:
-    if: github.repository == 'sgl-project/sglang'
+    if: github.repository == 'Ascend/sglang'
     runs-on: ubuntu-22.04
     steps:
       - name: Login to SWR
