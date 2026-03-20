@@ -17,7 +17,6 @@ from types import SimpleNamespace
 from urllib.parse import urlparse
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import Qwen3_30B_A3B_Instruct_2507_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval as run_eval_few_shot_gsm8k
 from sglang.test.test_utils import (
@@ -65,6 +64,8 @@ ASCEND_COMMON_ARGS = [
     "--disable-cuda-graph",
     "--mem-fraction-static",
     "0.8",
+    "--disaggregation-transfer-backend",
+    "ascend",
 ]
 
 
@@ -97,7 +98,8 @@ class TestAscendQwen3MoePCP(CustomTestCase):
         cls.lb_url = f"http://{cls.base_host}:{cls.lb_port}"
         cls.process_lb = cls.process_prefill = cls.process_decode = None
 
-        cls.model = Qwen3_30B_A3B_Instruct_2507_WEIGHTS_PATH
+        MODELPATH = "LOCAL_PATH" #modify to actual model path when running the test
+        cls.model = MODELPATH
 
         # Start prefill and decode servers in parallel, then block until both ready.
         cls.start_prefill(env)
@@ -191,12 +193,13 @@ class TestAscendQwen3MoePCP(CustomTestCase):
 
     def test_gsm8k_accuracy(self):
         """GSM8K accuracy validates PCP correctness end-to-end."""
+        GSM8K_PATH = "LOCAL_PATH" #modify to actual GSM8K path when running the test
         args = SimpleNamespace(
             num_shots=5,
-            data_path=None,
+            data_path=GSM8K_PATH if os.path.exists(GSM8K_PATH) else None,
             num_questions=200,
             max_new_tokens=512,
-            parallel=32,
+            parallel=8,
             host=f"http://{self.base_host}",
             port=int(self.lb_port),
         )
