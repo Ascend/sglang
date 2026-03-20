@@ -36,6 +36,11 @@ if is_cuda():
 
     causal_conv1d_fn = causal_conv1d_fn_cuda
 elif is_npu():
+    try:
+        from vllm_ascend.utils import enable_custom_op
+        enable_custom_op_flag = True
+    except ValueError:
+        enable_custom_op_flag = False
     from sgl_kernel_npu.fla.fused_gdn_gating import fused_gdn_gating_npu
     from sgl_kernel_npu.mamba.causal_conv1d import (
         causal_conv1d_fn_npu,
@@ -464,16 +469,30 @@ class GDNAttnBackend(MambaAttnBackendBase):
                 mixed_qkv_reshaped = mixed_qkv.view(
                     batch_size, draft_token_num, -1
                 )
-                conv_states_to_use = conv_states[cache_indices]
-                mixed_qkv_processed, new_conv_state = npu_causal_conv1d_update(
-                    mixed_qkv_reshaped.transpose(1, 2).contiguous(),
-                    layer.conv_weights,
-                    conv_states_to_use.transpose(1, 2).contiguous(),
-                    layer.bias,
-                    True
-                )
-                mixed_qkv = mixed_qkv_processed.transpose(1, 2).contiguous().view(seq_len, -1)
-                conv_states[cache_indices] = new_conv_state.transpose(1, 2).contiguous()
+                num_accepted_tokens=torch.full((batch_size,),draft_token_num,dtype=torch.int32, device=mixed_qkv.device)
+                if enable_custom_op_flag and enable_custom_op():
+                    mixed_qkv = torch.ops._C_ascend.npu_causal_conv1d_update(
+                        mixed_qkv_reshaped,
+                        layer.conv_weights.transpose(0,1).contiguous(),
+                        conv_states,
+                        cache_indices,
+                        layer.bias,
+                        num_accepted_tokens,
+                        None,
+                        layer.activation,
+                        self.pad_slot_id,
+                    ).view(seq_len,-1)
+                else:
+                    conv_states_to_use = conv_states[cache_indices]
+                    mixed_qkv_processed, new_conv_state = npu_causal_conv1d_update(
+                        mixed_qkv_reshaped.transpose(1, 2).contiguous(),
+                        layer.conv_weights,
+                        conv_states_to_use.transpose(1, 2).contiguous(),
+                        layer.bias,
+                        True
+                    )
+                    mixed_qkv = mixed_qkv_processed.transpose(1, 2).contiguous().view(seq_len, -1)
+                    conv_states[cache_indices] = new_conv_state.transpose(1, 2).contiguous()
             else:
                 mixed_qkv_reshaped = mixed_qkv.view(
                     batch_size, draft_token_num, -1
