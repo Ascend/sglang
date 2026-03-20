@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from itertools import accumulate
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
@@ -24,8 +23,6 @@ from sglang.srt.utils.common import ceil_align, ceil_div
 
 if TYPE_CHECKING:
     from sglang.srt.model_executor.forward_batch_info import ForwardBatch
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -218,20 +215,12 @@ def cp_split_and_rebuild_data(forward_batch, input_: torch.Tensor):
     if cp_metadata.rank_valid_ranges is not None:
         # Use rank_valid_ranges to select real tokens only.
         parts = []
-        expected = 0
         for start, end in cp_metadata.rank_valid_ranges:
             if end > start:
-                expected += end - start
                 parts.append(input_[start:end])
         if not parts:
             return input_.new_empty((0, *input_.shape[1:]))
         result = torch.cat(parts, dim=0).contiguous()
-        if result.shape[0] != expected:
-            logger.warning(
-                "cp_split_and_rebuild_data: unexpected token count, got=%s expected=%s",
-                result.shape[0],
-                expected,
-            )
         return result
 
     input_list = list(torch.split(input_, cp_metadata.split_list, dim=0))
@@ -256,20 +245,12 @@ def cp_split_and_rebuild_position(forward_batch, positions: torch.Tensor):
 
     if cp_metadata.rank_valid_ranges is not None:
         parts = []
-        expected = 0
         for start, end in cp_metadata.rank_valid_ranges:
             if end > start:
-                expected += end - start
                 parts.append(positions[..., start:end])
         if not parts:
             return positions.new_empty((*positions.shape[:-1], 0))
         result = torch.cat(parts, dim=-1).contiguous()
-        if result.shape[-1] != expected:
-            logger.warning(
-                "cp_split_and_rebuild_position: unexpected token count, got=%s expected=%s",
-                result.shape[-1],
-                expected,
-            )
         return result
 
     position_id_list = list(torch.split(positions, cp_metadata.split_list, dim=-1))

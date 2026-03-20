@@ -41,6 +41,7 @@ from sglang.srt.layers.dp_attention import (
     get_local_dp_buffer,
 )
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
+from sglang.srt.utils.common import get_current_device_stream_fast
 
 
 def nsa_enable_prefill_cp():
@@ -194,7 +195,7 @@ class NSACPCommunicateWithAllReduceAndLayerNormFn(
             get_attention_cp_group().cp_all_gather_into_tensor_async(
                 gathered_hidden_states,
                 local_hidden_states,
-                torch.npu.current_stream(),
+                get_current_device_stream_fast(),
             )
             reshaped_hidden_states = gathered_hidden_states.reshape(
                 -1, gathered_hidden_states.shape[-1]

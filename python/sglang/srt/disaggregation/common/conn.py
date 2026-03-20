@@ -521,10 +521,6 @@ class CommonKVReceiver(BaseKVReceiver):
             or self.prefill_info.attn_cp_size > 1
         )
         if self.kv_mgr.attn_cp_size == self.prefill_info.attn_cp_size:
-            # prefill cp size is 1
-            assert self.prefill_info.attn_cp_size == 1, (
-                f"When prefill cp size is 1, attn cp size should be 1, but got {self.kv_mgr.attn_cp_size}",
-            )
             self.target_cp_ranks = [self.kv_mgr.attn_cp_rank]
         else:
             self.target_cp_ranks = [
@@ -533,7 +529,6 @@ class CommonKVReceiver(BaseKVReceiver):
             if not enable_all_cp_ranks_for_transfer:
                 # Only retrieve from prefill CP rank 0 when not using all ranks
                 self.target_cp_ranks = self.target_cp_ranks[:1]
-                self.required_prefill_response_num *= 1
             else:
                 self.required_prefill_response_num *= (
                     self.prefill_info.attn_cp_size // self.kv_mgr.attn_cp_size

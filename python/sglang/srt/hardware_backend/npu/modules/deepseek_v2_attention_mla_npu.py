@@ -2,10 +2,12 @@ import re
 from typing import TYPE_CHECKING
 
 import torch
+import torch_npu
 
 from sglang.srt.environ import envs
 from sglang.srt.hardware_backend.npu.attention.mla_preprocess import (
     NPUFusedMLAPreprocess,
+    is_fia_nz,
     is_mla_preprocess_enabled,
 )
 from sglang.srt.layers.attention.nsa.nsa_indexer import scattered_to_tp_attn_full
