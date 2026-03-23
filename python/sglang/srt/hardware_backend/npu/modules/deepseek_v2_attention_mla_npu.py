@@ -440,7 +440,6 @@ def forward_dsa_core_npu(
     forward_batch: "ForwardBatch",
     zero_allocator: "BumpAllocator",
     positions: torch.Tensor,
-    v: torch.Tensor,
 ) -> torch.Tensor:
     attn_output = m.attn_mqa(
         q_nope_out.contiguous(),
