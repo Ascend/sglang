@@ -254,6 +254,10 @@ class GDNAttnBackend(MambaAttnBackendBase):
         self.conv_states_shape = (
             model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape
         )
+        if is_npu():
+            self.conv_states_shape = torch.Size(
+                (*self.conv_states_shape[:-2], self.conv_states_shape[-1], self.conv_states_shape[-2])
+            )
         if not is_cpu() and not is_npu():
             assert (
                 self.conv_states_shape[-1] < FLA_CHUNK_SIZE
@@ -503,7 +507,12 @@ class GDNAttnBackend(MambaAttnBackendBase):
                     :, forward_metadata.track_conv_indices
                 ].transpose(0, 1)
                 mask_indices = forward_batch.mamba_track_mask.nonzero(as_tuple=True)[0]
-                conv_states[conv_dst[mask_indices]] = mixed_qkv_to_track
+                if is_npu():
+                    conv_states_tmp = conv_states.transpose(1, 2).contiguous()
+                    conv_states_tmp[conv_dst[mask_indices]] = mixed_qkv_to_track
+                    conv_states = conv_states_tmp.transpose(1, 2).contiguous()
+                else:
+                    conv_states[conv_dst[mask_indices]] = mixed_qkv_to_track
             kernel_size = layer.conv_weights.shape[-1]
             if is_npu():
                 conv_states_for_prefill = conv_states[:, -(kernel_size - 1):, :]
