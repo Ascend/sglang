@@ -42,6 +42,8 @@ elif is_npu():
         enable_custom_op_flag = True
     except ModuleNotFoundError:
         enable_custom_op_flag = False
+    from sglang.srt.layers.attention.fla.fused_gdn_gating import fused_gdn_gating_kernel_without_sigmoid
+    import npu_ops_transformer_ext
     from sgl_kernel_npu.fla.fused_gdn_gating import fused_gdn_gating_npu
     from sgl_kernel_npu.mamba.causal_conv1d import (
         causal_conv1d_fn_npu,
@@ -288,10 +290,8 @@ class GDNAttnBackend(MambaAttnBackendBase):
             offset = torch.arange(seq_len, device=start_indices.device)
             ranges = start_indices.unsqueeze(1) + offset
             self.ssm_state_indices = ranges.flatten().to(torch.int32)
-            self.forward_metadata.ssm_state_indices = self.ssm_state_indices
         else:
             self.ssm_state_indices = cache_indices
-            self.forward_metadata.ssm_state_indices = self.ssm_state_indices
 
     def init_forward_metadata(self, forward_batch: ForwardBatch):
         if forward_batch.forward_mode.is_draft_extend(True):
@@ -434,11 +434,10 @@ class GDNAttnBackend(MambaAttnBackendBase):
 
         mamba_cache_params = self.req_to_token_pool.mamba2_layer_cache(layer.layer_id)
         conv_states = mamba_cache_params.conv[0]
-        ssm_states = mamba_cache_params.temporal
-        if not forward_batch.spec_algorithm.is_none():
-            intermediate_state_cache = mamba_cache_params.intermediate_ssm
+        ssm_states = mamba_cache_params.temporal            
         if is_target_verify:
             assert isinstance(mamba_cache_params, MambaPool.SpeculativeState)
+            intermediate_state_cache = mamba_cache_params.intermediate_ssm
             intermediate_conv_window_cache = (
                 mamba_cache_params.intermediate_conv_window[0]
             )
@@ -447,9 +446,10 @@ class GDNAttnBackend(MambaAttnBackendBase):
                 dtype=torch.bool,
                 device=forward_batch.input_ids.device,
             )
-            intermediate_state_indices = torch.arange(
-                cache_indices.shape[0], dtype=torch.int32, device=cache_indices.device
-            )
+            if not is_npu():
+                intermediate_state_indices = torch.arange(
+                    cache_indices.shape[0], dtype=torch.int32, device=cache_indices.device
+                )
         else:
             has_initial_states = forward_batch.extend_prefix_lens > 0
         if is_target_verify:
@@ -559,35 +559,25 @@ class GDNAttnBackend(MambaAttnBackendBase):
             if is_npu():
                 conv_states[:, -(kernel_size - 1):, :] = conv_states_tmp.transpose(1, 2).contiguous()
 
-        query, key, value = torch.split(
-            mixed_qkv,
-            [layer.q_dim, layer.k_dim, layer.v_dim],
-            dim=-1,
-        )
-
-        actual_seq_len = query.shape[0]
-        num_heads, head_k_dim = layer.num_q_heads, layer.head_q_dim
-        num_value_heads, head_v_dim = layer.num_v_heads, layer.head_v_dim
-        query = query.view(1, actual_seq_len, layer.num_q_heads, layer.head_q_dim)
-        key = key.view(1, actual_seq_len, layer.num_k_heads, layer.head_k_dim)
-        value = value.view(1, actual_seq_len, layer.num_v_heads, layer.head_v_dim)
-
-        g, beta = fused_gdn_gating(layer.A_log, a, b, layer.dt_bias)
-
         if is_target_verify:
             if is_npu():
-                query = query.view(-1, num_heads, head_k_dim)
-                key = key.view(-1, num_heads, head_k_dim)
-                value = value.view(-1, num_value_heads, head_v_dim)
-                query = l2norm_fwd(
-                    query.contiguous(), eps=1e-6, output_dtype=torch.bfloat16
-                )
-                key = l2norm_fwd(key.contiguous(), eps=1e-6, output_dtype=torch.bfloat16)
-
-                core_attn_out = self.fused_recurrent_gated_delta_rule_update_npu(
-                    query,
-                    key,
-                    value,
+                g, beta = fused_gdn_gating_kernel_without_sigmoid(layer.A_log, a, b, layer.dt_bias)
+                beta = beta.unsqueeze(0)
+                num_heads, head_k_dim = layer.num_q_heads,  layer.head_q_dim
+                num_value_heads, head_v_dim = layer.num_v_heads, layer.head_v_dim
+                
+                mixed_qkv_last_dim = mixed_qkv.shape[-1]
+ 
+                mixed_qkv = mixed_qkv.view(batch_size, -1, mixed_qkv_last_dim)
+                beta = beta.view(batch_size, -1, num_value_heads)
+                g = g.view(batch_size, -1, num_value_heads)
+                
+                core_attn_out = self.fused_recurrent_gated_delta_rule_update_npu_v2(
+                    mixed_qkv,
+                    num_heads,
+                    num_value_heads,
+                    head_k_dim,
+                    head_v_dim,
                     recurrent_state=ssm_states,
                     beta=beta,
                     g=g,
@@ -607,6 +597,15 @@ class GDNAttnBackend(MambaAttnBackendBase):
                         dim=0,
                     )
             else:
+                query, key, value = torch.split(
+                    mixed_qkv,
+                    [layer.q_dim, layer.k_dim, layer.v_dim],
+                    dim=-1,
+                )
+                actual_seq_len = query.shape[0]
+                query = query.view(1, actual_seq_len, layer.num_q_heads, layer.head_q_dim)
+                key = key.view(1, actual_seq_len, layer.num_k_heads, layer.head_k_dim)
+                value = value.view(1, actual_seq_len, layer.num_v_heads, layer.head_v_dim)
                 core_attn_out = self.kernel_dispatcher.target_verify(
                     A_log=layer.A_log,
                     dt_bias=layer.dt_bias,
@@ -624,6 +623,17 @@ class GDNAttnBackend(MambaAttnBackendBase):
                     retrieve_parent_token=retrieve_parent_token,
                 )
         else:
+            query, key, value = torch.split(
+                mixed_qkv,
+                [layer.q_dim, layer.k_dim, layer.v_dim],
+                dim=-1,
+            )
+
+            actual_seq_len = query.shape[0]
+            query = query.view(1, actual_seq_len, layer.num_q_heads, layer.head_q_dim)
+            key = key.view(1, actual_seq_len, layer.num_k_heads, layer.head_k_dim)
+            value = value.view(1, actual_seq_len, layer.num_v_heads, layer.head_v_dim)
+
             g, beta = fused_gdn_gating(layer.A_log, a, b, layer.dt_bias)
             core_attn_out, last_recurrent_state, h = self.kernel_dispatcher.extend(
                 q=query,
@@ -643,12 +653,11 @@ class GDNAttnBackend(MambaAttnBackendBase):
             if is_npu():
                 if not forward_batch.spec_algorithm.is_none():
                     last_recurrent_state = last_recurrent_state.transpose(-1, -2).to(ssm_states.dtype, copy=False)
-                    intermediate_state_cache[cache_indices, 0] = last_recurrent_state
                 else:
                     last_recurrent_state = last_recurrent_state.to(
                         ssm_states.dtype, copy=False
                     )
-                    ssm_states[cache_indices] = last_recurrent_state
+                ssm_states[cache_indices] = last_recurrent_state
             if h is not None:
                 self._track_mamba_state_extend(
                     forward_batch, h, ssm_states, forward_metadata
@@ -677,12 +686,12 @@ class GDNAttnBackend(MambaAttnBackendBase):
 
         if intermediate_state is not None:
             # MTP intermediate_state
-            # intermediate_state[cache_indices, 0] = recurrent_state[cache_indices] # update indexput slow
+            intermediate_state[cache_indices, 0] = recurrent_state[cache_indices] # update indexput slow
             ssm_state = intermediate_state.view(
                 -1, num_value_heads, head_k_dim, head_v_dim
             )
         else:
-            ssm_state = intermediate_state[cache_indices, 0]
+            ssm_state = recurrent_state
 
         if self.graph_mode:
             num_accepted_tokens = torch.ones(
@@ -695,7 +704,7 @@ class GDNAttnBackend(MambaAttnBackendBase):
         else:
             num_accepted_tokens = self.num_accepted_tokens
             actual_seq_lengths = self.actual_seq_lengths
-            ssm_state_indices = self.forward_metadata.mamba_cache_indices
+            ssm_state_indices = self.ssm_state_indices
 
         attn_core_out = torch_npu.npu_recurrent_gated_delta_rule(
             query,
@@ -714,4 +723,60 @@ class GDNAttnBackend(MambaAttnBackendBase):
             intermediate_state = ssm_state.view(
                 -1, seq_len, num_value_heads, head_k_dim, head_v_dim
             )
+        return attn_core_out
+
+    def fused_recurrent_gated_delta_rule_update_npu_v2(
+        self,
+        mix_qkv: torch.Tensor,
+        num_heads,
+        num_value_heads,
+        head_k_dim,
+        head_v_dim,
+        recurrent_state: torch.Tensor,
+        beta: torch.Tensor,
+        g: torch.Tensor,
+        cache_indices: torch.Tensor,
+        intermediate_state: Optional[torch.Tensor] = None,
+    ):
+        beta = beta.to(torch.bfloat16)
+        g = g.to(torch.float32)
+        batch_size = mix_qkv.shape[0]
+        seq_len = mix_qkv.shape[1]
+        scale = 1 / (head_k_dim**0.5)
+ 
+        if intermediate_state is not None:
+            intermediate_state = intermediate_state.view(-1, num_value_heads, head_k_dim, head_v_dim)
+ 
+
+        if self.graph_mode:
+            num_accepted_tokens = torch.full(
+                [batch_size], 1, dtype=torch.int32, device=cache_indices.device
+            )
+            actual_seq_lengths = torch.full(
+                [batch_size], seq_len, dtype=torch.int32, device=cache_indices.device
+            )
+            ssm_state_indices = self.forward_metadata.mamba_cache_indices_gdn
+        else:
+            num_accepted_tokens = self.num_accepted_tokens
+            actual_seq_lengths = self.actual_seq_lengths
+            ssm_state_indices = self.ssm_state_indices
+
+        attn_core_out = torch.ops.npu_ops_transformer_ext.recurrent_gated_delta_rule(
+            mix_qkv,
+            recurrent_state,
+            beta=beta,
+            scale=scale,
+            actual_seq_lengths=actual_seq_lengths,
+            ssm_state_indices=ssm_state_indices.view(batch_size, seq_len),
+            nk=num_heads,
+            nv=num_value_heads,
+            intermediate_state=intermediate_state,
+            cache_indices=cache_indices,
+            num_accepted_tokens=num_accepted_tokens,
+            g=g,
+        )
+ 
+        if intermediate_state is not None:
+            intermediate_state = intermediate_state.view(
+                -1, seq_len, num_value_heads, head_k_dim, head_v_dim)    
         return attn_core_out

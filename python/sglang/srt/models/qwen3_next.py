@@ -198,7 +198,10 @@ def fused_qkvzba_split_reshape_cat(
     )
     return mixed_qkv, z, b, a
 
-
+if _is_npu:
+    from sglang.srt.layers.attention.mamba.mamba_state_scatter_triton import fused_qkvzba_split_reshape_cat_npu
+    fused_qkvzba_split_reshape_cat = fused_qkvzba_split_reshape_cat_npu 
+    
 class Qwen3GatedDeltaNet(nn.Module):
     def __init__(
         self,
@@ -422,11 +425,11 @@ class Qwen3GatedDeltaNet(nn.Module):
             hidden_states
         )
 
-        is_extend = forward_batch.forward_mode.is_extend()
+        is_graph = forward_batch.forward_mode.is_cuda_graph()
         if (
             self.num_v_heads // self.num_k_heads in [1, 2, 4]
             and not _is_cpu
-            and (not _is_npu or not is_extend)
+            and (not _is_npu or is_graph)
         ):
             mixed_qkv, z, b, a = fused_qkvzba_split_reshape_cat(
                 projected_states_qkvz,
@@ -753,22 +756,38 @@ class Qwen3HybridAttentionDecoderLayer(nn.Module):
     ) -> torch.Tensor:
         qkv, _ = self.qkv_proj(hidden_states)
 
-        if self.attn_output_gate:
-            q_gate, k, v = qkv.split(
-                [self.q_size * 2, self.kv_size, self.kv_size], dim=-1
-            )
-            orig_shape = q_gate.shape[:-1]
-            q_gate = q_gate.view(*orig_shape, self.num_heads, -1)
-            q, gate = torch.chunk(q_gate, 2, dim=-1)
-            q = q.reshape(*orig_shape, -1)
-            gate = gate.reshape(*orig_shape, -1)
+        if True or not is_npu():
+            if self.attn_output_gate:
+                q_gate, k, v = qkv.split(
+                    [self.q_size * 2, self.kv_size, self.kv_size], dim=-1
+                )
+                orig_shape = q_gate.shape[:-1]
+                q_gate = q_gate.view(*orig_shape, self.num_heads, -1)
+                q, gate = torch.chunk(q_gate, 2, dim=-1)
+                q = q.reshape(*orig_shape, -1)
+                gate = gate.reshape(*orig_shape, -1)
+            else:
+                q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
+
+            q, k = self._apply_qk_norm(q, k)
+
+            q, k = self.rotary_emb(positions, q, k)
         else:
-            q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
+            if self.attn.layer_id == 3:
+                self.rotary_emb.get_cos_sin_with_position(positions)
 
-        q, k = self._apply_qk_norm(q, k)
-
-        q, k = self.rotary_emb(positions, q, k)
-
+            q, k, v, gate = split_qkv_gate_rmsnorm_rope(
+                qkv, #qkv[bs,1536]
+                self.rotary_emb.position_sin,
+                self.rotary_emb.position_cos,
+                self.q_size, #512
+                self.kv_size, #256
+                self.head_dim, #256
+                int(self.head_dim * self.partial_rotary_factor), #64
+                eps=self.q_norm.variance_epsilon,
+                q_weight=self.q_norm.weight,
+                k_weight=self.k_norm.weight,
+            )
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.attn_output_gate:
