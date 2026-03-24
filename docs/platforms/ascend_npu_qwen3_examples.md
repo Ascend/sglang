@@ -94,76 +94,230 @@ python -m sglang.launch_server \
    --mem-fraction-static 0.8
 ```
 
-#### Running Qwen3 MOE with Prefill Context Parallel (PCP) on Ascend NPU
+#### Running Qwen3 MoE with PD+PCP and Ascend KV Transfer on Ascend NPU
 
-For Qwen3 MoE models, you can enable **Prefill Context Parallel (PCP)** to split the context across devices during the prefill phase, which improves TTFT (Time To First Token) performance for long sequences.
+For Qwen3 MoE models, you can enable **Prefill Context Parallel (PCP)** on the prefill side and use **Ascend KV transfer** in the PD path.
 
-Use the `--attn-cp-size` argument to set the context parallelism size.
+Use `--attn-cp-size` to set the context parallel size on the prefill side.
 
-> **Important constraints:**
-> - The prefill instance only supports **batch_size=1** when PCP is enabled.
-> - PCP requires **PD disaggregation** (Prefill/Decode separated deployment) to produce correct inference results. See [PD Disaggregation](../advanced_features/pd_disaggregation.md) for details.
+##### Why PD+PCP is needed
 
-Example: Running Qwen3-235B-A22B-Instruct-2507 with PCP on 1 x Atlas 800I A3 (PD disaggregation with Ascend transfer backend):
+In this path, the prefill worker runs Qwen3 MoE with PCP enabled and generates KV cache in a PCP-aware layout. The decode worker cannot continue from this KV cache through a generic PD transfer path because the KV pages are not stored in a normal contiguous layout.
 
-**Prefill Instance:**
+This path is needed to make the following execution flow work on Ascend:
+
+- the prefill worker runs with PCP enabled
+- the prefill worker generates KV cache with PCP layout
+- KV cache is transferred through the PD path
+- the decode worker restores the KV view and continues decoding
+
+##### How it works
+
+At a high level, this path has four stages:
+
+1. The prefill worker builds PCP metadata for the request.
+2. Qwen3 MoE writes KV cache with PCP block layout on the prefill side.
+3. The disaggregation layer transfers KV data and the page ordering implied by the prefill layout.
+4. The decode worker remaps pages, rebuilds the local KV view, and continues decoding.
+
+The key requirement is that allocation, KV transfer, and decode all use the same PCP layout semantics.
+
+**Important constraints:**
+- PCP requires **PD disaggregation** (Prefill/Decode separated deployment) to produce correct inference results. See [PD Disaggregation](../advanced_features/pd_disaggregation.md) for details.
+- The prefill side must run with PCP enabled.
+- Data parallelism is not supported on the prefill side in this path.
+- Radix cache must be disabled.
+- Chunked prefill must be disabled.
+- The prefill side currently requires `batch_size = 1`, so `--max-running-requests 1` is required.
+
+##### Single-node example
+
+The following example shows the basic single-node setup for Qwen3-30B-A3B.
+
+First, set the shared environment variables:
 
 ```shell
-export SGLANG_SET_CPU_AFFINITY=1
+export PYTHONPATH=/path/to/sglang/python:$PYTHONPATH
+
+export MODEL_PATH=/path/to/Qwen3-30B-A3B
+
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 export STREAMS_PER_DEVICE=32
 export HCCL_BUFFSIZE=1536
 export SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK=32
 export SGLANG_DEEPEP_BF16_DISPATCH=1
-export ASCEND_USE_FIA=1
 
-python -m sglang.launch_server \
-   --model-path Qwen/Qwen3-235B-A22B-Instruct-2507 \
-   --tp-size 16 \
-   --attn-cp-size 4 \
-   --trust-remote-code \
-   --attention-backend ascend \
-   --device npu \
-   --watchdog-timeout 9000 \
-   --mem-fraction-static 0.8 \
-   --max-running-requests 1 \
-   --disable-radix-cache \
-   --disaggregation-transfer-backend ascend \
-   --disaggregation-mode prefill \
-   --port 30000
+export PREFILL_HOST=127.0.0.1
+export PREFILL_PORT=8231
+export PREFILL_BOOTSTRAP_PORT=8995
+
+export DECODE_HOST=127.0.0.1
+export DECODE_PORT=8232
+
+export ROUTER_HOST=127.0.0.1
+export ROUTER_PORT=6689
+export ROUTER_PROM_PORT=29010
+
+export ASCEND_MF_STORE_URL="tcp://<store_host>:12345"
+export ASCEND_USE_FIA=True
 ```
 
-**Decode Instance:**
+Start the prefill worker:
 
 ```shell
 export SGLANG_SET_CPU_AFFINITY=1
+
+python3 -m sglang.launch_server \
+    --model-path ${MODEL_PATH} \
+    --disaggregation-mode prefill \
+    --disaggregation-transfer-backend ascend \
+    --disaggregation-bootstrap-port ${PREFILL_BOOTSTRAP_PORT} \
+    --attention-backend ascend \
+    --disable-radix-cache \
+    --chunked-prefill-size -1 \
+    --skip-server-warmup \
+    --device npu \
+    --base-gpu-id 2 \
+    --tp-size 4 \
+    --attn-cp-size 2 \
+    --max-running-requests 1 \
+    --host ${PREFILL_HOST} \
+    --port ${PREFILL_PORT}
+```
+
+Start the decode worker:
+
+```shell
+python3 -m sglang.launch_server \
+    --model-path ${MODEL_PATH} \
+    --disaggregation-mode decode \
+    --disaggregation-transfer-backend ascend \
+    --attention-backend ascend \
+    --mem-fraction-static 0.8 \
+    --disable-cuda-graph \
+    --device npu \
+    --disable-radix-cache \
+    --chunked-prefill-size -1 \
+    --skip-server-warmup \
+    --base-gpu-id 12 \
+    --tp-size 2 \
+    --max-running-requests 32 \
+    --host ${DECODE_HOST} \
+    --port ${DECODE_PORT}
+```
+
+Start the router:
+
+```shell
+python3 -m sglang_router.launch_router \
+    --pd-disaggregation \
+    --policy cache_aware \
+    --prefill http://${PREFILL_HOST}:${PREFILL_PORT} ${PREFILL_BOOTSTRAP_PORT} \
+    --decode http://${DECODE_HOST}:${DECODE_PORT} \
+    --host ${ROUTER_HOST} \
+    --port ${ROUTER_PORT} \
+    --prometheus-port ${ROUTER_PROM_PORT}
+```
+
+##### Multi-node example
+
+The following example shows the basic setup where the prefill worker and decode worker run on different nodes.
+
+```shell
+export PYTHONPATH=/path/to/sglang/python:$PYTHONPATH
+
+export MODEL_PATH=/path/to/Qwen3-235B-A22B-Instruct-2507-W8A8
+export QUANTIZATION=modelslim
+
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 export STREAMS_PER_DEVICE=32
 export HCCL_BUFFSIZE=1536
 export SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK=32
 export SGLANG_DEEPEP_BF16_DISPATCH=1
 
-python -m sglang.launch_server \
-   --model-path Qwen/Qwen3-235B-A22B-Instruct-2507 \
-   --tp-size 16 \
-   --trust-remote-code \
-   --attention-backend ascend \
-   --device npu \
-   --watchdog-timeout 9000 \
-   --mem-fraction-static 0.8 \
-   --disaggregation-transfer-backend ascend \
-   --disaggregation-mode decode \
-   --port 30001
+export PREFILL_HOST=<prefill_host>
+export PREFILL_PORT=8000
+export PREFILL_BOOTSTRAP_PORT=8995
+export PREFILL_DIST_INIT_ADDR=${PREFILL_HOST}:6688
+
+export DECODE_HOST=<decode_host>
+export DECODE_PORT=8001
+export DECODE_DIST_INIT_ADDR=${DECODE_HOST}:6688
+
+export ROUTER_HOST=127.0.0.1
+export ROUTER_PORT=6689
+export ROUTER_PROM_PORT=29010
+
+export ASCEND_MF_STORE_URL="tcp://<store_host>:12345"
+export ASCEND_USE_FIA=True
 ```
 
-**Router:**
+Start the prefill worker on the prefill node:
 
 ```shell
-python -m sglang_router.launch_router \
-   --pd-disaggregation \
-   --prefill http://127.0.0.1:30000 \
-   --decode http://127.0.0.1:30001 \
-   --host 0.0.0.0 --port 8000
+export SGLANG_SET_CPU_AFFINITY=1
+
+python3 -m sglang.launch_server \
+    --model-path ${MODEL_PATH} \
+    --trust-remote-code \
+    --disaggregation-mode prefill \
+    --disaggregation-transfer-backend ascend \
+    --quantization ${QUANTIZATION} \
+    --disaggregation-bootstrap-port ${PREFILL_BOOTSTRAP_PORT} \
+    --attention-backend ascend \
+    --disable-radix-cache \
+    --mem-fraction-static 0.7 \
+    --chunked-prefill-size -1 \
+    --skip-server-warmup \
+    --device npu \
+    --base-gpu-id 0 \
+    --tp-size 16 \
+    --attn-cp-size 2 \
+    --max-running-requests 1 \
+    --host ${PREFILL_HOST} \
+    --port ${PREFILL_PORT} \
+    --nnodes 1 \
+    --node-rank 0 \
+    --dist-init-addr ${PREFILL_DIST_INIT_ADDR}
+```
+
+Start the decode worker on the decode node:
+
+```shell
+python3 -m sglang.launch_server \
+    --model-path ${MODEL_PATH} \
+    --trust-remote-code \
+    --disaggregation-mode decode \
+    --disaggregation-transfer-backend ascend \
+    --quantization ${QUANTIZATION} \
+    --attention-backend ascend \
+    --disable-radix-cache \
+    --mem-fraction-static 0.7 \
+    --disable-cuda-graph \
+    --chunked-prefill-size -1 \
+    --skip-server-warmup \
+    --device npu \
+    --base-gpu-id 8 \
+    --tp-size 8 \
+    --max-running-requests 32 \
+    --host ${DECODE_HOST} \
+    --port ${DECODE_PORT} \
+    --nnodes 1 \
+    --node-rank 0 \
+    --dist-init-addr ${DECODE_DIST_INIT_ADDR}
+```
+
+Start the router:
+
+```shell
+python3 -m sglang_router.launch_router \
+    --pd-disaggregation \
+    --policy cache_aware \
+    --prefill http://${PREFILL_HOST}:${PREFILL_PORT} ${PREFILL_BOOTSTRAP_PORT} \
+    --decode http://${DECODE_HOST}:${DECODE_PORT} \
+    --host ${ROUTER_HOST} \
+    --port ${ROUTER_PORT} \
+    --prometheus-port ${ROUTER_PROM_PORT}
 ```
 
 #### Running Qwen3-VL-8B-Instruct on 1 x Atlas 800I A3.
