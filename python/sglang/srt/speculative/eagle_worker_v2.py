@@ -61,11 +61,13 @@ from sglang.srt.utils.common import (
     is_cuda,
     is_hip,
     is_npu,
+    is_npu_zero_buffer,
     next_power_of_2,
 )
 from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions
 
 _is_npu = is_npu()
+_is_npu_zero_buffer = is_npu_zero_buffer()
 _is_cuda = is_cuda()
 _is_hip = is_hip()
 
@@ -258,6 +260,20 @@ class EagleDraftWorker(BaseDraftWorker):
 
         if self.server_args.model_impl == "mindspore":
             return
+
+        from sglang.srt.distributed import (
+            get_world_group,
+        )
+        if _is_npu_zero_buffer:
+            # lazy init main model of eagle mode graph capture till now
+            from sglang.srt.hardware_backend.npu.utils import lazy_init_zbccl_gva_mem
+            ret = lazy_init_zbccl_gva_mem(self.device, self.gpu_id, self.tp_rank, self.target_worker.model_runner.tp_size,
+                                          get_world_group().cpu_group)
+            if not ret:
+                logger.error("[ZBCCL] zbccl lazy init failed!")
+
+            self.target_worker.model_runner.init_attention_backend()
+            self.target_worker.model_runner.init_device_graphs()
 
         Device2DraftCudaGraphRunner = {
             "npu": EAGLEDraftNpuGraphRunner,

@@ -216,7 +216,7 @@ from sglang.srt.utils import (
     set_random_seed,
     suppress_other_loggers,
 )
-from sglang.srt.utils.common import is_npu
+from sglang.srt.utils.common import is_npu, is_npu_zero_buffer
 from sglang.srt.utils.hf_transformers_utils import (
     get_processor,
     get_tokenizer,
@@ -239,6 +239,7 @@ TEST_RETRACT_INTERVAL = envs.SGLANG_TEST_RETRACT_INTERVAL.get()
 TEST_RETRACT_NO_PREFILL_BS = envs.SGLANG_TEST_RETRACT_NO_PREFILL_BS.get()
 
 _is_npu = is_npu()
+_is_npu_zero_buffer = is_npu_zero_buffer()
 
 
 @dataclass
@@ -3435,6 +3436,22 @@ def run_scheduler_process(
     dp_rank: Optional[int],
     pipe_writer,
 ):
+    # init zbccl if is set
+    if _is_npu_zero_buffer:
+        from zbccl import switch_to_allocator, is_mix_alloc, zbccl_init
+        if is_mix_alloc():
+            switch_to_allocator()
+            # use lazy init for mix alloc
+        else:
+            if envs.ZBCCL_BOOTSTRAP_URL.get():
+                ret = zbccl_init(server_args.tp_size, gpu_id, tp_rank, envs.ZBCCL_LOCAL_MEM_SIZE.get() * (1024 ** 2),
+                                 ip_port=envs.ZBCCL_BOOTSTRAP_URL.get())
+            else:
+                ret = zbccl_init(server_args.tp_size, gpu_id, tp_rank, envs.ZBCCL_LOCAL_MEM_SIZE.get() * (1024 ** 2))
+            if not ret:
+                logger.error(f"[ZBCCL] zbccl init failed!")
+                sys.exit(-1)
+
     dp_rank = configure_scheduler(
         server_args, tp_rank, attn_cp_rank, moe_dp_rank, moe_ep_rank, pp_rank, dp_rank
     )

@@ -509,6 +509,10 @@ class Envs:
     # TokenizerManager
     SGLANG_REQUEST_STATE_WAIT_TIMEOUT = EnvInt(4)
 
+    # ZBCCL
+    ZBCCL_LOCAL_MEM_SIZE = EnvInt(0)
+    ZBCCL_BOOTSTRAP_URL = EnvStr("")
+
     # Symmetric Memory
     SGLANG_SYMM_MEM_PREALLOC_GB_SIZE = EnvInt(-1)
 
