@@ -284,10 +284,9 @@ class GDNAttnBackend(MambaAttnBackendBase):
             seq_len = spec_info.draft_token_num
             self.actual_seq_lengths = self.actual_seq_lengths * seq_len
             # indices
-            start_indices = cache_indices * seq_len
-            offset = torch.arange(seq_len, device=start_indices.device)
-            ranges = start_indices.unsqueeze(1) + offset
-            self.ssm_state_indices = ranges.flatten().to(torch.int32)
+            self.ssm_state_indices = torch.arange(
+                cache_indices.shape[0] * seq_len, dtype=torch.int32, device=cache_indices.device
+            )
         else:
             self.ssm_state_indices = cache_indices
 
@@ -508,7 +507,7 @@ class GDNAttnBackend(MambaAttnBackendBase):
                 ].transpose(0, 1)
                 mask_indices = forward_batch.mamba_track_mask.nonzero(as_tuple=True)[0]
                 if is_npu():
-                    conv_states_tmp = conv_states.transpose(1, 2).contiguous()
+                    conv_states_tmp = conv_states.transpose(1, 2)
                     conv_states_tmp[conv_dst[mask_indices]] = mixed_qkv_to_track
                     conv_states = conv_states_tmp.transpose(1, 2).contiguous()
                 else:
@@ -721,7 +720,6 @@ class GDNAttnBackend(MambaAttnBackendBase):
  
         if intermediate_state is not None:
             intermediate_state = intermediate_state.view(-1, num_value_heads, head_k_dim, head_v_dim)
- 
 
         if self.graph_mode:
             num_accepted_tokens = torch.full(
@@ -736,7 +734,7 @@ class GDNAttnBackend(MambaAttnBackendBase):
             actual_seq_lengths = self.actual_seq_lengths
             ssm_state_indices = self.ssm_state_indices
 
-        attn_core_out = torch.ops.npu_ops_transformer_ext.recurrent_gated_delta_rule(
+        attn_core_out = torch.ops.npu.recurrent_gated_delta_rule(
             mix_qkv,
             recurrent_state,
             beta=beta,

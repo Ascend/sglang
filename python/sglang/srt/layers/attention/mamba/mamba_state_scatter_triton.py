@@ -433,8 +433,7 @@ def move_cache_dynamic_last_kernel_h_block(
 
     # 循环处理 layer
     for l in range(num_layers):
-        src_base_addr = src_cache_ptr + tl.cast(l, tl.int64) * layer_stride + tl.cast(valid_idx_val,
-                                                                                      tl.int64) * size_stride
+        src_base_addr = src_cache_ptr + tl.cast(l, tl.int64) * layer_stride + tl.cast(valid_id, tl.int64) * size_stride
         dst_base_addr = dst_cache_ptr + tl.cast(l, tl.int64) * dst_layer_stride + tl.cast(valid_idx_val,
                                                                                           tl.int64) * dst_size_stride
         src_addr = src_base_addr + tl.cast(last_step_val, tl.int64) * draft_stride

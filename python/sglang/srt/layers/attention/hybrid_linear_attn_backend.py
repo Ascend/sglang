@@ -479,10 +479,9 @@ class MambaAttnBackendBase(AttentionBackend):
             self.query_start_loc_list[bs - 1].copy_(
                 self.cached_cuda_graph_verify_query_start_loc[: bs + 1]
             )
-            start_indices = mamba_indices * spec_info.draft_token_num
-            offset = torch.arange(spec_info.draft_token_num, device=start_indices.device)
-            ranges = start_indices.unsqueeze(1) + offset
-            ssm_state_indices = ranges.flatten().to(torch.int32)
+            ssm_state_indices = torch.arange(
+                mamba_indices.shape[0] * spec_info.draft_token_num, dtype=torch.int32, device=mamba_indices.device
+            )
             self.state_indices_list_gdn[bs - 1][:len(mamba_indices) * spec_info.draft_token_num].copy_(
                 ssm_state_indices)
         else:
@@ -536,12 +535,12 @@ class MambaAttnBackendBase(AttentionBackend):
                     bs - num_padding
                 )
         elif forward_mode.is_target_verify():
-            start_indices = mamba_indices[:bs - num_padding] * spec_info.draft_token_num
-            offset = torch.arange(spec_info.draft_token_num, device=start_indices.device)
-            ranges = start_indices.unsqueeze(1) + offset
-            ssm_state_indices = ranges.flatten().to(torch.int32)
+            ssm_state_indices = torch.arange(
+                len(mamba_indices[:bs - num_padding]) * spec_info.draft_token_num,
+                dtype=torch.int32, device=mamba_indices.device
+            )
             self.state_indices_list_gdn[bs - 1][
-            :len(mamba_indices[:bs - num_padding]) * spec_info.draft_token_num].copy_(ssm_state_indices)
+                :len(mamba_indices[:bs - num_padding]) * spec_info.draft_token_num].copy_(ssm_state_indices)
             self.state_indices_list_gdn[bs - 1][len(mamba_indices[:bs - num_padding]) * spec_info.draft_token_num:] = 0
             if num_padding == 0:
                 self.query_start_loc_list[bs - 1].copy_(
