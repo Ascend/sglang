@@ -15,7 +15,8 @@ from sglang.srt.layers.attention.nsa.nsa_indexer import scattered_to_tp_attn_ful
 from sglang.srt.layers.attention.nsa.utils import (
     nsa_use_prefill_cp,
 )
-from sglang.srt.layers.communicator import ScatterMode, get_attn_tp_context
+from sglang.srt.layers.communicator import get_attn_tp_context
+from sglang.srt.layers.dp_attention import pcp_ag_rearange_output 
 
 if TYPE_CHECKING:
     from sglang.srt.model_executor.forward_batch_info import ForwardBatch
@@ -77,38 +78,22 @@ def forward_mha_prepare_npu(
     latent_cache = latent_cache.unsqueeze(1)
 
     if m.use_deepseek_yarn_rope:
-        B, S = q.shape[0], 1
-        cos, sin = m.rotary_emb.get_cos_sin_cache(
-            positions, hidden_states.dtype, offsets=None
-        )
-        q_pe = torch_npu.npu_interleave_rope(
-            q_pe.reshape(B, -1, S, m.qk_rope_head_dim),
-            cos,
-            sin,
-        )
-        q_pe = q_pe.reshape(B, -1, m.qk_rope_head_dim)
+        if nsa_use_prefill_cp(forward_batch, m.enable_prefill_cp):
+            positions = cp_split_and_rebuild_position(forward_batch, positions)
+        k_nope, k_pe = latent_cache.split([m.kv_lora_rank, m.qk_rope_head_dim], dim=-1)
+        k_nope = m.kv_a_layernorm(k_nope)
+        q_pe, k_pe = m.rotary_emb(positions, q_pe, k_pe)
 
-        ckv_cache, k_rope_cache = forward_batch.token_to_kv_pool.get_kv_buffer(
-            m.layer_id
-        )
-        _, _, k_pe, kv_a = torch_npu.npu_kv_rmsnorm_rope_cache(
-            latent_cache.view(-1, 1, 1, m.kv_lora_rank + m.qk_rope_head_dim),  # bnsd
-            m.kv_a_layernorm.weight,
-            cos,
-            sin,
-            forward_batch.out_cache_loc.to(torch.int64),
-            k_rope_cache,
-            ckv_cache,
-            k_rope_scale=None,
-            c_kv_scale=None,
-            k_rope_offset=None,
-            c_kv_offset=None,
-            epsilon=m.kv_a_layernorm.variance_epsilon,
-            cache_mode="PA_NZ" if is_fia_nz() else "PA_BNSD",
-            is_output_kv=True,
-        )  # adapter NZ
-
-        k_pe = k_pe.reshape(B, -1, m.qk_rope_head_dim)
+        latent_cache[..., : m.kv_lora_rank] = k_nope
+        latent_cache[..., m.kv_lora_rank :] = k_pe
+        if nsa_use_prefill_cp(forward_batch, m.enable_prefill_cp):
+            latent_cache = pcp_ag_rearange_output (
+                latent_cache.squeeze(1).contiguous(), m.pcp_size, forward_batch
+            )  # [n, 1, 576]
+        kv_a = latent_cache[..., : m.kv_lora_rank]
+        k_pe = latent_cache[..., m.kv_lora_rank :]
+        kv_a = kv_a.reshape(latent_cache.shape[0], -1, m.kv_lora_rank)  # [8, 1, 512]
+        k_pe = k_pe.reshape(latent_cache.shape[0], -1, m.qk_rope_head_dim)  # [8, 1, 64]
     else:
         kv_a = m.kv_a_layernorm(kv_a)
         k_pe = latent_cache[:, :, m.kv_lora_rank :]
@@ -144,6 +129,58 @@ def forward_mha_core_npu(
 
 
 # endregion
+
+
+def forward_prefill_mla_prepare_npu(
+    m: "DeepseekV2AttentionMLA",
+    positions: torch.Tensor,
+    hidden_states: torch.Tensor,
+    forward_batch: "ForwardBatch",
+    zero_allocator: "BumpAllocator",
+):
+    q, latent_cache = (
+        get_attn_tp_context()
+        .fetch_qkv_latent()
+        .split(
+            [m.q_lora_rank, m.kv_lora_rank + m.qk_rope_head_dim],
+            dim=-1,
+        )
+    )
+    q = m.q_a_layernorm(q)
+    q = m.q_b_proj(q)[0].view(-1, m.num_local_heads, m.qk_head_dim)
+    q_nope, q_pe = q.split(
+        [m.qk_nope_head_dim, m.qk_rope_head_dim], dim=-1
+    )  # q_pe [2, h, 64] #q_nope [2, h, 512]
+    k_nope, k_pe = latent_cache.split(
+        [m.kv_lora_rank, m.qk_rope_head_dim], dim=-1
+    )  # k_pe [2, 64] #k_nope [2, 512]
+    k_nope = m.kv_a_layernorm(k_nope)
+    if nsa_use_prefill_cp(forward_batch, m.enable_prefill_cp):
+        positions = cp_split_and_rebuild_position(forward_batch, positions)
+    q_pe, k_pe = m.rotary_emb(positions, q_pe, k_pe.unsqueeze(1))
+    if nsa_use_prefill_cp(forward_batch, m.enable_prefill_cp):
+        # support allgather+rerrange
+        k_nope, k_pe = m.rebuild_cp_kv_cache(latent_cache, forward_batch, k_nope, k_pe)
+    forward_batch.token_to_kv_pool.set_kv_buffer(
+        m, forward_batch.out_cache_loc, k_nope.unsqueeze(1), k_pe
+    )
+    kv = m.kv_b_proj(k_nope)[0]
+    kv = kv.view(-1, m.num_local_heads, m.qk_nope_head_dim + m.v_head_dim)
+    k_nope = kv[..., : m.qk_nope_head_dim]
+    v = kv[..., m.qk_nope_head_dim :]
+    k_pe = k_pe.expand((*k_nope.shape[:-1], -1))
+    # k = m._concat_and_cast_mha_k(k_nope, k_pe, forward_batch)
+    return (
+        q_pe,
+        k_pe,
+        q_nope,
+        k_nope,
+        forward_batch,
+        zero_allocator,
+        positions,
+        None,
+        v,
+    )
 
 
 # region MLA
@@ -434,6 +471,7 @@ def forward_dsa_core_npu(
     forward_batch: "ForwardBatch",
     zero_allocator: "BumpAllocator",
     positions: torch.Tensor,
+    v: torch.Tensor,
 ) -> torch.Tensor:
     attn_output = m.attn_mqa(
         q_nope_out.contiguous(),

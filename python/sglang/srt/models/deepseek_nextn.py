@@ -32,6 +32,7 @@ from sglang.srt.layers.attention.nsa.utils import (
     cp_all_gather_rerange_output,
     cp_split_and_rebuild_data,
     cp_split_and_rebuild_position,
+    is_enable_prefill_cp,
     is_nsa_enable_prefill_cp,
     nsa_use_prefill_cp,
     prepare_input_dp_with_cp_dsa,
@@ -40,6 +41,7 @@ from sglang.srt.layers.dp_attention import (
     get_attention_cp_rank,
     get_attention_cp_size,
     is_dp_attention_enabled,
+    pcp_ag_rearange_output,
 )
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.logits_processor import LogitsProcessor
@@ -133,8 +135,9 @@ class DeepseekModelNextN(nn.Module):
         self.shared_head = nn.Module()
         self.shared_head.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.nsa_enable_prefill_cp = is_nsa_enable_prefill_cp()
-        if self.nsa_enable_prefill_cp:
-            self.cp_size = get_attention_cp_size()
+        self.enable_prefill_cp = is_enable_prefill_cp()
+        if self.nsa_enable_prefill_cp or self.enable_prefill_cp:
+            self.cp_size = self.pcp_size = get_attention_cp_size()
         else:
             self.cp_size = None
 
@@ -172,7 +175,10 @@ class DeepseekModelNextN(nn.Module):
                 )
             )
 
-        if nsa_use_prefill_cp(forward_batch, self.nsa_enable_prefill_cp):
+        if (
+            nsa_use_prefill_cp(forward_batch, self.nsa_enable_prefill_cp)
+            or self.enable_prefill_cp
+        ):
             hidden_states = cp_split_and_rebuild_data(forward_batch, hidden_states)
             positions = cp_split_and_rebuild_position(forward_batch, positions)
         residual = None
@@ -198,6 +204,13 @@ class DeepseekModelNextN(nn.Module):
                     self.cp_size,
                     forward_batch,
                     torch.cuda.current_stream(),
+                )
+            elif self.enable_prefill_cp:
+                # pcp allgather + rerrange
+                hidden_states = pcp_ag_rearange_output(
+                    hidden_states,
+                    self.pcp_size,
+                    forward_batch,
                 )
 
         os.environ["SGLANG_DEEPEP_BF16_DISPATCH"] = "0"
@@ -231,10 +244,12 @@ class DeepseekV3ForCausalLMNextN(DeepseekV3ForCausalLM):
         self.pp_group = get_pp_group()
         self.determine_num_fused_shared_experts("DeepseekV3ForCausalLMNextN")
         self.use_nsa = is_deepseek_nsa(config)
-        self.nsa_enable_prefill_cp = is_nsa_enable_prefill_cp()
-        if self.nsa_enable_prefill_cp:
-            self.cp_rank = get_attention_cp_rank()
-            self.cp_size = get_attention_cp_size()
+        self.enable_prefill_cp = (
+            is_nsa_enable_prefill_cp() if self.use_nsa else is_enable_prefill_cp()
+        )
+        if self.enable_prefill_cp:
+            self.cp_rank = self.pcp_rank = get_attention_cp_rank()
+            self.cp_size = self.pcp_size = get_attention_cp_size()
         else:
             self.cp_rank = None
             self.cp_size = None
@@ -259,13 +274,21 @@ class DeepseekV3ForCausalLMNextN(DeepseekV3ForCausalLM):
         forward_batch: ForwardBatch,
     ) -> torch.Tensor:
         # TODO current just support prefill batch=1 and len(input_ids) > self.cp_size * 2
-        if self.nsa_enable_prefill_cp:
-            if can_cp_split(len(input_ids), self.cp_size, self.use_nsa, forward_batch):
-                forward_batch.nsa_cp_metadata = prepare_input_dp_with_cp_dsa(
+        if self.enable_prefill_cp and self.use_nsa:
+            if can_cp_split(len(input_ids), self.cp_size, forward_batch):
+                forward_batch.cp_metadata = prepare_input_dp_with_cp_dsa(
                     len(input_ids),
                     self.cp_rank,
                     self.cp_size,
-                    forward_batch.seq_lens_cpu.tolist(),
+                    input_ids.device,
+                )
+        elif self.enable_prefill_cp:
+            if can_cp_split(len(input_ids), self.pcp_size, forward_batch):
+                forward_batch.cp_metadata = prepare_input_dp_with_cp_dsa(
+                    len(input_ids),
+                    self.cp_rank,
+                    self.cp_size,
+                    input_ids.device,
                 )
         hidden_states = self.model(input_ids, positions, forward_batch)
         return self.logits_processor(

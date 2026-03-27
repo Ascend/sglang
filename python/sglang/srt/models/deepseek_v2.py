@@ -58,6 +58,7 @@ from sglang.srt.layers.attention.nsa.utils import (
     cp_all_gather_rerange_output,
     cp_split_and_rebuild_data,
     cp_split_and_rebuild_position,
+    is_enable_prefill_cp,
     is_nsa_enable_prefill_cp,
     nsa_use_prefill_cp,
     prepare_input_dp_with_cp_dsa,
@@ -76,6 +77,7 @@ from sglang.srt.layers.dp_attention import (
     get_attention_tp_rank,
     get_attention_tp_size,
     is_dp_attention_enabled,
+    pcp_ag_rearange_output,
 )
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
@@ -1778,8 +1780,11 @@ class DeepseekV2Model(nn.Module):
         self.vocab_size = config.vocab_size
         self.first_k_dense_replace = config.first_k_dense_replace
         self.pp_group = get_pp_group()
-        self.nsa_enable_prefill_cp = is_nsa_enable_prefill_cp()
-        if self.nsa_enable_prefill_cp:
+        self.use_nsa = is_deepseek_nsa(config)
+        self.enable_prefill_cp = (
+            is_nsa_enable_prefill_cp() if self.use_nsa else is_enable_prefill_cp()
+        )
+        if self.enable_prefill_cp:
             self.cp_size = get_attention_cp_size()
         else:
             self.cp_size = None
@@ -1938,7 +1943,18 @@ class DeepseekV2Model(nn.Module):
             else None
         )
 
-        if nsa_use_prefill_cp(forward_batch):
+        if self.pp_group.is_first_rank:
+            if input_embeds is None:
+                hidden_states = self.embed_tokens(input_ids)
+            else:
+                hidden_states = input_embeds
+            residual = None
+        else:
+            assert pp_proxy_tensors is not None
+            hidden_states = pp_proxy_tensors["hidden_states"]
+            residual = pp_proxy_tensors["residual"]
+
+        if nsa_use_prefill_cp(forward_batch, self.enable_prefill_cp):
             if self.pp_group.is_first_rank:
                 hidden_states = cp_split_and_rebuild_data(forward_batch, hidden_states)
             positions = cp_split_and_rebuild_position(forward_batch, positions)
@@ -2021,13 +2037,14 @@ class DeepseekV2Model(nn.Module):
                 else:
                     hidden_states, _ = self.norm(hidden_states, residual)
 
-        if self.pp_group.is_last_rank and nsa_use_prefill_cp(forward_batch):
+        if self.pp_group.is_last_rank and nsa_use_prefill_cp(
+            forward_batch, self.enable_prefill_cp
+        ):
             # allgather + rerrange
-            hidden_states = cp_all_gather_rerange_output(
+            hidden_states = pcp_ag_rearange_output(
                 hidden_states,
                 self.cp_size,
                 forward_batch,
-                torch.cuda.current_stream(),
             )
         if len(aux_hidden_states) == 0:
             return hidden_states
@@ -2092,12 +2109,16 @@ class DeepseekV2ForCausalLM(nn.Module, DeepseekV2WeightLoaderMixin):
         )
         self.capture_aux_hidden_states = False
 
-        self.nsa_enable_prefill_cp = is_nsa_enable_prefill_cp()
-        if self.nsa_enable_prefill_cp:
-            self.cp_rank = get_attention_cp_rank()
-            self.cp_size = get_attention_cp_size()
+        self.use_nsa = is_deepseek_nsa(config)
+        self.enable_prefill_cp = (
+            is_nsa_enable_prefill_cp() if self.use_nsa else is_enable_prefill_cp()
+        )
+        if self.enable_prefill_cp:
+            self.cp_rank = self.pcp_rank = get_attention_cp_rank()
+            self.cp_size = self.pcp_size = get_attention_cp_size()
         else:
             self.cp_rank = self.cp_size = None
+            self.pcp_rank = self.pcp_size = None
 
         q_lora_rank = config.q_lora_rank if hasattr(config, "q_lora_rank") else None
         get_attn_tp_context().init_context(q_lora_rank, is_deepseek_nsa(config))
@@ -2162,13 +2183,13 @@ class DeepseekV2ForCausalLM(nn.Module, DeepseekV2WeightLoaderMixin):
         input_embeds: torch.Tensor = None,
         pp_proxy_tensors: Optional[PPProxyTensors] = None,
     ) -> torch.Tensor:
-        if self.nsa_enable_prefill_cp:
-            if can_cp_split(len(input_ids), self.cp_size, self.use_nsa, forward_batch):
-                forward_batch.nsa_cp_metadata = prepare_input_dp_with_cp_dsa(
+        if self.enable_prefill_cp:
+            if can_cp_split(len(input_ids), self.cp_size, forward_batch):
+                forward_batch.cp_metadata = prepare_input_dp_with_cp_dsa(
                     len(input_ids),
                     self.cp_rank,
                     self.cp_size,
-                    forward_batch.seq_lens_cpu.tolist(),
+                    input_ids.device,
                 )
 
         with get_attn_tp_context().maybe_input_scattered(forward_batch):

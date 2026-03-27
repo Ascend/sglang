@@ -36,15 +36,23 @@ from sglang.srt.eplb.expert_distribution import get_global_expert_distribution_r
 from sglang.srt.eplb.expert_location import ModelConfigForExpertLocation
 from sglang.srt.eplb.expert_location_dispatch import ExpertLocationDispatchInfo
 from sglang.srt.layers.activation import SiluAndMul
+from sglang.srt.layers.attention.nsa.utils import (
+    cp_split_and_rebuild_data,
+    cp_split_and_rebuild_position,
+    is_enable_prefill_cp,
+    use_pcp,
+)
 from sglang.srt.layers.communicator import (
     LayerCommunicator,
     LayerScatterModes,
     ScatterMode,
 )
 from sglang.srt.layers.dp_attention import (
+    get_attention_cp_size,
     get_attention_tp_rank,
     get_attention_tp_size,
     is_dp_attention_enabled,
+    pcp_ag_rearange_output,
 )
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
@@ -601,6 +609,8 @@ class Qwen2MoeModel(nn.Module):
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
         self.pp_group = get_pp_group()
+        self.enable_prefill_cp = is_enable_prefill_cp()
+        self.pcp_size = get_attention_cp_size() if self.enable_prefill_cp else 1
 
         if self.pp_group.is_first_rank:
             self.embed_tokens = VocabParallelEmbedding(
@@ -659,6 +669,9 @@ class Qwen2MoeModel(nn.Module):
             hidden_states = pp_proxy_tensors["hidden_states"]
             residual = pp_proxy_tensors["residual"]
 
+        if self.enable_prefill_cp and use_pcp(forward_batch):
+            hidden_states = cp_split_and_rebuild_data(forward_batch, hidden_states)
+            positions = cp_split_and_rebuild_position(forward_batch, positions)
         aux_hidden_states = []
         if forward_batch.can_run_tbo:
             hidden_states, residual = model_forward_maybe_tbo(
@@ -690,6 +703,7 @@ class Qwen2MoeModel(nn.Module):
                             else None
                         ),
                     )
+
         if not self.pp_group.is_last_rank:
             return PPProxyTensors(
                 {
@@ -704,6 +718,12 @@ class Qwen2MoeModel(nn.Module):
                 else:
                     hidden_states, _ = self.norm(hidden_states, residual)
 
+        if self.enable_prefill_cp and use_pcp(forward_batch):
+            hidden_states = pcp_ag_rearange_output(
+                hidden_states.contiguous(),
+                self.pcp_size,
+                forward_batch,
+            )
         if len(aux_hidden_states) == 0:
             return hidden_states
 

@@ -3171,7 +3171,13 @@ def require_gathered_buffer(server_args: ServerArgs):
 
 
 def require_mlp_sync(server_args: ServerArgs):
-    return server_args.enable_dp_attention or require_gathered_buffer(server_args)
+    # PCP can still trigger attention/MLP communication paths that rely on
+    # `global_num_tokens`, even when dp-attention is disabled.
+    return (
+        server_args.enable_dp_attention
+        or server_args.attn_cp_size > 1
+        or require_gathered_buffer(server_args)
+    )
 
 
 def find_local_repo_dir(repo_id: str, revision: Optional[str] = None) -> Optional[str]:
