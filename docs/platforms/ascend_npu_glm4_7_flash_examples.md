@@ -103,7 +103,7 @@ python3 -m sglang.launch_server \
 
 Note: TP size is currently limited to 2 or 4.
 
-### Running GLM-4.7-Flash on 1 x Atlas 800I A3 using slime-ascend.
+### Running GLM-4.7-Flash on 1 x Atlas 800I A3 in slime-ascend.
 
 #### Preparation
 
@@ -126,7 +126,7 @@ Note: Make sure you are using Transformers 5.3.0.
 
 #### Execution
 
-Run the following script to execute online inference.
+Run the following script to execute online **inference**.
 
 ```shell
 # high performance cpu
