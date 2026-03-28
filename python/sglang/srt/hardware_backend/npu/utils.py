@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 _is_npu = is_npu()
 indexer_weight_stream = None
+gva_is_inited = False
 
 
 class NPUACLFormat(IntEnum):
@@ -144,3 +145,44 @@ def get_indexer_weight_stream():
     if indexer_weight_stream is None:
         indexer_weight_stream = torch.npu.Stream()
     return indexer_weight_stream
+
+
+def lazy_init_zbccl_gva_mem(device, gpu_id, world_rank, world_size, cpu_group=None):
+    """
+    lazy init zbccl gva mem, keep weights and kv remains alloc by dma vmm to avoid memory fragment
+    """
+    from zbccl import zbccl_init, zbccl_set_logger_level, is_mix_alloc
+    if not is_mix_alloc():
+        logger.info("lazy init is supported only in mix alloc mode, this action will be passed")
+        return 1
+
+    global gva_is_inited
+    from sglang.srt.utils.common import get_available_gpu_memory
+    # TODO need to use allgather if you want use total_memory stats from mem_get_info as unbalance os
+    total_memory = 61.2   # 2.5GB for other (workspace & os) outside torch
+    free_gpu_memory = get_available_gpu_memory(device, gpu_id,
+                                               distributed=world_size > 1,
+                                               cpu_group=cpu_group, empty_cache=True)
+
+    used_memory = total_memory - free_gpu_memory
+
+    used_memory_in_mb = int(used_memory * 1024)
+    gva_in_mb = envs.ZBCCL_LOCAL_MEM_SIZE.get() - used_memory_in_mb
+    gva_in_mb = gva_in_mb - gva_in_mb % 128  # align to 128MB
+    print(f"[ZBCCL] rank {world_rank} allocated {gva_in_mb} MB gva space.")
+
+    assert not gva_is_inited, "zbccl gva should be inited only once"
+    # zbccl_set_logger_level(0)
+    if envs.ZBCCL_BOOTSTRAP_URL.get():
+        res = zbccl_init(
+            world_size,
+            gpu_id,
+            world_rank,
+            gva_in_mb * (1024**2),
+            ip_port=envs.ZBCCL_BOOTSTRAP_URL.get(),
+        )
+    else:
+        res = zbccl_init(world_size, gpu_id, world_rank, gva_in_mb * (1024**2))
+
+    gva_is_inited = True
+    return res

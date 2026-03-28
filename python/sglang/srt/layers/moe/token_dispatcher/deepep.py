@@ -30,16 +30,22 @@ from sglang.srt.utils import (
     is_blackwell,
     is_hip,
     is_npu,
+    is_npu_zero_buffer,
     load_json_config,
 )
 
 _is_npu = is_npu()
+_is_npu_zero_buffer = is_npu_zero_buffer()
 
 if TYPE_CHECKING:
     from sglang.srt.batch_overlap.single_batch_overlap import CombineOverlapArgs
 
 try:
-    from deep_ep import Buffer, Config
+    if _is_npu_zero_buffer:
+        from zbccl.zbccl_buffer import Buffer
+        from zbccl.zbccl.deepep_adaptor import Config
+    else:
+        from deep_ep import Buffer, Config
 
     if not _is_npu:
         from sglang.srt.layers.quantization.fp8_kernel import (

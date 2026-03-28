@@ -53,6 +53,7 @@ from sglang.srt.utils import (
     is_hip,
     is_musa,
     is_npu,
+    is_npu_zero_buffer,
     is_shm_available,
     is_xpu,
 )
@@ -60,6 +61,7 @@ from sglang.srt.utils.custom_op import register_custom_op
 from sglang.srt.utils.network import get_local_ip_auto
 
 _is_npu = is_npu()
+_is_npu_zero_buffer = is_npu_zero_buffer()
 _is_cpu = is_cpu()
 _is_xpu = is_xpu()
 _is_musa = is_musa()
@@ -1608,7 +1610,7 @@ _DEVICE_TO_DISTRIBUTED_BACKEND = {
     "xpu": "xccl",
     "hpu": "hccl",
     "cpu": "gloo",
-    "npu": "hccl",
+    "npu": "hccl" if not _is_npu_zero_buffer else "zbccl",
     "musa": "mccl",
 }
 
