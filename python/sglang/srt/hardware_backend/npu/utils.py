@@ -2,7 +2,7 @@ import functools
 import logging
 from enum import IntEnum
 from typing import TYPE_CHECKING, Callable
-
+import sys
 import torch
 
 from sglang.srt.environ import envs
@@ -147,11 +147,41 @@ def get_indexer_weight_stream():
     return indexer_weight_stream
 
 
-def lazy_init_zbccl_gva_mem(device, gpu_id, world_rank, world_size, cpu_group=None):
+def init_zbal(tp_size, gpu_id, tp_rank, do_check=True):
     """
-    lazy init zbccl gva mem, keep weights and kv remains alloc by dma vmm to avoid memory fragment
+    init zbal, if is mix alloc mode, only register for sma & comm
     """
-    from zbccl import zbccl_init, zbccl_set_logger_level, is_mix_alloc
+    zbal_mem_size = envs.SGLANG_ZBAL_LOCAL_MEM_SIZE.get()
+    if not zbal_mem_size > 0:
+        return 1
+
+    global gva_is_inited
+    from zbal import switch_to_allocator, is_mix_alloc, zbal_init
+    if is_mix_alloc():
+        switch_to_allocator()
+        # use lazy init for mix alloc
+        return 1
+    else:
+        if envs.SGLANG_ZBAL_BOOTSTRAP_URL.get():
+            ret = zbal_init(tp_size, gpu_id, tp_rank, zbal_mem_size * (1024 ** 2),
+                             ip_port=envs.SGLANG_ZBAL_BOOTSTRAP_URL.get())
+        else:
+            ret = zbal_init(tp_size, gpu_id, tp_rank, zbal_mem_size * (1024 ** 2))
+
+        gva_is_inited = True
+
+        if do_check and not ret:
+            logger.error(f"[ZBAL] zbal init failed!")
+            sys.exit(-1)
+
+        return ret
+
+
+def lazy_init_zbal_gva_mem(device, gpu_id, world_rank, world_size, cpu_group=None, do_check=True):
+    """
+    lazy init zbal gva mem, keep weights and kv remains alloc by dma vmm to avoid memory fragment
+    """
+    from zbal import zbal_init, zbal_set_logger_level, is_mix_alloc
     if not is_mix_alloc():
         logger.info("lazy init is supported only in mix alloc mode, this action will be passed")
         return 1
@@ -167,22 +197,25 @@ def lazy_init_zbccl_gva_mem(device, gpu_id, world_rank, world_size, cpu_group=No
     used_memory = total_memory - free_gpu_memory
 
     used_memory_in_mb = int(used_memory * 1024)
-    gva_in_mb = envs.ZBCCL_LOCAL_MEM_SIZE.get() - used_memory_in_mb
+    gva_in_mb = envs.SGLANG_ZBAL_LOCAL_MEM_SIZE.get() - used_memory_in_mb
     gva_in_mb = gva_in_mb - gva_in_mb % 128  # align to 128MB
-    print(f"[ZBCCL] rank {world_rank} allocated {gva_in_mb} MB gva space.")
+    print(f"[ZBAL] rank {world_rank} allocated {gva_in_mb} MB gva space.")
 
-    assert not gva_is_inited, "zbccl gva should be inited only once"
-    # zbccl_set_logger_level(0)
-    if envs.ZBCCL_BOOTSTRAP_URL.get():
-        res = zbccl_init(
+    assert not gva_is_inited, "zbal gva should be inited only once"
+    # zbal_set_logger_level(0)
+    if envs.SGLANG_ZBAL_BOOTSTRAP_URL.get():
+        res = zbal_init(
             world_size,
             gpu_id,
             world_rank,
             gva_in_mb * (1024**2),
-            ip_port=envs.ZBCCL_BOOTSTRAP_URL.get(),
+            ip_port=envs.SGLANG_ZBAL_BOOTSTRAP_URL.get(),
         )
     else:
-        res = zbccl_init(world_size, gpu_id, world_rank, gva_in_mb * (1024**2))
+        res = zbal_init(world_size, gpu_id, world_rank, gva_in_mb * (1024**2))
 
     gva_is_inited = True
+    if do_check and not res:
+        logger.error(f"[ZBAL] zbal lazy init failed!")
+        sys.exit(-1)
     return res

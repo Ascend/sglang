@@ -157,22 +157,6 @@ def is_npu() -> bool:
 
 
 @lru_cache(maxsize=1)
-def is_npu_zero_buffer() -> bool:
-    if not is_npu():
-        return False
-
-    if os.getenv("ZBCCL_LOCAL_MEM_SIZE", -1) > 0:
-        try:
-            import zbccl  # noqa: F401
-        except ImportError:
-            raise RuntimeError("ZBCCL not found, please install it before using zero buffer.")
-
-        return True
-    else:
-        return False
-
-
-@lru_cache(maxsize=1)
 def is_host_cpu_x86() -> bool:
     machine = platform.machine().lower()
     return (
@@ -582,10 +566,10 @@ def get_available_gpu_memory(
             )
         if empty_cache:
             torch.npu.empty_cache()
-        if is_npu_zero_buffer():
-            import zbccl
-            if not zbccl.is_mix_alloc():
-                free_gpu_memory, total_gpu_memory = zbccl.zbccl_module.mem_get_info()
+        if envs.SGLANG_ZBAL_LOCAL_MEM_SIZE.get() > 0:
+            import zbal
+            if not zbal.is_mix_alloc():
+                free_gpu_memory, total_gpu_memory = zbal.zbal_module.mem_get_info()
             else:
                 # mix mode fall back into npu mem info since gva may not inited yet
                 free_gpu_memory, total_gpu_memory = torch.npu.mem_get_info()
@@ -1561,8 +1545,8 @@ def get_npu_memory_capacity():
     try:
         import torch_npu  # noqa: F401
 
-        if is_npu_zero_buffer():
-            return envs.ZBCCL_LOCAL_MEM_SIZE.get()  # unit: MB
+        if envs.SGLANG_ZBAL_LOCAL_MEM_SIZE.get() > 0:
+            return envs.SGLANG_ZBAL_LOCAL_MEM_SIZE.get()  # unit: MB
         else:
             return torch.npu.mem_get_info()[1] // 1024 // 1024  # unit: MB
     except ImportError as e:

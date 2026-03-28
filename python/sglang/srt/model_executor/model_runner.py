@@ -167,7 +167,6 @@ from sglang.srt.utils import (
     is_hip,
     is_host_cpu_arm64,
     is_npu,
-    is_npu_zero_buffer,
     log_info_on_rank0,
     monkey_patch_p2p_access_check,
     require_attn_tp_gather,
@@ -197,7 +196,6 @@ from sglang.srt.weight_sync.tensor_bucket import (
 
 _is_hip = is_hip()
 _is_npu = is_npu()
-_is_npu_zero_buffer = is_npu_zero_buffer()
 _is_cpu_amx_available = cpu_has_amx_support()
 _is_cpu_arm64 = is_host_cpu_arm64()
 
@@ -645,25 +643,29 @@ class ModelRunner(ModelRunnerKVCacheMixin):
             self.init_attention_backend()
             self.kernel_warmup()
             self.init_device_graphs()
-        elif self.device in ["npu", "cpu"]:
-            disable_cuda_graph_bk = False
-            if _is_npu_zero_buffer and self.spec_algorithm.is_eagle():
+        elif self.device == "cpu":
+            self.init_attention_backend()
+            self.init_device_graphs()
+        elif self.device == "npu":
+            disable_cuda_graph_bk = self.server_args.disable_cuda_graph
+            use_npu_zero_buffer = envs.SGLANG_ZBAL_LOCAL_MEM_SIZE.get() > 0
+            capture_dalay_enable = (self.server_args.disaggregation_mode in ["decode", "null"] and
+                                    (use_npu_zero_buffer and self.spec_algorithm.is_eagle() and not disable_cuda_graph_bk))
+            if capture_dalay_enable:
                 # we will delay main model graph capture until MTP weights already loaded
-                disable_cuda_graph_bk = self.server_args.disable_cuda_graph
                 self.server_args.disable_cuda_graph = True
 
             self.init_attention_backend()
-            # lazy init for zbccl with mix mode(before graph capture when enable_cuda_graph)
-            if (_is_npu_zero_buffer and not self.spec_algorithm.is_eagle() and
-                    (self.server_args.disaggregation_mode in ["decode", "null"] and not self.server_args.disable_cuda_graph)):
-                from sglang.srt.hardware_backend.npu.utils import lazy_init_zbccl_gva_mem
-                ret = lazy_init_zbccl_gva_mem(self.device, self.gpu_id, self.tp_rank, self.tp_size,
-                                              get_world_group().cpu_group)
-                if not ret:
-                    logger.error("[ZBCCL] zbccl lazy init failed!")
+            # lazy init for zbal with mix mode(before graph capture when enable_cuda_graph)
+            if use_npu_zero_buffer and capture_dalay_enable:
+                pass  # will lazy init zbal till MTP weights loaded
+            elif use_npu_zero_buffer and not self.is_draft_worker:
+                from sglang.srt.hardware_backend.npu.utils import lazy_init_zbal_gva_mem
+                lazy_init_zbal_gva_mem(self.device, self.gpu_id, self.tp_rank, self.tp_size,
+                                       get_world_group().cpu_group)
             self.init_device_graphs()
 
-            if _is_npu_zero_buffer and self.spec_algorithm.is_eagle():
+            if capture_dalay_enable:
                 self.server_args.disable_cuda_graph = disable_cuda_graph_bk
         else:
             self.graph_runner = None
