@@ -214,14 +214,15 @@ class ModelSlimConfig(QuantizationConfig):
         # TODO: @dsikka: refactor this to use schemes as other kernels
         # are supported + check if the layer is being ignored.
 
-        prefix_in_quant_config = prefix + ".0.down_proj.weight"
+        prefix_in_quant_config_down = prefix + ".0.down_proj.weight"
+        prefix_in_quant_config_w2 = prefix + ".0.w2.weight"
+        quant_scheme_down = self.quant_description.get(prefix_in_quant_config_down, "STATIC")
+        quant_scheme_w2 = self.quant_description.get(prefix_in_quant_config_w2, "STATIC")
         is_moe_w4a8_dynamic = (
-            self.quant_description.get(prefix_in_quant_config, "STATIC")
-            == "W4A8_DYNAMIC"
+            quant_scheme_down == "W4A8_DYNAMIC" or quant_scheme_w2 == "W4A8_DYNAMIC"
         )
         is_moe_w8a8_dynamic = (
-            self.quant_description.get(prefix_in_quant_config, "STATIC")
-            == "W8A8_DYNAMIC"
+            quant_scheme_down == "W8A8_DYNAMIC" or quant_scheme_w2 == "W8A8_DYNAMIC"
         )
         if is_moe_w4a8_dynamic:
             logger.info_once("Using ModelSlimW4A8Int8MoE")
@@ -232,7 +233,8 @@ class ModelSlimConfig(QuantizationConfig):
         else:
             logger.warning(
                 f"Unsupported FusedMoe modelslim scheme: "
-                f"{self.quant_description.get(prefix_in_quant_config.strip())} "
+                f"{self.quant_description.get(prefix_in_quant_config_down.strip())} "
+                f"{self.quant_description.get(prefix_in_quant_config_w2.strip())} "
                 f"in layer: {prefix}"
             )
             return None
