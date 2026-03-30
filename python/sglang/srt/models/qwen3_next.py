@@ -199,6 +199,10 @@ def fused_qkvzba_split_reshape_cat(
     return mixed_qkv, z, b, a
 
 
+if _is_npu:
+    from sgl_kernel_npu.fla.utils import fused_qkvzba_split_reshape_cat as fused_qkvzba_split_reshape_cat_npu
+    fused_qkvzba_split_reshape_cat = fused_qkvzba_split_reshape_cat_npu
+
 class Qwen3GatedDeltaNet(nn.Module):
     def __init__(
         self,
