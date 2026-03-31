@@ -97,8 +97,6 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && cd sgl-kernel-npu \
     && wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.8.0-py311-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
     && unzip sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.8.0-py311-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
-    && rm -rf sgl_kernel_npu*.whl \
-    && wget https://sglang-ascend.obs.cn-east-3.myhuaweicloud.com:443/B091/sgl_kernel_npu-2026.3.1-cp311-cp311-linux_aarch64.whl \
     && ${PIP_INSTALL} deep_ep*.whl sgl_kernel_npu*.whl \
     && cd .. && rm -rf sgl-kernel-npu \
     && cd "$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" && ln -sf deep_ep/deep_ep_cpp*.so
