@@ -129,6 +129,12 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.layer_id = layer_id
         self.activation = config.hidden_act
         self.layer_norm_epsilon = config.rms_norm_eps
+        packed_modules_mapping = {
+            "in_proj_qkvz": ["in_proj_qkv", "in_proj_z"],
+            "in_proj_ba": ["in_proj_b", "in_proj_a"],
+        }
+        if quant_config is not None and hasattr(quant_config, "packed_modules_mapping"):
+            quant_config.packed_modules_mapping["model"].update(packed_modules_mapping)
 
         # Conv1d layer
         self.conv_dim = self.key_dim * 2 + self.value_dim
