@@ -153,10 +153,7 @@ class ModelSlimConfig(QuantizationConfig):
                 key = "vision_model"
             elif "visual" in prefix:
                 key = "visual"
-            if (
-                "vision_tower" in prefix
-                or "mm_projector" in prefix
-            ):
+            if "vision_tower" in prefix or "mm_projector" in prefix:
                 prefix = prefix.replace(r"attn.qkv_proj", r"wqkv")
                 prefix = prefix.replace(r"attn.proj", r"wo")
             packed_modules_mapping_subset = self.packed_modules_mapping.get(key, {})
