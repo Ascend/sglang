@@ -46,7 +46,6 @@ from sglang.srt.layers.linear import (
     RowParallelLinear,
 )
 from sglang.srt.layers.logits_processor import LogitsProcessor
-from sglang.srt.layers.moe.fused_moe_triton import fused_moe
 from sglang.srt.layers.moe.moe_runner import MoeRunnerConfig
 from sglang.srt.layers.moe.topk import TopK
 from sglang.srt.layers.quantization.base_config import QuantizationConfig
@@ -58,8 +57,16 @@ from sglang.srt.layers.vocab_parallel_embedding import (
 )
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 from sglang.srt.model_loader.weight_utils import default_weight_loader
-from sglang.srt.utils import add_prefix
+from sglang.srt.utils import add_prefix, is_npu
 
+_is_npu = is_npu()
+
+if not _is_npu:
+    from sglang.srt.layers.moe.fused_moe_triton import fused_moe
+else:
+    from sglang.srt.hardware_backend.npu.quantization.fused_moe_method_npu import (
+        fused_moe_npu,
+    ) as fused_moe
 
 def get_attention_sliding_window_size(config: PretrainedConfig) -> Optional[int]:
     sliding_window = getattr(config, "sliding_window", None)
@@ -266,7 +273,7 @@ class AfmoeMoE(nn.Module):
 
         router_logits, _ = self.gate(hidden_states)
         topk_output = self.topk(hidden_states, router_logits)
-        final_hidden_states = fused_moe.fused_moe(
+        final_hidden_states = self.fused_moe_method(
             hidden_states,
             w1=self.w1,
             w2=self.w2,
@@ -314,8 +321,8 @@ class AfmoeAttention(nn.Module):
         self.kv_size = self.num_kv_heads * self.head_dim
         self.scaling = self.head_dim**-0.5
 
-        rope_theta = config.rope_parameters["rope_theta"]
-        rope_scaling = config.rope_parameters
+        rope_theta = config.rope_theta
+        rope_scaling = config.rope_scaling
         partial_rotary_factor = getattr(config, "partial_rotary_factor", 1.0)
         self.rotary_dim = int(self.head_dim * partial_rotary_factor)
         max_position_embeddings = getattr(config, "max_position_embeddings", 8192)
