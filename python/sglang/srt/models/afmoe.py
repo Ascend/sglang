@@ -64,9 +64,7 @@ _is_npu = is_npu()
 if not _is_npu:
     from sglang.srt.layers.moe.fused_moe_triton import fused_moe
 else:
-    from sglang.srt.hardware_backend.npu.quantization.fused_moe_method_npu import (
-        fused_moe_npu,
-    ) as fused_moe
+    from sglang.srt.hardware_backend.npu.quantization.fused_moe_method_npu import fused_moe_npu as fused_moe
 
 def get_attention_sliding_window_size(config: PretrainedConfig) -> Optional[int]:
     sliding_window = getattr(config, "sliding_window", None)
@@ -273,7 +271,7 @@ class AfmoeMoE(nn.Module):
 
         router_logits, _ = self.gate(hidden_states)
         topk_output = self.topk(hidden_states, router_logits)
-        final_hidden_states = self.fused_moe_method(
+        final_hidden_states = fused_moe(
             hidden_states,
             w1=self.w1,
             w2=self.w2,
