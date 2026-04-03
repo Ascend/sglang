@@ -65,6 +65,7 @@ def npu_wrapper_rmsnorm_forward(func):
         if residual is not None:
             if post_residual_addition is not None:
                 residual = residual + post_residual_addition
+            from sgl_kernel_npu.norm.add_rmsnorm_bias import add_rmsnorm_bias
             out, residual_out = add_rmsnorm_bias(
                 x,
                 residual,
@@ -73,9 +74,14 @@ def npu_wrapper_rmsnorm_forward(func):
                 self.variance_epsilon,
             )
             return out.to(x.dtype), residual_out
+        from sgl_kernel_npu.norm.rmsnorm_bias import rmsnorm_bias
 
-        out = torch.ops.npu.npu_rms_norm(x, self.weight.data, self.variance_epsilon)[0]
-        out = out + self.bias
+        out = rmsnorm_bias(
+            x,
+            self.weight.data,
+            self.bias,
+            self.variance_epsilon,
+        )
         return out.to(x.dtype)
 
     return _rmsnorm_forward_oot
