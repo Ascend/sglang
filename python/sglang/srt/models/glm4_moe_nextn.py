@@ -167,6 +167,7 @@ class Glm4MoeForCausalLMNextN(Glm4MoeForCausalLM):
 
         with cxt:
             hidden_states = self.model(input_ids, positions, forward_batch)
+
         return self.logits_processor(
             input_ids, hidden_states, self.lm_head, forward_batch
         )
