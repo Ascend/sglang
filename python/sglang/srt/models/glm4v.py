@@ -562,8 +562,6 @@ class Glm4vForConditionalGeneration(nn.Module):
             use_data_parallel=self.use_data_parallel,
         )
 
-        vision_utils.update_vit_attn_dummy_heads_config(self.config)
-
         self.model = Glm4Model(
             config,
             quant_config=quant_config,

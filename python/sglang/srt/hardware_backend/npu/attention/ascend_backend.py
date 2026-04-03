@@ -467,6 +467,8 @@ class AscendAttnBackend(AttentionBackend):
             self.q_head_num_padding is not None
             and self.q_head_num_padding > self.tp_q_head_num
         ):
+            # In the MLA architecture, the FIA kernel requires the head count to be a power of 2.
+            # Therefore, we pad the head dimension accordingly and initialize an empty tensor for padding.
             metadata.nope_padding = torch.empty(
                 [
                     bs,
@@ -1050,6 +1052,9 @@ class AscendAttnBackend(AttentionBackend):
                         -1, layer.tp_q_head_num * layer.v_head_dim
                     )
         elif sum(forward_batch.extend_prefix_lens_cpu) > 0:
+            # This branch adds support for prefix cache for GLM-4.7-Flash.
+            # When using the MLA architecture, if qk head dim equals v head dim and the head count is not a power of 2,
+            # we use the FIA kernel for computation.
             if layer.qk_head_dim == layer.v_head_dim:
                 q = q.reshape(-1, layer.tp_q_head_num, layer.qk_head_dim)
 
@@ -1694,6 +1699,8 @@ class AscendAttnBackend(AttentionBackend):
                 self.q_head_num_padding is not None
                 and self.q_head_num_padding > layer.tp_q_head_num
             ):
+                # The FIA kernel only supports head counts that are powers of 2.
+                # Therefore, we pad the head dimension when it is not a power of 2.
                 q_nope = torch.cat(
                     [q_nope, self.forward_metadata.nope_padding], dim=2
                 ).contiguous()
