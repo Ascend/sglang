@@ -25,12 +25,12 @@ on:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11'
+        default: ''
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
         type: string
-        default: 'false'
+        default: ''
 
 
 concurrency:
@@ -76,7 +76,6 @@ jobs:
 
   nightly-1-npu-a3:
     needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     runs-on: linux-aarch64-a3-2
     strategy:
       fail-fast: false
@@ -142,7 +141,6 @@ jobs:
 
   nightly-2-npu-a3:
     needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     runs-on: linux-aarch64-a3-2
     strategy:
       fail-fast: false
@@ -207,7 +205,6 @@ jobs:
 
   nightly-4-npu-a3:
     needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     runs-on: linux-aarch64-a3-4
     strategy:
       fail-fast: false
@@ -273,7 +270,6 @@ jobs:
 
   nightly-8-npu-a3:
     needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     runs-on: linux-aarch64-a3-8
     strategy:
       fail-fast: false
@@ -339,7 +335,6 @@ jobs:
 
   nightly-16-npu-a3:
     needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     runs-on: linux-aarch64-a3-16
     strategy:
       fail-fast: false

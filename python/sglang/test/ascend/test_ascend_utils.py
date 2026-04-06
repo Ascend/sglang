@@ -44,8 +44,14 @@ CHATGLM2_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/chatglm2-6b"
 DBRX_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "AI-ModelScope/dbrx-instruct"
 )
+DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-R1-0528-W8A8"
+)
 DEEPSEEK_V3_2_EXP_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "DeepSeek-V3.2-Exp-W8A8"
+)
+DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-R1-0528-W8A8"
 )
 DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-V3.2-W8A8"
@@ -56,6 +62,7 @@ DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH = os.path.join(
 DEEPSEEK_CODER_1_3_B_BASE_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "deepseek-ai/deepseek-coder-1.3b-base"
 )
+DOTS_OCR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "rednote-hilab/dots.ocr")
 ERNIE_4_5_21B_A3B_PT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "baidu/ERNIE-4.5-21B-A3B-PT"
 )
@@ -64,6 +71,9 @@ EXAONE_3_5_7_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 )
 GEMMA_3_4B_IT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "google/gemma-3-4b-it")
 GLM_4_9B_CHAT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/glm-4-9b-chat")
+GPT_OSS_120B_BF16_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "eigen-ai-labs/gpt-oss-120b-bf16"
+)
 GRANITE_3_0_3B_A800M_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "ibm-granite/granite-3.0-3b-a800m-instruct"
 )
@@ -71,6 +81,9 @@ GRANITE_3_1_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "ibm-granite/granite-3.1-8b-instruct"
 )
 GROK_2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "huihui-ai/grok-2")
+GROK_2_WEIGHTS_TOKENIZER_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "huihui-ai/grok-2/tokenizer.tok.json"
+)
 INTERNLM2_7B_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Shanghai_AI_Laboratory/internlm2-7b"
 )
@@ -98,6 +111,9 @@ MINICPM3_4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "OpenBMB/MiniCPM3-4B"
 MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "mistralai/Mistral-7B-Instruct-v0.2"
 )
+OLMO_2_1124_7B_INSTRUCT_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "allenai/OLMo-2-1124-7B-Instruct"
+)
 OLMOE_1B_7B_0924_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "allenai/OLMoE-1B-7B-0924"
 )
@@ -111,6 +127,7 @@ QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen2.5-7B-Instruct"
 )
 QWEN3_0_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-0.6B")
+QWEN3_5_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-27B")
 QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-1.7B-GPTQ-Int8"
 )
@@ -144,9 +161,14 @@ QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH = os.path.join(
 )
 QWQ_32B_W8A8_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "vllm-ascend/QWQ-32B-W8A8")
 SMOLLM_1_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "HuggingFaceTB/SmolLM-1.7B")
+SOLAR_10_7B_INSTRUCT_V1_0_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "upstage/SOLAR-10.7B-Instruct-v1.0"
+)
 STABLELM_2_1_6B_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "stabilityai/stablelm-2-1_6b"
 )
+STARCODER2_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "bigcode/starcoder2-7b")
+TRINITY_MINI_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "arcee-ai/Trinity-Mini")
 XVERSE_MOE_A36B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "xverse/XVERSE-MoE-A36B")
 MINIMAX_M2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "cyankiwi/MiniMax-M2-BF16")
 
@@ -203,11 +225,19 @@ QWEN3_30B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B
 QWEN3_30B_A3B_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B-w8a8"
 )
+DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-V2-Lite-W8A8"
+)
 
 DEEPSEEK_R1_DISTILL_QWEN_7B_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
 )
-
+DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "DeepSeek-R1-0528-w4a8-per-channel"
+)
+DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-R1-0528-W8A8"
+)
 QWEN3_30B_MODELSLIM_INT4_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3-30B-A3B-w4a4-LAOS"
 )

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import requests
 
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -13,26 +14,33 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="stage-b-test-1-npu-a2", nightly=False)
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=800, suite="nightly-1-npu-a3", nightly=True)
 
 
 class TestAscendSamplingBackend(CustomTestCase):
+    """Testcase：When --sampling-backend=pytorch or ascend, verify the MMLU dataset accuracy (>0.65) and greedy sampling consistency of the Llama-3.1-8B-Instruct mode
+
+    [Test Category] Parameter
+    [Test Target] --sampling-backend;
+    """
+
+    sampling_backend = "ascend"
+
     @classmethod
     def setUpClass(cls):
-        cls.model = "/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-7B-Instruct"
+        cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
-                "--sampling-backend",
+                "--attention-backend",
                 "ascend",
-                "--disable-radix-cache",
                 "--disable-cuda-graph",
-                "--mem-fraction-static",
-                0.85,
+                "--sampling-backend",
+                cls.sampling_backend,
+                "--disable-radix-cache",
             ],
         )
 
@@ -41,6 +49,7 @@ class TestAscendSamplingBackend(CustomTestCase):
         kill_process_tree(cls.process.pid)
 
     def test_mmlu(self):
+        """Verify MMLU dataset evaluation accuracy meets the minimum requirement (score ≥ 0.65)"""
         args = SimpleNamespace(
             base_url=self.base_url,
             model=self.model,
@@ -54,10 +63,11 @@ class TestAscendSamplingBackend(CustomTestCase):
         self.assertGreaterEqual(metrics["score"], 0.65)
 
     def test_greedy(self):
+        """Verify greedy sampling consistency (identical results for single/batch requests with temperature=0)"""
 
         first_text = None
 
-        # ensure the answer is identical across single response
+        # 1. Verify consistency of results for 5 consecutive single requests
         for _ in range(5):
             response_single = requests.post(
                 self.base_url + "/generate",
@@ -77,6 +87,7 @@ class TestAscendSamplingBackend(CustomTestCase):
 
         first_text = None
 
+        # 2. Send a batch request with 10 identical prompts
         response_batch = requests.post(
             self.base_url + "/generate",
             json={
@@ -88,12 +99,16 @@ class TestAscendSamplingBackend(CustomTestCase):
             },
         ).json()
 
-        # ensure the answer is identical among the batch
+        # 3. Verify consistency of results within the batch response
         for i in range(10):
             text = response_batch[i]["text"]
             if first_text is None:
                 first_text = text
             self.assertEqual(text, first_text)
+
+
+class TestPyTorchSamplingBackend(TestAscendSamplingBackend):
+    sampling_backend = "pytorch"
 
 
 if __name__ == "__main__":
