@@ -20,6 +20,7 @@ from sglang.srt.layers.dp_attention import (
 from sglang.srt.layers.layernorm import GemmaRMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
+    MergedColumnParallelLinear,
     QKVParallelLinear,
     RowParallelLinear,
 )
@@ -252,23 +253,23 @@ class Qwen3GatedDeltaNet(nn.Module):
         projection_size_qkvz = self.key_dim * 2 + self.value_dim * 2
         projection_size_ba = self.num_v_heads * 2
 
-        self.in_proj_qkvz = ColumnParallelLinear(
-            input_size=self.hidden_size,
-            output_size=projection_size_qkvz,
-            bias=False,
+        self.in_proj_qkvz = self.create_qkvz_proj(
+            hidden_size=self.hidden_size,
+            key_dim=self.key_dim,
+            value_dim=self.value_dim,
             quant_config=quant_config,
-            tp_rank=self.attn_tp_rank,
-            tp_size=self.attn_tp_size,
             prefix=add_prefix("in_proj_qkvz", prefix),
-        )
-        self.in_proj_ba = ColumnParallelLinear(
-            input_size=self.hidden_size,
-            output_size=projection_size_ba,
-            bias=False,
-            quant_config=quant_config,
             tp_rank=self.attn_tp_rank,
             tp_size=self.attn_tp_size,
+        )
+        self.in_proj_ba = MergedColumnParallelLinear(
+            input_size=self.hidden_size,
+            output_sizes=[self.num_v_heads] * 2,
+            bias=False,
+            quant_config=quant_config,
             prefix=add_prefix("in_proj_ba", prefix),
+            tp_rank=self.attn_tp_rank,
+            tp_size=self.attn_tp_size,
         )
 
         # Override weight_loader for packed checkpoint format.
@@ -361,11 +362,20 @@ class Qwen3GatedDeltaNet(nn.Module):
         ModelWeightParameter exposes weight_loader as a read-only property
         backed by _weight_loader, while plain parameters store it as a
         regular attribute.  This helper handles both cases."""
-        param = module.weight
-        if hasattr(param, "_weight_loader"):
-            param._weight_loader = new_loader
-        else:
-            param.weight_loader = new_loader
+        for attr_name in (
+            "weight",
+            "weight_scale_inv",
+            "weight_scale",
+            "input_scale",
+            "weight_offset",
+        ):
+            param = getattr(module, attr_name, None)
+            if param is None:
+                continue
+            if hasattr(param, "_weight_loader"):
+                param._weight_loader = new_loader
+            else:
+                param.weight_loader = new_loader
 
     @staticmethod
     def _make_packed_weight_loader(module):
@@ -1113,11 +1123,18 @@ class Qwen3NextForCausalLM(nn.Module):
     ) -> Set[str]:
         stacked_params_mapping = [
             # (param_name, shard_name, shard_id)
+            # self attention
             ("qkv_proj", "q_proj", "q"),
             ("qkv_proj", "k_proj", "k"),
             ("qkv_proj", "v_proj", "v"),
+            # mlp
             ("gate_up_proj", "gate_proj", 0),
             ("gate_up_proj", "up_proj", 1),
+            # GDN
+            ("in_proj_qkvz.", "in_proj_qkv.", (0, 1, 2)),
+            ("in_proj_qkvz.", "in_proj_z.", 3),
+            ("in_proj_ba.", "in_proj_b.", 0),
+            ("in_proj_ba.", "in_proj_a.", 1),
         ]
 
         # Params for weights, fp8 weight scales, fp8 activation scales
