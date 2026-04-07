@@ -34,6 +34,7 @@ class TestStartProfile(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
         envs.SGLANG_TORCH_PROFILER_DIR.set(OUTPUT_DIR)
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
