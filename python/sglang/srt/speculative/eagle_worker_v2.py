@@ -380,8 +380,10 @@ class EagleDraftWorker(BaseDraftWorker):
             position_buf,
         )
 
-        build_tree_done = torch.get_device_module(self.device).Event()
-        build_tree_done.record()
+        build_tree_done = None
+        if self.plan_stream:
+            build_tree_done = torch.get_device_module(self.device).Event()
+            build_tree_done.record()
 
         return EagleVerifyInput(
             draft_token=draft_tokens,
@@ -758,7 +760,7 @@ class EAGLEWorkerV2(BaseSpecWorker):
         # Batch 1: Target verify
         # Prepare for target verify in a separate stream
         with self.plan_stream_ctx:
-            if hasattr(verify_input, 'build_tree_done_event') and self.plan_stream:
+            if verify_input.build_tree_done_event and self.plan_stream:
                 verify_input.build_tree_done_event.wait(self.plan_stream)
             verify_forward_batch, can_run_cuda_graph = (
                 verify_input.prepare_for_v2_verify(
