@@ -58,6 +58,18 @@ TWO_NPU_CASES: list[DiffusionTestCase] = [
         T2I_sampling_params,
         run_consistency_check=False,
     ),
+    DiffusionTestCase(
+        "qwen_image_t2i_2npu",
+        DiffusionServerArgs(
+            model_path="/root/.cache/modelscope/hub/models/Qwen/Qwen-Image",
+            modality="image",
+            num_gpus=2,
+            # test ring attn
+            ulysses_degree=1,
+            ring_degree=2,
+        ),
+        T2I_sampling_params,
+    ),
 ]
 
 EIGHT_NPU_CASES: list[DiffusionTestCase] = [

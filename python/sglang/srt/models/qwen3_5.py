@@ -102,7 +102,6 @@ _is_cpu = is_cpu()
 _is_gfx95 = is_gfx95_supported()
 _is_amx_available = cpu_has_amx_support()
 
-
 cached_get_processor = lru_cache(get_processor)
 
 
@@ -132,6 +131,12 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         self.layer_id = layer_id
         self.activation = config.hidden_act
         self.layer_norm_epsilon = config.rms_norm_eps
+        packed_modules_mapping = {
+            "in_proj_qkvz": ["in_proj_qkv", "in_proj_z"],
+            "in_proj_ba": ["in_proj_b", "in_proj_a"],
+        }
+        if quant_config is not None and hasattr(quant_config, "packed_modules_mapping"):
+            quant_config.packed_modules_mapping["model"].update(packed_modules_mapping)
 
         # Conv1d layer
         self.conv_dim = self.key_dim * 2 + self.value_dim
@@ -203,6 +208,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         conv_weights = self.conv1d.weight.view(
             self.conv1d.weight.size(0), self.conv1d.weight.size(2)
         )
+
         self.attn = RadixLinearAttention(
             layer_id=layer_id,
             num_q_heads=self.num_k_heads // self.attn_tp_size,
@@ -439,7 +445,11 @@ class Qwen3_5GatedDeltaNet(nn.Module):
             hidden_states
         )
 
-        if self.num_v_heads // self.num_k_heads in [1, 2, 4] and not _is_cpu:
+        if (
+            self.num_v_heads // self.num_k_heads in [1, 2, 4]
+            and not _is_cpu
+            and not _is_npu
+        ):
             mixed_qkv, z, b, a = fused_qkvzba_split_reshape_cat_contiguous(
                 projected_states_qkvz,
                 projected_states_ba,
@@ -448,6 +458,8 @@ class Qwen3_5GatedDeltaNet(nn.Module):
                 self.head_k_dim,
                 self.head_v_dim,
             )
+            b = b.contiguous()
+            a = a.contiguous()
         elif _is_cpu and _is_amx_available:
             mixed_qkv, z, b, a = (
                 torch.ops.sgl_kernel.fused_qkvzba_split_reshape_cat_cpu(
@@ -463,6 +475,8 @@ class Qwen3_5GatedDeltaNet(nn.Module):
             query, key, value, z, b, a = self.fix_query_key_value_ordering(
                 projected_states_qkvz, projected_states_ba
             )
+            b = b.contiguous()
+            a = a.contiguous()
             query, key, value = map(
                 lambda x: x.reshape(x.shape[0], -1), (query, key, value)
             )

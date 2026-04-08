@@ -157,6 +157,9 @@ from sglang.srt.utils.custom_op import register_custom_op
 if _use_aiter:
     from sglang.srt.layers.rocm_linear_utils import aiter_dsv3_router_gemm
 
+if _use_aiter:
+    from sglang.srt.layers.rocm_linear_utils import aiter_dsv3_router_gemm
+
 if _use_aiter_gfx95:
     from sglang.srt.layers.rocm_linear_utils import (
         get_dsv3_gemm_output_zero_allocator_size,
@@ -339,7 +342,6 @@ class MoEGate(nn.Module):
                     logits = dsv3_router_gemm(
                         hidden_states, self.weight, out_dtype=torch.float32
                     )
-
             elif _use_aiter:
                 logits = aiter_dsv3_router_gemm(hidden_states, self.weight)
             else:
