@@ -269,25 +269,22 @@ class AscendGDNAttnBackend(GDNAttnBackend):
                 conv_states.transpose(1, 2)[conv_dst[mask_indices]] = mixed_qkv_to_track
             kernel_size = layer.conv_weights.shape[-1]
             conv_states_for_prefill = conv_states[:, -(kernel_size - 1) :, :]
-            conv_states_tmp = conv_states_for_prefill.contiguous()
+            conv_states_tmp = conv_states_for_prefill.transpose(1, 2).contiguous()
 
-            x = mixed_qkv.transpose(0, 1).contiguous()
-            weight = layer.conv_weights.transpose(0, 1).contiguous()
-            activation_mode = layer.activation == "silu"
-
-            mixed_qkv = torch.ops.npu.causal_conv1d(
-                x,
-                weight,
-                conv_states_tmp,
-                query_start_loc,
-                cache_indices,
-                has_initial_states,
+            mixed_qkv = causal_conv1d_fn(
+                mixed_qkv,
+                layer.conv_weights,
                 layer.bias,
-                activation_mode,
-                self.pad_slot_id,
-            )[:seq_len]
-
-            conv_states[:, -(kernel_size - 1) :, :] = conv_states_tmp
+                activation=layer.activation,
+                conv_states=conv_states_tmp,
+                has_initial_state=has_initial_states,
+                cache_indices=cache_indices,
+                query_start_loc=query_start_loc,
+                seq_lens_cpu=forward_batch.extend_seq_lens_cpu,
+            ).transpose(0, 1)[:seq_len]
+            conv_states[:, -(kernel_size - 1) :, :] = conv_states_tmp.transpose(
+                1, 2
+            ).contiguous()
         if is_target_verify:
             g, beta = fused_gdn_gating_kernel_without_sigmoid(
                 layer.A_log, a, b, layer.dt_bias
