@@ -271,6 +271,16 @@ class Qwen3GatedDeltaNet(nn.Module):
             prefix=add_prefix("in_proj_ba", prefix),
         )
 
+        # Override weight_loader for packed checkpoint format.
+        # Must capture original_loader BEFORE overwriting.
+        self._override_weight_loader(
+            self.in_proj_qkvz, self._make_packed_weight_loader(self.in_proj_qkvz)
+        )
+        self._override_weight_loader(
+            self.in_proj_ba, self._make_packed_weight_loader(self.in_proj_ba)
+        )
+
+        # Conv1d weight loader setup
         query_key_settings = (self.key_dim, 0, False)
         value_settings = (self.value_dim, 0, False)
 
@@ -344,7 +354,74 @@ class Qwen3GatedDeltaNet(nn.Module):
             dt_bias=self.dt_bias,
         )
 
-    def fix_query_key_value_ordering(self, mixed_qkvz, mixed_ba):
+    @staticmethod
+    def _override_weight_loader(module, new_loader):
+        """Override weight_loader on a module's weight parameter.
+
+        ModelWeightParameter exposes weight_loader as a read-only property
+        backed by _weight_loader, while plain parameters store it as a
+        regular attribute.  This helper handles both cases."""
+        param = module.weight
+        if hasattr(param, "_weight_loader"):
+            param._weight_loader = new_loader
+        else:
+            param.weight_loader = new_loader
+
+    @staticmethod
+    def _make_packed_weight_loader(module):
+        """Create a weight_loader that does contiguous TP slicing for fused
+        (packed-format) checkpoint weights (shard_id=None), and delegates
+        to the standard MergedColumnParallelLinear loader for split checkpoint
+        weights (shard_id=int/tuple)."""
+        original_loader = module.weight.weight_loader
+
+        def weight_loader(param, loaded_weight, loaded_shard_id=None):
+            if loaded_shard_id is None:
+                # Fused checkpoint: weight is in packed (per-head-group)
+                # format. Do contiguous TP slice like ColumnParallelLinear.
+                output_dim = getattr(param, "output_dim", None)
+                if output_dim is not None and module.tp_size > 1:
+                    shard_size = param.data.shape[output_dim]
+                    start_idx = module.tp_rank * shard_size
+                    loaded_weight = loaded_weight.narrow(
+                        output_dim, start_idx, shard_size
+                    )
+                assert param.data.shape == loaded_weight.shape, (
+                    f"Shape mismatch: param {param.data.shape} vs "
+                    f"loaded {loaded_weight.shape}"
+                )
+                param.data.copy_(loaded_weight)
+            else:
+                # Split checkpoint (int or tuple shard_id) → standard path
+                original_loader(param, loaded_weight, loaded_shard_id)
+
+        return weight_loader
+
+    def create_qkvz_proj(
+        self,
+        hidden_size: int,
+        key_dim: int,
+        value_dim: int,
+        quant_config: QuantizationConfig | None,
+        prefix: str,
+        tp_rank: Optional[int] = None,
+        tp_size: Optional[int] = None,
+    ) -> MergedColumnParallelLinear:
+        return MergedColumnParallelLinear(
+            input_size=hidden_size,
+            output_sizes=[key_dim, key_dim, value_dim, value_dim],
+            bias=False,
+            quant_config=quant_config,
+            prefix=prefix,
+            tp_rank=tp_rank,
+            tp_size=tp_size,
+        )
+
+    def fix_query_key_value_ordering(
+        self,
+        mixed_qkvz: torch.Tensor,
+        mixed_ba: torch.Tensor,
+    ):
         """
         Derives `query`, `key` and `value` tensors from `mixed_qkvzba`.
         """
