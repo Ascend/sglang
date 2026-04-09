@@ -56,7 +56,11 @@ class BaseReasoningFormatDetector:
         One-time parsing: Detects and parses reasoning sections in the provided text.
         Returns both reasoning content and normal text separately.
         """
-        in_reasoning = self._in_reasoning or self.think_start_token in text
+        in_reasoning = (
+            self._in_reasoning
+            or self.think_start_token in text
+            or self.think_end_token in text
+        )
 
         if not in_reasoning:
             return StreamingParseResult(normal_text=text)
@@ -124,6 +128,10 @@ class BaseReasoningFormatDetector:
         # Strip `<think>` token if present
         if not self.stripped_think_start and self.think_start_token in current_text:
             current_text = current_text.replace(self.think_start_token, "")
+            self.stripped_think_start = True
+            self._in_reasoning = True
+        
+        if not self._in_reasoning and self.think_end_token in current_text:
             self.stripped_think_start = True
             self._in_reasoning = True
 
@@ -235,7 +243,7 @@ class Qwen3Detector(BaseReasoningFormatDetector):
         super().__init__(
             "<think>",
             "</think>",
-            force_reasoning=force_reasoning,
+            force_reasoning=False,
             stream_reasoning=stream_reasoning,
             continue_final_message=continue_final_message,
             previous_content=previous_content,
