@@ -71,9 +71,6 @@ class EagleVerifyInput(SpecInput, EagleVerifyInputV2Mixin):
     # Shape info for padding
     num_tokens_per_req: int = -1
 
-    # plan stream event
-    build_tree_done_event: Optional[torch.cuda.Event] = None
-
     def __post_init__(self):
         super().__init__(SpecInputType.EAGLE_VERIFY)
 
