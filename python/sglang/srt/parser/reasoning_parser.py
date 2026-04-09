@@ -130,7 +130,7 @@ class BaseReasoningFormatDetector:
             current_text = current_text.replace(self.think_start_token, "")
             self.stripped_think_start = True
             self._in_reasoning = True
-        
+
         if not self._in_reasoning and self.think_end_token in current_text:
             self.stripped_think_start = True
             self._in_reasoning = True
