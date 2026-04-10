@@ -12,7 +12,6 @@ The GLM (General Language Model) series is an open-source bilingual large langua
 - `GLM-5.0-w4a8`(Quantized version without mtp): [Download model weight](https://modelers.cn/models/Eco-Tech/GLM-5-w4a8).
 - You can use [msmodelslim](https://gitcode.com/Ascend/msmodelslim) to quantify the model naively.
 
-
 ### Installation
 
 The dependencies required for the NPU runtime environment have been integrated into a Docker image and uploaded to the Ascend platform. You can directly pull it.
@@ -54,6 +53,7 @@ swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${TAG}
 ```
 
 Note: Using this image, you need to update transformers to main branch
+
 ``` shell
 # reinstall transformers
 pip install git+https://github.com/huggingface/transformers.git
