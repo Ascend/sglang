@@ -200,6 +200,7 @@ Notes:
     ```bash
     export SGLANG_CPU_OMP_THREADS_BIND="0-39|43-82|86-125|128-167|171-210|214-253"
     ```
+
     This configuration is equivalent to:
     - rank 0: `numactl -C 0-39 -m 0`
     - rank 1: `numactl -C 43-82 -m 1`
@@ -208,12 +209,13 @@ Notes:
     - rank 4: `numactl -C 171-210 -m 4`
     - rank 5: `numactl -C 214-253 -m 5`
 
-
     **example 2**: Run SGLang service with TP=2, using 96 cores cross 3 SNCs on a Xeon® 6972P server,
     which has 32-32-32 cores on the 3 SNCs in a socket, we should set:
+
     ```bash
     export SGLANG_CPU_OMP_THREADS_BIND="0-95|96-191"
     ```
+
     This configuration is equivalent to:
     - rank 0: `numactl -C 0-95 -m 0-2`
     - rank 1: `numactl -C 96-191 -m 3-5`

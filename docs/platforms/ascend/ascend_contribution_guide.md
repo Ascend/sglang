@@ -73,21 +73,12 @@ Also, do not rely on the "Latency/Output throughput" from this script, as it is 
 
 GSM8K is too easy for state-of-the-art models nowadays. Please try your own more challenging accuracy tests.
 You can find additional accuracy eval examples in:
-<<<<<<< HEAD:docs/platforms/ascend_contribution_guide.md
-
-- [test_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/registered/eval/test_eval_accuracy_large.py)
-- [test_moe_eval_accuracy_large.py]()
-
-## Benchmark the speed
-
-Refer to [Benchmark and Profiling](../developer_guide/benchmark_and_profiling.md).
-=======
 - [test_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/registered/eval/test_eval_accuracy_large.py)
 - [test_moe_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/registered/eval/test_moe_eval_accuracy_large.py)
 
 ## Benchmark the speed
+
 Refer to [Benchmark and Profiling](../../developer_guide/benchmark_and_profiling.md).
->>>>>>> f30df723bf146d4a8037010b0b11939a601df423:docs/platforms/ascend/ascend_contribution_guide.md
 
 ## Requesting a review for merge
 

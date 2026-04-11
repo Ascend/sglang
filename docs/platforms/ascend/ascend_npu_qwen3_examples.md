@@ -94,9 +94,6 @@ python -m sglang.launch_server \
    --mem-fraction-static 0.8
 ```
 
-<<<<<<< HEAD:docs/platforms/ascend_npu_qwen3_examples.md
-### Running Qwen3-VL-8B-Instruct on 1 x Atlas 800I A3
-=======
 #### Running Qwen3-235B-A22B-Instruct-2507 with 256K long sequence on 2 x Atlas 800I A3 without CP
 
 This example uses **PD disaggregation** for long-sequence inference and keeps **context parallel disabled**.
@@ -188,8 +185,7 @@ python3 -m sglang_router.launch_router \
    --prometheus-port 29010
 ```
 
-#### Running Qwen3-VL-8B-Instruct on 1 x Atlas 800I A3.
->>>>>>> f30df723bf146d4a8037010b0b11939a601df423:docs/platforms/ascend/ascend_npu_qwen3_examples.md
+#### Running Qwen3-VL-8B-Instruct on 1 x Atlas 800I A3
 
 Model weights could be found [on the website](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct)
 

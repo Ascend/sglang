@@ -7,11 +7,7 @@ You can install SGLang using any of the methods below. Please go through `System
 
 | Component         | Version                 | Obtain Way                                                                                                                                                                                                                   |
 |-------------------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-<<<<<<< HEAD:docs/platforms/ascend_npu.md
 | HDK               | 25.3.RC1                  | [website](https://hiascend.com/hardware/firmware-drivers/commercial?product=7&model=33) |
-=======
-| HDK               | 25.3.RC1                  | [link](https://www.hiascend.com/hardware/firmware-drivers/commercial?product=7&model=33) |
->>>>>>> f30df723bf146d4a8037010b0b11939a601df423:docs/platforms/ascend/ascend_npu.md
 | CANN              | 8.5.0                     | [Obtain Images](#obtain-cann-image)                                                                                                                                                                                          |
 | Pytorch Adapter   | 7.3.0                   | [website](https://gitcode.com/Ascend/pytorch/releases)                                                                                                                                                                          |
 | MemFabric         | 1.0.5                   | `pip install memfabric-hybrid==1.0.5`                                                                                                                                                                 |

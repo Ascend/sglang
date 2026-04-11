@@ -547,13 +547,8 @@ do
         --moe-a2a-backend deepep --enable-dp-attention --deepep-mode low_latency --enable-dp-lm-head \
         --cuda-graph-bs 8 10 12 14 16 18 20 22 24 --disaggregation-transfer-backend ascend --watchdog-timeout 9000 --context-length 8192 \
         --speculative-algorithm NEXTN --speculative-num-steps 3 --speculative-eagle-topk 1 --speculative-num-draft-tokens 4  \
-<<<<<<< HEAD:docs/platforms/ascend_npu_best_practice.md
-        --prefill-round-robin-balance --disable-shared-experts-fusion --dtype bfloat16 --tokenizer-worker-num 4 \
-           --load-balance-method decode_round_robin
-=======
         --disable-shared-experts-fusion --dtype bfloat16 --tokenizer-worker-num 4 \
-		--load-balance-method decode_round_robin
->>>>>>> f30df723bf146d4a8037010b0b11939a601df423:docs/platforms/ascend/ascend_npu_best_practice.md
+        --load-balance-method decode_round_robin
         NODE_RANK=$i
         break
     fi
@@ -752,13 +747,8 @@ do
         --moe-a2a-backend deepep --enable-dp-attention --deepep-mode low_latency --enable-dp-lm-head \
         --cuda-graph-bs 8 10 12 14 16 18 20 22 24 --disaggregation-transfer-backend ascend --watchdog-timeout 9000 --context-length 8192 \
         --speculative-algorithm NEXTN --speculative-num-steps 3 --speculative-eagle-topk 1 --speculative-num-draft-tokens 4  \
-<<<<<<< HEAD:docs/platforms/ascend_npu_best_practice.md
-        --prefill-round-robin-balance --disable-shared-experts-fusion --dtype bfloat16 --tokenizer-worker-num 4 \
-          --load-balance-method decode_round_robin
-=======
         --disable-shared-experts-fusion --dtype bfloat16 --tokenizer-worker-num 4 \
-		--load-balance-method decode_round_robin
->>>>>>> f30df723bf146d4a8037010b0b11939a601df423:docs/platforms/ascend/ascend_npu_best_practice.md
+        --load-balance-method decode_round_robin
         NODE_RANK=$i
         break
     fi
@@ -1965,13 +1955,8 @@ do
         --attention-backend ascend --device npu --quantization modelslim --enable-dp-attention \
         --moe-a2a-backend ascend_fuseep --cuda-graph-bs 16 32 48 56 64 72 80 88 96 \
         --dist-init-addr DIP1:5000 \
-<<<<<<< HEAD:docs/platforms/ascend_npu_best_practice.md
         --disaggregation-transfer-backend ascend --watchdog-timeout 9000 --context-length 8192 \
-        --prefill-round-robin-balance --enable-dp-lm-head --dtype bfloat16 --tokenizer-worker-num 4 --load-balance-method decode_round_robin
-=======
-	    --disaggregation-transfer-backend ascend --watchdog-timeout 9000 --context-length 8192 \
         --enable-dp-lm-head --dtype bfloat16 --tokenizer-worker-num 4 --load-balance-method decode_round_robin
->>>>>>> f30df723bf146d4a8037010b0b11939a601df423:docs/platforms/ascend/ascend_npu_best_practice.md
         NODE_RANK=$i
         break
     fi
