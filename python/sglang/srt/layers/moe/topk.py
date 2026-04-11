@@ -380,6 +380,12 @@ class TopK(MultiPlatformOp):
 
         from sglang.srt.hardware_backend.npu.moe.topk import fused_topk_npu
 
+        # Ensure correction_bias is on the same device as hidden_states(For OffloaderV1)
+        if self.topk_config.correction_bias is not None:
+            self.topk_config.correction_bias = self.topk_config.correction_bias.to(
+                hidden_states.device, non_blocking=True
+            )
+
         return fused_topk_npu(
             hidden_states=hidden_states,
             router_logits=router_logits,
