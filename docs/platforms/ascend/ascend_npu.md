@@ -100,7 +100,7 @@ You can download the SGLang image or build an image based on Dockerfile to obtai
 
 1. Download SGLang image
 
-    ```angular2html
+    ```shell
     dockerhub: docker.io/lmsysorg/sglang:$tag
     # Main-based tag, change main to specific version like v0.5.6,
     # you can get image for specific version

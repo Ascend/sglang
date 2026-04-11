@@ -100,8 +100,8 @@ MODEL_PATH=xxx
 export SGLANG_NPU_USE_MLAPO=1
 export SGLANG_USE_FIA_NZ=1
 
-LOCAL_HOST1=`hostname -I|awk -F " " '{print$1}'`
-LOCAL_HOST2=`hostname -I|awk -F " " '{print$2}'`
+LOCAL_HOST1=`hostname -I|awk -F " " '{print $1}'`
+LOCAL_HOST2=`hostname -I|awk -F " " '{print $2}'`
 echo "${LOCAL_HOST1}"
 echo "${LOCAL_HOST2}"
 # prefill
@@ -852,7 +852,7 @@ do
         --nnodes 2 --node-rank $i \
         --disaggregation-bootstrap-port 8995 \
         --moe-dense-tp-size 1 \
-	    --enable-nsa-prefill-context-parallel \
+        --enable-nsa-prefill-context-parallel \
         --nsa-prefill-cp-mode in-seq-split \
         --attn-cp-size 32 \
         --speculative-algorithm NEXTN --speculative-num-steps 1 --speculative-eagle-topk 1 --speculative-num-draft-tokens 2 \
@@ -910,7 +910,6 @@ do
     fi
 done
 ```
-
 
 ```shell
 python -m sglang_router.launch_router \
@@ -1348,7 +1347,7 @@ do
         --attention-backend ascend --device npu --quantization modelslim --enable-dp-attention \
         --moe-a2a-backend deepep --deepep-mode auto --cuda-graph-bs 6 8 10 12 18 24 \
         --dist-init-addr ${MIX_IP[0]}:5000 --chunked-prefill-size 131072 --max-prefill-tokens 458880 \
-        --speculative-algorithm EAGLE3 --speculative-draft-model-path xxx --speculative-draft-model-quantization= unquant \
+        --speculative-algorithm EAGLE3 --speculative-draft-model-path xxx --speculative-draft-model-quantization=unquant \
         --speculative-num-steps 3 --speculative-eagle-topk 1 --speculative-num-draft-tokens 4 \
         --context-length 8192 --disable-radix-cache \
         --enable-dp-lm-head --dtype bfloat16

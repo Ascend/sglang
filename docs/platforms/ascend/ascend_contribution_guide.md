@@ -39,16 +39,20 @@ SGLang uses Python's built-in [unittest](https://docs.python.org/3/library/unitt
 For detailed instructions on running tests and integrating them into CI, refer to [test/README.md](https://github.com/sgl-project/sglang/tree/main/test/README.md).
 
 If you need to use model which is not in ```python/sglang/test/ascend/test_ascend_utils.py`` list. Follow these steps:
+
 1. Register account and upload your model to [modelscope](https://modelscope.cn/models).
 2. Make sure your model is pre-cached on the CI server and is on the way "/data/ascend-ci-share-pkking-sglang/modelscope/hub/models/{your_model_repo}/{your_model}".
-If this is not the case, use following command on CI server:
-  ```bash
-  modelscope download
-  --model {your_model_repo}/{your_model}
-  --local_dir /data/ascend-ci-share-pkking-sglang/modelscope/hub/models/{your_model_repo}/{your_model}
-  ```
-  > Note: If you don’t have access to CI server, please ask maintainers (zl19940307@163.com) to download your model.
-4. Add model to ```python/sglang/test/ascend/test_ascend_utils.py``` (use docker ```"/root/.cache/modelscope/hub/models/{your_model_repo}/{your_model}"``` path).
+  If this is not the case, use following command on CI server:
+
+    ```bash
+    modelscope download
+    --model {your_model_repo}/{your_model}
+    --local_dir /data/ascend-ci-share-pkking-sglang/modelscope/hub/models/{your_model_repo}/{your_model}
+    ```
+
+    > Note: If you don't have access to CI server, please ask maintainers (zl19940307@163.com) to download your model.
+
+3. Add model to ```python/sglang/test/ascend/test_ascend_utils.py``` (use docker ```"/root/.cache/modelscope/hub/models/{your_model_repo}/{your_model}"``` path).
 
 ## Write documentations
 
@@ -73,6 +77,7 @@ Also, do not rely on the "Latency/Output throughput" from this script, as it is 
 
 GSM8K is too easy for state-of-the-art models nowadays. Please try your own more challenging accuracy tests.
 You can find additional accuracy eval examples in:
+
 - [test_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/registered/eval/test_eval_accuracy_large.py)
 - [test_moe_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/registered/eval/test_moe_eval_accuracy_large.py)
 
@@ -98,13 +103,13 @@ For CI to run on a pull request, it must have the "run-ci" label. Authorized use
 - `/tag-and-rerun-ci`: A single command that performs both `/tag-run-ci-label` and `/rerun-failed-ci`.
 - `/rerun-stage <stage-name>`: Reruns a specific test stage without waiting for its dependencies. This is useful when you want to quickly validate a fix for a specific test failure instead of waiting ~30 minutes for preceding stages to complete.
 
-If you have permission, the [Slash Command Handler](https://github.com/sgl-project/sglang/actions/workflows/slash-command-handler.yml) will run your command and react with a 👍 to your comment. It may take up to a few minutes for the reaction to appear. Here’s a usage [example](https://github.com/sgl-project/sglang/pull/14253#issuecomment-3599509302).
+If you have permission, the [Slash Command Handler](https://github.com/sgl-project/sglang/actions/workflows/slash-command-handler.yml) will run your command and react with a 👍 to your comment. It may take up to a few minutes for the reaction to appear. Here's a usage [example](https://github.com/sgl-project/sglang/pull/14253#issuecomment-3599509302).
 
 To avoid spamming a PR with too many `/rerun-failed-ci` comments, you can also trigger the command by editing an existing comment and adding any suffix (e.g., `/rerun-failed-ci try again`).
 
 Example of rerunning a single test stage: `/rerun-stage unit-test-backend-4-gpu`.
 
-If you don’t have permission, please ask maintainers to trigger CI for you.
+If you don't have permission, please ask maintainers to trigger CI for you.
 
 ### CI rate limits
 
