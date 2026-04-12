@@ -59,12 +59,19 @@ from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 from sglang.srt.model_loader.weight_utils import default_weight_loader
 from sglang.srt.utils import add_prefix, is_npu
 
-_is_npu = is_npu()
+from sglang.srt.utils import add_prefix, is_cuda, is_npu
 
-if not _is_npu:
+_is_npu = is_npu()
+_is_cuda = is_cuda()
+
+if _is_cuda:
     from sglang.srt.layers.moe.fused_moe_triton import fused_moe
+elif _is_npu:
+    from sglang.srt.hardware_backend.npu.quantization.fused_moe_method_npu import (
+        fused_moe_npu,
+    )
 else:
-    from sglang.srt.hardware_backend.npu.quantization.fused_moe_method_npu import fused_moe_npu as fused_moe
+    from sglang.srt.layers.moe.fused_moe_native import moe_forward_native
 
 def get_attention_sliding_window_size(config: PretrainedConfig) -> Optional[int]:
     sliding_window = getattr(config, "sliding_window", None)
@@ -206,6 +213,12 @@ class AfmoeMoE(nn.Module):
             ]
         )
         self.pack_params()
+        if _is_cuda:
+            self.fused_moe_method = fused_moe
+        elif _is_npu:
+            self.fused_moe_method = fused_moe_npu
+        else:
+            self.fused_moe_method = moe_forward_native
 
         if self.num_shared_experts:
             intermediate_size = config.moe_intermediate_size * self.num_shared_experts
@@ -232,8 +245,8 @@ class AfmoeMoE(nn.Module):
             )
 
         renormalize = self.route_norm if self.score_func == "sigmoid" else False
-        if not _is_npu:
-            self.topk = TopK(
+
+        self.topk = TopK(
                 top_k=self.top_k,
                 renormalize=renormalize,
                 use_grouped_topk=self.use_grouped_topk,
@@ -242,19 +255,7 @@ class AfmoeMoE(nn.Module):
                 custom_routing_function=custom_routing_fn,
                 correction_bias=correction_bias,
                 routed_scaling_factor=self.route_scale,
-            )
-        else:
-            self.topk = TopK(
-                top_k=self.top_k,
-                renormalize=False,
-                use_grouped_topk=self.use_grouped_topk,
-                num_expert_group=self.n_group if self.use_grouped_topk else None,
-                topk_group=self.topk_group if self.use_grouped_topk else None,
-                custom_routing_function=custom_routing_fn,
-                correction_bias=self.expert_bias,
-                scoring_func=self.score_func,
-                routed_scaling_factor=self.route_scale,
-            )
+        )
 
 
     def pack_params(self) -> None:
@@ -285,16 +286,27 @@ class AfmoeMoE(nn.Module):
 
         router_logits, _ = self.gate(hidden_states)
         topk_output = self.topk(hidden_states, router_logits)
-        final_hidden_states = fused_moe(
-            hidden_states,
-            w1=self.w1,
-            w2=self.w2,
-            topk_output=topk_output,
-            moe_runner_config=MoeRunnerConfig(
-                inplace=True,
-                routed_scaling_factor=self.route_scale,
-            ),
-        )
+        if _is_cuda or _is_npu:
+            final_hidden_states = self.fused_moe_method(
+                hidden_states,
+                w1=self.w1,
+                w2=self.w2,
+                topk_output=topk_output,
+                moe_runner_config=MoeRunnerConfig(
+                    inplace=True,
+                    routed_scaling_factor=self.route_scale,
+                ),
+            )
+        else:
+            final_hidden_states = self.fused_moe_method(
+                layer=self,
+                x=hidden_states,
+                topk_output=topk_output,
+                moe_runner_config=MoeRunnerConfig(
+                    inplace=True,
+                    routed_scaling_factor=self.route_scale,
+                ),
+            )
 
         if shared_output is not None:
             final_hidden_states = final_hidden_states + shared_output
