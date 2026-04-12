@@ -148,9 +148,10 @@ void shm_initialize(int size, int rank, const char* addr_string, const char* por
   // allocate workspace_buf for current rank
   struct allreduce_workspace* workspace_buf;
   struct allreduce_workspace* workspace_buf_other;
-  workspace_buf = (struct allreduce_workspace*)malloc(sizeof(struct allreduce_workspace));
+  struct allreduce_workspace* temp_ws = (struct allreduce_workspace*)malloc(sizeof(struct allreduce_workspace));
   snprintf(shm_name, NAME_BUF_SIZE, "%.900s_%d", shm_name_prefix, rank);
-  shared_create(&allreduce_buffer, shm_name, workspace_buf, sizeof(struct allreduce_workspace));
+  shared_create(&allreduce_buffer, shm_name, temp_ws, sizeof(struct allreduce_workspace));
+  free(temp_ws);
   workspace_buf = (struct allreduce_workspace*)allreduce_buffer.bytes;
   workspace_buf->states[0] = coll_alt2_allreduce_naive__copy_in_done;
   workspace_buf->states[1] = coll_begin;
