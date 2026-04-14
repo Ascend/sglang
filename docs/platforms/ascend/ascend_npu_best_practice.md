@@ -40,7 +40,7 @@ you encounter issues or have any questions, please [open an issue](https://githu
 | Qwen3-30B-A3B   | Atlas 800I A3 | 1     | PD Mixed    | 6K+1.5K | 10ms | W8A8 INT8    | [Optimal Configuration](#qwen3-30b-a3b-6k-1_5k-10ms-on-a3-1-cards-mixed-mode)  |
 | Qwen3-30B-A3B   | Atlas 800I A3 | 4     | PD Mixed    | 1K+0.3K | 8ms  | W8A8 INT8    | [Optimal Configuration](#qwen3-30b-a3b-1k-0_3k-8ms-on-a3-4-cards-mixed-mode)   |
 | Qwen3-Next-A3B-Instruct       | Atlas 800I A3 | 2     | PD Mixed    | 1K+0.3K | 14.21ms | W8A8 INT8    | [Optimal Configuration](#qwen3-next-1k-0_3k-14_21ms-on-a3-2-cards-mixed-mode)      |
-| Qwen3-Next-A3B-Instruct       | Atlas 800I A3 | 2     | PD Mixed    | 6K+1.5K | 15.62ms | W8A8 INT8    | [Optimal Configuration](#qwen3-next-6k-1k-15_62ms-on-a3-2-cards-mixed-mode)      |
+| Qwen3-Next-A3B-Instruct       | Atlas 800I A3 | 2     | PD Mixed    | 6K+1.5K | 15.62ms | W8A8 INT8    | [Optimal Configuration](#qwen3-next-6k-1_5k-15_62ms-on-a3-2-cards-mixed-mode)      |
 
 
 ### High Throughput
