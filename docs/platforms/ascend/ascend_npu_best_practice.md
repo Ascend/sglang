@@ -43,6 +43,7 @@ you encounter issues or have any questions, please [open an issue](https://githu
 | Qwen3-Next-A3B-Instruct       | Atlas 800I A3 | 2     | PD Mixed    | 6K+1.5K | 15.62ms | W8A8 INT8    | [Optimal Configuration](#qwen3-next-6k-1k-15_62ms-on-a3-2-cards-mixed-mode)      |
 
 
+### High Throughput
 
 | Model                          | Hardware      | Cards | Deploy Mode       | Dataset   | TPOT  | Quantization | Configuration                                                                                              |
 |--------------------------------|---------------|-------|-------------------|-----------|-------|--------------|------------------------------------------------------------------------------------------------------------|
@@ -2616,7 +2617,7 @@ We tested it based on the `RANDOM` dataset.
 python3 -m sglang.bench_serving  --dataset-name random --backend sglang --host 127.0.0.1 --port 7339 --random-range-ratio 1 --max-concurrency 16 --random-output-len 300 --random-input-len 1024 --num-prompts 16
 ```
 
-### Qwen3-Next 1K-0_3K 14.21ms on A3 2 Cards Mixed Mode
+### Qwen3-Next 1K-0_3K 14_21ms on A3 2 Cards Mixed Mode
 
 Model: Qwen3-Next-80B-A3B-Instruct
 
@@ -2710,8 +2711,7 @@ We tested it based on the `RANDOM` dataset.
 python3 -m sglang.bench_serving  --dataset-name random --backend sglang --host 127.0.0.1 --port 6699 --random-range-ratio 1 --max-concurrency 16 --random-output-len 300 --random-input-len 1024 --num-prompts 16
 ```
 
-
-### Qwen3-Next 6K-1_5K 15.62ms on A3 2 Cards Mixed Mode
+### Qwen3-Next 6K-1_5K 15_62ms on A3 2 Cards Mixed Mode
 
 Model: Qwen3-Next-80B-A3B-Instruct
 
