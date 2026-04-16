@@ -1600,6 +1600,8 @@ class Scheduler(
                 and has_shm_features(recv_reqs)
             ):
                 barrier(group=self.tp_cpu_group)
+            if self.server_args.enable_dp_attention and has_shm_features(recv_reqs):
+                barrier(group=self.attn_tp_cpu_group)
             for req in recv_reqs:
                 unwrap_shm_features(req)
 
