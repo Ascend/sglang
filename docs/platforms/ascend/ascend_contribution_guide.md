@@ -41,7 +41,7 @@ For detailed instructions on running tests and integrating them into CI, refer t
 If you need to use model which is not in ```python/sglang/test/ascend/test_ascend_utils.py`` list. Follow these steps:
 
 1. Register account and upload your model to [modelscope](https://modelscope.cn/models).
-2. Make sure your model is pre-cached on the CI server and is on the way "/data/ascend-ci-share-pkking-sglang/modelscope/hub/models/{your_model_repo}/{your_model}".
+2. Make sure your model is pre-cached on the CI server and is lacated at "/data/ascend-ci-share-pkking-sglang/modelscope/hub/models/{your_model_repo}/{your_model}".
   If this is not the case, use following command on CI server:
 
     ```bash
@@ -79,7 +79,7 @@ GSM8K is too easy for state-of-the-art models nowadays. Please try your own more
 You can find additional accuracy eval examples in:
 
 - [test_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/registered/eval/test_eval_accuracy_large.py)
-- [test_moe_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/registered/eval/test_moe_eval_accuracy_large.py)
+- [test_moe_deepep_eval_accuracy_large.py](https://github.com/sgl-project/sglang/blob/main/test/manual/ep/test_moe_deepep_eval_accuracy_large.py)
 
 ## Benchmark the speed
 

@@ -344,7 +344,7 @@ To minimize time-to-first-token (TTFT) and inter-token latency:
    ```bash
    export JAX_COMPILATION_CACHE_DIR=/tmp/jit_cache
    ```
-   
+
    Always set this environment variable to cache compiled kernels and accelerate server startup.
 
 2. **Data Type Optimization:**
@@ -453,7 +453,7 @@ Current contribution areas include:
 
 1. Visit the [sglang-jax repository](https://github.com/sgl-project/sglang-jax)
 2. Read the [Contribution Guide](https://github.com/sgl-project/sglang-jax/blob/main/docs/developer_guide/contribution_guide.md)
-3. Join the [SGL-JAX Slack community](https://sgl-fru7574.slack.com/archives/C09EBE5HT5X) for discussions
+3. Join the [SGLang-JAX Slack community](https://sgl-fru7574.slack.com/archives/C09EBE5HT5X) for discussions
 4. Report issues at [sglang-jax/issues](https://github.com/sgl-project/sglang-jax/issues)
 
 ### Testing on TPU

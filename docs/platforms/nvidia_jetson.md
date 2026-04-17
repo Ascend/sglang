@@ -74,7 +74,7 @@ After launching the engine, refer to [Chat completions](https://docs.sglang.io/b
 
 -----------------------------------------
 
-TorchAO is suggested to NVIDIA Jetson Orin.
+TorchAO is suggested for NVIDIA Jetson Orin.
 
 ```bash
 python -m sglang.launch_server \

@@ -9,21 +9,21 @@ you encounter issues or have any questions, please [open an issue](https://githu
 
 | Model             | Hardware      | Cards | Deploy Mode   | Dataset   | TPOT | Quantization | Configuration                                                                         |
 |-------------------|---------------|-------|---------------|-----------|------|--------------|---------------------------------------------------------------------------------------|
-| Deepseek-R1       | Atlas 800I A3 | 32    | PD Separation | 6K+1.6K   | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-6k-1_6k-20ms-on-a3-32-cards-separation-mode)     |
-| Deepseek-R1       | Atlas 800I A3 | 32    | PD Separation | 3.9K+1K   | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_9k-1k-20ms-on-a3-32-cards-separation-mode)     |
-| Deepseek-R1       | Atlas 800I A3 | 32    | PD Separation | 3.5K+1.5K | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-20ms-on-a3-32-cards-separation-mode)   |
-| Deepseek-R1       | Atlas 800I A3 | 32    | PD Separation | 3.5K+1K   | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1k-20ms-on-a3-32-cards-separation-mode)     |
+| DeepSeek-R1       | Atlas 800I A3 | 32    | PD Separation | 6K+1.6K   | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-6k-1_6k-20ms-on-a3-32-cards-separation-mode)     |
+| DeepSeek-R1       | Atlas 800I A3 | 32    | PD Separation | 3.9K+1K   | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_9k-1k-20ms-on-a3-32-cards-separation-mode)     |
+| DeepSeek-R1       | Atlas 800I A3 | 32    | PD Separation | 3.5K+1.5K | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-20ms-on-a3-32-cards-separation-mode)   |
+| DeepSeek-R1       | Atlas 800I A3 | 32    | PD Separation | 3.5K+1K   | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1k-20ms-on-a3-32-cards-separation-mode)     |
 | DeepSeek-V3.2     | Atlas 800I A3 | 32    | PD Separation | 128K+1K   | 20ms | W8A8 INT8    | [Optimal Configuration](#deepseek-v32-128k-1k-20ms-on-a3-32-cards-separation-mode) |
 
 ### High Throughput
 
 | Model       | Hardware      | Cards | Deploy Mode   | Dataset   | TPOT | Quantization | Configuration                                                                       |
 |-------------|---------------|-------|---------------|-----------|------|--------------|-------------------------------------------------------------------------------------|
-| Deepseek-R1 | Atlas 800I A3 | 32    | PD Separation | 3.5K+1.5K | 50ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-50ms-on-a3-32-cards-separation-mode) |
-| Deepseek-R1 | Atlas 800I A3 | 8     | PD Mixed      | 2K+2K     | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-2k-2k-50ms-on-a3-8-cards-mixed-mode)           |
-| Deepseek-R1 | Atlas 800I A3 | 16    | PD Separation | 2K+2K     | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-2k-2k-50ms-on-a3-16-cards-separation-mode)     |
-| Deepseek-R1 | Atlas 800I A3 | 8     | PD Mixed      | 3.5K+1.5K | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-50ms-on-a3-8-cards-mixed-mode)       |
-| Deepseek-R1 | Atlas 800I A3 | 16    | PD Separation | 3.5K+1.5K | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-50ms-on-a3-16-cards-separation-mode) |
+| DeepSeek-R1 | Atlas 800I A3 | 32    | PD Separation | 3.5K+1.5K | 50ms | W8A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-50ms-on-a3-32-cards-separation-mode) |
+| DeepSeek-R1 | Atlas 800I A3 | 8     | PD Mixed      | 2K+2K     | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-2k-2k-50ms-on-a3-8-cards-mixed-mode)           |
+| DeepSeek-R1 | Atlas 800I A3 | 16    | PD Separation | 2K+2K     | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-2k-2k-50ms-on-a3-16-cards-separation-mode)     |
+| DeepSeek-R1 | Atlas 800I A3 | 8     | PD Mixed      | 3.5K+1.5K | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-50ms-on-a3-8-cards-mixed-mode)       |
+| DeepSeek-R1 | Atlas 800I A3 | 16    | PD Separation | 3.5K+1.5K | 50ms | W4A8 INT8    | [Optimal Configuration](#deepseek-r1-3_5k-1_5k-50ms-on-a3-16-cards-separation-mode) |
 
 ## Qwen Series Models
 
@@ -61,9 +61,9 @@ you encounter issues or have any questions, please [open an issue](https://githu
 
 ### DeepSeek-R1 3_5K-1_5K 50ms on A3 32 Cards Separation Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 32Card
+Hardware: Atlas 800I A3 32 Card
 
 DeployMode: PD Separation
 
@@ -179,9 +179,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 6K-1_6K 20ms on A3 32 Cards Separation Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 32Card
+Hardware: Atlas 800I A3 32 Card
 
 DeployMode: PD Separation
 
@@ -295,9 +295,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 3_9K-1K 20ms on A3 32 Cards Separation Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 32Card
+Hardware: Atlas 800I A3 32 Card
 
 DeployMode: PD Separation
 
@@ -321,9 +321,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 3_5K-1_5K 20ms on A3 32 Cards Separation Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 32Card
+Hardware: Atlas 800I A3 32 Card
 
 DeployMode: PD Separation
 
@@ -347,9 +347,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 3_5K-1K 20ms on A3 32 Cards Separation Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 32Card
+Hardware: Atlas 800I A3 32 Card
 
 DeployMode: PD Separation
 
@@ -373,9 +373,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 2K-2K 50ms on A3 8 Cards Mixed Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -453,9 +453,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 2K-2K 50ms on A3 16 Cards Separation Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 16Card
+Hardware: Atlas 800I A3 16 Card
 
 DeployMode: PD Separation
 
@@ -577,9 +577,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 3_5K-1_5K 50ms on A3 8 Cards Mixed Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -654,9 +654,9 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 ### DeepSeek-R1 3_5K-1_5K 50ms on A3 16 Cards Separation Mode
 
-Model: Deepseek R1
+Model: DeepSeek R1
 
-Hardware: Atlas 800I A3 16Card
+Hardware: Atlas 800I A3 16 Card
 
 DeployMode: PD Separation
 
@@ -779,7 +779,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: DeepSeek-V3.2-W8A8
 
-Hardware: Atlas 800I A3 32Card
+Hardware: Atlas 800I A3 32 Card
 
 DeployMode: PD Separation
 
@@ -934,7 +934,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-235B-A22B-W8A8
 
-Hardware: Atlas 800I A3 24Card
+Hardware: Atlas 800I A3 24 Card
 
 DeployMode: PD Separation
 
@@ -1068,7 +1068,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang-oai --host
 
 Model: Qwen3-235B-A22B-W8A8
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -1141,7 +1141,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-235B-A22B-W8A8
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -1213,7 +1213,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-235B-A22B-W8A8
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -1285,7 +1285,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-235B-A22B-W8A8
 
-Hardware: Atlas 800I A3 16Card
+Hardware: Atlas 800I A3 16 Card
 
 DeployMode: PD Mixed
 
@@ -1347,7 +1347,7 @@ do
         --attention-backend ascend --device npu --quantization modelslim --enable-dp-attention \
         --moe-a2a-backend deepep --deepep-mode auto --cuda-graph-bs 6 8 10 12 18 24 \
         --dist-init-addr ${MIX_IP[0]}:5000 --chunked-prefill-size 131072 --max-prefill-tokens 458880 \
-        --speculative-algorithm EAGLE3 --speculative-draft-model-path xxx --speculative-draft-model-quantization=unquant \
+        --speculative-algorithm EAGLE3 --speculative-draft-model-path xxx --speculative-draft-model-quantization= unquant \
         --speculative-num-steps 3 --speculative-eagle-topk 1 --speculative-num-draft-tokens 4 \
         --context-length 8192 --disable-radix-cache \
         --enable-dp-lm-head --dtype bfloat16
@@ -1370,7 +1370,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-235B-A22B-W8A8
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -1443,7 +1443,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A3 4Card
+Hardware: Atlas 800I A3 4 Card
 
 DeployMode: PD Mixed
 
@@ -1514,7 +1514,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A3 4Card
+Hardware: Atlas 800I A3 4 Card
 
 DeployMode: PD Mixed
 
@@ -1584,7 +1584,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -1653,7 +1653,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A3 2Card
+Hardware: Atlas 800I A3 2 Card
 
 DeployMode: PD Mixed
 
@@ -1723,7 +1723,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A3 2Card
+Hardware: Atlas 800I A3 2 Card
 
 DeployMode: PD Mixed
 
@@ -1793,7 +1793,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-30B-A3B-Instruct-2507
 
-Hardware: Atlas 800I A3 1Card
+Hardware: Atlas 800I A3 1 Card
 
 DeployMode: PD Mixed
 
@@ -1863,7 +1863,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-Coder-480B-A35B-Instruct
 
-Hardware: Atlas 800I A3 24Card
+Hardware: Atlas 800I A3 24 Card
 
 DeployMode: PD Separation
 
@@ -1986,7 +1986,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-Coder-480B-A35B-Instruct
 
-Hardware: Atlas 800I A3 16Card
+Hardware: Atlas 800I A3 16 Card
 
 DeployMode: PD Mixed
 
@@ -2069,7 +2069,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-Coder-480B-A35B-Instruct
 
-Hardware: Atlas 800I A3 8Card
+Hardware: Atlas 800I A3 8 Card
 
 DeployMode: PD Mixed
 
@@ -2137,7 +2137,7 @@ python -m sglang.bench_serving --dataset-name random --backend sglang --host 127
 
 Model: Qwen3-Next-80B-A3B-Instruct
 
-Hardware: Atlas 800I A3 2Card
+Hardware: Atlas 800I A3 2 Card
 
 DeployMode: PD Mixed
 
@@ -2206,7 +2206,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A2 8Card
+Hardware: Atlas 800I A2 8 Card
 
 DeployMode: PD Mixed
 
@@ -2275,7 +2275,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A2 8Card
+Hardware: Atlas 800I A2 8 Card
 
 DeployMode: PD Mixed
 
@@ -2348,7 +2348,7 @@ python3 -m sglang.bench_serving  --dataset-name random --backend sglang --host 1
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A2 8Card
+Hardware: Atlas 800I A2 8 Card
 
 DeployMode: PD Mixed
 
@@ -2418,7 +2418,7 @@ python3 -m sglang.bench_serving --dataset-name random --backend sglang --host 12
 
 Model: Qwen3-32B
 
-Hardware: Atlas 800I A2 8Card
+Hardware: Atlas 800I A2 8 Card
 
 DeployMode: PD Mixed
 
