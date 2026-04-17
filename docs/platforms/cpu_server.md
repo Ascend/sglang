@@ -16,7 +16,7 @@ and DeepSeek series like DeepSeek-R1 and DeepSeek-V3.1-Terminus.
 | DeepSeek-V3.1-Terminus |   | [IntervitensInc/DeepSeek-V3.1-Terminus-Channel-int8](https://huggingface.co/IntervitensInc/DeepSeek-V3.1-Terminus-Channel-int8) | [deepseek-ai/DeepSeek-V3.1-Terminus](https://huggingface.co/deepseek-ai/DeepSeek-V3.1-Terminus) |
 | Llama-3.2-3B | [meta-llama/Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct) | [RedHatAI/Llama-3.2-3B-quantized.w8a8](https://huggingface.co/RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8) |   |
 | Llama-3.1-8B | [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) | [RedHatAI/Meta-Llama-3.1-8B-quantized.w8a8](https://huggingface.co/RedHatAI/Meta-Llama-3.1-8B-quantized.w8a8) |   |
-| QwQ-32B |   | [RedHatAI/QwQ-32B-quantized.w8a8](https://huggingface.co/RedHatAI/QwQ-32B-quantized.w8a8) |   |
+| Qwen-32B |   | [RedHatAI/QwQ-32B-quantized.w8a8](https://huggingface.co/RedHatAI/QwQ-32B-quantized.w8a8) |   |
 | DeepSeek-Distilled-Llama |   | [RedHatAI/DeepSeek-R1-Distill-Llama-70B-quantized.w8a8](https://huggingface.co/RedHatAI/DeepSeek-R1-Distill-Llama-70B-quantized.w8a8) |   |
 | Qwen3-235B |   |   | [Qwen/Qwen3-235B-A22B-FP8](https://huggingface.co/Qwen/Qwen3-235B-A22B-FP8) |
 
@@ -65,80 +65,80 @@ for guidance.
 
 1. Install `uv` package manager, then create and activate a virtual environment:
 
-```bash
-# Taking '/opt' as the example uv env folder, feel free to change it as needed
-cd /opt
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.local/bin/env
-uv venv --python 3.12
-source .venv/bin/activate
-```
+    ```bash
+    # Taking '/opt' as the example uv env folder, feel free to change it as needed
+    cd /opt
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.local/bin/env
+    uv venv --python 3.12
+    source .venv/bin/activate
+    ```
 
 2. Create a config file to direct the installation channel
     (a.k.a. index-url) of `torch` related packages:
 
-```bash
-vim .venv/uv.toml
-```
+    ```bash
+    vim .venv/uv.toml
+    ```
 
-Press 'a' to enter insert mode of `vim`, paste the following content into the created file
+    Press 'a' to enter insert mode of `vim`, paste the following content into the created file
 
-```file
-[[index]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cpu"
+    ```file
+    [[index]]
+    name = "torch"
+    url = "https://download.pytorch.org/whl/cpu"
 
-[[index]]
-name = "torchvision"
-url = "https://download.pytorch.org/whl/cpu"
+    [[index]]
+    name = "torchvision"
+    url = "https://download.pytorch.org/whl/cpu"
 
-[[index]]
-name = "torchaudio"
-url = "https://download.pytorch.org/whl/cpu"
+    [[index]]
+    name = "torchaudio"
+    url = "https://download.pytorch.org/whl/cpu"
 
-[[index]]
-name = "triton"
-url = "https://download.pytorch.org/whl/cpu"
+    [[index]]
+    name = "triton"
+    url = "https://download.pytorch.org/whl/cpu"
 
-```
+    ```
 
-Save the file (in `vim`, press 'esc' to exit insert mode, then ':x+Enter'),
-and set it as the default `uv` config.
+    Save the file (in `vim`, press 'esc' to exit insert mode, then ':x+Enter'),
+    and set it as the default `uv` config.
 
-```bash
-export UV_CONFIG_FILE=/opt/.venv/uv.toml
-```
+    ```bash
+    export UV_CONFIG_FILE=/opt/.venv/uv.toml
+    ```
 
 3. Clone the `sglang` source code and build the packages
 
-```bash
-# Clone the SGLang code
-git clone https://github.com/sgl-project/sglang.git
-cd sglang
-git checkout <YOUR-DESIRED-VERSION>
+    ```bash
+    # Clone the SGLang code
+    git clone https://github.com/sgl-project/sglang.git
+    cd sglang
+    git checkout <YOUR-DESIRED-VERSION>
 
-# Use dedicated toml file
-cd python
-cp pyproject_cpu.toml pyproject.toml
-# Install SGLang dependent libs, and build SGLang main package
-uv pip install --upgrade pip setuptools
-uv pip install .
+    # Use dedicated toml file
+    cd python
+    cp pyproject_cpu.toml pyproject.toml
+    # Install SGLang dependent libs, and build SGLang main package
+    uv pip install --upgrade pip setuptools
+    uv pip install .
 
-# Build the CPU backend kernels
-cd ../sgl-kernel
-cp pyproject_cpu.toml pyproject.toml
-uv pip install .
-```
+    # Build the CPU backend kernels
+    cd ../sgl-kernel
+    cp pyproject_cpu.toml pyproject.toml
+    uv pip install .
+    ```
 
 4. Set the required environment variables
 
-```bash
-export SGLANG_USE_CPU_ENGINE=1
+    ```bash
+    export SGLANG_USE_CPU_ENGINE=1
 
-# Set 'LD_LIBRARY_PATH' and 'LD_PRELOAD' to ensure the libs can be loaded by sglang processes
-export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
-export LD_PRELOAD=${LD_PRELOAD}:/opt/.venv/lib/libiomp5.so:${LD_LIBRARY_PATH}/libtcmalloc.so.4:${LD_LIBRARY_PATH}/libtbbmalloc.so.2
-```
+    # Set 'LD_LIBRARY_PATH' and 'LD_PRELOAD' to ensure the libs can be loaded by sglang processes
+    export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
+    export LD_PRELOAD=${LD_PRELOAD}:/opt/.venv/lib/libiomp5.so:${LD_LIBRARY_PATH}/libtcmalloc.so.4:${LD_LIBRARY_PATH}/libtbbmalloc.so.2
+    ```
 
 Notes:
 
@@ -200,6 +200,7 @@ Notes:
     ```bash
     export SGLANG_CPU_OMP_THREADS_BIND="0-39|43-82|86-125|128-167|171-210|214-253"
     ```
+
     This configuration is equivalent to:
     - rank 0: `numactl -C 0-39 -m 0`
     - rank 1: `numactl -C 43-82 -m 1`
@@ -208,18 +209,19 @@ Notes:
     - rank 4: `numactl -C 171-210 -m 4`
     - rank 5: `numactl -C 214-253 -m 5`
 
-
     **example 2**: Run SGLang service with TP=2, using 96 cores cross 3 SNCs on a Xeon® 6972P server,
     which has 32-32-32 cores on the 3 SNCs in a socket, we should set:
+
     ```bash
     export SGLANG_CPU_OMP_THREADS_BIND="0-95|96-191"
     ```
+
     This configuration is equivalent to:
     - rank 0: `numactl -C 0-95 -m 0-2`
     - rank 1: `numactl -C 96-191 -m 3-5`
 
     Please beware that with SGLANG_CPU_OMP_THREADS_BIND set,
-    the available memory amounts of the ranks may not be determined in prior.
+    the available memory amounts of the ranks may not be determined in advance.
     You may need to set proper `--max-total-tokens` to avoid the out-of-memory error.
 
 3. For optimizing decoding with torch.compile, please add the flag `--enable-torch-compile`.
