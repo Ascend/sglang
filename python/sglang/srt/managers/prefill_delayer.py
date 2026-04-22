@@ -59,7 +59,7 @@ class PrefillDelayer:
         self.enable_dp_attention = server_args.enable_dp_attention
         dp_size_dim = dp_size if self.enable_dp_attention else 1
         self._global_info_buffer = torch.empty(
-            (dp_size_dim, attn_tp_size, 4),
+            (dp_size_dim, attn_tp_size, 3),
             dtype=torch.int64,
             device=device,
         )
@@ -115,8 +115,7 @@ class PrefillDelayer:
         )
         global_prefillable = tp0_info[:, 0]
         global_token_watermark_force_allow = tp0_info[:, 1]
-        num_new_prefill_requests = tp0_info[:, 2]
-        global_max_prefill_bs = tp0_info[:, 3]
+        global_max_prefill_bs = tp0_info[:, 2]
 
         # Compute derived global states
         if global_prefillable.min().item() > 0:
@@ -145,9 +144,10 @@ class PrefillDelayer:
                     **debug_info,
                 )
 
+            num_new_prefill_requests = kwargs.get("new_prefill_requests_count", 0)
             prev_delayed_count = prev_state.delayed_count if prev_state else 0
             if (
-                    num_new_prefill_requests.min().item() < global_max_prefill_bs.max().item()
+                    num_new_prefill_requests < global_max_prefill_bs.max().item()
             ):
                 if prev_delayed_count < self._max_delay_passes - 1:
                     if self.skip_first_delayer:
@@ -214,7 +214,6 @@ class PrefillDelayer:
             [
                 int(local_prefillable),
                 int(local_token_watermark_force_allow),
-                kwargs.get("new_prefill_requests_count", 0),
                 kwargs.get("max_prefill_bs", 0),
             ],
             device="cpu",
