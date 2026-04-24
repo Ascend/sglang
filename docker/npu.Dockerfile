@@ -13,14 +13,13 @@ ARG APTMIRROR=""
 ARG PYTORCH_VERSION="2.8.0"
 ARG TORCHVISION_VERSION="0.23.0"
 ARG TORCH_NPU_URL="https://sglang-ascend.obs.cn-east-3.myhuaweicloud.com:443/newmodel/pkg_20260413/torch_npu-2.8.0.post2%2Bgitdef4a1c-cp311-cp311-manylinux_2_28_aarch64.whl"
-ARG SGLANG_ZIP_URL="https://sglang-ascend.obs.cn-east-3.myhuaweicloud.com:443/newmodel/pkg_20260413/sglang-pri-zyj-dev_20260416.zip"
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=main
 
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 
-WORKDIR /workspace
+WORKDIR /sgl-workspace
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN pip config set global.index-url $PIP_INDEX_URL
@@ -56,7 +55,7 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN ${PIP_INSTALL} memfabric-hybrid==1.0.5
+RUN ${PIP_INSTALL} memfabric-hybrid==1.0.8
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
 
@@ -66,15 +65,10 @@ RUN ${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION}
 
 RUN ${PIP_INSTALL} pybind11 triton-ascend
 
-RUN wget -O /tmp/sglang.zip "${SGLANG_ZIP_URL}" \
-    && unzip -q /tmp/sglang.zip -d /tmp/sglang-src \
-    && cd /tmp/sglang-src/* \
-    && cd python \
-    && rm -f pyproject.toml \
-    && mv pyproject_npu.toml pyproject.toml \
-    && export SETUPTOOLS_SCM_PRETEND_VERSION=v0.5.10a2 \
-    && ${PIP_INSTALL} -v .[all_npu] \
-    && rm -rf /tmp/sglang.zip /tmp/sglang-src
+# Install SGLang
+RUN git clone https://github.com/iforgetmyname/sglang --branch dsv4_release && \
+    cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
+    ${PIP_INSTALL} -v -e .[all_npu]
 
 RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && mkdir sgl-kernel-npu \
