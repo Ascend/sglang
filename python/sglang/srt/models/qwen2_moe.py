@@ -98,6 +98,7 @@ if is_npu():
     from sglang.srt.hardware_backend.npu.cmo import (
         shared_expert_on_independent_stream,
         routed_expert_on_independent_stream,
+        moe_core_on_independent_stream,
         wait_share_stream,
         wait_routed_stream,
     )
@@ -283,6 +284,7 @@ class Qwen2MoeSparseMoeBlock(nn.Module):
             and forward_batch.forward_mode.is_cuda_graph()
         )
         enable_routed_stream = enable_dual_stream and not is_dp_attention_enabled()
+        enable_dp_split_stream = enable_dual_stream and is_dp_attention_enabled()
         shared_output = None
         if hidden_states.shape[0] > 0:
             # router_logits: (num_tokens, n_experts)
@@ -312,6 +314,16 @@ class Qwen2MoeSparseMoeBlock(nn.Module):
                 hidden_states, topk_output, self.experts
             )
             wait_routed_stream()
+            wait_share_stream()
+        elif enable_dp_split_stream:
+            dispatch_output = self.experts.dispatch(hidden_states, topk_output)
+            combine_input = moe_core_on_independent_stream(
+                dispatch_output, self.experts.run_moe_core
+            )
+            wait_routed_stream()
+            final_hidden_states = self.experts.dispatcher.combine(
+                combine_input=combine_input,
+            )
             wait_share_stream()
         else:
             final_hidden_states = self.experts(

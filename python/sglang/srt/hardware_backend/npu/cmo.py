@@ -146,3 +146,14 @@ def routed_expert_on_independent_stream(hidden_states, topk_output, forward_func
     with torch.npu.stream(stream):
         routed_output = forward_func(hidden_states, topk_output)
         return routed_output
+
+
+def moe_core_on_independent_stream(dispatch_output, forward_func):
+    stream = get_routed_stream()
+    if stream is None:
+        stream = torch.npu.Stream()
+        set_routed_stream(stream)
+    stream.wait_stream(torch.npu.current_stream())
+    with torch.npu.stream(stream):
+        combine_input = forward_func(dispatch_output)
+        return combine_input
