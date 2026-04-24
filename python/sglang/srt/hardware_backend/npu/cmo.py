@@ -66,28 +66,6 @@ def wait_cmo_stream():
         cur_stream.wait_stream(stream)
 
 
-def get_or_create_cache_update_stream():
-    global cache_update_stream
-    if cache_update_stream is None:
-        cache_update_stream = torch.npu.Stream()
-        torch.npu.set_stream_limit(
-            cache_update_stream,
-            CORE_NUM_FOR_CACHE_UPDATE,
-            CORE_NUM_FOR_CACHE_UPDATE * 2,
-        )
-    return cache_update_stream
-
-
-def get_or_create_conv1d_stream():
-    global conv1d_stream
-    if conv1d_stream is None:
-        conv1d_stream = torch.npu.Stream()
-        torch.npu.set_stream_limit(
-            conv1d_stream, CORE_NUM_FOR_CONV1D, CORE_NUM_FOR_CONV1D * 2
-        )
-    return conv1d_stream
-
-
 def get_share_stream():
     global share_stream
     return share_stream
