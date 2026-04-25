@@ -116,6 +116,7 @@ class AscendGDNAttnBackend(GDNAttnBackend):
                     extend_seq_lens_cpu=seq_lens,
                     chunk_size=self.GDN_CHUNK_SIZE,
                     device=self.forward_metadata.query_start_loc.device,
+                    dtype=self.forward_metadata.query_start_loc.dtype,
                 )
             )
 

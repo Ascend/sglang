@@ -44,6 +44,7 @@ def build_gdn_chunked_prefill_meta(
     chunk_size: int,
     device: torch.device,
     *,
+    dtype: torch.dtype = torch.int32,
     use_pinned_memory: bool = True,
 ) -> Optional[GDNChunkedPrefillMetadata]:
     """Build chunk-indices / chunk-offsets on CPU from already-known per-seq
@@ -77,11 +78,11 @@ def build_gdn_chunked_prefill_meta(
     # environments without a pinned-memory allocator).
     if chunk_indices_rows:
         chunk_indices_cpu = torch.tensor(
-            chunk_indices_rows, dtype=torch.long, pin_memory=False
+            chunk_indices_rows, dtype=dtype, pin_memory=False
         )
     else:
-        chunk_indices_cpu = torch.empty((0, 2), dtype=torch.long)
-    chunk_offsets_cpu = torch.tensor(chunk_offsets_list, dtype=torch.long)
+        chunk_indices_cpu = torch.empty((0, 2), dtype=dtype)
+    chunk_offsets_cpu = torch.tensor(chunk_offsets_list, dtype=dtype)
 
     if use_pinned_memory:
         try:
