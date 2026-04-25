@@ -98,7 +98,7 @@ KIMI_K2_5_W4A8_OTHER_ARGS = [
 
 class TestNPUKimiK2_5_W4A8(TestAscendPerformanceTestCaseBase):
     """Test NPU performance for Kimi-K2.5-w4a8"""
-    
+
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = KIMI_K2_5_W4A8_MODEL_PATH

@@ -93,8 +93,8 @@ KIMI_K2_5_OTHER_ARGS = [
 
 
 class TestNPUKimiK2_5GPQA(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Kimi-K2.5-w4a8 on GPQA dataset"""
-    
+    """Test NPU accuracy for Kimi-K2.5-w4a8 on GPQA"""
+
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = KIMI_K2_5_W4A8_MODEL_PATH
     other_args = KIMI_K2_5_OTHER_ARGS
