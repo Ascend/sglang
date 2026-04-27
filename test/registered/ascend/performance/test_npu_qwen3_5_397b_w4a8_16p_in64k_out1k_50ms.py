@@ -22,7 +22,7 @@ QWEN3_5_397B_ENVS = {
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "3000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -31,7 +31,7 @@ QWEN3_5_397B_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
-QWEN3_5_397B_3_5_1_5_OTHER_ARGS = [
+QWEN3_5_397B_64K_OTHER_ARGS = [
     "--model-path",
     QWEN3_5_397B_W4A8_MODEL_PATH,
     "--attention-backend",
@@ -43,7 +43,9 @@ QWEN3_5_397B_3_5_1_5_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    17500,
+    65536,
+    "--prefill-max-requests",
+    1,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--host",
@@ -51,27 +53,20 @@ QWEN3_5_397B_3_5_1_5_OTHER_ARGS = [
     "--port",
     20000,
     "--max-running-requests",
-    448,
+    32,
     "--mem-fraction-static",
-    0.8,
+    0.57,
     "--max-total-tokens",
-    320000,
+    1065000,
     "--cuda-graph-bs",
     2,
     4,
     6,
     8,
+    10,
     12,
+    14,
     16,
-    20,
-    24,
-    28,
-    32,
-    36,
-    48,
-    52,
-    54,
-    56,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -86,7 +81,7 @@ QWEN3_5_397B_3_5_1_5_OTHER_ARGS = [
     "--mamba-ssm-dtype",
     "bfloat16",
     "--dp-size",
-    8,
+    2,
     "--enable-dp-attention",
     "--enable-dp-lm-head",
     "--speculative-algorithm",
@@ -102,25 +97,25 @@ QWEN3_5_397B_3_5_1_5_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_5_397B_3_5_1_5_High(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Qwen3.5-397B-w4a8 3_5_1_5 high"""
+class TestNPUQwen3_5_397B_64K(TestAscendPerformanceTestCaseBase):
+    """Test NPU performance for Qwen3.5-397B-w4a8 16p in64k out1k"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W4A8_MODEL_PATH
-    other_args = QWEN3_5_397B_3_5_1_5_OTHER_ARGS
+    other_args = QWEN3_5_397B_64K_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 448
-    num_prompts = 448
-    input_len = 2048
-    output_len = 512
+    max_concurrency = 32
+    num_prompts = 32
+    input_len = 65536
+    output_len = 1024
     random_range_ratio = 1
-    tpot = 12
-    output_token_throughput = 300
+    tpot = 50
+    output_token_throughput = 150
 
-    def test_npu_qwen3_5_397b_3_5_1_5_high(self):
-        """Run NPU performance test for Qwen3.5-397B 3_5_1_5 high"""
+    def test_npu_qwen3_5_397b_64k(self):
+        """Run NPU performance test for Qwen3.5-397B in64k out1k"""
         self.run_throughput()
 
 

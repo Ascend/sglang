@@ -19,9 +19,10 @@ QWEN3_5_397B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
+    "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "3000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -30,7 +31,7 @@ QWEN3_5_397B_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
-QWEN3_5_397B_128_1_OTHER_ARGS = [
+QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--model-path",
     QWEN3_5_397B_W4A8_MODEL_PATH,
     "--attention-backend",
@@ -42,18 +43,19 @@ QWEN3_5_397B_128_1_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    131072,
-    "--max-mamba-cache-size",
-    640,
+    17500,
+    "--disable-radix-cache",
     "--trust-remote-code",
     "--host",
     "0.0.0.0",
     "--port",
     20000,
     "--max-running-requests",
-    128,
+    448,
     "--mem-fraction-static",
-    0.6,
+    0.8,
+    "--max-total-tokens",
+    320000,
     "--cuda-graph-bs",
     2,
     4,
@@ -61,13 +63,15 @@ QWEN3_5_397B_128_1_OTHER_ARGS = [
     8,
     12,
     16,
+    20,
     24,
+    28,
     32,
+    36,
     48,
-    64,
-    80,
-    96,
-    128,
+    52,
+    54,
+    56,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -81,6 +85,10 @@ QWEN3_5_397B_128_1_OTHER_ARGS = [
     "bfloat16",
     "--mamba-ssm-dtype",
     "bfloat16",
+    "--dp-size",
+    8,
+    "--enable-dp-attention",
+    "--enable-dp-lm-head",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -91,30 +99,28 @@ QWEN3_5_397B_128_1_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
-    "--mamba-scheduler-strategy",
-    "extra_buffer",
 ]
 
 
-class TestNPUQwen3_5_397B_128_1_PrefixHigh(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Qwen3.5-397B-w4a8 128-1 prefix high"""
+class TestNPUQwen3_5_397B_3K5(TestAscendPerformanceTestCaseBase):
+    """Test NPU performance for Qwen3.5-397B-w4a8 16p in3k5 out1k5"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W4A8_MODEL_PATH
-    other_args = QWEN3_5_397B_128_1_OTHER_ARGS
+    other_args = QWEN3_5_397B_3K5_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 128
-    num_prompts = 128
-    input_len = 4096
-    output_len = 1024
+    max_concurrency = 448
+    num_prompts = 448
+    input_len = 3500
+    output_len = 1500
     random_range_ratio = 1
-    tpot = 15
-    output_token_throughput = 200
+    tpot = 50
+    output_token_throughput = 300
 
-    def test_npu_qwen3_5_397b_128_1_prefix_high(self):
-        """Run NPU performance test for Qwen3.5-397B 128-1 prefix high"""
+    def test_npu_qwen3_5_397b_3k5(self):
+        """Run NPU performance test for Qwen3.5-397B in3k5 out1k5"""
         self.run_throughput()
 
 
