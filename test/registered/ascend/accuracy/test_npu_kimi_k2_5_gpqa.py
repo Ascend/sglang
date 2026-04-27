@@ -93,7 +93,7 @@ KIMI_K2_5_OTHER_ARGS = [
 
 
 class TestNPUKimiK2_5GPQA(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Kimi-K2.5-w4a8 on GPQA"""
+    ""Test NPU accuracy for Kimi-K2.5-w4a8 on GPQA""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = KIMI_K2_5_W4A8_MODEL_PATH
@@ -106,9 +106,10 @@ class TestNPUKimiK2_5GPQA(TestAscendAccuracyTestCaseBase):
     max_out_len = 1024
 
     def test_npu_kimi_k2_5_gpqa(self):
-        """Run NPU accuracy test for Kimi-K2.5 on GPQA"""
+        ""Run NPU accuracy test for Kimi-K2.5 on GPQA""
         self.run_accuracy()
 
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -90,7 +90,7 @@ KIMI_K2_5_W4A8_OTHER_ARGS = [
 
 
 class TestNPUKimiK2_5_W4A8(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Kimi-K2.5-w4a8"""
+    ""Test NPU performance for Kimi-K2.5-w4a8""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
@@ -107,9 +107,10 @@ class TestNPUKimiK2_5_W4A8(TestAscendPerformanceTestCaseBase):
     output_token_throughput = 120
 
     def test_npu_kimi_k2_5_w4a8(self):
-        """Run NPU performance test"""
+        ""Run NPU performance test""
         self.run_throughput()
 
 
 if __name__ == "__main__":
     unittest.main()
+
