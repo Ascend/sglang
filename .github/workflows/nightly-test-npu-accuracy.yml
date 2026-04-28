@@ -1,0 +1,64 @@
+name: nightly-test-npu-accuracy
+
+on:
+  pull_request:
+    branches:
+      - main
+      - testcases
+    paths:
+      - ".github/workflows/nightly-test-npu-accuracy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ascend-nightly-test-accuracy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nightly-accuracy-baseline-single-node-tests:
+    name: single-node
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_config:
+          - name: test_ascend_qwen3_30b_w8a8_2p_accuracy
+            test_case: test/registered/ascend/accuracy/test_ascend_qwen3_30b_w8a8_2p_accuracy.py
+            runner: linux-aarch64-a3-4
+    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
+    with:
+      runner: ${{ matrix.test_config.runner }}
+      test_type: 'accuracy'
+      test_config_name: ${{ matrix.test_config.name }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-a3-B121'
+      install_sglang_from_source: false
+      transformers_version: ''
+
+  nightly-accuracy-baseline-multi-node-tests:
+    name: multi-node-pd-separation
+    if: ${{ !cancelled() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    needs: nightly-accuracy-baseline-single-node-tests
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_config:
+          - name: test_ascend_qwen3_235b_w8a8_1p1d_24p_accuracy
+            prefill_size: 1
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/ascend/accuracy/test_ascend_qwen3_235b_w8a8_1p1d_24p_accuracy.py
+    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
+    with:
+      runner: linux-aarch64-a3-0
+      test_type: 'accuracy'
+      test_config_name: ${{ matrix.test_config.name }}
+      prefill_size: ${{ matrix.test_config.prefill_size }}
+      decode_size: ${{ matrix.test_config.decode_size }}
+      router_size: ${{ matrix.test_config.router_size }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-a3-B121'
+      install_sglang_from_source: false
+      prefill_decode_deployment: 'separation'
+      transformers_version: ''
