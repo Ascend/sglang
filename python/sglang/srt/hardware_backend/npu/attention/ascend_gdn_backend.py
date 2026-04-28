@@ -54,6 +54,8 @@ class AscendGDNAttnBackend(GDNAttnBackend):
                 self.conv_states_shape[-2],
             )
         )
+        temporal_cache = model_runner.req_to_token_pool.mamba_pool.mamba_cache.temporal
+        self.gdn_num_heads = int(temporal_cache.shape[2])
         decode_backend = get_linear_attn_decode_backend()
         prefill_backend = get_linear_attn_prefill_backend()
         self.kernel_dispatcher = AscendGDNKernelDispatcher(
@@ -117,6 +119,7 @@ class AscendGDNAttnBackend(GDNAttnBackend):
                     chunk_size=self.GDN_CHUNK_SIZE,
                     device=self.forward_metadata.query_start_loc.device,
                     dtype=self.forward_metadata.query_start_loc.dtype,
+                    num_heads=self.gdn_num_heads,
                 )
             )
 
@@ -307,6 +310,27 @@ class AscendGDNAttnBackend(GDNAttnBackend):
             conv_states_for_prefill = conv_states[:, -(kernel_size - 1) :, :]
             conv_states_tmp = conv_states_for_prefill.transpose(1, 2).contiguous()
 
+            # Derive host-side scalars once per layer to avoid device->host
+            # syncs inside causal_conv1d_fn / prepare_data.
+            extend_prefix_lens_cpu = getattr(
+                forward_batch, "extend_prefix_lens_cpu", None
+            )
+            extend_seq_lens_cpu = forward_batch.extend_seq_lens_cpu
+            has_initial_state_any = (
+                bool((extend_prefix_lens_cpu > 0).any())
+                if extend_prefix_lens_cpu is not None
+                else None
+            )
+            prebuilt_meta = getattr(
+                forward_metadata, "non_spec_chunked_prefill_meta", None
+            )
+            if prebuilt_meta is not None:
+                max_seqlen_host = prebuilt_meta.max_T
+                cu_seq_len_host = prebuilt_meta.cu_seq_len
+            else:
+                max_seqlen_host = int(extend_seq_lens_cpu.max())
+                cu_seq_len_host = int(extend_seq_lens_cpu.sum())
+
             mixed_qkv = causal_conv1d_fn(
                 mixed_qkv,
                 layer.conv_weights,
@@ -314,9 +338,11 @@ class AscendGDNAttnBackend(GDNAttnBackend):
                 activation=layer.activation,
                 conv_states=conv_states_tmp,
                 has_initial_state=has_initial_states,
+                has_initial_state_any=has_initial_state_any,
                 cache_indices=cache_indices,
                 query_start_loc=query_start_loc,
-                seq_lens_cpu=forward_batch.extend_seq_lens_cpu,
+                max_seqlen=max_seqlen_host,
+                cu_seq_len=cu_seq_len_host,
             ).transpose(0, 1)[:seq_len]
             conv_states[:, -(kernel_size - 1) :, :] = conv_states_tmp.transpose(
                 1, 2
