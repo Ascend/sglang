@@ -1,0 +1,26 @@
+{
+    "error_log": "Complete error log string",
+    "error_type": "RuntimeError",
+    "error_stage": "deploy",
+    "context": {
+        "model_info": {
+            "architecture_name": "Glm4MoeLiteForCausalLM",
+            "architecture_type": "MoE-MLA",
+            "model_path": "/path/to/model"
+        },
+        "parallel_config": {
+            "tp_size": 4,
+            "ep_size": 4,
+            "pp_size": 1
+        },
+        "device_info": {
+            "device_type": "npu",
+            "device_count": 8,
+            "device_model": "Ascend910"
+        },
+        "launch_command": "python -m sglang.launch_server ..."
+    },
+    "iteration": 1,
+    "max_iterations": 20,
+    "previous_fixes": []
+}

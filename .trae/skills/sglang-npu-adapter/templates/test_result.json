@@ -1,0 +1,50 @@
+{
+    "status": "passed",
+    "overall_result": "passed",
+    "test_mode": "quick",
+    "architecture_type": "MoE-MLA",
+    "test_cases": [
+        {
+            "case_id": "TC001",
+            "case_name": "short_text_inference",
+            "status": "passed",
+            "input": "12+12=?",
+            "output": "12+12=24",
+            "latency_ms": 150,
+            "tokens_generated": 3,
+            "error_message": null
+        },
+        {
+            "case_id": "TC002",
+            "case_name": "long_text_inference",
+            "status": "passed",
+            "input": "Please write a short essay about artificial intelligence",
+            "output": "Artificial intelligence is...",
+            "latency_ms": 850,
+            "tokens_generated": 120,
+            "error_message": null
+        },
+        {
+            "case_id": "TC003",
+            "case_name": "multi_turn_dialog",
+            "status": "passed",
+            "input": "My name is Zhang San->What is my name?",
+            "output": "Your name is Zhang San",
+            "latency_ms": 200,
+            "tokens_generated": 5,
+            "error_message": null
+        }
+    ],
+    "performance_metrics": {
+        "avg_latency_ms": 400,
+        "avg_tokens_per_second": 45,
+        "total_tokens_generated": 128,
+        "total_test_time_seconds": 120
+    },
+    "passed_count": 3,
+    "failed_count": 0,
+    "total_count": 3,
+    "issues": [],
+    "recommendations": [],
+    "next_action": "complete"
+}
