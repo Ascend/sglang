@@ -404,20 +404,21 @@ class AscendGDNAttnBackend(GDNAttnBackend):
                 prebuilt_meta=prebuilt_meta,
                 cu_seqlens_cpu=cu_seqlens_cpu,
             )
-            if is_cpu() and last_recurrent_state is not None:
-                last_recurrent_state = last_recurrent_state.to(
-                    ssm_states.dtype, copy=False
-                )
+            if last_recurrent_state is not None:
+                if is_cpu():
+                    last_recurrent_state = last_recurrent_state.to(
+                        ssm_states.dtype, copy=False
+                    )
+                    ssm_states[cache_indices] = last_recurrent_state
+                if not forward_batch.spec_algorithm.is_none():
+                    last_recurrent_state = last_recurrent_state.transpose(-1, -2).to(
+                        ssm_states.dtype, copy=False
+                    )
+                else:
+                    last_recurrent_state = last_recurrent_state.to(
+                        ssm_states.dtype, copy=False
+                    )
                 ssm_states[cache_indices] = last_recurrent_state
-            if not forward_batch.spec_algorithm.is_none():
-                last_recurrent_state = last_recurrent_state.transpose(-1, -2).to(
-                    ssm_states.dtype, copy=False
-                )
-            else:
-                last_recurrent_state = last_recurrent_state.to(
-                    ssm_states.dtype, copy=False
-                )
-            ssm_states[cache_indices] = last_recurrent_state
             if h is not None:
                 self._track_mamba_state_extend(
                     forward_batch, h, ssm_states, forward_metadata

@@ -148,7 +148,7 @@ class TritonGDNKernel(LinearAttnKernelBase):
         if cu_seqlens_cpu is not None:
             extra["cu_seqlens_cpu"] = cu_seqlens_cpu
         try:
-            return chunk_gated_delta_rule(
+            core_attn_out, last_recurrent_state, h = chunk_gated_delta_rule(
                 q=q,
                 k=k,
                 v=v,
@@ -164,7 +164,7 @@ class TritonGDNKernel(LinearAttnKernelBase):
         except TypeError as err:
             if "prebuilt_meta" not in str(err) and "cu_seqlens_cpu" not in str(err):
                 raise
-            return chunk_gated_delta_rule(
+            core_attn_out, last_recurrent_state, h = chunk_gated_delta_rule(
                 q=q,
                 k=k,
                 v=v,
@@ -176,6 +176,9 @@ class TritonGDNKernel(LinearAttnKernelBase):
                 use_qk_l2norm_in_kernel=True,
                 **recurrent_state_indices_args,
             )
+        if (is_npu() or is_cpu()) and last_recurrent_state is None:
+            last_recurrent_state = recurrent_state
+        return core_attn_out, last_recurrent_state, h
 
     def target_verify(
         self,
