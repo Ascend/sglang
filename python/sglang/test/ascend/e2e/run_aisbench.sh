@@ -52,6 +52,7 @@ PREFIX_HIT_RATE="0"
 REQUEST_RATE="0"
 CONCURRENCY="1"
 REPEAT_RATE="0"
+DP="0"
 
 GENERATION_KWARGS=""
 
@@ -105,7 +106,6 @@ while [[ $# -gt 0 ]]; do
             NUM_PROMPTS="$2"
             shift 2
             ;;
-        # 前缀缓存测试参数
         --prefix-hit-rate)
             PREFIX_HIT_RATE="$2"
             shift 2
@@ -128,6 +128,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --output-path)
             OUTPUT_PATH="$2"
+            shift 2
+            ;;
+        --dp)
+            DP="$2"
             shift 2
             ;;
         -h|--help)
@@ -497,7 +501,7 @@ if [ "$MODE" == "perf" ];then
             echo "Use dataset: ${DATASET_NAME}, dataset_file: ${dataset_file}"
             echo "Input tokens: ${INPUT_LEN} | Output tokens: ${OUTPUT_LEN} | Batch size: ${BATCH_SIZE} | Prompts num: ${NUM_PROMPTS}"
             
-            PREFIX_TEST_CMD="python3 ${INTERNAL_TEMPLATE_DIR}/aisbench_test.py --input_len ${INPUT_LEN} --output_len ${OUTPUT_LEN} --data_num ${NUM_PROMPTS} --concurrency ${CONCURRENCY} --request_rate ${REQUEST_RATE} --dataset_type prefix_cache --repeat_rate ${REPEAT_RATE} --prefix_test --dp 2"
+            PREFIX_TEST_CMD="python3 ${INTERNAL_TEMPLATE_DIR}/aisbench_test.py --input_len ${INPUT_LEN} --output_len ${OUTPUT_LEN} --data_num ${NUM_PROMPTS} --concurrency ${CONCURRENCY} --request_rate ${REQUEST_RATE} --dataset_type prefix_cache --repeat_rate ${REPEAT_RATE} --prefix_test --dp ${DP}"
             echo "Executing: ${PREFIX_TEST_CMD}"
     
             source ${PYTHON_ENV_FOR_AISBENCH}/bin/activate
