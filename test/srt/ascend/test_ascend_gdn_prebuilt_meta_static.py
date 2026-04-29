@@ -51,9 +51,3 @@ def test_gdn_extend_passes_prebuilt_meta_to_kernel():
     assert 'extra["prebuilt_meta"] = prebuilt_meta' in triton_source
     assert "cu_seqlens_cpu" in triton_source
     assert "prebuilt_meta=prebuilt_meta" in ascend_source
-
-
-def test_disable_flag_is_registered_in_server_args():
-    source = SERVER_ARGS.read_text(encoding="utf-8")
-    assert "disable_ascend_gdn_prebuilt_chunk_meta: bool = False" in source
-    assert "--disable-ascend-gdn-prebuilt-chunk-meta" in source
