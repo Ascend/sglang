@@ -48,7 +48,6 @@ NUM_PROMPTS="128"
 OUTPUT_PATH="./result"
 INTERNAL_TEMPLATE_DIR="/root/.cache/.cache/aisbench_auto_tools_prefix-master"
 
-PREFIX_HIT_RATE="0"
 REQUEST_RATE="0"
 REPEAT_RATE="0"
 DP="1"
@@ -503,7 +502,7 @@ if [ "$MODE" == "perf" ];then
         gen_dataset_gsm8k_config_file "${dataset_dir}"
         gen_model_config_file_vllm_api_stream_chat
 
-        if (( $(echo "$PREFIX_HIT_RATE > 0" | bc -l) )); then
+        if (( $(echo "$REPEAT_RATE > 0" | bc -l) )); then
             TARGET_CONFIG_FILE="${DEST_COPY_DIR}/config"
             
             echo "===== [Step 2/4] Prefix Mode Detected: Updating temporary config file ====="
@@ -519,7 +518,7 @@ if [ "$MODE" == "perf" ];then
                 exit 1
             fi
 
-            echo "===== [Mode] Prefix Cache Test (Hit Rate: $PREFIX_HIT_RATE) ====="
+            echo "===== [Mode] Prefix Cache Test (Hit Rate: $REPEAT_RATE) ====="
             echo "Use dataset: ${DATASET_NAME}, dataset_file: ${dataset_file}"
             echo "Input tokens: ${INPUT_LEN} | Output tokens: ${OUTPUT_LEN} | Batch size: ${BATCH_SIZE} | Prompts num: ${NUM_PROMPTS}"
             echo "Executing from temp dir: ${INTERNAL_TEMPLATE_DIR}"
