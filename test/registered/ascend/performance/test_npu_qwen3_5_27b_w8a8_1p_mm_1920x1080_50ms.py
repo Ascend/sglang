@@ -4,7 +4,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     AISBENCHMARK_DATASET_MM_CUSTOM_GEN,
     BENCHMARK_TOOL_DEFAULT,
-    QWEN3_5_27B_W8A8_MODEL_PATH,
+    QWEN3_5_27B_W8A8_HOME_MODEL_PATH,
     TestAscendPerformanceTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -31,7 +31,7 @@ QWEN3_5_27B_MM_1920_1080_HIGH_ENVS = {
 
 QWEN3_5_27B_MM_1920_1080_HIGH_OTHER_ARGS = [
     "--model-path",
-    QWEN3_5_27B_W8A8_MODEL_PATH,
+    QWEN3_5_27B_W8A8_HOME_MODEL_PATH,
     "--tp-size",
     2,
     "--nnodes",
@@ -89,7 +89,7 @@ class TestNPUQwen3_5_27B_1P_MM_1920x1080_High(TestAscendPerformanceTestCaseBase)
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
-    model = QWEN3_5_27B_W8A8_MODEL_PATH
+    model = QWEN3_5_27B_W8A8_HOME_MODEL_PATH
     other_args = QWEN3_5_27B_MM_1920_1080_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_MM_1920_1080_HIGH_ENVS
     dataset_name = "random"
