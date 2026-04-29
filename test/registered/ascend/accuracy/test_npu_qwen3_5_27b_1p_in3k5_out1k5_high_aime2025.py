@@ -3,13 +3,17 @@ import unittest
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     QWEN3_5_27B_W8A8_HOME_MODEL_PATH,
 >>>>>>> parent of 90e0873b0 (debug)
     TestAscendAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
+=======
+>>>>>>> parent of 586e55a99 (debug)
     QWEN3_5_27B_W8A8_MODEL_PATH,
+    TestAscendAccuracyTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
