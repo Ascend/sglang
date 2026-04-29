@@ -51,7 +51,7 @@ INTERNAL_TEMPLATE_DIR="/root/.cache/.cache/aisbench_auto_tools_prefix-master"
 PREFIX_HIT_RATE="0"
 REQUEST_RATE="0"
 REPEAT_RATE="0"
-DP="2"
+DP="1"
 
 GENERATION_KWARGS=""
 
