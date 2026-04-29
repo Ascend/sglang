@@ -1071,7 +1071,7 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 prefix_hit_rate=self.prefix_hit_rate,
                 aisbench_request_rate=self.aisbench_request_rate,
                 aisbench_repeat_rate=self.aisbench_repeat_rate,
-                dp=self.dp
+                dp=self.dp,
                 generation_kwargs=self.generation_kwargs,
             )
             assert_metrics(self, metrics)
