@@ -300,6 +300,7 @@ def rms_norm_gated(
         bias = bias.contiguous()
     if _is_npu:
         assert activation == "swish", "NPU only supports swish activation"
+    extra_kwargs = {} if _is_npu else {"activation": activation}
     y, mean, rstd = _layer_norm_fwd(
         x,
         weight,
@@ -309,7 +310,7 @@ def rms_norm_gated(
         group_size=group_size,
         norm_before_gate=norm_before_gate,
         is_rms_norm=is_rms_norm,
-        activation=activation,
+        **extra_kwargs,
     )
     return y.reshape(x_shape_og)
 
