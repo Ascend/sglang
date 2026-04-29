@@ -418,6 +418,12 @@ def run_aisbench(
     num_prompts,
     image_resolution=None,
     random_range_ratio=1,
+
+    prefix_hit_rate=None,
+    aisbench_request_rate=None,
+    aisbench_concurrency=None,
+    aisbench_repeat_rate=None,
+    generation_kwargs=None,
 ):
 
     if dataset_type == "sharegpt":
@@ -493,6 +499,18 @@ def run_aisbench(
     cmd += f"--batch-size {str(max_concurrency)} "
     cmd += f"--num-prompts {str(num_prompts)} "
     cmd += f"--output-path {result_path}"
+    
+
+    if prefix_hit_rate is not None:
+        cmd += f" --prefix-hit-rate {prefix_hit_rate}"
+    if aisbench_request_rate is not None:
+        cmd += f" --request_rate {aisbench_request_rate}"
+    if aisbench_concurrency is not None:
+        cmd += f" --concurrency {aisbench_concurrency}"
+    if aisbench_repeat_rate is not None:
+        cmd += f" --repeat_rate {aisbench_repeat_rate}"
+    if generation_kwargs:
+        cmd += f" --generation-kwargs '{generation_kwargs}'"
 
     logger.info(f"Command: {cmd}")
 
@@ -734,6 +752,12 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
     mean_e2e_latency = None
     output_token_throughput = None
 
+    prefix_hit_rate = None
+    aisbench_request_rate = None
+    aisbench_concurrency = None
+    aisbench_repeat_rate = None
+    generation_kwargs = None
+
     @classmethod
     def setUpClass(cls):
         cls.base_url = DEFAULT_URL_FOR_TEST
@@ -781,6 +805,12 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 num_prompts=self.num_prompts,
                 image_resolution=self.image_resolution,
                 random_range_ratio=self.random_range_ratio,
+
+                prefix_hit_rate=self.prefix_hit_rate,
+                aisbench_request_rate=self.aisbench_request_rate,
+                aisbench_concurrency=self.aisbench_concurrency,
+                aisbench_repeat_rate=self.aisbench_repeat_rate,
+                generation_kwargs=self.generation_kwargs,
             )
             assert_metrics(self, metrics)
 
@@ -831,6 +861,12 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
     tpot = None
     mean_e2e_latency = None
     output_token_throughput = None
+
+    prefix_hit_rate = None
+    aisbench_request_rate = None
+    aisbench_concurrency = None
+    aisbench_repeat_rate = None
+    generation_kwargs = None
 
     @classmethod
     def setUpClass(cls):
@@ -893,6 +929,12 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
                 num_prompts=self.num_prompts,
                 image_resolution=self.image_resolution,
                 random_range_ratio=self.random_range_ratio,
+                # 新增传参
+                prefix_hit_rate=self.prefix_hit_rate,
+                aisbench_request_rate=self.aisbench_request_rate,
+                aisbench_concurrency=self.aisbench_concurrency,
+                aisbench_repeat_rate=self.aisbench_repeat_rate,
+                generation_kwargs=self.generation_kwargs,
             )
             assert_metrics(self, metrics)
 
@@ -943,6 +985,12 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
     tpot = None
     mean_e2e_latency = None
     output_token_throughput = None
+
+    prefix_hit_rate = None
+    aisbench_request_rate = None
+    aisbench_concurrency = None
+    aisbench_repeat_rate = None
+    generation_kwargs = None
 
     @classmethod
     def setUpClass(cls):
@@ -1022,6 +1070,11 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 num_prompts=self.num_prompts,
                 image_resolution=self.image_resolution,
                 random_range_ratio=self.random_range_ratio,
+                prefix_hit_rate=self.prefix_hit_rate,
+                aisbench_request_rate=self.aisbench_request_rate,
+                aisbench_concurrency=self.aisbench_concurrency,
+                aisbench_repeat_rate=self.aisbench_repeat_rate,
+                generation_kwargs=self.generation_kwargs,
             )
             assert_metrics(self, metrics)
 
