@@ -127,6 +127,8 @@ class EagleDraftInputV2Mixin:
             num_needed_tokens += x
             r.kv_allocated_len += x
             r.decode_batch_idx += 1
+            # Pre-claim bonus slot here (like normal decode); resolve subtracts 1.
+            r.kv_committed_len += 1
 
         cur_kv_lens_cpu = torch.tensor(cur_kv_lens_cpu, dtype=torch.int32, device="cpu")
         nxt_kv_lens_cpu = torch.tensor(nxt_kv_lens_cpu, dtype=torch.int32, device="cpu")
@@ -259,12 +261,20 @@ class EagleVerifyInputV2Mixin:
 
             # Set mamba_track_indices for mamba prefix-cache state tracking
             if get_global_server_args().enable_mamba_extra_buffer():
-                batch.mamba_track_indices = torch.stack(
-                    [
-                        req.mamba_ping_pong_track_buffer[req.mamba_next_track_idx]
-                        for req in batch.reqs
-                    ]
-                ).to(torch.int64)
+                mapping = (
+                    req_to_token_pool.req_index_to_mamba_ping_pong_track_buffer_mapping
+                )
+                req_pool_idx_tensor = batch.req_pool_indices.to(
+                    device=mapping.device, dtype=torch.int64
+                )
+                track_col_idx = torch.tensor(
+                    [req.mamba_next_track_idx for req in batch.reqs],
+                    dtype=torch.int64,
+                    pin_memory=True,
+                ).to(mapping.device, non_blocking=True)
+                batch.mamba_track_indices = mapping[
+                    req_pool_idx_tensor, track_col_idx
+                ].to(dtype=torch.int64)
                 batch.mamba_track_mask = None
                 batch.mamba_track_seqlens = None
 
@@ -363,9 +373,9 @@ class EagleVerifyInputV2Mixin:
                 accept_index=accept_index,  # mutable
                 accept_token_num=accept_length,  # mutable
                 candidates=candidates,
-                retrive_index=self.retrive_index,
-                retrive_next_token=self.retrive_next_token,
-                retrive_next_sibling=self.retrive_next_sibling,
+                retrieve_index=self.retrieve_index,
+                retrieve_next_token=self.retrieve_next_token,
+                retrieve_next_sibling=self.retrieve_next_sibling,
                 target_predict=target_predict,
                 topk=self.topk,
             )
@@ -405,9 +415,10 @@ class EagleVerifyInputV2Mixin:
                 accept_index=accept_index,  # mutable
                 accept_token_num=accept_length,  # mutable
                 candidates=candidates,
-                retrive_index=self.retrive_index,
-                retrive_next_token=self.retrive_next_token,
-                retrive_next_sibling=self.retrive_next_sibling,
+                # kwarg LHS retained as `retrive_*` to match sgl_kernel op schema.
+                retrive_index=self.retrieve_index,
+                retrive_next_token=self.retrieve_next_token,
+                retrive_next_sibling=self.retrieve_next_sibling,
                 uniform_samples=coins,
                 uniform_samples_for_final_sampling=coins_for_final_sampling,
                 target_probs=target_probs,

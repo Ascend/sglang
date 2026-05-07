@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    QWEN3_8B_EAGLE3_WEIGHTS_PATH,
-    QWEN3_8B_WEIGHTS_PATH,
+    QWEN3_8B_DECRYPTED_WEIGHTS_PATH,
+    QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH,
     run_command,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -36,14 +36,14 @@ class TestDraftConfigFile(CustomTestCase):
     def setUpClass(cls):
         # Modify the config.json under the weight path
         run_command(
-            f"mv {os.path.join(QWEN3_8B_WEIGHTS_PATH, 'config.json')} {os.path.join(QWEN3_8B_WEIGHTS_PATH, '_config.json')}"
+            f"mv {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, 'config.json')} {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, '_config.json')}"
         )
         run_command(
-            f"mv {os.path.join(QWEN3_8B_EAGLE3_WEIGHTS_PATH, 'config.json')} {os.path.join(QWEN3_8B_EAGLE3_WEIGHTS_PATH, '_config.json')}"
+            f"mv {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, 'config.json')} {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, '_config.json')}"
         )
         try:
             cls.process = popen_launch_server(
-                QWEN3_8B_WEIGHTS_PATH,
+                QWEN3_8B_DECRYPTED_WEIGHTS_PATH,
                 DEFAULT_URL_FOR_TEST,
                 DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
                 other_args=[
@@ -58,7 +58,7 @@ class TestDraftConfigFile(CustomTestCase):
                     "--speculative-algorithm",
                     "EAGLE3",
                     "--speculative-draft-model-path",
-                    QWEN3_8B_EAGLE3_WEIGHTS_PATH,
+                    QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH,
                     "--speculative-num-steps",
                     "3",
                     "--speculative-eagle-topk",
@@ -86,10 +86,10 @@ class TestDraftConfigFile(CustomTestCase):
         except Exception as e:
             # Service failed to start, restoring original file name
             run_command(
-                f"mv {os.path.join(QWEN3_8B_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_WEIGHTS_PATH, 'config.json')}"
+                f"mv {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
             )
             run_command(
-                f"mv {os.path.join(QWEN3_8B_EAGLE3_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_EAGLE3_WEIGHTS_PATH, 'config.json')}"
+                f"mv {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
             )
             if cls.process:
                 kill_process_tree(cls.process.pid)
@@ -98,10 +98,10 @@ class TestDraftConfigFile(CustomTestCase):
     @classmethod
     def tearDownClass(cls):
         run_command(
-            f"mv {os.path.join(QWEN3_8B_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_WEIGHTS_PATH, 'config.json')}"
+            f"mv {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
         )
         run_command(
-            f"mv {os.path.join(QWEN3_8B_EAGLE3_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_EAGLE3_WEIGHTS_PATH, 'config.json')}"
+            f"mv {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
         )
         kill_process_tree(cls.process.pid)
 
@@ -109,7 +109,7 @@ class TestDraftConfigFile(CustomTestCase):
         args = SimpleNamespace(
             max_tokens=512,
             base_url=DEFAULT_URL_FOR_TEST,
-            model=QWEN3_8B_WEIGHTS_PATH,
+            model=QWEN3_8B_DECRYPTED_WEIGHTS_PATH,
             eval_name="gsm8k",
             api="completion",
             num_examples=200,
