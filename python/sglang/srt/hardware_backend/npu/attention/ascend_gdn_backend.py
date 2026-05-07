@@ -41,7 +41,11 @@ class AscendGDNAttnBackend(GDNAttnBackend):
         super().__init__(model_runner)
         # transpose last two dim for _init_npu_conv_state
         self.conv_states_shape = torch.Size(
-            (*self.conv_states_shape[:-2], self.conv_states_shape[-1], self.conv_states_shape[-2])
+            (
+                *self.conv_states_shape[:-2],
+                self.conv_states_shape[-1],
+                self.conv_states_shape[-2],
+            )
         )
         decode_backend = get_linear_attn_decode_backend()
         prefill_backend = get_linear_attn_prefill_backend()
@@ -67,7 +71,9 @@ class AscendGDNAttnBackend(GDNAttnBackend):
             self.actual_seq_lengths = self.actual_seq_lengths * seq_len
             # indices
             self.ssm_state_indices = torch.arange(
-                cache_indices.shape[0] * seq_len, dtype=torch.int32, device=cache_indices.device
+                cache_indices.shape[0] * seq_len,
+                dtype=torch.int32,
+                device=cache_indices.device,
             )
         else:
             self.ssm_state_indices = cache_indices
@@ -246,7 +252,7 @@ class AscendGDNAttnBackend(GDNAttnBackend):
             mixed_qkv = causal_conv1d_update_v2(
                 x=mixed_qkv.view(batch_size, draft_token_num, -1).contiguous(),
                 conv_state=conv_states.contiguous(),
-                weight=layer.conv_weights.transpose(0,1).contiguous(),
+                weight=layer.conv_weights.transpose(0, 1).contiguous(),
                 bias=layer.bias,
                 activation=layer.activation,
                 conv_state_indices=cache_indices,
@@ -350,7 +356,10 @@ class AscendGDNAttnBackend(GDNAttnBackend):
                     ssm_states.dtype, copy=False
                 )
                 ssm_states[cache_indices] = last_recurrent_state
-            if not forward_batch.spec_algorithm.is_none():
+            if (
+                forward_batch.spec_algorithm is not None
+                and not forward_batch.spec_algorithm.is_none()
+            ):
                 last_recurrent_state = last_recurrent_state.transpose(-1, -2).to(
                     ssm_states.dtype, copy=False
                 )

@@ -195,8 +195,11 @@ class PiecewiseCudaGraphRunner:
         self.capture_forward_mode = ForwardMode.EXTEND
         self.capture_hidden_mode = CaptureHiddenMode.NULL
 
-        # If returning hidden states is enabled, set initial capture hidden mode to full to avoid double-capture on startup
-        if model_runner.server_args.enable_return_hidden_states:
+        # Speculative target prefill needs hidden states for the draft model.
+        if model_runner.server_args.enable_return_hidden_states or (
+            model_runner.spec_algorithm is not None
+            and not model_runner.spec_algorithm.is_none()
+        ):
             self.capture_hidden_mode = CaptureHiddenMode.FULL
 
         self.max_num_tokens = (
@@ -383,9 +386,9 @@ class PiecewiseCudaGraphRunner:
                 dp_padding_mode=DpPaddingMode.get_default_mode_in_cuda_graph(),
                 global_dp_buffer_len=None,
                 mrope_positions=mrope_positions,
-                spec_algorithm=None,
+                spec_algorithm=self.model_runner.spec_algorithm,
                 spec_info=None,
-                capture_hidden_mode=CaptureHiddenMode.NULL,
+                capture_hidden_mode=self.capture_hidden_mode,
                 num_token_non_padded=None,
                 global_forward_mode=ForwardMode.EXTEND,
                 lora_ids=None,
@@ -416,6 +419,17 @@ class PiecewiseCudaGraphRunner:
         # Disable piecewise cuda graph for input embeddings
         # TODO(yuwei): fix it
         if forward_batch.input_embeds is not None:
+            return False
+        requested_capture_hidden_mode = max(
+            forward_batch.capture_hidden_mode,
+            getattr(
+                forward_batch.spec_info, "capture_hidden_mode", CaptureHiddenMode.NULL
+            ),
+        )
+        if (
+            requested_capture_hidden_mode != CaptureHiddenMode.NULL
+            and requested_capture_hidden_mode != self.capture_hidden_mode
+        ):
             return False
         num_tokens = len(forward_batch.input_ids)
         if forward_batch.return_logprob:
@@ -540,7 +554,7 @@ class PiecewiseCudaGraphRunner:
                 dp_padding_mode=DpPaddingMode.get_default_mode_in_cuda_graph(),
                 global_dp_buffer_len=None,
                 mrope_positions=mrope_positions,
-                spec_algorithm=None,
+                spec_algorithm=self.model_runner.spec_algorithm,
                 spec_info=None,
                 capture_hidden_mode=CaptureHiddenMode.NULL,
                 num_token_non_padded=None,
@@ -787,6 +801,11 @@ class PiecewiseCudaGraphRunner:
                         hidden_states=(
                             output.hidden_states[: self.raw_num_tokens]
                             if output.hidden_states is not None
+                            else None
+                        ),
+                        mm_input_embeds=(
+                            output.mm_input_embeds[: self.raw_num_tokens]
+                            if output.mm_input_embeds is not None
                             else None
                         ),
                     )

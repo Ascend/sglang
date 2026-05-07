@@ -127,8 +127,9 @@ def unified_linear_attention_with_output(
     )
 
     assert (
-        output.numel() == ret.numel()
-    ), f"Output tensor element mismatch: {output.numel()} != {ret.numel()}"
+        output.numel() >= ret.numel()
+    ), f"Output tensor element mismatch: {output.numel()} < {ret.numel()}"
 
-    output.view(ret.shape).copy_(ret)
+    output.zero_()
+    output.view(-1)[: ret.numel()].copy_(ret.reshape(-1))
     return

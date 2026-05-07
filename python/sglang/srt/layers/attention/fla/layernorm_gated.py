@@ -7,6 +7,7 @@
 
 
 from functools import lru_cache
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -300,6 +301,17 @@ def rms_norm_gated(
         bias = bias.contiguous()
     if _is_npu:
         assert activation == "swish", "NPU only supports swish activation"
+        if torch.compiler.is_compiling():
+            return rms_norm_ref(
+                x,
+                weight,
+                bias,
+                z=z,
+                eps=eps,
+                group_size=group_size,
+                norm_before_gate=norm_before_gate,
+                upcast=True,
+            ).reshape(x_shape_og)
     y, mean, rstd = _layer_norm_fwd(
         x,
         weight,
@@ -342,6 +354,40 @@ class LayerNormFn(torch.autograd.Function):
         )
 
 
+if _is_npu:
+
+    @torch.library.custom_op("sglang::layernorm_gated_fwd", mutates_args=())
+    def _layernorm_gated_fwd_op(
+        x: torch.Tensor,
+        weight: torch.Tensor,
+        bias: Optional[torch.Tensor],
+        z: Optional[torch.Tensor],
+        eps: float,
+        group_size: Optional[int],
+        norm_before_gate: bool,
+        is_rms_norm: bool,
+        activation: str,
+    ) -> torch.Tensor:
+        with torch.no_grad():
+            return LayerNormFn.apply(
+                x,
+                weight,
+                bias,
+                z,
+                eps,
+                group_size,
+                norm_before_gate,
+                is_rms_norm,
+                activation,
+            )
+
+    @_layernorm_gated_fwd_op.register_fake
+    def _(
+        x, weight, bias, z, eps, group_size, norm_before_gate, is_rms_norm, activation
+    ):
+        return torch.empty_like(x)
+
+
 def layernorm_fn(
     x,
     weight,
@@ -353,8 +399,28 @@ def layernorm_fn(
     is_rms_norm=False,
     activation: str = "swish",
 ):
+    if _is_npu:
+        return torch.ops.sglang.layernorm_gated_fwd(
+            x,
+            weight,
+            bias,
+            z,
+            eps,
+            group_size,
+            norm_before_gate,
+            is_rms_norm,
+            activation,
+        )
     return LayerNormFn.apply(
-        x, weight, bias, z, eps, group_size, norm_before_gate, is_rms_norm, activation
+        x,
+        weight,
+        bias,
+        z,
+        eps,
+        group_size,
+        norm_before_gate,
+        is_rms_norm,
+        activation,
     )
 
 

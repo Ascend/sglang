@@ -123,7 +123,11 @@ class Qwen3_5ForCausalLMMTP(nn.Module):
         input_embeds: Optional[torch.Tensor] = None,
         **kwargs,
     ):
-        if is_npu() and self.quant_config is None and get_global_server_args().quantization is not None:
+        if (
+            is_npu()
+            and self.quant_config is None
+            and get_global_server_args().quantization is not None
+        ):
             # ascend mtp unquant
             os.environ["SGLANG_DEEPEP_BF16_DISPATCH"] = "1"
             os.environ["DEEP_NORMAL_MODE_USE_INT8_QUANT"] = "0"
@@ -132,9 +136,9 @@ class Qwen3_5ForCausalLMMTP(nn.Module):
         if (
             forward_batch.forward_mode.is_extend()
             and forward_batch.contains_mm_inputs()
+            and input_embeds is not None
             and not forward_batch.forward_mode.is_draft_extend(include_v2=True)
         ):
-            assert input_embeds is not None
             input_embeds = torch.cat(
                 [input_embeds[:-1], self.model.embed_tokens(input_ids[-1].unsqueeze(0))]
             )
@@ -158,7 +162,11 @@ class Qwen3_5ForCausalLMMTP(nn.Module):
                 forward_batch,
                 hidden_states,
             )
-        if is_npu() and self.quant_config is None and get_global_server_args().quantization is not None:
+        if (
+            is_npu()
+            and self.quant_config is None
+            and get_global_server_args().quantization is not None
+        ):
             # ascend mtp unquant
             os.environ["SGLANG_DEEPEP_BF16_DISPATCH"] = "0"
             os.environ["DEEP_NORMAL_MODE_USE_INT8_QUANT"] = "1"
