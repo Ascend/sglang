@@ -1169,6 +1169,16 @@ jobs:
           - name: test_npu_glm5_1_w4a8_16p_in128k_out1k_50ms_90_1.py
             node_size: 2
             test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_16p_in128k_out1k_50ms_90_1.py
+          # kimi-k2.5-w4a8
+          - name: test_npu_kimi_k2_5_w4a8_16p_gpqa
+            node_size: 2
+            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_16p_gpqa.py
+          - name: test_npu_kimi_k2_5_w4a8_16p_aime2025
+            node_size: 2
+            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_16p_aime2025.py
+          - name: test_npu_kimi_k2_5_w4a8_16p_in32k_out512_prefix90_100ms
+            node_size: 2
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_16p_in32k_out512_prefix90_100ms.py
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-aarch64-a3-0
