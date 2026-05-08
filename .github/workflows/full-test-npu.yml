@@ -470,6 +470,15 @@ jobs:
 #            runner: linux-aarch64-a3-16
 #            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in128k_out1k_prefix90_50ms.py
 #            test_type: 'perf'
+          # Kimi-K2.5-w4a8 8p performance tests from issue #10
+          - name: test_npu_kimi_k2_5_w4a8_8p_in64k_out1k5_prefix90_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in64k_out1k5_prefix90_50ms.py
+            test_type: 'perf'
+          - name: test_npu_kimi_k2_5_w4a8_8p_in128k_out1k_prefix90_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in128k_out1k_prefix90_50ms.py
+            test_type: 'perf'
           #- name: test_npu_qwen3_5_397b_gpqa
           #  runner: linux-aarch64-a3-16
           #  test_case: test/registered/ascend/accuracy/test_npu_qwen3_5_397b_gpqa.py
