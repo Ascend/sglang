@@ -186,8 +186,8 @@ class TestNPUMiniMaxM2_5W8A8_1P1D_16P_In128k_Out1k_Prefix90_50ms(TestAscendPerfM
     dataset_name = "random"
     max_concurrency = 64
     num_prompts = 200
-    input_len = 128000
-    output_len = 1000
+    input_len = 131072
+    output_len = 1024
     random_range_ratio = 1
     aisbench_repeat_rate = 0.9
     tpot = 50
