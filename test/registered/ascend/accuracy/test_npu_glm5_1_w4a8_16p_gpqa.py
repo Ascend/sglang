@@ -4,6 +4,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestAscendAccuracyMultiNodePdMixTestCaseBase,
 )
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import GLM_5_1_W4A8_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -18,8 +19,8 @@ GLM_5_1_SINGLE_NODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "HCCL_SOCKET_IFNAME": "lo",
-    "GLOO_SOCKET_IFNAME": "lo",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "HCCL_BUFFSIZE": "2000",
@@ -34,8 +35,6 @@ GLM_5_1_SINGLE_NODE_OTHER_ARGS = [
     32,
     "--nnodes",
     2,
-    "--node-rank",
-    0,
     "--dp-size",
     4,
     "--enable-dp-attention",
@@ -49,9 +48,9 @@ GLM_5_1_SINGLE_NODE_OTHER_ARGS = [
     "--served-model-name",
     "glm-5",
     "--cuda-graph-max-bs",
-    16,
+    8,
     "--max-running-requests",
-    128,
+    32,
     "--quantization",
     "modelslim",
     "--speculative-draft-model-quantization",

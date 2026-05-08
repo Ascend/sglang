@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
@@ -21,6 +22,7 @@ register_npu_ci(
 PREFILL_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
     "STREAMS_PER_DEVICE": "32",
     "ENABLE_PROFILING": "1",
@@ -40,6 +42,7 @@ PREFILL_ENVS = {
 DECODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_BUFFSIZE": "1600",

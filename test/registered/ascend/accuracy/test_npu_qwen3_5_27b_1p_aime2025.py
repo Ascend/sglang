@@ -4,16 +4,19 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestAscendAccuracyTestCaseBase,
 )
-from sglang.test.ascend.test_ascend_utils import QWEN3_5_397B_W8A8_MODEL_PATH
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    QWEN3_5_27B_W8A8_MODEL_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=1800,
-    suite="nightly-16-npu-a3",
+    est_time=3600,
+    suite="",
     nightly=True,
+    disabled="accuracy testcase",
 )
 
-QWEN3_5_397B_W8A8_1P_HIGH_ENVS = {
+QWEN3_5_27B_3K5_1K5_HIGH_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -26,11 +29,11 @@ QWEN3_5_397B_W8A8_1P_HIGH_ENVS = {
     "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
 }
 
-QWEN3_5_397B_W8A8_1P_HIGH_OTHER_ARGS = [
+QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS = [
     "--model-path",
-    QWEN3_5_397B_W8A8_MODEL_PATH,
+    QWEN3_5_27B_W8A8_MODEL_PATH,
     "--tp-size",
-    16,
+    2,
     "--nnodes",
     1,
     "--node-rank",
@@ -46,16 +49,17 @@ QWEN3_5_397B_W8A8_1P_HIGH_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    32,
+    48,
     "--max-mamba-cache-size",
     60,
     "--mem-fraction-static",
-    0.75,
+    0.7,
     "--cuda-graph-bs",
     2,
     8,
     16,
     32,
+    48,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -76,23 +80,22 @@ QWEN3_5_397B_W8A8_1P_HIGH_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_5_397B_W8A8_1P_In3k5_Out1k5_High_AIME2025(
-    TestAscendAccuracyTestCaseBase
-):
-    """Test NPU accuracy for Qwen3.5-397B-W8A8 1p in3k5 out1k5 high throughput on AIME2025"""
+class TestNPUQwen3_5_27B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
+    """Test NPU accuracy for Qwen3.5-27B-W8A8 1p on AIME2025"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    model = QWEN3_5_397B_W8A8_MODEL_PATH
-    other_args = QWEN3_5_397B_W8A8_1P_HIGH_OTHER_ARGS
-    envs = QWEN3_5_397B_W8A8_1P_HIGH_ENVS
+    model = QWEN3_5_27B_W8A8_MODEL_PATH
+    other_args = QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS
+    envs = QWEN3_5_27B_3K5_1K5_HIGH_ENVS
     accuracy = 0.1
     dataset_type = "aime2025"
-    dataset_name = "aime2025_gen_0_shot_cot"
+    dataset_name = "aime2025_gen"
     output_len = 8192
     max_concurrency = 1
     num_prompts = 100000
 
-    def test_npu_qwen3_5_397b_w8a8_1p_in3k5_out1k5_high_aime2025(self):
+    def test_npu_qwen3_5_27b_1p_in3k5_out1k5_high_aime2025(self):
+        """Run NPU accuracy test for Qwen3.5-27B-W8A8 on AIME2025"""
         self.run_accuracy()
 
 

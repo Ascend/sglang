@@ -31,8 +31,8 @@ DECODE_ENVS = {
     "ASCEND_USE_FIA": "1",
     "HCCL_BUFFSIZE": "3000",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "HCCL_SOCKET_IFNAME": "enp196s0f0",
-    "GLOO_SOCKET_IFNAME": "enp196s0f0",
+    "HCCL_SOCKET_IFNAME": "lo",
+    "GLOO_SOCKET_IFNAME": "lo",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
@@ -52,9 +52,13 @@ PREFILL_ARGS = [
     "--mem-fraction-static",
     0.75,
     "--max-running-requests",
-    16,
+    4,
     "--chunked-prefill-size",
     32768,
+    "--max-prefill-tokens",
+    32768,
+    "--max-total-tokens",
+    150000,
     "--quantization",
     "modelslim",
     "--disaggregation-transfer-backend",
@@ -72,10 +76,6 @@ PREFILL_ARGS = [
     "deepep",
     "--deepep-mode",
     "auto",
-    "--dp-size",
-    4,
-    "--enable-dp-attention",
-    "--enable-dp-lm-head",
     "--dtype",
     "bfloat16",
     "--mamba-ssm-dtype",
@@ -90,9 +90,11 @@ DECODE_ARGS = [
     "--nnodes",
     1,
     "--mem-fraction-static",
-    0.76,
+    0.75,
+    "--max-total-tokens",
+    100000,
     "--max-running-requests",
-    16,
+    4,
     "--quantization",
     "modelslim",
     "--disaggregation-transfer-backend",
@@ -121,15 +123,6 @@ DECODE_ARGS = [
     8,
     12,
     16,
-    20,
-    24,
-    28,
-    32,
-    36,
-    48,
-    52,
-    54,
-    56,
     "--dtype",
     "bfloat16",
     "--mamba-ssm-dtype",
@@ -167,8 +160,10 @@ class TestNPUQwen3_5_397B_W8A8_1P1D_16P_GPQA(
     accuracy = 0.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
-    max_concurrency = 128
+    max_concurrency = 4
+    num_prompts = 448
     output_len = 1024
+    generation_kwargs = '{"temperature": 0}'
 
     def test_npu_qwen3_5_397b_w8a8_1p1d_16p_gpqa(self):
         self.run_accuracy()

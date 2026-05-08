@@ -162,6 +162,7 @@ class TestAscendSpeculativeAttentionMode(TestDisaggregationBase):
             base_url=self.base_url,
             eval_name="gsm8k",
             api="completion",
+            model=self.model,
             num_examples=1319,
             num_threads=128,
             max_tokens=512,

@@ -1,5 +1,6 @@
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -19,8 +20,8 @@ GLM_5_1_TWO_NODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "HCCL_SOCKET_IFNAME": "lo",
-    "GLOO_SOCKET_IFNAME": "lo",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "HCCL_BUFFSIZE": "2000",
@@ -39,7 +40,7 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     2,
     "--enable-dp-attention",
     "--chunked-prefill-size",
-    131072,
+    65536,
     "--max-prefill-tokens",
     280000,
     "--trust-remote-code",
@@ -50,7 +51,7 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     "--cuda-graph-max-bs",
     8,
     "--max-running-requests",
-    128,
+    16,
     "--quantization",
     "modelslim",
     "--speculative-draft-model-quantization",
@@ -85,7 +86,7 @@ class TestNPUGLM5_1_W4A8_32P_In3k5_Out1k5(TestAscendPerfMultiNodePdMixTestCaseBa
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 4
+    max_concurrency = 2
     num_prompts = 8
     input_len = 131072
     output_len = 1024

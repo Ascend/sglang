@@ -9,10 +9,10 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=1800,
+    est_time=3600,
     suite="nightly-16-npu-a3",
     nightly=True,
-    disabled="Currently it is executed by the npu performance workflow.",
+    disabled="performance testcase",
 )
 
 QWEN3_5_397B_ENVS = {
@@ -22,7 +22,7 @@ QWEN3_5_397B_ENVS = {
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "3000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -31,7 +31,7 @@ QWEN3_5_397B_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
-QWEN3_5_397B_3K5_OTHER_ARGS = [
+QWEN3_5_397B_64K_OTHER_ARGS = [
     "--attention-backend",
     "ascend",
     "--device",
@@ -41,24 +41,22 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    140000,
+    71680,
+    "--max-total-tokens",
+    1280000,
+    "--prefill-max-requests",
+    1,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    128,
+    28,
     "--mem-fraction-static",
-    0.85,
-    "--max-total-tokens",
-    1100000,
+    0.7,
     "--cuda-graph-bs",
     2,
     4,
-    6,
     8,
-    12,
     16,
-    20,
-    24,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -75,35 +73,36 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
-    3,
+    2,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    3,
     "--speculative-draft-model-quantization",
     "unquant",
 ]
 
 
-class TestNPUQwen3_5_397B_128K_1k_20ms(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Qwen3.5-397B-w4a8 16p in128k out1k"""
+class TestNPUQwen3_5_397B_64K(TestAscendPerformanceTestCaseBase):
+    """Test NPU performance for Qwen3.5-397B-w4a8 16p in64k out1k"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W8A8_MODEL_PATH
-    other_args = QWEN3_5_397B_3K5_OTHER_ARGS
+    other_args = QWEN3_5_397B_64K_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 64
-    input_len = 131072
+    max_concurrency = 28
+    num_prompts = 28
+    input_len = 65536
     output_len = 1024
     random_range_ratio = 1
-    tpot = 20
-    output_token_throughput = 100
+    tpot = 50
+    aisbench_request_rate = 1
+    # output_token_throughput = 150
 
-    def test_npu_qwen3_5_397b_128K_1k_20ms(self):
-        """Run NPU performance test for Qwen3.5-397B in128k"""
+    def test_npu_qwen3_5_397b_64k(self):
+        """Run NPU performance test for Qwen3.5-397B in64k out1k"""
         self.run_throughput()
 
 

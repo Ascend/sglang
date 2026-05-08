@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -28,6 +29,8 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "204800",
+    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
+    "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
 
 MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [

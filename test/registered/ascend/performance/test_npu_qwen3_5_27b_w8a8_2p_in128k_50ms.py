@@ -48,7 +48,7 @@ QWEN3_5_27B_128K_HIGH_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    32,
+    10,
     "--max-mamba-cache-size",
     22,
     "--mem-fraction-static",
@@ -56,8 +56,9 @@ QWEN3_5_27B_128K_HIGH_OTHER_ARGS = [
     "--cuda-graph-bs",
     2,
     4,
-    5,
     6,
+    8,
+    10,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -89,8 +90,8 @@ class TestNPUQwen3_5_27B_2P_In128k_High(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_27B_128K_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_128K_HIGH_ENVS
     dataset_name = "random"
-    max_concurrency = 2
-    num_prompts = 8
+    max_concurrency = 10
+    num_prompts = 40
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1

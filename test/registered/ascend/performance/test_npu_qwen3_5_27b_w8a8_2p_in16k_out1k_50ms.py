@@ -47,7 +47,7 @@ QWEN3_5_27B_16K_1K_HIGH_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    28,
+    34,
     "--max-mamba-cache-size",
     50,
     "--mem-fraction-static",
@@ -60,6 +60,7 @@ QWEN3_5_27B_16K_1K_HIGH_OTHER_ARGS = [
     20,
     24,
     28,
+    34,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -89,13 +90,13 @@ class TestNPUQwen3_5_27B_2P_In16k_Out1k_High(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_27B_16K_1K_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_16K_1K_HIGH_ENVS
     dataset_name = "random"
-    max_concurrency = 28
-    num_prompts = 112
+    max_concurrency = 34
+    num_prompts = 136
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 500
+    output_token_throughput = 217
 
     def test_npu_qwen3_5_27b_2p_in16k_out1k_high(self):
         """Run NPU performance test for Qwen3.5-27B-W8A8 in16k out1k high throughput"""

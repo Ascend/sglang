@@ -44,19 +44,18 @@ QWEN3_5_397B_W8A8_1P_HIGH_OTHER_ARGS = [
     -1,
     "--max-prefill-tokens",
     60000,
+    "--max-total-tokens",
+    80000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    32,
+    4,
     "--max-mamba-cache-size",
     60,
     "--mem-fraction-static",
     0.75,
     "--cuda-graph-bs",
     2,
-    8,
-    16,
-    32,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -86,12 +85,13 @@ class TestNPUQwen3_5_397B_W8A8_1P_In3k5_Out1k5_High_GPQA(
     model = QWEN3_5_397B_W8A8_MODEL_PATH
     other_args = QWEN3_5_397B_W8A8_1P_HIGH_OTHER_ARGS
     envs = QWEN3_5_397B_W8A8_1P_HIGH_ENVS
-    accuracy = 0.3
+    accuracy = 0.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     output_len = 1500
-    max_concurrency = 1
-    num_prompts = 100000
+    max_concurrency = 4
+    num_prompts = 448
+    generation_kwargs = '{"temperature": 0}'
 
     def test_npu_qwen3_5_397b_w8a8_1p_in3k5_out1k5_high_gpqa(self):
         self.run_accuracy()
