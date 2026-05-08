@@ -162,7 +162,6 @@ DECODE_ARGS = [
 ]
 
 ROUTER_ARGS = [
-    "--pd-disaggregation",
     "--policy",
     "round_robin",
     "--mini-lb",
