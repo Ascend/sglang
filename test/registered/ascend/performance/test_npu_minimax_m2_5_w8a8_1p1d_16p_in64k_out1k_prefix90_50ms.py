@@ -1,18 +1,17 @@
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
-from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    BENCHMARK_TOOL_DEFAULT,
-    TestAscendAccuracyMultiNodePdSepTestCaseBase,
-)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    AISBENCHMARK_DATASET_DEFAULT,
+    BENCHMARK_TOOL_DEFAULT,
     MINIMAX_M2_5_W8A8_MODEL_PATH,
+    TestAscendPerfMultiNodePdSepTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=1800,
-    suite="npu-accuracy",
+    est_time=3600,
+    suite="npu-performance",
     nightly=True,
 )
 
@@ -68,7 +67,7 @@ PREFILL_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    130000,
+    58000,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -87,11 +86,11 @@ PREFILL_ARGS = [
     "--speculative-draft-model-path",
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-eagle3",
     "--speculative-num-steps",
-    2,
+    3,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    3,
+    4,
     "--speculative-draft-model-quantization",
     "unquant",
     "--skip-server-warmup",
@@ -122,7 +121,7 @@ DECODE_ARGS = [
     "--deepep-mode",
     "low_latency",
     "--tokenizer-worker-num",
-    8,
+    16,
     "--dp-size",
     2,
     "--enable-dp-attention",
@@ -135,11 +134,11 @@ DECODE_ARGS = [
     "--speculative-draft-model-path",
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-eagle3",
     "--speculative-num-steps",
-    2,
+    3,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    3,
+    4,
     "--speculative-draft-model-quantization",
     "unquant",
     "--disaggregation-enable-decode-radix-cache",
@@ -148,6 +147,10 @@ DECODE_ARGS = [
     2,
     4,
     8,
+    16,
+    24,
+    32,
+    40,
 ]
 
 ROUTER_ARGS = [
@@ -170,22 +173,24 @@ MODEL_CONFIG = {
 }
 
 
-class TestNPUMiniMaxM2_5W8A8_8P_GPQA(TestAscendAccuracyMultiNodePdSepTestCaseBase):
-    """MiniMax-M2.5-w8a8 PD Sep GPQA accuracy test"""
+class TestNPUMiniMaxM2_5W8A8_1P1D_16P_In64k_Out1k_Prefix90_50ms(TestAscendPerfMultiNodePdSepTestCaseBase):
+    """MiniMax-M2.5-w8a8 PD Sep 1p1d 16p 64k input 1k output with 90% prefix cache performance test"""
 
-    model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.5
-    dataset_type = "gpqa"
-    dataset_name = "gpqa"
-    output_len = 1024
-    max_concurrency = 16
-    num_prompts = 198
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
+    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    model_config = MODEL_CONFIG
+    dataset_name = "random"
+    max_concurrency = 64
+    num_prompts = 200
+    input_len = 64000
+    output_len = 1000
+    random_range_ratio = 1
+    aisbench_repeat_rate = 0.9
+    tpot = 50
 
-    def test_npu_minimax_m2_5_w8a8_8p_gpqa(self):
-        """Run MiniMax-M2.5-w8a8 PD Sep GPQA accuracy test"""
-        self.run_accuracy()
+    def test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms(self):
+        """Run MiniMax-M2.5-w8a8 PD Sep 1p1d 16p 64k/1k prefix90 performance test"""
+        self.run_throughput()
 
 
 if __name__ == "__main__":

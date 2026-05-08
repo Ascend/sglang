@@ -1,18 +1,17 @@
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
-from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    BENCHMARK_TOOL_DEFAULT,
-    TestAscendAccuracyMultiNodePdSepTestCaseBase,
-)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    AISBENCHMARK_DATASET_DEFAULT,
+    BENCHMARK_TOOL_DEFAULT,
     MINIMAX_M2_5_W8A8_MODEL_PATH,
+    TestAscendPerfMultiNodePdSepTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=1800,
-    suite="npu-accuracy",
+    est_time=3600,
+    suite="npu-performance",
     nightly=True,
 )
 
@@ -170,21 +169,24 @@ MODEL_CONFIG = {
 }
 
 
-class TestNPUMiniMaxM2_5W8A8_8P_AIME2025(TestAscendAccuracyMultiNodePdSepTestCaseBase):
-    """MiniMax-M2.5-w8a8 PD Sep AIME2025 accuracy test"""
+class TestNPUMiniMaxM2_5W8A8_1P1D_16P_In128k_Out1k_Prefix90_50ms(TestAscendPerfMultiNodePdSepTestCaseBase):
+    """MiniMax-M2.5-w8a8 PD Sep 1p1d 16p 128k input 1k output with 90% prefix cache performance test"""
 
-    model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.8
-    dataset_type = "aime2025"
-    dataset_name = "aime2025"
-    output_len = 8192
-    max_concurrency = 16
-    num_prompts = 30
+    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    model_config = MODEL_CONFIG
+    dataset_name = "random"
+    max_concurrency = 64
+    num_prompts = 200
+    input_len = 128000
+    output_len = 1000
+    random_range_ratio = 1
+    aisbench_repeat_rate = 0.9
+    tpot = 50
 
-    def test_npu_minimax_m2_5_w8a8_8p_aime2025(self):
-        """Run MiniMax-M2.5-w8a8 PD Sep AIME2025 accuracy test"""
-        self.run_accuracy()
+    def test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms(self):
+        """Run MiniMax-M2.5-w8a8 PD Sep 1p1d 16p 128k/1k prefix90 performance test"""
+        self.run_throughput()
 
 
 if __name__ == "__main__":
