@@ -15,7 +15,7 @@ register_npu_ci(
     nightly=True,
 )
 
-MINIMAX_M2_5_W8A8_2P_IN64K_OUT1K_PREFIX90_ENVS = {
+MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -36,7 +36,7 @@ MINIMAX_M2_5_W8A8_2P_IN64K_OUT1K_PREFIX90_ENVS = {
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
 
-MINIMAX_M2_5_W8A8_2P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
+MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     "--tp-size",
     8,
     "--enable-dp-attention",
@@ -83,14 +83,14 @@ MINIMAX_M2_5_W8A8_2P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
 ]
 
 
-class TestNPUMiniMaxM2_5W8A8_2P_In64k_Out1k_Prefix90_50ms(TestAscendPerformanceTestCaseBase):
-    """MiniMax-M2.5-w8a8 2p (4 cards) 64k input 1k output with 90% prefix cache performance test"""
+class TestNPUMiniMaxM2_5W8A8_4P_In64k_Out1k_Prefix90_50ms(TestAscendPerformanceTestCaseBase):
+    """MiniMax-M2.5-w8a8 4p (4 cards) 64k input 1k output with 90% prefix cache performance test"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
-    other_args = MINIMAX_M2_5_W8A8_2P_IN64K_OUT1K_PREFIX90_OTHER_ARGS
-    envs = MINIMAX_M2_5_W8A8_2P_IN64K_OUT1K_PREFIX90_ENVS
+    other_args = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS
+    envs = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS
     dataset_name = "random"
     max_concurrency = 64
     num_prompts = 200
@@ -100,8 +100,8 @@ class TestNPUMiniMaxM2_5W8A8_2P_In64k_Out1k_Prefix90_50ms(TestAscendPerformanceT
     aisbench_repeat_rate = 0.9
     tpot = 50
 
-    def test_npu_minimax_m2_5_w8a8_2p_in64k_out1k_prefix90_50ms(self):
-        """Run MiniMax-M2.5-w8a8 2p 64k/1k prefix90 performance test"""
+    def test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms(self):
+        """Run MiniMax-M2.5-w8a8 4p 64k/1k prefix90 performance test"""
         self.run_throughput()
 
 
