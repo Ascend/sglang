@@ -35,6 +35,11 @@ MINIMAX_M2_5_W8A8_4P_GPQA_ENVS = {
     "SGLANG_NPU_DEEPEP_USE_FUSED_MOE_DECODE": "1",
     "SGLANG_NPU_FUSEEP_DECODE_ONLY": "1",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
+    "PYTHONPATH": "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-eagel-model-0318",
+    "ENABLE_PROFILING": "0",
+    "PROFILING_BS": "28",
+    "PROFILING_STAGE": "decode",
+    "PROFILING_step": "10",
 }
 
 MINIMAX_M2_5_W8A8_4P_GPQA_OTHER_ARGS = [

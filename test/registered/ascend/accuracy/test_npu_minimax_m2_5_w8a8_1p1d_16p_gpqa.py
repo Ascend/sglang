@@ -31,6 +31,11 @@ PREFILL_ENVS = {
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
+    "PYTHONPATH": "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-eagel-model-0318",
+    "ENABLE_PROFILING": "0",
+    "PROFILING_BS": "8",
+    "PROFILING_STAGE": "prefill",
+    "PROFILING_step": "30",
 }
 
 DECODE_ENVS = {
@@ -46,6 +51,7 @@ DECODE_ENVS = {
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
     "SGLANG_DISAGGREGATION_NUM_PRE_ALLOCATE_REQS": "96",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
+    "PYTHONPATH": "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-eagel-model-0318",
 }
 
 PREFILL_ARGS = [
