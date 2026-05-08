@@ -82,8 +82,8 @@ MINIMAX_M2_5_W8A8_IN128K_OUT1K_PREFIX90_OTHER_ARGS = [
 ]
 
 
-class TestNPUMiniMaxM2_5W8A8_8P_In128k_Out1k_Prefix90(TestAscendPerformanceTestCaseBase):
-    """MiniMax-M2.5-w8a8 8p (16 die) 128k input 1k output with 90% prefix cache performance test - low latency"""
+class TestNPUMiniMaxM2_5W8A8_8P_In128k_Out1k_Prefix90_20ms(TestAscendPerformanceTestCaseBase):
+    """MiniMax-M2.5-w8a8 8p (16 die) 128k input 1k output with 90% prefix cache low latency performance test"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
@@ -97,10 +97,10 @@ class TestNPUMiniMaxM2_5W8A8_8P_In128k_Out1k_Prefix90(TestAscendPerformanceTestC
     output_len = 1000
     random_range_ratio = 1
     aisbench_repeat_rate = 0.9
-    tpot = None
+    tpot = 20
 
-    def test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90(self):
-        """Run MiniMax-M2.5-w8a8 8p 128k/1k prefix90 low latency performance test"""
+    def test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms(self):
+        """Run MiniMax-M2.5-w8a8 8p 128k/1k prefix90 low latency 20ms performance test"""
         self.run_throughput()
 
 
