@@ -1,5 +1,6 @@
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -25,6 +26,8 @@ PREFILL_ENVS = {
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "64",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
 
@@ -34,6 +37,8 @@ DECODE_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "HCCL_BUFFSIZE": "1600",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "640",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
