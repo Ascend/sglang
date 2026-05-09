@@ -25,6 +25,7 @@ show_usage() {
     echo "  --repeat_rate       Repeat rate for prefix cache test (default: 0)"
     echo "  --dp                Data parallelism for prefix cache test (default: 2)"
     echo "  --generation-kwargs Custom generation kwargs dict string (overrides defaults based on mode)"
+    echo "  --api               Specify API interface type (chat / completion) to match model type"
     echo "                      Example: 'dict(temperature=0.5, top_k=10, top_p=0.95, seed=None, repetition_penalty=1.03)'"
     echo ""
     echo "Example:"
@@ -126,6 +127,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dp)
             DP="$2"
+            shift 2
+            ;;
+        --api)
+            API="$2"
             shift 2
             ;;
         -h|--help)
@@ -282,6 +287,43 @@ models = [
         returns_tool_calls=True,
         batch_size=$BATCH_SIZE,
         trust_remote_code=False,
+        generation_kwargs=${final_generation_kwargs},
+        pred_postprocessor=dict(type=extract_non_reasoning_content),
+    )
+]
+EOF
+  echo "============== ${model_config_file} - Begin =============="
+  echo "$(cat ${model_config_file})"
+  echo "============== ${model_config_file} - End ================"
+}
+
+function gen_model_config_file_vllm_api() {
+  model_config_file=${MODEL_CONFIG_PATH}/${TMP_CFG}.py
+  echo "Writing model config info into file: ${model_config_file}"
+
+  final_generation_kwargs=$(get_generation_kwargs)
+
+  cat > "${model_config_file}" << EOF
+from ais_bench.benchmark.models import VLLMCustomAPI
+from ais_bench.benchmark.utils.postprocess.model_postprocessors import extract_non_reasoning_content
+models = [
+    dict(
+        attr="service",
+        type=VLLMCustomAPI,
+        abbr='vllm-api',
+        path="$MODEL_PATH",
+        model="$MODEL",
+        stream=False,
+        request_rate=${REQUEST_RATE},
+        use_timestamp=False,
+        retry=2,
+        api_key="",
+        host_ip="$IP",
+        host_port=$PORT,
+        url="",
+        max_out_len=${OUTPUT_LEN},
+        batch_size=$BATCH_SIZE,
+        trust_remote_code=True,
         generation_kwargs=${final_generation_kwargs},
         pred_postprocessor=dict(type=extract_non_reasoning_content),
     )
@@ -550,7 +592,11 @@ elif [ "$MODE" == "accuracy" ]; then
     if [ "$DATASET_TYPE" == "bfcl" ]; then
         gen_model_config_file_vllm_api_function_call_chat
     else
-        gen_model_config_file_vllm_api_stream_chat
+        if [ "$API" == "completion" ]; then
+            gen_model_config_file_vllm_api
+        else
+            gen_model_config_file_vllm_api_stream_chat
+        fi
     fi
     CMD="${CMD} --config-dir ${AISBENCH_CUSTOM_CONFIG_PATH} --models $TMP_CFG --datasets ${DATASET_NAME} --work-dir $OUTPUT_PATH --num-prompts $NUM_PROMPTS "
     echo "IP: $IP | Port: $PORT | Model: $MODEL | Model Path: $MODEL_PATH"

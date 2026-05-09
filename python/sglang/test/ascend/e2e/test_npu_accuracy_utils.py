@@ -66,6 +66,7 @@ def run_aisbench(
     num_prompts,
     request_rate,
     generation_kwargs=None,
+    api="chat",
 ):
 
     metrics_path = os.getenv("METRICS_DATA_FILE")
@@ -83,7 +84,8 @@ def run_aisbench(
     cmd += f"--output-path {result_path} "
     cmd += f"--output-len {output_len} "
     cmd += f"--batch-size {max_concurrency} "
-    cmd += f"--num-prompts {num_prompts}"
+    cmd += f"--num-prompts {num_prompts} "
+    cmd += f"--api {api} "
 
     if generation_kwargs:
         cmd += f" --generation-kwargs '{generation_kwargs}'"
@@ -181,6 +183,7 @@ class TestAscendAccuracyTestCaseBase(CustomTestCase):
     num_prompts = 100000
     generation_kwargs = None
     request_rate = None
+    api = "chat"
 
     @classmethod
     def setUpClass(cls):
@@ -227,6 +230,7 @@ class TestAscendAccuracyTestCaseBase(CustomTestCase):
                 num_prompts=self.num_prompts,
                 request_rate=self.request_rate,
                 generation_kwargs=self.generation_kwargs,
+                api=self.api,
             )
             assert_metrics(self, metrics)
 
