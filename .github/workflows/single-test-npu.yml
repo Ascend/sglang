@@ -1,4 +1,5 @@
 name: Single Test (NPU)
+# tuning round 2: concurrency 54->64, num_prompts 216->256
 
 on:
   pull_request:
