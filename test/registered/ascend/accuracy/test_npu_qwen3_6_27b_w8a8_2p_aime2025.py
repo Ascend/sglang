@@ -79,7 +79,7 @@ QWEN3_6_27B_2P_OTHER_ARGS = [
 
 
 class TestNPUQwen3_6_27B_2P_AIME2025(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Qwen3.6-27B-W8A8 2p on AIME2025"""
+    """Test NPU accuracy for Qwen3.6-27B-w8a8 2p on AIME2025"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_6_27B_W8A8_MODEL_PATH
@@ -93,7 +93,7 @@ class TestNPUQwen3_6_27B_2P_AIME2025(TestAscendAccuracyTestCaseBase):
     num_prompts = 100000
 
     def test_npu_qwen3_6_27b_2p_aime2025(self):
-        """Run NPU accuracy test for Qwen3.6-27B-W8A8 2p on AIME2025"""
+        """Run NPU accuracy test for Qwen3.6-27B-w8a8 2p on AIME2025"""
         self.run_accuracy()
 
 

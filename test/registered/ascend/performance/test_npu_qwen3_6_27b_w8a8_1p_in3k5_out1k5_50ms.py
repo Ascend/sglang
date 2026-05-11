@@ -77,7 +77,7 @@ QWEN3_6_27B_3K5_1K5_OTHER_ARGS = [
 
 
 class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Qwen3.6-27B-W8A8 1p in3k5 out1k5 50ms"""
+    """Test NPU performance for Qwen3.6-27B-w8a8 1p in3k5 out1k5 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
@@ -94,7 +94,7 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase)
     output_token_throughput = 800
 
     def test_npu_qwen3_6_27b_1p_in3k5_out1k5_50ms(self):
-        """Run NPU performance test for Qwen3.6-27B-W8A8 in3k5 out1k5 50ms"""
+        """Run NPU performance test for Qwen3.6-27B-w8a8 in3k5 out1k5 50ms"""
         self.run_throughput()
 
 
