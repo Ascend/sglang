@@ -23,14 +23,13 @@ KIMI_K2_5_IN1024x1024_30_OUT1024_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
-    "HCCL_BUFFSIZE": "1200",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "112",
+    "HCCL_BUFFSIZE": "1500",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
 KIMI_K2_5_IN1024x1024_30_OUT1024_OTHER_ARGS = [
-    "--skip-server-warmup",
     "--quantization",
     "modelslim",
     "--dtype",
@@ -45,11 +44,13 @@ KIMI_K2_5_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.8,
+    0.77,
     "--max-running-requests",
-    128,
+    256,
     "--chunked-prefill-size",
-    16384,
+    32768,
+    "--context-length",
+    8192,
     "--max-prefill-tokens",
     16384,
     "--enable-multimodal",
@@ -63,22 +64,27 @@ KIMI_K2_5_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "auto",
     "--enable-dp-attention",
     "--dp-size",
-    4,
+    16,
     "--cuda-graph-bs",
+    1,
+    2,
     4,
     8,
+    9,
+    10,
+    12,
     16,
-    32,
+    "--disable-radix-cache",
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
     KIMI_K2_5_EAGLE3_MODEL_PATH,
     "--speculative-num-steps",
-    3,
+    4,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    5,
     "--speculative-draft-model-quantization",
     "unquant",
 ]
@@ -96,16 +102,16 @@ class TestNPUKimiK2_5_W4A8_8P_IN1024x1024_30_OUT1024_50MS(
     envs = KIMI_K2_5_IN1024x1024_30_OUT1024_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    image_resolution = "1920x1080"
+    image_resolution = "1024x1024"
     image_count = 1
-    max_concurrency = 16
-    num_prompts = 16
+    max_concurrency = 256
+    num_prompts = 256
     request_rate = 1
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 600
+    output_token_throughput = 3300
 
     def test_npu_kimi_k2_5_w4a8_8p_in1024x1024_30_out1024_50ms(self):
         """Run NPU performance test for Kimi-K2.5-w4a8 multimodal in1024x1024+30 out1024"""

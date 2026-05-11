@@ -1,5 +1,6 @@
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -19,11 +20,11 @@ GLM_5_1_TWO_NODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "HCCL_SOCKET_IFNAME": "lo",
-    "GLOO_SOCKET_IFNAME": "lo",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
-    "HCCL_BUFFSIZE": "2000",
+    "HCCL_BUFFSIZE": "2500",
 }
 
 GLM_5_1_TWO_NODE_OTHER_ARGS = [
@@ -36,10 +37,10 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     "--nnodes",
     2,
     "--dp-size",
-    4,
+    16,
     "--enable-dp-attention",
     "--chunked-prefill-size",
-    131072,
+    65536,
     "--max-prefill-tokens",
     280000,
     "--trust-remote-code",
@@ -85,13 +86,13 @@ class TestNPUGLM5_1_W4A8_32P_In3k5_Out1k5(TestAscendPerfMultiNodePdMixTestCaseBa
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 80
-    num_prompts = 320
+    max_concurrency = 128
+    num_prompts = 512
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 3000
+    output_token_throughput = 1500
 
     def test_npu_glm5_1_w4a8_32p_in3k5_out1k5(self):
         """Run NPU performance test for GLM-5.1-w4a8 two nodes"""

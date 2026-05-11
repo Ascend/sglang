@@ -97,13 +97,13 @@ class TestNPUQwen3_5_27B_2P_In3k5_Out1k5_Low(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_27B_3K5_1K5_LOW_OTHER_ARGS
     envs = QWEN3_5_27B_3K5_1K5_LOW_ENVS
     dataset_name = "random"
-    max_concurrency = 10
-    num_prompts = 40
+    max_concurrency = 38
+    num_prompts = 152
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
     tpot = 20
-    output_token_throughput = 400
+    output_token_throughput = 555
 
     def test_npu_qwen3_5_27b_2p_in3k5_out1k5_low(self):
         """Run NPU performance test for Qwen3.5-27B-W8A8 in3k5 out1k5 low latency"""

@@ -1,5 +1,6 @@
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -19,7 +20,6 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24707",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "HCCL_BUFFSIZE": "1200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
@@ -28,15 +28,14 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "TASK_QUEUE_ENABLE": "2",
     "ENABLE_PROFILING": "0",
-    "HCCL_SOCKET_IFNAME": "enp196s0f0",
-    "GLOO_SOCKET_IFNAME": "enp196s0f0",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
 GLM_5_1_PD_SEP_DECODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24707",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "SGLANG_SPEC_ENABLE_OVERLAP_REFLOW": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
@@ -44,8 +43,8 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
     "HCCL_BUFFSIZE": "650",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     "TASK_QUEUE_ENABLE": "0",
-    "HCCL_SOCKET_IFNAME": "enp196s0f0",
-    "GLOO_SOCKET_IFNAME": "enp196s0f0",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
 GLM_5_1_PD_SEP_PREFILL_ARGS = [
@@ -114,14 +113,14 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "--nnodes",
     2,
     "--dp-size",
-    8,
+    32,
     "--ep-size",
     32,
     "--enable-dp-attention",
     "--mem-fraction-static",
     0.87,
     "--max-running-requests",
-    24,
+    128,
     "--attention-backend",
     "ascend",
     "--device",
@@ -170,7 +169,7 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
     "decode_args": GLM_5_1_PD_SEP_DECODE_ARGS,
     "prefill_envs": GLM_5_1_PD_SEP_PREFILL_ENVS,
     "decode_envs": GLM_5_1_PD_SEP_DECODE_ENVS,
-    "router_args": [],
+    "router_args": ["--policy", "round_robin"],
     "router_envs": {},
 }
 
@@ -182,13 +181,13 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 40
-    num_prompts = 160
+    max_concurrency = 128
+    num_prompts = 512
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1
-    tpot = 50
-    output_token_throughput = 3000
+    tpot = 20
+    output_token_throughput = 1000
 
     def test_npu_glm5_1_w4a8_pd_sep_in3k5_out1k5(self):
         """Run NPU performance test for GLM-5.1-w4a8 PD separation"""

@@ -24,13 +24,12 @@ KIMI_K2_5_IN1080P_30_OUT256_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
-    "HCCL_BUFFSIZE": "1200",
+    "HCCL_BUFFSIZE": "1800",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
 KIMI_K2_5_IN1080P_30_OUT256_OTHER_ARGS = [
-    "--skip-server-warmup",
     "--quantization",
     "modelslim",
     "--dtype",
@@ -45,13 +44,15 @@ KIMI_K2_5_IN1080P_30_OUT256_OTHER_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.8,
+    0.765,
     "--max-running-requests",
-    128,
+    160,
     "--chunked-prefill-size",
-    16384,
-    "--max-prefill-tokens",
-    16384,
+    -1,
+    "--context-length",
+    8192,
+    "--prfill-max-requests",
+    1,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -63,22 +64,25 @@ KIMI_K2_5_IN1080P_30_OUT256_OTHER_ARGS = [
     "auto",
     "--enable-dp-attention",
     "--dp-size",
-    4,
-    "--cuda-graph-bs",
-    4,
-    8,
     16,
-    32,
+    "--cuda-graph-bs",
+    1,
+    2,
+    4,
+    6,
+    8,
+    10,
+    "--disable-radix-cache",
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
     KIMI_K2_5_EAGLE3_MODEL_PATH,
     "--speculative-num-steps",
-    3,
+    2,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    3,
     "--speculative-draft-model-quantization",
     "unquant",
 ]
@@ -96,14 +100,14 @@ class TestNPUKimiK2_5_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     dataset_name = "image"
     image_resolution = "1920x1080"
     image_count = 1
-    max_concurrency = 16
-    num_prompts = 16
+    max_concurrency = 64
+    num_prompts = 64
     request_rate = 1
     input_len = 30
     output_len = 256
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 600
+    output_token_throughput = 1374
 
     def test_npu_kimi_k2_5_w4a8_8p_in1080p_30_out256_50ms(self):
         """Run NPU performance test for Kimi-K2.5-w4a8 multimodal in1080p+30 out256"""

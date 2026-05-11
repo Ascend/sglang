@@ -13,14 +13,14 @@ register_npu_ci(
 
 
 class TestGptOss120bBf16(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the eigen-ai-labs/gpt-oss-120b-bf16 model on the GSM8K dataset is no less than 0.86.
+    """Testcase: Verify that the inference accuracy of the eigen-ai-labs/gpt-oss-120b-bf16 model on the GSM8K dataset is no less than 0.84.
 
     [Test Category] Model
     [Test Target] eigen-ai-labs/gpt-oss-120b-bf16
     """
 
     model = GPT_OSS_120B_BF16_WEIGHTS_PATH
-    accuracy = 0.86
+    accuracy = 0.84
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",

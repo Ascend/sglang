@@ -1,55 +1,59 @@
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
-    TestAscendPerformanceTestCaseBase,
-)
-from sglang.test.ascend.test_ascend_utils import (
     KIMI_K2_5_EAGLE3_MODEL_PATH,
     KIMI_K2_5_W4A8_MODEL_PATH,
+    TestAscendPerformanceTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=1800,
-    suite="nightly-8-npu-a3",
+    suite="nightly-16-npu-a3",
     nightly=True,
     disabled="Currently it is executed by the npu performance workflow.",
 )
 
-KIMI_K2_5_3K5_20MS_ENVS = {
+KIMI_K2_5_ENVS = {
+    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
-    "SGLANG_SET_CPU_AFFINITY": "1",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
     "STREAMS_PER_DEVICE": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "48",
     "HCCL_BUFFSIZE": "1200",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_NPU_USE_MLAPO": "1",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
+    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
 }
 
-KIMI_K2_5_3K5_20MS_OTHER_ARGS = [
-    "--skip-server-warmup",
+KIMI_K2_5_OTHER_ARGS = [
+    "--trust-remote-code",
+    "--attention-backend",
+    "ascend",
+    "--device",
+    "npu",
     "--quantization",
     "modelslim",
     "--dtype",
     "bfloat16",
-    "--model-loader-extra-config",
-    '{"enable_multithread_load": true}',
-    "--trust-remote-code",
-    "--device",
-    "npu",
-    "--attention-backend",
-    "ascend",
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.8,
+    0.74,
     "--max-running-requests",
-    128,
+    64,
     "--chunked-prefill-size",
-    16384,
+    32768,
+    "--context-length",
+    8192,
     "--max-prefill-tokens",
     16384,
     "--enable-multimodal",
@@ -57,53 +61,55 @@ KIMI_K2_5_3K5_20MS_OTHER_ARGS = [
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--enable-dp-attention",
+    "--dp-size",
+    16,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
     "auto",
-    "--enable-dp-attention",
-    "--dp-size",
-    4,
     "--cuda-graph-bs",
+    1,
+    2,
+    3,
     4,
-    8,
-    16,
-    32,
+    "--disable-radix-cache",
+    "--model-loader-extra-config",
+    '{"enable_multithread_load": true}',
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
     KIMI_K2_5_EAGLE3_MODEL_PATH,
     "--speculative-num-steps",
-    3,
+    4,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    5,
     "--speculative-draft-model-quantization",
     "unquant",
 ]
 
 
-class TestNPUKimiK2_5_W4A8_8P_In3k5_Out1k5_20ms(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Kimi-K2.5-w4a8 8p in3k5 out1k5 20ms TPOT"""
-
+class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    max_attempts = 5
     model = KIMI_K2_5_W4A8_MODEL_PATH
-    other_args = KIMI_K2_5_3K5_20MS_OTHER_ARGS
-    envs = KIMI_K2_5_3K5_20MS_ENVS
+    other_args = KIMI_K2_5_OTHER_ARGS
+    envs = KIMI_K2_5_ENVS
+    backend = "sglang"
     dataset_name = "random"
-    max_concurrency = 16
-    num_prompts = 16
-    request_rate = 1
+    max_concurrency = 64
+    num_prompts = 64
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    warmup_requests = 0
     tpot = 20
-    output_token_throughput = 1540
+    output_token_throughput = 1800
 
-    def test_npu_kimi_k2_5_w4a8_8p_in3k5_out1k5_20ms(self):
-        """Run NPU performance test for Kimi-K2.5-w4a8 in3k5 out1k5 20ms"""
+    def test_kimi_k2_5_w4a8(self):
         self.run_throughput()
 
 

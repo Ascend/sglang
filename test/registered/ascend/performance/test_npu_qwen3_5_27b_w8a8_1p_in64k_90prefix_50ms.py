@@ -50,7 +50,7 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    16,
+    14,
     "--max-mamba-cache-size",
     80,
     "--mem-fraction-static",
@@ -63,7 +63,6 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     11,
     12,
     14,
-    16,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -93,13 +92,14 @@ class TestNPUQwen3_5_27B_1P_In64k_90Prefix_High(TestAscendPerformanceTestCaseBas
     other_args = QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS
     dataset_name = "random"
-    max_concurrency = 2
-    num_prompts = 8
+    max_concurrency = 14
+    num_prompts = 56
     input_len = 65536
     output_len = 1024
+    aisbench_repeat_rate = 0.9
     random_range_ratio = 0.1
     tpot = 50
-    output_token_throughput = 100
+    output_token_throughput = 110
 
     def test_npu_qwen3_5_27b_1p_in64k_90prefix_high(self):
         """Run NPU performance test for Qwen3.5-27B-W8A8 in64k 90% prefix"""

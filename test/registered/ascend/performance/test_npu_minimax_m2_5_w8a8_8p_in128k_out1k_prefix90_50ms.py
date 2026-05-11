@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -38,6 +39,7 @@ MINIMAX_M2_5_128K_PREFIX_ENVS = {
     "PROFILING_BS": "28",
     "PROFILING_STAGE": "decode",
     "PROFILING_step": "10",
+    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
 
@@ -99,8 +101,8 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In128k_Out1k_Prefix90(
     other_args = MINIMAX_M2_5_128K_PREFIX_OTHER_ARGS
     envs = MINIMAX_M2_5_128K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 12
-    num_prompts = 48
+    max_concurrency = 8
+    num_prompts = 32
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1

@@ -4,6 +4,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestAscendAccuracyMultiNodePdSepTestCaseBase,
 )
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import GLM_5_1_W4A8_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -17,7 +18,6 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24707",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "HCCL_BUFFSIZE": "1200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
@@ -26,15 +26,14 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "TASK_QUEUE_ENABLE": "2",
     "ENABLE_PROFILING": "0",
-    "HCCL_SOCKET_IFNAME": "enp196s0f0",
-    "GLOO_SOCKET_IFNAME": "enp196s0f0",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
 GLM_5_1_PD_SEP_DECODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24707",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "SGLANG_SPEC_ENABLE_OVERLAP_REFLOW": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
@@ -42,8 +41,8 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
     "HCCL_BUFFSIZE": "650",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     "TASK_QUEUE_ENABLE": "0",
-    "HCCL_SOCKET_IFNAME": "enp196s0f0",
-    "GLOO_SOCKET_IFNAME": "enp196s0f0",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
 GLM_5_1_PD_SEP_PREFILL_ARGS = [

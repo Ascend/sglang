@@ -100,7 +100,7 @@ if [ "${INSTALL_SGLANG_FROM_SOURCE}" = "true" ] || [ "${INSTALL_SGLANG_FROM_SOUR
     export PYTHONPATH=${sglang_source_path}/python:$PYTHONPATH
 else
     echo "Use sglang from docker image"
-    sglang_pkg_path=$(pip show sglang | grep Location | awk '{print $2}')
+    sglang_pkg_path=/sgl-workspace/sglang/python
     ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
     mkdir -p "${ascend_test_util_path}"
     mv "${ascend_test_util_path}" "${ascend_test_util_path}_bak"

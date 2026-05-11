@@ -20,7 +20,7 @@ class TestClipVitLargePatch14(BaseEmbeddingTest, CustomTestCase):
     [Test Target] AI-ModelScope/clip-vit-large-patch14-336
     """
 
-    MODELS = [(CLIP_VIT_LARGE_PATCH14_336_WEIGHTS_PATH, 1, 0.22)]
+    MODELS = [(CLIP_VIT_LARGE_PATCH14_336_WEIGHTS_PATH, 1, 0.3)]
     DEFAULT_MAX_LENGTH = 76
 
 

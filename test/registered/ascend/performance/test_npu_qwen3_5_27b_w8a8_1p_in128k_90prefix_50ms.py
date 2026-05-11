@@ -96,6 +96,7 @@ class TestNPUQwen3_5_27B_1P_In128k_90Prefix_High(TestAscendPerformanceTestCaseBa
     num_prompts = 8
     input_len = 131072
     output_len = 1024
+    aisbench_repeat_rate = 0.9
     random_range_ratio = 0.1
     tpot = 50
     output_token_throughput = 100

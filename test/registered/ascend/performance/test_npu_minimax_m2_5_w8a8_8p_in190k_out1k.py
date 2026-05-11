@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -38,6 +39,7 @@ MINIMAX_M2_5_128K_PREFIX_ENVS = {
     "PROFILING_BS": "28",
     "PROFILING_STAGE": "decode",
     "PROFILING_step": "10",
+    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
 
@@ -55,7 +57,7 @@ MINIMAX_M2_5_128K_PREFIX_OTHER_ARGS = [
     "--max-running-requests",
     36,
     "--chunked-prefill-size",
-    -1,
+    130000,
     "--max-prefill-tokens",
     130000,
     "--cuda-graph-bs",

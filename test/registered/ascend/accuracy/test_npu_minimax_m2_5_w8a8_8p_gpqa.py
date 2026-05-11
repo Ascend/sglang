@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
@@ -29,6 +30,8 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "204800",
+    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
+    "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
 
 MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [
@@ -94,7 +97,7 @@ class TestNPUMiniMaxM2_5_W8A8_8P_GPQA(TestAscendAccuracyTestCaseBase):
     accuracy = 0.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
-    batch_size = 128
+    max_concurrency = 128
     max_out_len = 1024
 
     def test_npu_minimax_m2_5_w8a8_8p_gpqa(self):

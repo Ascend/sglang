@@ -92,16 +92,16 @@ class TestNPUQwen3_5_27B_1P_MM_In1k_Out1k_High(TestAscendPerformanceTestCaseBase
     model = QWEN3_5_27B_W8A8_MODEL_PATH
     other_args = QWEN3_5_27B_MM_1024_1024_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_MM_1024_1024_HIGH_ENVS
-    dataset_name = "random"
-    max_concurrency = 48
-    num_prompts = 192
-    input_len = 1024
+    dataset_name = "image"
+    image_resolution = "1024x1024"
+    image_count = 1
+    max_concurrency = 16
+    num_prompts = 16
+    input_len = 30
     output_len = 1024
     random_range_ratio = 1
-    image_resolution = 1024
-    image_count = 1
     tpot = 50
-    output_token_throughput = 400
+    output_token_throughput = 30
 
     def test_npu_qwen3_5_27b_1p_mm_in1k_out1k_high(self):
         """Run NPU performance test for Qwen3.5-27B-W8A8 multimodal in1k out1k"""

@@ -4,65 +4,71 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestAscendAccuracyMultiNodePdSepTestCaseBase,
 )
-from sglang.test.ascend.test_ascend_utils import QWEN3_5_397B_W8A8_MODEL_PATH
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
+from sglang.test.ascend.test_ascend_utils import (
+    KIMI_K2_5_EAGLE3_MODEL_PATH,
+    KIMI_K2_5_W4A8_MODEL_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
     suite="nightly-pd-sep-2-node",
     nightly=True,
+    disabled="accuracy testcase",
 )
 
 PREFILL_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_USE_FIA": "1",
-    "HCCL_BUFFSIZE": "3000",
-    "HCCL_OP_EXPANSION_MODE": "AIV",
-    "HCCL_SOCKET_IFNAME": "lo",
-    "GLOO_SOCKET_IFNAME": "lo",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
+    "HCCL_BUFFSIZE": "1800",
 }
 
 DECODE_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_USE_FIA": "1",
-    "HCCL_BUFFSIZE": "3000",
-    "HCCL_OP_EXPANSION_MODE": "AIV",
-    "HCCL_SOCKET_IFNAME": "enp196s0f0",
-    "GLOO_SOCKET_IFNAME": "enp196s0f0",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
+    "HCCL_BUFFSIZE": "1200",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_NPU_USE_MLAPO": "1",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
 }
 
 PREFILL_ARGS = [
-    "--disaggregation-mode",
-    "prefill",
-    "--tp-size",
-    16,
-    "--nnodes",
-    1,
-    "--node-rank",
-    0,
-    "--mem-fraction-static",
-    0.75,
-    "--max-running-requests",
-    16,
-    "--chunked-prefill-size",
-    32768,
     "--quantization",
     "modelslim",
-    "--disaggregation-transfer-backend",
-    "ascend",
+    "--dtype",
+    "bfloat16",
+    "--disaggregation-mode",
+    "prefill",
+    "--nnodes",
+    "1",
+    "--node-rank",
+    "0",
+    "--trust-remote-code",
     "--attention-backend",
     "ascend",
     "--device",
     "npu",
+    "--tp-size",
+    16,
+    "--mem-fraction-static",
+    0.78,
+    "--max-running-requests",
+    8,
+    "--chunked-prefill-size",
+    16384,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -72,105 +78,84 @@ PREFILL_ARGS = [
     "deepep",
     "--deepep-mode",
     "auto",
-    "--dp-size",
-    4,
-    "--enable-dp-attention",
-    "--enable-dp-lm-head",
-    "--dtype",
-    "bfloat16",
-    "--mamba-ssm-dtype",
-    "bfloat16",
 ]
 
 DECODE_ARGS = [
-    "--disaggregation-mode",
-    "decode",
-    "--tp-size",
-    16,
-    "--nnodes",
-    1,
-    "--mem-fraction-static",
-    0.76,
-    "--max-running-requests",
-    16,
     "--quantization",
     "modelslim",
-    "--disaggregation-transfer-backend",
-    "ascend",
+    "--dtype",
+    "bfloat16",
+    "--disaggregation-mode",
+    "decode",
+    "--nnodes",
+    "2",
+    "--trust-remote-code",
     "--attention-backend",
     "ascend",
     "--device",
     "npu",
+    "--tp-size",
+    32,
+    "--mem-fraction-static",
+    0.82,
+    "--max-running-requests",
+    32,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--enable-dp-attention",
+    "--dp-size",
+    4,
+    "--disable-radix-cache",
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
     "auto",
-    "--dp-size",
-    4,
-    "--enable-dp-attention",
-    "--enable-dp-lm-head",
     "--cuda-graph-bs",
-    2,
-    4,
-    6,
     8,
-    12,
-    16,
-    20,
-    24,
-    28,
-    32,
-    36,
-    48,
-    52,
-    54,
-    56,
-    "--dtype",
-    "bfloat16",
-    "--mamba-ssm-dtype",
-    "bfloat16",
     "--speculative-algorithm",
-    "NEXTN",
+    "EAGLE3",
+    "--speculative-draft-model-path",
+    KIMI_K2_5_EAGLE3_MODEL_PATH,
     "--speculative-num-steps",
-    3,
+    1,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    2,
     "--speculative-draft-model-quantization",
     "unquant",
 ]
 
 MODEL_CONFIG = {
-    "model_path": QWEN3_5_397B_W8A8_MODEL_PATH,
+    "model_path": KIMI_K2_5_W4A8_MODEL_PATH,
     "prefill_args": PREFILL_ARGS,
     "decode_args": DECODE_ARGS,
     "prefill_envs": PREFILL_ENVS,
     "decode_envs": DECODE_ENVS,
-    "router_args": ["--policy", "round_robin"],
+    "router_args": ["--policy", "cache_aware"],
     "router_envs": {},
 }
 
 
-class TestNPUQwen3_5_397B_W8A8_1P1D_16P_AIME2025(
+class TestNPUKimiK2_5_W4A8_1P1D_24P_AIME2025(
     TestAscendAccuracyMultiNodePdSepTestCaseBase
 ):
-    """Test NPU accuracy for Qwen3.5-397B-W8A8 1p1d_16p on AIME2025"""
+    """Test NPU accuracy for Kimi-K2.5-w4a8 1p1d_24p on AIME 2025"""
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     accuracy = 0.8
     dataset_type = "aime2025"
-    dataset_name = "aime2025_gen_0_shot_cot"
-    max_concurrency = 64
-    output_len = 8192
+    dataset_name = "aime2025_gen"
+    max_concurrency = 128
+    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
+    output_len = 256000
 
-    def test_npu_qwen3_5_397b_w8a8_1p1d_16p_aime2025(self):
+    def test_npu_kimi_k2_5_w4a8_1p1d_24p_aime2025(self):
+        """Run NPU accuracy test for Kimi-K2.5-w4a8 1p1d_24p on AIME 2025"""
         self.run_accuracy()
 
 

@@ -2,7 +2,7 @@ import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
-    TestAscendAccuracyMultiNodePdMixTestCaseBase,
+    TestAscendAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import GLM_5_1_W4A8_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
@@ -14,7 +14,7 @@ register_npu_ci(
     disabled="accuracy testcase",
 )
 
-GLM_5_1_TWO_NODE_ENVS = {
+GLM_5_1_NODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_ENABLE_SPEC_V2": "1",
@@ -25,7 +25,7 @@ GLM_5_1_TWO_NODE_ENVS = {
     "HCCL_BUFFSIZE": "2000",
 }
 
-GLM_5_1_TWO_NODE_OTHER_ARGS = [
+GLM_5_1_NODE_OTHER_ARGS = [
     "--attention-backend",
     "ascend",
     "--device",
@@ -70,25 +70,21 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     4,
 ]
 
-GLM_5_1_TWO_NODE_MODEL_CONFIG = {
-    "model_path": GLM_5_1_W4A8_MODEL_PATH,
-    "other_args": GLM_5_1_TWO_NODE_OTHER_ARGS,
-    "node_envs": GLM_5_1_TWO_NODE_ENVS,
-}
 
+class TestNPUGLM5_1_W4A8_32P_GPQA(TestAscendAccuracyTestCaseBase):
+    """Test NPU accuracy for GLM-5.1-w4a8 8p single node on GPQA"""
 
-class TestNPUGLM5_1_W4A8_32P_GPQA(TestAscendAccuracyMultiNodePdMixTestCaseBase):
-    """Test NPU accuracy for GLM-5.1-w4a8 32p two nodes on GPQA"""
-
-    model_config = GLM_5_1_TWO_NODE_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    model = GLM_5_1_W4A8_MODEL_PATH
+    other_args = GLM_5_1_NODE_OTHER_ARGS
+    envs = GLM_5_1_NODE_ENVS
     accuracy = 0.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 128
-    output_len = 1024
+    max_out_len = 1024
 
-    def test_npu_glm5_1_w4a8_32p_gpqa(self):
+    def test_npu_glm5_1_w4a8_8p_gpqa(self):
         """Run NPU accuracy test for GLM-5.1-w4a8 two nodes on GPQA"""
         self.run_accuracy()
 

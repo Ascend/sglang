@@ -80,8 +80,8 @@ QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_5_27B_1P_In3k5_Out1k5_High_GPQA(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Qwen3.5-27B-W8A8 1p in3k5 out1k5 high throughput on GPQA"""
+class TestNPUQwen3_5_27B_1P_GPQA(TestAscendAccuracyTestCaseBase):
+    """Test NPU accuracy for Qwen3.5-27B-W8A8 1p on GPQA"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_5_27B_W8A8_MODEL_PATH
@@ -94,8 +94,8 @@ class TestNPUQwen3_5_27B_1P_In3k5_Out1k5_High_GPQA(TestAscendAccuracyTestCaseBas
     max_concurrency = 1
     num_prompts = 100000
 
-    def test_npu_qwen3_5_27b_1p_in3k5_out1k5_high_gpqa(self):
-        """Run NPU accuracy test for Qwen3.5-27B-W8A8 in3k5 out1k5 high on GPQA"""
+    def test_npu_qwen3_5_27b_1p_gpqa(self):
+        """Run NPU accuracy test for Qwen3.5-27B-W8A8 on GPQA"""
         self.run_accuracy()
 
 

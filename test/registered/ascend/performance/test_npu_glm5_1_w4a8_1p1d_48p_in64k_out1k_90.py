@@ -20,7 +20,8 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
+    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "1200",
+    "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "1200",
     "HCCL_BUFFSIZE": "1200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
@@ -36,12 +37,13 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
+    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "1200",
+    "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "1200",
     "SGLANG_SPEC_ENABLE_OVERLAP_REFLOW": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "HCCL_BUFFSIZE": "650",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
+    "HCCL_BUFFSIZE": "300",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "40",
     "TASK_QUEUE_ENABLE": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
@@ -51,11 +53,11 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--disaggregation-mode",
     "prefill",
     "--tp-size",
-    32,
+    4,
     "--nnodes",
-    2,
+    1,
     "--mem-fraction-static",
-    0.75,
+    0.72,
     "--attention-backend",
     "ascend",
     "--device",
@@ -65,11 +67,11 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--disaggregation-transfer-backend",
     "ascend",
     "--max-running-requests",
-    64,
+    16,
     "--served-model-name",
     "glm-5",
     "--chunked-prefill-size",
-    524288,
+    16384,
     "--max-prefill-tokens",
     180000,
     "--moe-a2a-backend",
@@ -80,21 +82,16 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--disable-cuda-graph",
     "--dtype",
     "bfloat16",
-    "--dp-size",
-    4,
-    "--enable-dp-attention",
-    "--load-balance-method",
-    "round_robin",
+    "--speculative-draft-model-quantization",
+    "unquant",
     "--enable-nsa-prefill-context-parallel",
     "--nsa-prefill-cp-mode",
     "in-seq-split",
     "--attn-cp-size",
-    8,
+    4,
     "--enable-dp-lm-head",
     "--moe-dense-tp",
     1,
-    "--speculative-draft-model-quantization",
-    "unquant",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -103,6 +100,8 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     2,
+    "--pp-size",
+    4,
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
@@ -113,14 +112,14 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "--nnodes",
     2,
     "--dp-size",
-    4,
+    32,
     "--ep-size",
     32,
     "--enable-dp-attention",
     "--mem-fraction-static",
-    0.87,
+    0.85,
     "--max-running-requests",
-    128,
+    320,
     "--attention-backend",
     "ascend",
     "--device",
@@ -137,6 +136,13 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     1,
     2,
     3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
     "--disaggregation-transfer-backend",
     "ascend",
     "--watchdog-timeout",
@@ -169,7 +175,7 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
     "decode_args": GLM_5_1_PD_SEP_DECODE_ARGS,
     "prefill_envs": GLM_5_1_PD_SEP_PREFILL_ENVS,
     "decode_envs": GLM_5_1_PD_SEP_DECODE_ENVS,
-    "router_args": [],
+    "router_args": ["--policy", "round_robin"],
     "router_envs": {},
 }
 
@@ -181,13 +187,13 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 8
-    num_prompts = 32
-    input_len = 131072
+    max_concurrency = 320
+    num_prompts = 1280
+    input_len = 65536
     output_len = 1024
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 3000
+    output_token_throughput = 4000
     aisbench_repeat_rate = 0.9
 
     def test_npu_glm5_1_w4a8_pd_sep_in3k5_out1k5(self):

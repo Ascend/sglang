@@ -12,57 +12,57 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="npu-performance",
     nightly=True,
-    disabled="performance testcase",
 )
 
-MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS = {
+MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "HCCL_OP_EXPANSION_MODE": "AIV",
     "TASK_QUEUE_ENABLE": "1",
-    "HCCL_BUFFSIZE": "800",
+    "ASCEND_USE_FIA": "0",
+    "HCCL_BUFFSIZE": "1600",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "640",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "64",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
+    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "204800",
-    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
+    "SGLANG_NPU_DEEPEP_USE_FUSED_MOE_DECODE": "1",
+    "SGLANG_NPU_FUSEEP_DECODE_ONLY": "1",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
+    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
+    "ENABLE_PROFILING": "0",
+    "PROFILING_BS": "28",
+    "PROFILING_STAGE": "decode",
+    "PROFILING_step": "10",
 }
 
-MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [
+MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     "--tp-size",
-    16,
+    8,
     "--enable-dp-attention",
-    "--dp-size",
-    16,
-    "--ep-size",
-    16,
-    "--mem-fraction-static",
-    0.75,
-    "--max-running-requests",
-    2048,
-    "--disable-radix-cache",
     "--prefill-delayer-max-delay-passes",
-    200,
+    500,
     "--enable-prefill-delayer",
+    "--mem-fraction-static",
+    0.65,
+    "--max-running-requests",
+    36,
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    4096,
+    150000,
     "--cuda-graph-bs",
-    1,
-    2,
+    8,
+    16,
     24,
     32,
-    48,
-    64,
-    65,
-    80,
-    81,
+    40,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -83,30 +83,33 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [
     "unquant",
     "--dtype",
     "bfloat16",
+    "--trust-remote-code",
+    "--tokenizer-worker-num",
+    8,
 ]
 
 
-class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_HighThroughput(
+class TestNPUMiniMaxM2_5W8A8_4P_In64k_Out1k_Prefix90_50ms(
     TestAscendPerformanceTestCaseBase
 ):
-    """Test NPU performance for MiniMax-M2.5-w8a8 8p single node high throughput in3k5 out1k5"""
+    """MiniMax-M2.5-w8a8 4p (4 cards) 64k input 1k output with 90% prefix cache performance test"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
-    other_args = MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS
-    envs = MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS
+    other_args = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS
+    envs = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS
     dataset_name = "random"
-    max_concurrency = 217
-    num_prompts = 868
-    input_len = 3500
-    output_len = 1500
+    max_concurrency = 36
+    num_prompts = 144
+    input_len = 65536
+    output_len = 1024
     random_range_ratio = 1
+    aisbench_repeat_rate = 0.9
     tpot = 50
-    output_token_throughput = 200
 
-    def test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_high_throughput(self):
-        """Run NPU performance test for MiniMax-M2.5-w8a8 high throughput"""
+    def test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms(self):
+        """Run MiniMax-M2.5-w8a8 4p 64k/1k prefix90 performance test"""
         self.run_throughput()
 
 

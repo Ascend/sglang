@@ -23,7 +23,7 @@ GLM_5_1_SINGLE_NODE_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
-    "HCCL_BUFFSIZE": "2000",
+    "HCCL_BUFFSIZE": "1200",
 }
 
 GLM_5_1_SINGLE_NODE_OTHER_ARGS = [
@@ -46,7 +46,7 @@ GLM_5_1_SINGLE_NODE_OTHER_ARGS = [
     280000,
     "--trust-remote-code",
     "--mem-fraction-static",
-    0.8,
+    0.75,
     "--served-model-name",
     "glm-5",
     "--cuda-graph-max-bs",
