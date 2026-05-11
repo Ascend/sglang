@@ -85,79 +85,16 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
-  run-single-test:
-    needs: set-image-config
-    runs-on: linux-aarch64-a3-2
-    container:
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      options: --privileged --network host --shm-size=1g --pid=host
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.set-image-config.outputs.ref || github.sha }}
-          fetch-depth: 0
-
-      - name: Set up environment
-        run: |
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh
-          source /usr/local/Ascend/nnal/atb/set_env.sh
-          echo "ASCEND_TOOLKIT_HOME=/usr/local/Ascend/ascend-toolkit" >> $GITHUB_ENV
-          echo "ASCEND_NNAL_HOME=/usr/local/Ascend/nnal/atb" >> $GITHUB_ENV
-
-      - name: Install sglang
-        if: needs.set-image-config.outputs.skip_install_flag != 'true'
-        run: |
-          pip install -e python/
-
-      - name: Run single test for performance tuning
-        run: |
-          echo "========================================="
-          echo "Performance Tuning Test"
-          echo "========================================="
-          echo "Test case: test_npu_qwen3_6_27b_w8a8_1p_in3k5_out1k5_50ms.py"
-          echo "Purpose: Tune num_prompts, max_concurrency, request_rate for optimal throughput"
-          echo "Constraint: TPOT <= 50ms"
-          echo "========================================="
-          
-          python -m pytest \
-            test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_1p_in3k5_out1k5_50ms.py \
-            -v \
-            --tb=short \
-            --log-cli-level=INFO \
-            2>&1 | tee test_results.log
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: test_results.log
-          retention-days: 30
-
-      - name: Extract and report metrics
-        run: |
-          echo "========================================="
-          echo "Performance Metrics Summary"
-          echo "========================================="
-          
-          if [ -f test_results.log ]; then
-            echo "Mean TTFT:"
-            grep "Mean TTFT" test_results.log || echo "N/A"
-            
-            echo "Mean TPOT:"
-            grep "Mean TPOT" test_results.log || echo "N/A"
-            
-            echo "Output token throughput:"
-            grep "Output token throughput" test_results.log || echo "N/A"
-            
-            echo "Mean E2E Latency:"
-            grep "Mean E2E Latency" test_results.log || echo "N/A"
-          fi
-          
-          echo "========================================="
-          echo "Tuning Parameters:"
-          echo "- num_prompts: 216"
-          echo "- max_concurrency: 54"
-          echo "- request_rate: N/A (using batch mode)"
-          echo "- TPOT constraint: <= 50ms"
-          echo "========================================="
+  single-node-tests:
+    name: single-node-poc
+    needs: [set-image-config]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'single') }}
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        test_config:
+          - name: test_npu_qwen3_6_27b_w8a8_1p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_1p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
