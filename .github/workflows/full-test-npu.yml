@@ -140,7 +140,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -207,7 +207,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -273,7 +273,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -339,7 +339,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -405,7 +405,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
