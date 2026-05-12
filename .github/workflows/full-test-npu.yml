@@ -1,12 +1,12 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#      - testcases
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - main
+      - testcases
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -37,7 +37,7 @@ on:
           - all
           - func
           - poc
-        default: 'poc'
+        default: 'func'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -82,7 +82,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.test_scope }}" ]; then
-            echo "test_scope=poc" >> $GITHUB_OUTPUT
+            echo "test_scope=func" >> $GITHUB_OUTPUT
           else
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
@@ -137,6 +137,10 @@ jobs:
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Replace deep_ep with local wheel
+        run: |
+          pip uninstall deep_ep
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -199,6 +203,10 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Replace deep_ep with local wheel
+        run: |
+          pip uninstall deep_ep
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -260,6 +268,10 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Replace deep_ep with local wheel
+        run: |
+          pip uninstall deep_ep
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -321,6 +333,10 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Replace deep_ep with local wheel
+        run: |
+          pip uninstall deep_ep
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -382,6 +398,10 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Replace deep_ep with local wheel
+        run: |
+          pip uninstall deep_ep
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
