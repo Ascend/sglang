@@ -131,6 +131,18 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
             test_type: 'perf'
+          - name: test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_20ms.py
+            test_type: 'perf'
+          - name: test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_50ms.py
+            test_type: 'perf'
+          - name: test_npu_kimi_k2_5_w4a8_8p_gpqa
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_8p_gpqa.py
+            test_type: 'accuracy'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
