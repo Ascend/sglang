@@ -131,46 +131,56 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
             test_type: 'perf'
+          - name: test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_20ms.py
+            test_type: 'perf'
+          - name: test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in16k_out1k_50ms.py
+            test_type: 'perf'
+          - name: test_npu_kimi_k2_5_w4a8_8p_gpqa
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_8p_gpqa.py
+            test_type: 'accuracy'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
       test_type: ${{ matrix.test_config.test_type }}
       test_config_name: ${{ matrix.test_config.name }}
       test_case: ${{ matrix.test_config.test_case }}
-      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-a3-B131'
+      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11'
       install_sglang_from_source: false
       transformers_version: ''
 
-  multi-node-tests:
-    name: multi-node-poc
-    needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'multi') }}
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        test_config:
-          # - name: test_npu_qwen3_6_35b_a3b_2p_in984k_out1k_50ms
-          #   runner: linux-aarch64-a3-4
-          #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k_50ms.py
-          #   test_type: 'perf'
-          #   prefill_node: 0
-          #   decode_node: 1
-    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
-    with:
-      runner: ${{ matrix.test_config.runner }}
-      test_type: ${{ matrix.test_config.test_type }}
-      test_config_name: ${{ matrix.test_config.name }}
-      test_case: ${{ matrix.test_config.test_case }}
-      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann8.5.0-a3-B131'
-      install_sglang_from_source: false
-      transformers_version: ''
+  # multi-node-tests:
+  #   name: multi-node-poc
+  #   needs: [ set-image-config ]
+  #   strategy:
+  #     fail-fast: false
+  #     max-parallel: 2
+  #     matrix:
+  #       test_config:
+  #         # - name: test_npu_qwen3_6_35b_a3b_2p_in984k_out1k_50ms
+  #         #   runner: linux-aarch64-a3-4
+  #         #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k_50ms.py
+  #         #   test_type: 'perf'
+  #         #   prefill_node: 0
+  #         #   decode_node: 1
+  #   uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
+  #   with:
+  #     runner: ${{ matrix.test_config.runner }}
+  #     test_type: ${{ matrix.test_config.test_type }}
+  #     test_config_name: ${{ matrix.test_config.name }}
+  #     test_case: ${{ matrix.test_config.test_case }}
+  #     image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11'
+  #     install_sglang_from_source: false
+  #     transformers_version: ''
 
   check-all-jobs:
     needs:
       - set-image-config
       - single-node-tests
-      - multi-node-tests
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:
