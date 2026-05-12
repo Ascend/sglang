@@ -80,8 +80,8 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_50ms(TestAscendPerformanceTestCaseBa
     other_args = QWEN3_6_35B_A3B_128K_1K_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_128K_1K_ENVS
     dataset_name = "random"
-    max_concurrency = 3
-    num_prompts = 12
+    max_concurrency = 4
+    num_prompts = 16
     input_len = 128000
     output_len = 1000
     random_range_ratio = 1
