@@ -122,7 +122,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
         run: |
@@ -138,7 +138,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
-          source /usr/local/Ascend/cann/set_env.sh
+          . /usr/local/Ascend/cann-9.0.0/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -202,7 +202,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
         run: |
@@ -217,7 +217,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
-          source /usr/local/Ascend/cann/set_env.sh
+          . /usr/local/Ascend/cann-9.0.0/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -281,7 +281,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
         run: |
@@ -297,7 +297,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
-          source /usr/local/Ascend/cann/set_env.sh
+          . /usr/local/Ascend/cann-9.0.0/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -362,7 +362,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
         run: |
@@ -378,7 +378,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
-          source /usr/local/Ascend/cann/set_env.sh
+          . /usr/local/Ascend/cann-9.0.0/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -443,7 +443,7 @@ jobs:
       - name: Replace deep_ep with local wheel
         run: |
           pip uninstall -y deep_ep
-          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
+          pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.9.0.0.b250-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: |
           bash scripts/ci/npu/npu_log_print.sh
@@ -458,7 +458,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
-          source /usr/local/Ascend/cann/set_env.sh
+          . /usr/local/Ascend/cann-9.0.0/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
