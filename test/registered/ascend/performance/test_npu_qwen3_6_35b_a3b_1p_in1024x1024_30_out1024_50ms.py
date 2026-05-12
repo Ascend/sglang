@@ -45,9 +45,9 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--max-running-requests",
-    120,
-    "--max-mamba-cache-size",
     140,
+    "--max-mamba-cache-size",
+    160,
     "--mem-fraction-static",
     0.78,
     "--cuda-graph-bs",
@@ -59,6 +59,7 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     64,
     96,
     120,
+    140,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -88,8 +89,8 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     other_args = QWEN3_6_35B_A3B_1024_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1024_ENVS
     dataset_name = "random"
-    max_concurrency = 120
-    num_prompts = 480
+    max_concurrency = 140
+    num_prompts = 560
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
