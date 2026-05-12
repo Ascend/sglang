@@ -115,11 +115,11 @@ jobs:
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms.py
           #   test_type: 'perf'
-          # - name: test_npu_qwen3_6_35b_a3b_1p_in254k_out1k_50ms
+          # - name: test_npu_qwen3_6_35b_a3b_1p_in254k_out1k
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in254k_out1k.py
           #   test_type: 'perf'
-          # - name: test_npu_qwen3_6_35b_a3b_2p_in984k_out1k_50ms
+          # - name: test_npu_qwen3_6_35b_a3b_2p_in984k_out1k
           #   runner: linux-aarch64-a3-4
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k.py
           #   test_type: 'perf'
