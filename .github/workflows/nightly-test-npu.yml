@@ -121,7 +121,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
       - name: Replace deep_ep with local wheel
         run: |
-          pip uninstall deep_ep
+          pip uninstall -y deep_ep
           pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
@@ -200,7 +200,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
       - name: Replace deep_ep with local wheel
         run: |
-          pip uninstall deep_ep
+          pip uninstall -y deep_ep
           pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
@@ -278,7 +278,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
       - name: Replace deep_ep with local wheel
         run: |
-          pip uninstall deep_ep
+          pip uninstall -y deep_ep
           pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
@@ -358,7 +358,7 @@ jobs:
 
       - name: Replace deep_ep with local wheel
         run: |
-          pip uninstall deep_ep
+          pip uninstall -y deep_ep
           pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
 
       - name: Print Log Information
@@ -438,7 +438,7 @@ jobs:
 
       - name: Replace deep_ep with local wheel
         run: |
-          pip uninstall deep_ep
+          pip uninstall -y deep_ep
           pip install ~/.cache/deepep/deep_ep-1.0.0+1f8b2e9e.cann.8.5.0.b232-cp311-cp311-linux_aarch64.whl
       - name: Print Log Information
         run: |
