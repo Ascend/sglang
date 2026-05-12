@@ -144,12 +144,16 @@ jobs:
   multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'multi') }}
+    if: ${{ !cancelled() && false }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
         test_config:
+          - name: placeholder
+            runner: linux-aarch64-a3-4
+            test_case: placeholder
+            test_type: 'perf'
           # - name: test_npu_qwen3_6_35b_a3b_2p_in984k_out1k_50ms
           #   runner: linux-aarch64-a3-4
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k_50ms.py
