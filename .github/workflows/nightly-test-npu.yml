@@ -138,6 +138,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
+          source /usr/local/Ascend/cann/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -216,6 +217,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
+          source /usr/local/Ascend/cann/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -295,6 +297,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
+          source /usr/local/Ascend/cann/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -375,6 +378,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
+          source /usr/local/Ascend/cann/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
@@ -454,6 +458,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
         run: |
+          source /usr/local/Ascend/cann/set_env.sh
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install sentence_transformers torchaudio==2.8.0
