@@ -64,7 +64,7 @@ OTHER_ARGS = [
     "ascend",
     "--enable-dp-attention",
     "--dp-size",
-    2,
+    1,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",

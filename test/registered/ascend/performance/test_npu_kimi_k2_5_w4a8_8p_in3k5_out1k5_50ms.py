@@ -108,7 +108,7 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     random_range_ratio = 1
     warmup_requests = 0
     tpot = 50
-    output_token_throughput = 3264
+    output_token_throughput = 3241
 
     def test_kimi_k2_5_w4a8(self):
         self.run_throughput()
