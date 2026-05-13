@@ -54,7 +54,7 @@ OTHER_ARGS = [
     "--chunked-prefill-size",
     32768,
     "--context-length",
-    8192,
+    260000,
     "--max-prefill-tokens",
     16384,
     "--enable-multimodal",
@@ -64,7 +64,7 @@ OTHER_ARGS = [
     "ascend",
     "--enable-dp-attention",
     "--dp-size",
-    16,
+    2,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -102,7 +102,7 @@ class TestNPUKimiK2_5GPQA(TestAscendAccuracyTestCaseBase):
     accuracy = 0.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
-    max_concurrency = 128
+    max_concurrency = 16
     generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
     max_out_len = 256000
 
