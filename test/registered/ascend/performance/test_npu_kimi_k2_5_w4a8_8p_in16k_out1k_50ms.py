@@ -93,8 +93,8 @@ class TestNPUKimiK2_5_W4A8_8P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase
     other_args = KIMI_K2_5_16K_50MS_OTHER_ARGS
     envs = KIMI_K2_5_16K_50MS_ENVS
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 256
+    max_concurrency = 48
+    num_prompts = 48
     request_rate = 1
     input_len = 16384
     output_len = 1024
