@@ -47,7 +47,7 @@ KIMI_K2_5_OTHER_ARGS = [
     "--mem-fraction-static",
     0.78,
     "--max-running-requests",
-    256,
+    320,
     "--chunked-prefill-size",
     32768,
     "--context-length",
@@ -101,14 +101,14 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     envs = KIMI_K2_5_ENVS
     backend = "sglang"
     dataset_name = "random"
-    max_concurrency = 256
-    num_prompts = 1024
+    max_concurrency = 320
+    num_prompts = 1280
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
     warmup_requests = 0
     tpot = 50
-    output_token_throughput = 3241
+    output_token_throughput = 3452
 
     def test_kimi_k2_5_w4a8(self):
         self.run_throughput()
