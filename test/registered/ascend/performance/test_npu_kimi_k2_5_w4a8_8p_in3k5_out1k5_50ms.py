@@ -100,7 +100,7 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     backend = "sglang"
     dataset_name = "random"
     max_concurrency = 192
-    num_prompts = 192
+    num_prompts = 768
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1

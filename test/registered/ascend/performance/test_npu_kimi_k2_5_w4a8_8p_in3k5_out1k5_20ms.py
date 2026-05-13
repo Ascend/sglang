@@ -100,8 +100,8 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     envs = KIMI_K2_5_ENVS
     backend = "sglang"
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 64
+    max_concurrency = 96
+    num_prompts = 96
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
