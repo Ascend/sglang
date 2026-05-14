@@ -87,6 +87,7 @@ QWEN3_30B_A3B_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-Instruct-2507"
 )
 QWEN3_6_35B_A3B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-35B-A3B"
+QWEN3_6_27B_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-27B-W8A8"
 QWEN3_30B_A3B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-w8a8"
 )
