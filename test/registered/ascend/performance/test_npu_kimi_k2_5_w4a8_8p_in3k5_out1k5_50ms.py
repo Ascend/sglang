@@ -47,7 +47,7 @@ KIMI_K2_5_OTHER_ARGS = [
     "--mem-fraction-static",
     0.78,
     "--max-running-requests",
-    320,
+    360,
     "--chunked-prefill-size",
     32768,
     "--context-length",
@@ -101,8 +101,8 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     envs = KIMI_K2_5_ENVS
     backend = "sglang"
     dataset_name = "random"
-    max_concurrency = 320
-    num_prompts = 1280
+    max_concurrency = 360
+    num_prompts = 360
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1

@@ -95,7 +95,7 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In32k_Out0k5_Prefix90(
     random_range_ratio = 1
     aisbench_repeat_rate = 0.9
     tpot = 100
-    output_token_throughput = 200
+    output_token_throughput = 280.44
 
     def test_npu_minimax_m2_5_w8a8_8p_in32k_out0k5_prefix(self):
         """Run NPU performance test for MiniMax-M2.5-w8a8 in32k out0.5k prefix"""

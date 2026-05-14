@@ -54,7 +54,7 @@ OTHER_ARGS = [
     "--chunked-prefill-size",
     32768,
     "--context-length",
-    260000,
+    66560,
     "--max-prefill-tokens",
     16384,
     "--enable-multimodal",
@@ -102,9 +102,9 @@ class TestNPUKimiK2_5GPQA(TestAscendAccuracyTestCaseBase):
     accuracy = 0.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
-    max_concurrency = 16
+    max_concurrency = 64
     generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
-    max_out_len = 256000
+    max_out_len = 65536
 
     def test_npu_kimi_k2_5_gpqa(self):
         """Run NPU accuracy test for Kimi-K2.5 on GPQA"""

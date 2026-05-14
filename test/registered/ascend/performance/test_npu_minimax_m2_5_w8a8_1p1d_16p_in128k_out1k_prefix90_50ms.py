@@ -191,6 +191,7 @@ class TestNPUMiniMaxM2_5W8A8_1P1D_16P_In128k_Out1k_Prefix90_50ms(
     random_range_ratio = 1
     aisbench_repeat_rate = 0.9
     tpot = 50
+    output_token_throughput = 616.3987
 
     def test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms(self):
         """Run MiniMax-M2.5-w8a8 PD Sep 1p1d 16p 128k/1k prefix90 performance test"""

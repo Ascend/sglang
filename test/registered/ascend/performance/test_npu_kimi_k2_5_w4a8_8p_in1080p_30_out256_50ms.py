@@ -51,7 +51,7 @@ KIMI_K2_5_IN1080P_30_OUT256_OTHER_ARGS = [
     -1,
     "--context-length",
     8192,
-    "--prfill-max-requests",
+    "--prefill-max-requests",
     1,
     "--enable-multimodal",
     "--mm-attention-backend",

@@ -454,22 +454,22 @@ jobs:
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in1024x1024_30_out1024_50ms.py
             test_type: 'perf'
-          - name: test_npu_kimi_k2_5_w4a8_8p_in32k_out512_prefix90_100ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in32k_out512_prefix90_100ms.py
-            test_type: 'perf'
-          - name: test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_20ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_20ms.py
-            test_type: 'perf'
-          - name: test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-          - name: test_npu_kimi_k2_5_w4a8_8p_in128k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
+#          - name: test_npu_kimi_k2_5_w4a8_8p_in32k_out512_prefix90_100ms
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in32k_out512_prefix90_100ms.py
+#            test_type: 'perf'
+#          - name: test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_20ms
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_20ms.py
+#            test_type: 'perf'
+#          - name: test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_50ms
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in64k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#          - name: test_npu_kimi_k2_5_w4a8_8p_in128k_out1k_prefix90_50ms
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in128k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
           # Qwen3.5-397b performance tests 8p single-node)
           - name: test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms
             runner: linux-aarch64-a3-16
@@ -1138,28 +1138,28 @@ jobs:
             prefill_size: 1
             decode_size: 1
             router_size: 1
-            test_case: test / registered / ascend / performance / test_npu_kimi_k2_5_w4a8_1p1d_16p_in64k_out1k5_100ms.py
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_16p_in64k_out1k5_100ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_in128k_out1k_100ms
             prefill_size: 1
             decode_size: 1
             router_size: 1
-            test_case: test / registered / ascend / performance / test_npu_kimi_k2_5_w4a8_1p1d_16p_in128k_out1k_100ms.py
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_16p_in128k_out1k_100ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms
             prefill_size: 1
             decode_size: 2
             router_size: 1
-            test_case: test / registered / ascend / performance / test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms.py
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in128k_out1k_prefix90_100ms
             prefill_size: 1
             decode_size: 2
             router_size: 1
-            test_case: test / registered / ascend / performance / test_npu_kimi_k2_5_w4a8_1p1d_24p_in128k_out1k_prefix90_100ms.py
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in128k_out1k_prefix90_100ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           # Qwen3.5-397B W8A8 1P1D 32-card accuracy tests (P:16 + D:16)

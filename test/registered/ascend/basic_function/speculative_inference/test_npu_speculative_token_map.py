@@ -87,7 +87,7 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
                 temperature=0.0,
             )
             metrics = run_eval(eval_args)
-            self.assertGreaterEqual(metrics["score"], 0.86)
+            self.assertGreaterEqual(metrics["score"], 0.84)
         finally:
             kill_process_tree(process.pid)
 

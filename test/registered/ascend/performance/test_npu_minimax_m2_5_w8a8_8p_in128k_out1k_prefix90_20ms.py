@@ -106,6 +106,7 @@ class TestNPUMiniMaxM2_5W8A8_8P_In128k_Out1k_Prefix90_20ms(
     random_range_ratio = 1
     aisbench_repeat_rate = 0.9
     tpot = 20
+    output_token_throughput = 66.29
 
     def test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms(self):
         """Run MiniMax-M2.5-w8a8 8p 128k/1k prefix90 low latency 20ms performance test"""

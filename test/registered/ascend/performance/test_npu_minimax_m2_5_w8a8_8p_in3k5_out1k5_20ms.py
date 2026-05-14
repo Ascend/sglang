@@ -24,13 +24,14 @@ MINIMAX_M2_5_LOW_LATENCY_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "TASK_QUEUE_ENABLE": "1",
-    "HCCL_BUFFSIZE": "800",
+    "HCCL_BUFFSIZE": "1500",
+    "ASCEND_USE_FIA": "1",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "204800",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "224000",
     "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
@@ -38,30 +39,23 @@ MINIMAX_M2_5_LOW_LATENCY_ENVS = {
 MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "--tp-size",
     16,
-    "--enable-dp-attention",
     "--dp-size",
     16,
-    "--ep-size",
-    16,
+    "--enable-dp-attention",
     "--mem-fraction-static",
     0.75,
     "--max-running-requests",
-    512,
+    128,
     "--disable-radix-cache",
-    "--prefill-delayer-max-delay-passes",
-    200,
-    "--enable-prefill-delayer",
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    4096,
+    8192,
     "--cuda-graph-bs",
-    1,
-    7,
+    2,
+    4,
+    6,
     8,
-    9,
-    10,
-    16,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -82,6 +76,11 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "unquant",
     "--dtype",
     "bfloat16",
+    "--tokenizer-worker-num",
+    2,
+    "--prefill-delayer-max-delay-passes",
+    500,
+    "--enable-prefill-delayer",
 ]
 
 
@@ -96,13 +95,13 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_LowLatency(
     other_args = MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS
     envs = MINIMAX_M2_5_LOW_LATENCY_ENVS
     dataset_name = "random"
-    max_concurrency = 30
-    num_prompts = 120
+    max_concurrency = 80
+    num_prompts = 80
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
     tpot = 20
-    output_token_throughput = 100
+    output_token_throughput = 3369.59
 
     def test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_low_latency(self):
         """Run NPU performance test for MiniMax-M2.5-w8a8 low latency"""

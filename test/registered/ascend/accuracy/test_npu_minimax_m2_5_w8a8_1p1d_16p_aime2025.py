@@ -188,11 +188,12 @@ class TestNPUMiniMaxM2_5_W8A8_1P1D_24P_AIME2025(
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.8
+    accuracy = 80
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 64
-    output_len = 8192
+    generation_kwargs = "dict(temperature=1.0)"
+    output_len = 65536
 
     def test_npu_minimax_m2_5_w8a8_1p1d_24p_aime2025(self):
         """Run NPU accuracy test for MiniMax-M2.5-w8a8 1p1d_24p on AIME 2025"""

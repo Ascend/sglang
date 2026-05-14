@@ -129,6 +129,7 @@ class BaseSamplingTest(CustomTestCase):
             "messages": [
                 {"role": "user", "content": "Test sampling parameters: 1+1=？"}
             ],
+            "max_tokens": 128,
         }
         if custom_params:
             req_body.update(custom_params)

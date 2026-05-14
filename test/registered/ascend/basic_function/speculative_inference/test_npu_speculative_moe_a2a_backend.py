@@ -59,6 +59,8 @@ class TestAscendDistTimeout(CustomTestCase):
             "ascend_fuseep",
             "--deepep-mode",
             "auto",
+            "--speculative-draft-model-quantization",
+            "unquant",
         ]
 
     def test_a_gsm8k(self):

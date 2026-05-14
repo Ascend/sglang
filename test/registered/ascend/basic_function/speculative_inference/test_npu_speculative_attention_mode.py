@@ -1,4 +1,6 @@
+import glob
 import os
+import time
 import unittest
 from types import SimpleNamespace
 from urllib.parse import urlparse
@@ -34,6 +36,17 @@ class TestAscendSpeculativeAttentionMode(TestDisaggregationBase):
 
     @classmethod
     def setUpClass(cls):
+        print("[CI Cleanup] Removing orphaned shared memory files...")
+        for pattern in ["/dev/shm/hccl*", "/dev/shm/sglang*", "/dev/shm/smem_*"]:
+            for f in glob.glob(pattern):
+                try:
+                    os.remove(f)
+                    print(f"[CI Cleanup] Successfully removed: {f}")
+                except OSError as e:
+                    print(f"[CI Cleanup] Warning: Could not remove {f}: {e}")
+
+        time.sleep(2)
+
         super().setUpClass()
         cls.model = QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH
         cls.accuracy = 0.86

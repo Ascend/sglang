@@ -125,11 +125,7 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "--cuda-graph-bs",
     1,
     2,
-    4,
-    10,
-    12,
-    14,
-    16,
+    3,
     "--disaggregation-transfer-backend",
     "ascend",
     "--watchdog-timeout",
@@ -174,14 +170,14 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 100
-    num_prompts = 480
+    max_concurrency = 128
+    num_prompts = 512
     input_len = 6656
     output_len = 1536
     random_range_ratio = 1
     tpot = 20
-    output_token_throughput = 3000
-    aisbench_repeat_rate = 0.9
+    output_token_throughput = 166145
+    aisbench_repeat_rate = 1.0
 
     def test_npu_glm5_1_w4a8_pd_sep_in3k5_out1k5(self):
         """Run NPU performance test for GLM-5.1-w4a8 PD separation"""
