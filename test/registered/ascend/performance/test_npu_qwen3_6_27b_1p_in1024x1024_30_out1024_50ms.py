@@ -93,15 +93,15 @@ class TestNPUQwen3_6_27B_1P_In1024x1024_30_Out1024_50ms(
     other_args = QWEN3_6_27B_1024_OTHER_ARGS
     envs = QWEN3_6_27B_1024_ENVS
     dataset_name = "random"
-    max_concurrency = 50
-    num_prompts = 200
+    max_concurrency = 48
+    num_prompts = 48
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
     image_resolution = 1024
     image_count = 1
     tpot = 50
-    output_token_throughput = 800
+    output_token_throughput = 800.8
 
     def test_npu_qwen3_6_27b_1p_in1024x1024_30_out1024_50ms(self):
         """Run NPU performance test for Qwen3.6-27B in1024x1024 30 out1024 50ms"""

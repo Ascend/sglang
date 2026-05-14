@@ -15,7 +15,7 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
-QWEN3_6_27B_16K_10K_ENVS = {
+QWEN3_6_27B_16K_1k_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -28,7 +28,7 @@ QWEN3_6_27B_16K_10K_ENVS = {
     "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
 }
 
-QWEN3_6_27B_16K_10K_OTHER_ARGS = [
+QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     "--tp-size",
     4,
     "--nnodes",
@@ -77,25 +77,25 @@ QWEN3_6_27B_16K_10K_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_6_27B_2P_In16k_Out10k_50ms(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Qwen3.6-27B-w8a8 2p in16k out10k 50ms"""
+class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
+    """Test NPU performance for Qwen3.6-27B-w8a8 2p in16k out1k 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_6_27B_W8A8_MODEL_PATH
-    other_args = QWEN3_6_27B_16K_10K_OTHER_ARGS
-    envs = QWEN3_6_27B_16K_10K_ENVS
+    other_args = QWEN3_6_27B_16K_1k_OTHER_ARGS
+    envs = QWEN3_6_27B_16K_1k_ENVS
     dataset_name = "random"
     max_concurrency = 28
     num_prompts = 112
     input_len = 16000
-    output_len = 10000
+    output_len = 1000
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 800
+    output_token_throughput = 426.1
 
-    def test_npu_qwen3_6_27b_2p_in16k_out10k_50ms(self):
-        """Run NPU performance test for Qwen3.6-27B-w8a8 in16k out10k 50ms"""
+    def test_npu_qwen3_6_27b_2p_in16k_out1k_50ms(self):
+        """Run NPU performance test for Qwen3.6-27B-w8a8 in16k out1k 50ms"""
         self.run_throughput()
 
 

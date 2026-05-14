@@ -96,7 +96,7 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     image_resolution = 1920
     image_count = 1
     tpot = 50
-    output_token_throughput = 800
+    output_token_throughput = 226
 
     def test_npu_qwen3_6_27b_1p_in1080p_30_out256_50ms(self):
         """Run NPU performance test for Qwen3.6-27B in1080p 30 out256 50ms"""

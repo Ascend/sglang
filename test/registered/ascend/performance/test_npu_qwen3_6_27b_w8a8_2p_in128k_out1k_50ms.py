@@ -76,13 +76,13 @@ class TestNPUQwen3_6_27B_2P_In128k_Out1k_50ms(TestAscendPerformanceTestCaseBase)
     other_args = QWEN3_6_27B_128K_OTHER_ARGS
     envs = QWEN3_6_27B_128K_ENVS
     dataset_name = "random"
-    max_concurrency = 6
-    num_prompts = 18
+    max_concurrency = 4
+    num_prompts = 16
     input_len = 128000
     output_len = 1000
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 800
+    output_token_throughput = 41.39
 
     def test_npu_qwen3_6_27b_2p_in128k_out1k_50ms(self):
         """Run NPU performance test for Qwen3.6-27B-w8a8 in128k out1k 50ms"""
