@@ -1,12 +1,12 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#      - testcases
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - main
+      - testcases
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -70,7 +70,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann8.5.0-a3" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -82,7 +82,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.test_scope }}" ]; then
-            echo "test_scope=poc" >> $GITHUB_OUTPUT
+            echo "test_scope=poc1" >> $GITHUB_OUTPUT
           else
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
@@ -1243,7 +1243,7 @@ jobs:
   nightly-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
     needs: [ set-image-config, nightly-poc-single-node-tests ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc1') }}
     strategy:
       fail-fast: false
       max-parallel: 1
