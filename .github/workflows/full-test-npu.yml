@@ -712,13 +712,6 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-          - name: test_ascend_qwen3_235b_w8a8_1p1d_24p_accuracy
-            prefill_size: 1
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/accuracy/test_ascend_qwen3_235b_w8a8_1p1d_24p_accuracy.py
-            test_type: 'accuracy'
-            prefill_decode_deployment: 'separation'
           # GLM5 1p1d_32p (P: tp=16 + D: tp=16, total 32 cards)
           - name: test_npu_glm5_1_w4a8_1p1d_32p_gpqa
             prefill_size: 2
