@@ -1,5 +1,4 @@
 name: Single Test (NPU)
-# tuning round 8: add QWEN3_6_27B model path constants, fix 27B ImportError
 
 on:
   pull_request:
