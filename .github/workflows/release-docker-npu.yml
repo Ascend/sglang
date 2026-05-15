@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         cann_version: ["8.5.0"]
-        device_type: ["a3", "910b"]
+        device_type: ["a3"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,13 +61,13 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: docker
-          file: docker/npu_POC_0415.Dockerfile
+          file: docker/npu_cann9_0.Dockerfile
           platforms: linux/arm64,linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           push: ${{ github.repository == 'Ascend/sglang' }}
           provenance: false
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=2026.04.15.rc4
+            SGLANG_KERNEL_NPU_TAG=2026.05.01.post1
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
