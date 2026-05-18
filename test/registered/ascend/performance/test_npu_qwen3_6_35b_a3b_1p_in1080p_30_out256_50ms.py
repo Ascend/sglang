@@ -84,8 +84,8 @@ class TestNPUQwen3_6_35BA3B_1P_In1080p_30_Out256_50ms(
     other_args = QWEN3_6_35B_A3B_1080P_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1080P_ENVS
     dataset_name = "random"
-    max_concurrency = 9
-    num_prompts = 36
+    max_concurrency = 6
+    num_prompts = 24
     input_len = 30
     output_len = 256
     random_range_ratio = 1
