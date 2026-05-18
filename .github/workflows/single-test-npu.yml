@@ -158,6 +158,15 @@ jobs:
             runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_50ms.py
             test_type: 'perf'
+          # Qwen3.6-27B 精度测试 (覆盖所有组网)
+          - name: test_npu_qwen3_6_27b_w8a8_1p_gpqa
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/accuracy/test_npu_qwen3_6_27b_w8a8_1p_gpqa.py
+            test_type: 'accuracy'
+          - name: test_npu_qwen3_6_27b_w8a8_1p_aime2025
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/accuracy/test_npu_qwen3_6_27b_w8a8_1p_aime2025.py
+            test_type: 'accuracy'
           - name: test_npu_qwen3_6_27b_w8a8_2p_gpqa
             runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/accuracy/test_npu_qwen3_6_27b_w8a8_2p_gpqa.py
