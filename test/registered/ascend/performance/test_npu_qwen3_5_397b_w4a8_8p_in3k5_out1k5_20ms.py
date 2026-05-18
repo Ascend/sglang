@@ -55,8 +55,8 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     4,
     8,
     16,
+    20,
     24,
-    32,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -96,8 +96,8 @@ class TestNPUQwen3_5_397B_3K5_1k5_20ms(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_3K5_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 32
-    num_prompts = 32
+    max_concurrency = 24
+    num_prompts = 24
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1

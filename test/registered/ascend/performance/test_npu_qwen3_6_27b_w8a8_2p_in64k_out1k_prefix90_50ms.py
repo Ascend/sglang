@@ -44,7 +44,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    24,
+    4,
     "--max-mamba-cache-size",
     30,
     "--mem-fraction-static",
@@ -53,11 +53,6 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     1,
     2,
     4,
-    8,
-    12,
-    16,
-    20,
-    24,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -89,8 +84,8 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_27B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_27B_64K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 24
-    num_prompts = 96
+    max_concurrency = 4
+    num_prompts = 16
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1

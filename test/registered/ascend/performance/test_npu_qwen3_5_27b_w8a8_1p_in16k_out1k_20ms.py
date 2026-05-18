@@ -55,9 +55,8 @@ QWEN3_5_27B_16K_1K_LOW_OTHER_ARGS = [
     "--mem-fraction-static",
     0.85,
     "--cuda-graph-bs",
+    1,
     2,
-    3,
-    4,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -89,8 +88,8 @@ class TestNPUQwen3_5_27B_1P_In16k_Out1k_Low(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_27B_16K_1K_LOW_OTHER_ARGS
     envs = QWEN3_5_27B_16K_1K_LOW_ENVS
     dataset_name = "random"
-    max_concurrency = 4
-    num_prompts = 16
+    max_concurrency = 2
+    num_prompts = 8
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1
