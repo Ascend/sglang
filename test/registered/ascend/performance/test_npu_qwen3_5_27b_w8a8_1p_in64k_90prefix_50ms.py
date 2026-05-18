@@ -50,7 +50,7 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    4,
+    6,
     "--max-mamba-cache-size",
     40,
     "--mem-fraction-static",
@@ -88,8 +88,8 @@ class TestNPUQwen3_5_27B_1P_In64k_90Prefix_High(TestAscendPerformanceTestCaseBas
     other_args = QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS
     dataset_name = "random"
-    max_concurrency = 4
-    num_prompts = 16
+    max_concurrency = 6
+    num_prompts = 24
     input_len = 65536
     output_len = 1024
     aisbench_repeat_rate = 0.9
