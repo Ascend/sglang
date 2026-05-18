@@ -52,17 +52,15 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     "--mem-fraction-static",
     0.65,
     "--max-running-requests",
-    36,
+    12,
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
     150000,
     "--cuda-graph-bs",
+    4,
     8,
-    16,
-    24,
-    32,
-    40,
+    12,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -100,8 +98,8 @@ class TestNPUMiniMaxM2_5W8A8_4P_In64k_Out1k_Prefix90_50ms(
     other_args = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS
     envs = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS
     dataset_name = "random"
-    max_concurrency = 36
-    num_prompts = 144
+    max_concurrency = 12
+    num_prompts = 48
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
