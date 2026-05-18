@@ -152,6 +152,23 @@ jobs:
             runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
+          # Qwen3.5-27B 调优
+          - name: test_npu_qwen3_5_27b_w8a8_1p_in16k_out1k_20ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_in16k_out1k_20ms.py
+            test_type: 'perf'
+          - name: test_npu_qwen3_5_27b_w8a8_1p_in64k_out1k_20ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_in64k_out1k_20ms.py
+            test_type: 'perf'
+          - name: test_npu_qwen3_5_27b_w8a8_2p_in16k_out1k_50ms
+            runner: linux-aarch64-a3-4
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_2p_in16k_out1k_50ms.py
+            test_type: 'perf'
+          - name: test_npu_qwen3_5_27b_w8a8_1p_in64k_90prefix_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_in64k_90prefix_50ms.py
+            test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}

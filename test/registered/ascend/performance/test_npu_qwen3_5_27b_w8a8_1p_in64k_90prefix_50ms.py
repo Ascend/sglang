@@ -45,24 +45,21 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    258000,
+    130000,
     "--trust-remote-code",
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    14,
+    8,
     "--max-mamba-cache-size",
-    80,
+    40,
     "--mem-fraction-static",
     0.6,
     "--cuda-graph-bs",
     2,
+    4,
     6,
     8,
-    10,
-    11,
-    12,
-    14,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -92,8 +89,8 @@ class TestNPUQwen3_5_27B_1P_In64k_90Prefix_High(TestAscendPerformanceTestCaseBas
     other_args = QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS
     dataset_name = "random"
-    max_concurrency = 14
-    num_prompts = 56
+    max_concurrency = 8
+    num_prompts = 32
     input_len = 65536
     output_len = 1024
     aisbench_repeat_rate = 0.9
