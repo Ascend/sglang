@@ -41,6 +41,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     -1,
     "--max-prefill-tokens",
     54000,
+    "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
     24,
