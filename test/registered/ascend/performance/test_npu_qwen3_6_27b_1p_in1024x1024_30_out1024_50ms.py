@@ -98,7 +98,7 @@ class TestNPUQwen3_6_27B_1P_In1024x1024_30_Out1024_50ms(
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
-    image_resolution = 1024
+    image_resolution = "1024x1024"
     image_count = 1
     tpot = 50
     output_token_throughput = 800.8

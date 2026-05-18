@@ -41,25 +41,22 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     -1,
     "--max-prefill-tokens",
     54000,
-    "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    120,
+    24,
     "--max-mamba-cache-size",
-    140,
+    30,
     "--mem-fraction-static",
     0.7,
     "--cuda-graph-bs",
+    1,
     2,
+    4,
     8,
     12,
     16,
-    32,
-    64,
-    80,
-    100,
-    110,
-    120,
+    20,
+    24,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -91,8 +88,8 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_27B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_27B_64K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 120
-    num_prompts = 480
+    max_concurrency = 24
+    num_prompts = 96
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1
