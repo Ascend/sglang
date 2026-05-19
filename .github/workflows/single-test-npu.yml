@@ -189,14 +189,14 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_in64k_90prefix_20ms.py
             test_type: 'perf'
-#          - name: test_npu_qwen3_5_27b_w8a8_1p_mm_1024_1024_50ms
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_mm_1024_1024_50ms.py
-            test_type: 'perf'
-#          - name: test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms.py
-            test_type: 'perf'
+# - name: test_npu_qwen3_5_27b_w8a8_1p_mm_1024_1024_50ms
+          #   runner: linux-aarch64-a3-2
+          #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_mm_1024_1024_50ms.py
+          #   test_type: 'perf'
+          # - name: test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms
+          #   runner: linux-aarch64-a3-4
+          #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms.py
+          #   test_type: 'perf'
           # 已通过 - 注释掉
           # - name: test_npu_qwen3_5_27b_w8a8_2p_in16k_out1k_50ms
           #   runner: linux-aarch64-a3-4
