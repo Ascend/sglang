@@ -1,7 +1,7 @@
 {
   "name": "ascend-performance-test",
   "description": "Ascend NPU性能测试调优工作流程",
-  "version": "3.0",
+  "version": "3.1",
   "rules": [
     {
       "id": "FAIL_REASON_FORMAT",
@@ -288,6 +288,14 @@
     {
       "error": "同类错误反复出现（如PASS数据丢失、CI注释遗漏）",
       "fix": "执行任务前检查skill文档common_errors，确保不重复犯同类错误；关键操作后验证结果"
+    },
+    {
+      "error": "取消注释时缩进丢失（- name: 前没有10个空格）",
+      "fix": "取消注释时保持原有缩进（10个空格），使用正则替换时保留空格：'          # - name:' -> '          - name:'，删除'#'但保留前面的10个空格"
+    },
+    {
+      "error": "CI配置YAML格式错误（缩进不一致导致解析失败）",
+      "fix": "修改CI配置后验证缩进：- name: 应有10个空格，子属性（runner/test_case/test_type）应有12个空格；使用Python脚本批量修改时注意保留缩进"
     }
   ]
 }
