@@ -86,14 +86,14 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_27B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_27B_64K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 8
-    num_prompts = 32
+    max_concurrency = 16
+    num_prompts = 64
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1
     aisbench_repeat_rate = 0.9
     tpot = 50
-    output_token_throughput = 2030.16
+    output_token_throughput = 120
 
     def test_npu_qwen3_6_27b_2p_in64k_out1k_prefix90_50ms(self):
         """Run NPU performance test for Qwen3.6-27B-w8a8 in64k out1k prefix90 50ms"""
