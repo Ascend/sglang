@@ -184,6 +184,19 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_in64k_out1k_20ms.py
             test_type: 'perf'
+          # 未测试用例 - Round 11
+          - name: test_npu_qwen3_5_27b_w8a8_1p_in64k_90prefix_20ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_in64k_90prefix_20ms.py
+            test_type: 'perf'
+          - name: test_npu_qwen3_5_27b_w8a8_1p_mm_1024_1024_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_27b_w8a8_1p_mm_1024_1024_50ms.py
+            test_type: 'perf'
+          - name: test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms
+            runner: linux-aarch64-a3-4
+            test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms.py
+            test_type: 'perf'
           # 已通过 - 注释掉
           # - name: test_npu_qwen3_5_27b_w8a8_2p_in16k_out1k_50ms
           #   runner: linux-aarch64-a3-4
@@ -255,6 +268,11 @@ jobs:
           - name: test_npu_kimi_k2_5_w4a8_8p_in1080p_30_out256_50ms
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in1080p_30_out256_50ms.py
+            test_type: 'perf'
+          # 未测试用例 - Round 11 (多节点)
+          - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms
+            runner: linux-aarch64-a3-24
+            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms.py
             test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
