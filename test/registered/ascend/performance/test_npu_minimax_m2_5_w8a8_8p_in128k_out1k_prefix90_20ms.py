@@ -62,6 +62,7 @@ MINIMAX_M2_5_W8A8_8P_IN128K_OUT1K_PREFIX90_20MS_OTHER_ARGS = [
     "--cuda-graph-bs",
     1,
     2,
+    4,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -99,8 +100,8 @@ class TestNPUMiniMaxM2_5W8A8_8P_In128k_Out1k_Prefix90_20ms(
     other_args = MINIMAX_M2_5_W8A8_8P_IN128K_OUT1K_PREFIX90_20MS_OTHER_ARGS
     envs = MINIMAX_M2_5_W8A8_8P_IN128K_OUT1K_PREFIX90_20MS_ENVS
     dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 4
+    max_concurrency = 2
+    num_prompts = 8
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1

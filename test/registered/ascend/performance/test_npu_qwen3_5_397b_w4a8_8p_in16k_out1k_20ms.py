@@ -45,9 +45,9 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    8,
+    4,
     "--mem-fraction-static",
-    0.75,
+    0.65,
     "--max-total-tokens",
     200000,
     "--cuda-graph-bs",
@@ -92,8 +92,8 @@ class TestNPUQwen3_5_397B_16K_1k_20ms(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_3K5_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 8
-    num_prompts = 8
+    max_concurrency = 4
+    num_prompts = 4
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1

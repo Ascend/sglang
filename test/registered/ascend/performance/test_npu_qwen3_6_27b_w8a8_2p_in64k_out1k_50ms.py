@@ -51,12 +51,8 @@ QWEN3_6_27B_64K_1K_OTHER_ARGS = [
     0.7,
     "--cuda-graph-bs",
     2,
-    8,
-    12,
-    16,
-    20,
-    24,
-    28,
+    4,
+    6,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -86,8 +82,8 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_6_27B_64K_1K_OTHER_ARGS
     envs = QWEN3_6_27B_64K_1K_ENVS
     dataset_name = "random"
-    max_concurrency = 4
-    num_prompts = 16
+    max_concurrency = 6
+    num_prompts = 24
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1

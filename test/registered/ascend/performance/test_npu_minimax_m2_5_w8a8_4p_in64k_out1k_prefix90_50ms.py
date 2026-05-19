@@ -61,6 +61,8 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     4,
     8,
     12,
+    16,
+    24,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -98,8 +100,8 @@ class TestNPUMiniMaxM2_5W8A8_4P_In64k_Out1k_Prefix90_50ms(
     other_args = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS
     envs = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS
     dataset_name = "random"
-    max_concurrency = 12
-    num_prompts = 48
+    max_concurrency = 24
+    num_prompts = 96
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1

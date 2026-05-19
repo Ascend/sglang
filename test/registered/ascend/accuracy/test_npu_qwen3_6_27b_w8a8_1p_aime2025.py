@@ -86,7 +86,7 @@ class TestNPUQwen3_6_27B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
     envs = QWEN3_6_27B_1P_ACC_ENVS
     accuracy = 0.3
     dataset_type = "aime2025"
-    dataset_name = "aime2025_gen_0_shot_cot_chat_prompt"
+    dataset_name = "aime2025_gen"
     output_len = 1500
     max_concurrency = 1
     num_prompts = 100000

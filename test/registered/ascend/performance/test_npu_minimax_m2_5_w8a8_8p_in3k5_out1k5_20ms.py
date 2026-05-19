@@ -54,13 +54,13 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "--cuda-graph-bs",
     2,
     4,
-    6,
     8,
     16,
     24,
     32,
     48,
     64,
+    96,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -100,8 +100,8 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_LowLatency(
     other_args = MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS
     envs = MINIMAX_M2_5_LOW_LATENCY_ENVS
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 64
+    max_concurrency = 96
+    num_prompts = 96
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1

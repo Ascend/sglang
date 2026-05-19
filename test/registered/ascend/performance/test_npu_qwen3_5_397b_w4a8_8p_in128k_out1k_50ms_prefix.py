@@ -46,7 +46,6 @@ QWEN3_5_397B_128K_OTHER_ARGS = [
     800000,
     "--prefill-max-requests",
     1,
-    "--disable-radix-cache",
     "--max-mamba-cache-size",
     160,
     "--trust-remote-code",
