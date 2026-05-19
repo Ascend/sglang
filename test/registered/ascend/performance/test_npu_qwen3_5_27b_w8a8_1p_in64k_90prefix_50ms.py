@@ -55,7 +55,7 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     40,
     "--mem-fraction-static",
     0.6,
-"--cuda-graph-bs",
+    "--cuda-graph-bs",
     1,
     2,
     3,

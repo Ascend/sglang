@@ -288,7 +288,7 @@ jobs:
       install_sglang_from_source: false
       transformers_version: ''
 
-multi-node-tests:
+  multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
     strategy:
