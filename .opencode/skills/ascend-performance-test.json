@@ -1,0 +1,293 @@
+{
+  "name": "ascend-performance-test",
+  "description": "Ascend NPU性能测试调优工作流程",
+  "version": "3.0",
+  "rules": [
+    {
+      "id": "FAIL_REASON_FORMAT",
+      "description": "失败原因格式规范",
+      "requirements": [
+        "禁止写笼统描述如'其他错误'、'执行超时'",
+        "必须粘贴日志中的AssertionError原文",
+        "服务启动失败需粘贴具体错误信息",
+        "TPOT不达标需写明: 实际XXms > 预期YYms, 需继续调优降低TPOT",
+        "吞吐不达标需写明: 实际吞吐XX < 预期吞吐YY, TPOT=XXms(达标/接近上限)"
+      ]
+    },
+    {
+      "id": "TPOT_TUNING_LOGIC",
+      "description": "TPOT调优逻辑",
+      "requirements": [
+        "TPOT超标 -> 降低并发 -> 达标后看吞吐",
+        "TPOT达标但吞吐不达标 -> 提升并发",
+        "TPOT接近上限(差距<5ms)且吞吐不达标 -> 标记'需开发定位'",
+        "并发已为1仍超标 -> 标记'需开发定位'"
+      ]
+    },
+    {
+      "id": "DATA_SOURCE",
+      "description": "数据获取规范",
+      "requirements": [
+        "所有数据统一从CI日志获取",
+        "TTFT P90/TPOT P90/E2E时间必须从日志表格提取",
+        "不要依赖预存的json文件（可能过期）",
+        "每次生成表格都要重新从日志提取最新数据"
+      ]
+    },
+    {
+      "id": "EXCEL_STYLE",
+      "description": "表格样式规范",
+      "requirements": [
+        "禁止修改表格样式",
+        "保持原始表格的列宽、颜色、字体",
+        "只更新数据内容，不改变格式",
+        "PASS用例必须标绿（填充色C6EFCE）",
+        "清除原有标红样式后再标绿"
+      ]
+    },
+    {
+      "id": "FILE_NAMING",
+      "description": "文件命名规范",
+      "requirements": [
+        "总表: {用例名}_总表_{YYYYMMDD_HHMMSS}.xlsx",
+        "轮次报告: {用例名}_R{轮次}_{YYYYMMDD_HHMMSS}.xlsx",
+        "使用时间后缀（精确到秒），不用日期后缀"
+      ]
+    },
+    {
+      "id": "TASK_LINK",
+      "description": "任务链接规范",
+      "requirements": [
+        "格式: https://github.com/Ascend/sglang/actions/runs/{run_id}/job/{job_id}",
+        "去掉pr=504参数（会导致链接失效）",
+        "确保链接可直接打开"
+      ]
+    },
+    {
+      "id": "ACCURACY_TEST",
+      "description": "精度测试规范",
+      "requirements": [
+        "精度用例通过后不需要重复运行",
+        "生成精度用例表格包含所有精度用例（不只是部分）",
+        "精度用例表格字段: 用例名称、预期精度、实际精度、结果、失败原因、任务链接",
+        "精度用例总数26条，需从test/registered/ascend/accuracy目录遍历所有文件",
+        "精度用例通过后立即注释CI配置中的对应用例（在.github/workflows/single-test-npu.yml中）"
+      ]
+    },
+    {
+      "id": "AUTO_TRIGGER",
+      "description": "自动触发规范",
+      "requirements": [
+        "禁止手动触发CI（需admin权限）",
+        "未测试用例需注册到CI配置文件自动运行",
+        "循环调优通过git push自动触发",
+        "不要提醒用户手动触发"
+      ]
+    },
+    {
+      "id": "LOOP_TUNING",
+      "description": "循环调优流程",
+      "requirements": [
+        "git push后等待CI运行",
+        "每隔1小时检查CI状态",
+        "CI完成后分析失败原因",
+        "自动调整并发参数",
+        "git commit & push触发下一轮",
+        "全程自动化，不要人工干预"
+      ]
+    },
+    {
+      "id": "EXCEL_COLUMNS",
+      "description": "Excel列数据完整性",
+      "requirements": [
+        "必须填充所有PASS用例的: TTFT平均、TTFT P90、TPOT卡时延、TPOT平均、TPOT P90、E2E时间",
+        "必须填充所有PASS用例的: 总吞吐、单卡吞吐、E2E吞吐、单卡E2E吞吐、QPS、QPM",
+        "必须填充所有PASS用例的: 请求数、最大并发数、系统并发数、数据频率",
+        "数据频率=aisbench_request_rate（从脚本配置获取，默认为1）",
+        "系统并发数=从CI日志提取average_concurrent，无法提取时=最大并发数",
+        "单卡吞吐=总吞吐/最大并发数",
+        "QPS=请求数/(E2E时间/1000)",
+        "QPM=QPS*60"
+      ]
+    },
+    {
+      "id": "PASS_COMMENT_CI",
+      "description": "通过用例注释CI规范",
+      "requirements": [
+        "性能用例通过后立即注释CI配置（.github/workflows/single-test-npu.yml）",
+        "精度用例通过后立即注释CI配置",
+        "注释格式：在'- name:'行前加'#'注释符",
+        "每次生成报告前检查CI配置是否已注释所有已通过用例",
+        "禁止重复运行已通过的用例（浪费CI资源）",
+        "新通过的用例在生成报告后立即注释CI配置并提交"
+      ]
+    },
+      "description": "PASS用例标绿规范",
+      "requirements": [
+        "PASS用例必须标绿（填充色C6EFCE）",
+        "清除原有标红样式（填充色00000000或FFC7CE）后再标绿",
+        "整行标绿，不只是结果列",
+        "参考已有PASS用例（如Row 2）的绿色填充"
+      ]
+    },
+    {
+      "id": "SCRIPT_CONFIG",
+      "description": "脚本配置参数获取",
+      "requirements": [
+        "请求数=num_prompts（从测试脚本class定义中提取）",
+        "最大并发数=max_concurrency（从测试脚本class定义中提取）",
+        "数据频率=aisbench_request_rate（从测试脚本class定义中提取，默认1）",
+        "TPOT卡时延=tpot（从测试脚本class定义中提取）",
+        "不随意填写配置参数，必须从脚本配置或CI日志获取"
+      ]
+    },
+    {
+      "id": "HISTORY_DATA",
+      "description": "历史数据保留规范",
+      "requirements": [
+        "保留历史总表中的PASS用例数据，不覆盖",
+        "新轮次只更新非PASS用例的状态",
+        "生成新总表前读取历史总表，复制PASS数据",
+        "禁止删除已有的PASS记录",
+        "新PASS用例在总表最后新增行，不插入中间"
+      ]
+    },
+    {
+      "id": "ROW_COUNT_CHECK",
+      "description": "表格行数校验",
+      "requirements": [
+        "总表行数必须等于声明用例数（58条=58行数据+1行表头）",
+        "禁止添加空行、汇总行",
+        "禁止重复用例",
+        "生成总表后校验行数，多出的空行/汇总行立即删除"
+      ]
+    },
+    {
+      "id": "CI_COMMENT_COMPLETE",
+      "description": "CI配置完整注释规范",
+      "requirements": [
+        "注释用例必须注释完整的配置块（name、runner、test_case、test_type全部行）",
+        "禁止只注释name行（不完整的注释会导致CI解析错误）",
+        "注释格式示例:",
+        "# - name: test_xxx",
+        "#   runner: linux-aarch64-a3-2",
+        "#   test_case: test/registered/ascend/performance/test_xxx.py",
+        "#   test_type: 'perf'"
+      ]
+    },
+    {
+      "id": "ERROR_PREVENT_REPEAT",
+      "description": "错误预防规范",
+      "requirements": [
+        "执行任务前检查历史错误记录（skill文档common_errors）",
+        "确保不重复犯同类错误",
+        "关键操作后验证结果（如注释CI后检查是否完整注释）",
+        "生成总表后校验：行数、PASS数量、无重复、无空行"
+      ]
+    }
+  ],
+  "checklist": [
+    "✓ 失败原因是否粘贴了AssertionError原文？",
+    "✓ 吞吐不达标是否说明了实际/预期吞吐？",
+    "✓ TPOT调优逻辑是否正确（先达标再看吞吐）？",
+    "✓ 任务链接是否可打开（无pr=504）？",
+    "✓ 文件命名是否用时间后缀？",
+    "✓ 是否修改了表格样式？",
+    "✓ 精度用例表格是否包含所有26条精度用例？",
+    "✓ 是否注册了未测试用例到CI配置？",
+    "✓ 是否自动化循环调优（无人工干预）？",
+    "✓ PASS用例是否标绿（填充色C6EFCE）？",
+    "✓ PASS用例所有列数据是否完整填充？",
+    "✓ 数据频率是否=aisbench_request_rate（脚本配置）？",
+    "✓ 系统并发数是否从CI日志提取或=最大并发数？",
+    "✓ 配置参数是否从脚本定义或CI日志获取（不随意填写）？",
+    "✓ 已通过用例是否注释CI配置（避免重复运行）？",
+    "✓ 生成报告前是否检查CI配置有无遗漏注释？",
+    "✓ CI注释是否完整（name/runner/test_case/test_type全部注释）？",
+    "✓ 是否保留历史总表的PASS数据（不覆盖）？",
+    "✓ 总表行数是否等于声明用例数（无空行/汇总行/重复）？",
+    "✓ 是否检查历史错误避免重复犯错？"
+  ],
+  "common_errors": [
+    {
+      "error": "失败原因写'其他错误'或'执行超时'",
+      "fix": "粘贴日志中的AssertionError原文"
+    },
+    {
+      "error": "吞吐不达标未说明实际/预期吞吐",
+      "fix": "格式: 吞吐不达标: 实际XX < 预期YY"
+    },
+    {
+      "error": "任务链接带pr=504无法打开",
+      "fix": "去掉pr=504参数"
+    },
+    {
+      "error": "文件命名用日期后缀",
+      "fix": "改用时间后缀YYYYMMDD_HHMMSS"
+    },
+    {
+      "error": "精度用例表格只包含部分用例",
+      "fix": "遍历test/registered/ascend/accuracy目录获取所有26条精度用例"
+    },
+    {
+      "error": "提醒用户手动触发CI",
+      "fix": "注册到CI配置文件自动运行"
+    },
+    {
+      "error": "修改了表格样式",
+      "fix": "只更新数据内容，不修改样式"
+    },
+    {
+      "error": "PASS用例TTFT_P90等列数据为空",
+      "fix": "从日志表格重新提取P90数据"
+    },
+    {
+      "error": "PASS用例未标绿",
+      "fix": "使用PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')标绿整行"
+    },
+    {
+      "error": "PASS用例数据不完整（缺少单卡吞吐、QPS等）",
+      "fix": "计算填充：单卡吞吐=总吞吐/最大并发, QPS=请求数/(E2E/1000), QPM=QPS*60"
+    },
+    {
+      "error": "数据频率填错（如填4，其他PASS都是1）",
+      "fix": "数据频率=aisbench_request_rate（从脚本配置提取，默认为1）"
+    },
+    {
+      "error": "系统并发数随意填写",
+      "fix": "从CI日志提取average_concurrent，无法提取时=最大并发数"
+    },
+    {
+      "error": "配置参数随意填写（如填模型名、量化格式）",
+      "fix": "从测试脚本class定义提取num_prompts、max_concurrency、aisbench_request_rate等"
+    },
+    {
+      "error": "PASS用例标红未清除",
+      "fix": "先用PatternFill(fill_type=None)清除标红，再用C6EFCE标绿"
+    },
+    {
+      "error": "已通过用例未注释CI配置，导致重复运行浪费资源",
+      "fix": "立即注释.github/workflows/single-test-npu.yml中的已通过用例（在'- name:'前加'#'），提交并推送"
+    },
+    {
+      "error": "生成报告前未检查CI配置，遗漏注释已通过用例",
+      "fix": "每次生成报告前，检查总表PASS用例是否都已注释CI配置，如有遗漏立即注释并提交"
+    },
+    {
+      "error": "PASS数据被覆盖导致历史记录丢失",
+      "fix": "读取历史总表，复制PASS数据到新表，只更新非PASS用例状态，禁止删除已有PASS记录"
+    },
+    {
+      "error": "总表行数错误（如58条变成59条或62条）",
+      "fix": "校验总表行数=声明用例数+1（表头），删除空行、汇总行、重复用例"
+    },
+    {
+      "error": "CI配置注释不完整（只注释name行，runner/test_case/test_type未注释）",
+      "fix": "注释完整的配置块（name、runner、test_case、test_type全部加'#'），不完整的注释会导致CI解析错误"
+    },
+    {
+      "error": "同类错误反复出现（如PASS数据丢失、CI注释遗漏）",
+      "fix": "执行任务前检查skill文档common_errors，确保不重复犯同类错误；关键操作后验证结果"
+    }
+  ]
+}
