@@ -86,8 +86,8 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_27B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_27B_64K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 8
-    num_prompts = 32
+    max_concurrency = 16
+    num_prompts = 64
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1
