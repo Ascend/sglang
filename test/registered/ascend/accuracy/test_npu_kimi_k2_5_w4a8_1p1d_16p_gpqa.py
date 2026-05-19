@@ -145,7 +145,7 @@ class TestNPUKimiK2_5_W4A8_1P1D_16P_GPQA(TestAscendAccuracyMultiNodePdSepTestCas
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.8
+    accuracy = 80
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 128

@@ -78,7 +78,7 @@ class TestNPUGLM5_1_W4A8_32P_AIME2025(TestAscendAccuracyTestCaseBase):
     model = GLM_5_1_W4A8_MODEL_PATH
     other_args = GLM_5_1_NODE_OTHER_ARGS
     envs = GLM_5_1_NODE_ENVS
-    accuracy = 0.8
+    accuracy = 80
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 16

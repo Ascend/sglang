@@ -78,7 +78,7 @@ class TestNPUGLM5_1_W4A8_32P_GPQA(TestAscendAccuracyTestCaseBase):
     model = GLM_5_1_W4A8_MODEL_PATH
     other_args = GLM_5_1_NODE_OTHER_ARGS
     envs = GLM_5_1_NODE_ENVS
-    accuracy = 0.8
+    accuracy = 80
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 16

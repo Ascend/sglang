@@ -99,7 +99,7 @@ class TestNPUKimiK2_5GPQA(TestAscendAccuracyTestCaseBase):
     model = KIMI_K2_5_W4A8_MODEL_PATH
     other_args = OTHER_ARGS
     envs = ENVS
-    accuracy = 0.8
+    accuracy = 80
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 64
