@@ -106,11 +106,10 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
-          # test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms - 吞吐不达标，实际63.34 token/s < 预期308.20 token/s，TPOT预期50ms实际34.5ms，需开发定位
-          # - name: test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms
-          #   runner: linux-aarch64-a3-2
-          #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms.py
-          #   test_type: 'perf'
+          - name: test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms.py
+            test_type: 'perf'
           - name: test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms.py
@@ -257,11 +256,10 @@ jobs:
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms.py
             test_type: 'perf'
-          # test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms - 吞吐不达标，实际144.61 token/s < 预期380.31 token/s，TPOT预期50ms实际34.8ms，需开发定位
-          # - name: test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
-          #   runner: linux-aarch64-a3-8
-          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
-          #   test_type: 'perf'
+          - name: test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
+            runner: linux-aarch64-a3-8
+            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
+            test_type: 'perf'
           - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
@@ -357,14 +355,13 @@ jobs:
             decode_size: 2
             router_size: 1
           # MiniMax (5 nodes: 2+2+1)
-          # test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms - 吞吐不达标，实际78.19 token/s < 预期616.40 token/s，TPOT预期50ms实际30.8ms，需开发定位
-          # - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms
-          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms.py
-          #   test_type: 'perf'
-          #   prefill_decode_deployment: 'separation'
-          #   prefill_size: 2
-          #   decode_size: 2
-          #   router_size: 1
+          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms
+            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
           - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms
             test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
