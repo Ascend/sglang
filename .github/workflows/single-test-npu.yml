@@ -1,4 +1,4 @@
-# test round 1: EPLB NPU test case - test_npu_eplb.py
+# test round 2: EPLB NPU test case - test_npu_eplb.py with updated model path
 name: Single Test (NPU)
 
 on:
