@@ -84,7 +84,7 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "--tokenizer-worker-num",
     2,
     "--prefill-delayer-max-delay-passes",
-    500,
+    50,
     "--enable-prefill-delayer",
 ]
 
