@@ -6,6 +6,7 @@ on:
       - testcases
     paths:
       - ".github/workflows/mlapo_test.yml"
+      - "test/registered/ascend/performance/test_npu_mlapo.py"
   workflow_dispatch:
     inputs:
       ref:
