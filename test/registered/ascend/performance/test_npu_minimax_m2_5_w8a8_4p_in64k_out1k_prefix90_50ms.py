@@ -47,12 +47,12 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     8,
     "--enable-dp-attention",
     "--prefill-delayer-max-delay-passes",
-    50,
+    30,
     "--enable-prefill-delayer",
     "--mem-fraction-static",
     0.65,
     "--max-running-requests",
-    16,
+    32,
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
@@ -100,8 +100,8 @@ class TestNPUMiniMaxM2_5W8A8_4P_In64k_Out1k_Prefix90_50ms(
     other_args = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS
     envs = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS
     dataset_name = "random"
-    max_concurrency = 32
-    num_prompts = 128
+    max_concurrency = 64
+    num_prompts = 256
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1

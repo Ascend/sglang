@@ -25,7 +25,7 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
     "ASCEND_USE_FIA": "1",
 }
 
@@ -43,9 +43,9 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     "--device",
     "npu",
     "--chunked-prefill-size",
-    -1,
+    32768,
     "--max-prefill-tokens",
-    130000,
+    65536,
     "--trust-remote-code",
     "--mamba-scheduler-strategy",
     "extra_buffer",

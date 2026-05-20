@@ -46,7 +46,7 @@ KIMI_K2_5_IN1080P_30_OUT256_OTHER_ARGS = [
     "--mem-fraction-static",
     0.7,
     "--max-running-requests",
-    60,
+    80,
     "--chunked-prefill-size",
     -1,
     "--context-length",
@@ -100,8 +100,8 @@ class TestNPUKimiK2_5_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     dataset_name = "image"
     image_resolution = "1920x1080"
     image_count = 1
-    max_concurrency = 10
-    num_prompts = 10
+    max_concurrency = 20
+    num_prompts = 20
     request_rate = 1
     input_len = 30
     output_len = 256

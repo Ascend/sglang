@@ -25,7 +25,7 @@ QWEN3_6_27B_64K_PREFIX_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "20",
 }
 
 QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
@@ -44,7 +44,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    32,
+    48,
     "--max-mamba-cache-size",
     50,
     "--mem-fraction-static",
@@ -84,8 +84,8 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_27B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_27B_64K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 16
-    num_prompts = 64
+    max_concurrency = 32
+    num_prompts = 128
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1

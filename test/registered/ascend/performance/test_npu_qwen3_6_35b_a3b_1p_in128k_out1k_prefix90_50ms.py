@@ -25,7 +25,7 @@ QWEN3_6_35B_A3B_128K_PREFIX_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
 }
 
 QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
@@ -46,7 +46,7 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    56,
+    112,
     "--max-mamba-cache-size",
     200,
     "--mem-fraction-static",
@@ -88,8 +88,8 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_128K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 56
-    num_prompts = 224
+    max_concurrency = 112
+    num_prompts = 448
     input_len = 128000
     output_len = 1000
     random_range_ratio = 1
