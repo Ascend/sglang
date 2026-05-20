@@ -23,6 +23,7 @@ from sglang.srt.model_executor.forward_batch_info import (
     ForwardMode,
 )
 from sglang.srt.model_executor.model_runner import ModelRunner
+from sglang.srt.sampling.penaltylib.repetition_penalty import apply_scaling_penalties
 from sglang.srt.server_args import get_global_server_args
 from sglang.srt.speculative.eagle_utils import verify_tree_greedy_func
 from sglang.srt.speculative.spec_utils import (
@@ -292,6 +293,28 @@ class EagleVerifyInputV2Mixin:
         next_token_logits = logits_output.next_token_logits
         device = batch.input_ids.device
 
+        # Apply penalty
+        # This is a relaxed version of penalties for speculative decoding.
+        if sampling_info.acc_additive_penalties is not None:
+            next_token_logits.add_(
+                torch.repeat_interleave(
+                    sampling_info.acc_additive_penalties, self.draft_token_num, dim=0
+                )
+            )
+        if sampling_info.acc_scaling_penalties is not None:
+            apply_scaling_penalties(
+                next_token_logits,
+                torch.repeat_interleave(
+                    sampling_info.acc_scaling_penalties, self.draft_token_num, dim=0
+                ),
+            )
+        if sampling_info.logit_bias is not None:
+            next_token_logits.add_(
+                torch.repeat_interleave(
+                    sampling_info.logit_bias, self.draft_token_num, dim=0
+                )
+            )
+
         # Apply grammar mask if provided
         if vocab_mask is not None:
             assert self.grammar is not None
@@ -306,7 +329,6 @@ class EagleVerifyInputV2Mixin:
             (bs, self.spec_steps + 1), -1, dtype=torch.int32, device=device
         )
         accept_length = torch.empty((bs,), dtype=torch.int32, device=device)
-
         # Sample tokens
         if sampling_info.is_all_greedy or _is_npu or _is_hip:
             target_predict = torch.argmax(next_token_logits, dim=-1)
