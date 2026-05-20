@@ -95,7 +95,7 @@ jobs:
       matrix:
         test_config:
           - name: test_npu_mlapo
-            runner: linux-aarch64-a3-2
+            runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/test_npu_mlapo.py
             test_type: 'perf'
 
