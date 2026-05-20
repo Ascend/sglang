@@ -87,10 +87,11 @@ jobs:
 
   multi-node-tests:
     name: multi-node-poc
-    needs: [ set-image-config ]
+    needs: [ set-image-config, nightly-poc-single-node-tests ]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 1
       matrix:
         test_config:
           - name: test_npu_cp_no_mtp
