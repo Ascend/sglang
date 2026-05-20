@@ -5,7 +5,7 @@ on:
     branches:
       - testcases
     paths:
-      - ".github/workflows/single-test-npu.yml"
+      - ".github/workflows/mlapo_test.yml"
   workflow_dispatch:
     inputs:
       ref:
