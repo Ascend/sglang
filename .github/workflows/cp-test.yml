@@ -87,7 +87,7 @@ jobs:
 
   multi-node-tests:
     name: multi-node-poc
-    needs: [ set-image-config, nightly-poc-single-node-tests ]
+    needs: [ set-image-config ]
     if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
     strategy:
       fail-fast: false
