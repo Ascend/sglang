@@ -98,7 +98,7 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_mlapo.py
             test_type: 'perf'
-         
+
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
