@@ -98,7 +98,7 @@ jobs:
           target_path=/root/.cache/tests/sglang
           rm -rf ${target_path}
           mkdir -p ${target_path}
-          cp -r ${current_path}/* ${target_path}/
+          cp -Rrf ${current_path}/. ${target_path}/
 
       - name: Clear resources
         run: |
