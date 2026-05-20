@@ -1,4 +1,3 @@
-# test round 1: EPLB NPU test case - test_npu_eplb.py
 name: Nightly Test (NPU)
 
 on:

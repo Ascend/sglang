@@ -24,7 +24,7 @@ from types import SimpleNamespace
 import sglang as sgl
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -48,7 +48,7 @@ class TestNPUDynamicEPLB(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = QWEN3_30B_A3B_WEIGHTS_PATH
+        cls.model = DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
 
         with (
@@ -154,7 +154,7 @@ class TestNPUStaticEPLB(CustomTestCase):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             engine_kwargs = dict(
-                model_path=QWEN3_30B_A3B_WEIGHTS_PATH,
+                model_path=QWEN3_8B_WEIGHTS_PATH,
                 trust_remote_code=True,
                 ep_num_redundant_experts=4,
                 enable_dp_attention=True,
