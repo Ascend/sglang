@@ -164,7 +164,9 @@ class NPUHiCacheStorageMooncakeBackendBaseMixin:
             time.sleep(2)
 
         if not services_ready:
-            print("Warning: Mooncake services may not be fully ready, continuing anyway...")
+            print(
+                "Warning: Mooncake services may not be fully ready, continuing anyway..."
+            )
 
         return services_ready
 
@@ -247,7 +249,9 @@ class NPUHiCacheStorageMooncakeBackendBaseMixin:
 
         return server_args, env_vars
 
-    def send_request(self, prompt: str, max_tokens: int = 100, temperature: float = 0.0):
+    def send_request(
+        self, prompt: str, max_tokens: int = 100, temperature: float = 0.0
+    ):
         response = requests.post(
             f"{self.base_url}/generate",
             json={

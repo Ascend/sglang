@@ -206,7 +206,9 @@ class TestNPUHf3fsBackendPageFirstLayout(
         )
         self.assertEqual(response2.status_code, 200)
 
-        cached_tokens = int(response2.json().get("meta_info", {}).get("cached_tokens", 0))
+        cached_tokens = int(
+            response2.json().get("meta_info", {}).get("cached_tokens", 0)
+        )
         print(f"Cached tokens: {cached_tokens}")
 
         self.assertGreater(
@@ -214,9 +216,7 @@ class TestNPUHf3fsBackendPageFirstLayout(
         )
 
 
-class TestNPUHf3fsBackendAccuracy(
-    NPUHiCacheStorage3FSBackendBaseMixin, CustomTestCase
-):
+class TestNPUHf3fsBackendAccuracy(NPUHiCacheStorage3FSBackendBaseMixin, CustomTestCase):
     """Accuracy tests for HiCache-HF3FS backend on NPU.
 
     [Test Category] HiCache

@@ -106,7 +106,9 @@ class TestNPUPPWithHiCache(CustomTestCase):
         metrics_initial = run_eval_few_shot_gsm8k(args)
         print(f"Initial accuracy: {metrics_initial['accuracy']}")
 
-        self.assertGreater(metrics_initial["accuracy"], 0.6, "Initial accuracy should be reasonable")
+        self.assertGreater(
+            metrics_initial["accuracy"], 0.6, "Initial accuracy should be reasonable"
+        )
 
         print("Phase 2: Flushing device cache...")
         self.flush_cache()

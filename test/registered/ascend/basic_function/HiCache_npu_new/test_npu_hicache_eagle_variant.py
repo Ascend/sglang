@@ -105,7 +105,9 @@ class TestNPUHiCacheEagle(CustomTestCase):
             cached_tokens = int(meta_info.get("cached_tokens", 0))
             spec_accept_length = float(meta_info.get("spec_accept_length", 0))
 
-            print(f"Request {i+1}: cached_tokens={cached_tokens}, spec_accept_length={spec_accept_length:.2f}")
+            print(
+                f"Request {i+1}: cached_tokens={cached_tokens}, spec_accept_length={spec_accept_length:.2f}"
+            )
 
             if i == 0:
                 self.assertEqual(cached_tokens, 0, "First request should have no cache")

@@ -82,7 +82,9 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         shutil.rmtree(cls.temp_dir, ignore_errors=True)
 
     @classmethod
-    def _wait_for_server_ready(cls, base_url: str, timeout: int = 60, process=None) -> bool:
+    def _wait_for_server_ready(
+        cls, base_url: str, timeout: int = 60, process=None
+    ) -> bool:
         wait_for_http_ready(
             url=f"{base_url}/health",
             timeout=timeout,
