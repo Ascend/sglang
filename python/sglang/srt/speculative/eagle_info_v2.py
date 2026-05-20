@@ -90,6 +90,25 @@ class EagleDraftInputV2Mixin:
         # Now seq_lens is correct
         batch.maybe_wait_verify_done()
 
+        # Accumulate penalty
+        # This is a relaxed version of penalties for speculative decoding.
+        if batch.sampling_info.penalizer_orchestrator.is_required:
+            output_ids = torch.tensor(
+                [
+                    (
+                        req.output_ids[-1]
+                        if len(req.output_ids)
+                        else req.origin_input_ids[-1]
+                    )
+                    for req in batch.reqs
+                ],
+                dtype=torch.int64,
+                device=batch.device,
+            )
+            batch.sampling_info.penalizer_orchestrator.cumulate_output_tokens(
+                output_ids
+            )
+
         page_size = batch.token_to_kv_pool_allocator.page_size
         cur_kv_lens_cpu = []
         nxt_kv_lens_cpu = []
