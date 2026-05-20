@@ -94,9 +94,9 @@ jobs:
       max-parallel: 3
       matrix:
         test_config:
-          - name: test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms
+          - name: test_npu_mlapo
             runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms.py
+            test_case: test/registered/ascend/performance/test_npu_mlapo.py
             test_type: 'perf'
          
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
@@ -117,13 +117,6 @@ jobs:
       max-parallel: 2
       matrix:
         test_config:
-          - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms
-            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 1
-            decode_size: 1
-            router_size: 1
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-aarch64-a3-0
