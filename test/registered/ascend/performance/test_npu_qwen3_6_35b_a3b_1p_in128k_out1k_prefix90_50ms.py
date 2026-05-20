@@ -40,7 +40,7 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    100000,
+    128000,
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--mamba-scheduler-strategy",
