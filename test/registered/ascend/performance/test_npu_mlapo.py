@@ -60,6 +60,7 @@ DEEPSEEK_R1_BASE_ARGS = [
 # 全局变量存储基准测试的tpot值
 BASELINE_TPOT = None
 
+
 # ====================== 测试用例 ======================
 class TestNPUDeepSeekR1_W8A8_Baseline(TestAscendPerformanceTestCaseBase):
     """DeepSeek R1 W8A8 NPU性能基准测试（原始参数）"""
@@ -131,10 +132,11 @@ class TestNPUDeepSeekR1_W8A8_MLAPO(TestAscendPerformanceTestCaseBase):
         self.assertLess(
             mlapo_tpot,
             BASELINE_TPOT - 2,
-            f"MLAPO优化效果不达标：tpot仅减少了{BASELINE_TPOT - mlapo_tpot:.2f}ms，要求至少减少2ms"
+            f"MLAPO优化效果不达标：tpot仅减少了{BASELINE_TPOT - mlapo_tpot:.2f}ms，要求至少减少2ms",
         )
 
         print(f"\n✅ MLAPO优化验证通过，tpot减少了{BASELINE_TPOT - mlapo_tpot:.2f} ms")
+
 
 if __name__ == "__main__":
     unittest.main()
