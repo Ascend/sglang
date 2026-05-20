@@ -109,25 +109,3 @@ jobs:
       image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann8.5.0-a3'
       install_sglang_from_source: false
       transformers_version: ''
-
-  multi-node-tests:
-    name: multi-node-poc
-    needs: [ set-image-config ]
-    if: ${{ false }}  # Disabled - no multi-node tests for EPLB
-    strategy:
-      fail-fast: false
-      matrix:
-        test_config:
-          - name: placeholder
-            runner: linux-aarch64-a3-8
-            test_case: test/registered/ascend/basic_function/parallel_strategy/expert_parallelism_npu_new/test_npu_eplb.py
-            test_type: 'func'
-    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
-    with:
-      runner: ${{ matrix.test_config.runner }}
-      test_type: ${{ matrix.test_config.test_type }}
-      test_config_name: ${{ matrix.test_config.name }}
-      test_case: ${{ matrix.test_config.test_case }}
-      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann8.5.0-a3'
-      install_sglang_from_source: false
-      transformers_version: ''
