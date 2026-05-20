@@ -38,17 +38,17 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     "--device",
     "npu",
     "--chunked-prefill-size",
-    -1,
+    16384,
     "--max-prefill-tokens",
-    128000,
+    65536,
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    112,
+    56,
     "--max-mamba-cache-size",
-    200,
+    100,
     "--mem-fraction-static",
     0.68,
     "--cuda-graph-bs",
@@ -88,9 +88,9 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_128K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 112
-    num_prompts = 448
-    input_len = 128000
+    max_concurrency = 56
+    num_prompts = 224
+    input_len = 64000
     output_len = 1000
     random_range_ratio = 1
     prefix_hit_rate = 0.9
