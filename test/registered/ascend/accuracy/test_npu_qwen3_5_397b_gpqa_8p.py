@@ -97,7 +97,7 @@ class TestNPUQwen3_5_397B_W4A8_1P_In3k5_Out1k5_High_GPQA(
     model = QWEN3_5_397B_W4A8_MODEL_PATH
     other_args = QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS
     envs = QWEN3_5_397B_W4A8_1P_HIGH_ENVS
-    accuracy = 0.8
+    accuracy = 80
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     output_len = 1500

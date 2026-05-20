@@ -152,7 +152,7 @@ class TestNPUKimiK2_5_W4A8_2P1D_64P_AIME2025(
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.8
+    accuracy = 80
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 128
