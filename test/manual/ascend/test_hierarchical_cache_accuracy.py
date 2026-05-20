@@ -143,7 +143,7 @@ class TestDeepSeekV32CacheAccuracy(TestAscendMultiNodePdSepTestCaseBase):
             self.start_router_server()
 
             for i in range(repeat_times):
-                acc = self.run_gsm8k_test()
+                acc = self.run_gsm8k_test(0.0)
                 acc_list.append(acc)
 
             avg_acc = np.mean(acc_list) if acc_list else 0.0
