@@ -1,4 +1,4 @@
-# test round 2: EPLB NPU test case - test_npu_eplb.py with updated model path
+# test round 3: EPLB NPU test case - test_npu_eplb.py with lint fix
 name: Single Test (NPU)
 
 on:
