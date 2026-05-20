@@ -116,10 +116,11 @@ MODEL_CONFIG_CACHE_ENABLED = {
     "model_path": DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": BASE_DECODE_ENVS,
-    "prefill_args": [arg for arg in BASE_PREFILL_ARGS if arg != "--disable-radix-cache"] + ["--enable-hierarchical-cache"],
+    "prefill_args": BASE_PREFILL_ARGS + ["--enable-hierarchical-cache"],
     "decode_args": BASE_DECODE_ARGS,
     "router_args": [],
 }
+
 
 # ====================== Test Case ======================
 class TestDeepSeekV32CacheAccuracy(TestAscendMultiNodePdSepTestCaseBase):
@@ -152,11 +153,16 @@ class TestDeepSeekV32CacheAccuracy(TestAscendMultiNodePdSepTestCaseBase):
         return avg_acc
 
     def test_accuracy(self):
-        acc_off = self.run_gsm8k_with_config(MODEL_CONFIG_CACHE_DISABLED, repeat_times=5)
+        acc_off = self.run_gsm8k_with_config(
+            MODEL_CONFIG_CACHE_DISABLED, repeat_times=5
+        )
         acc_on = self.run_gsm8k_with_config(MODEL_CONFIG_CACHE_ENABLED, repeat_times=5)
 
-        self.assertGreaterEqual(acc_on, acc_off - self.degradation_tolerance,
-                                msg="Accuracy degraded after enabling cache!")
+        self.assertGreaterEqual(
+            acc_on,
+            acc_off - self.degradation_tolerance,
+            msg="Accuracy degraded after enabling cache!"
+        )
 
 
 if __name__ == "__main__":

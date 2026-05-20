@@ -170,14 +170,18 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendMultiNodePdSepTestCaseBase):
             ttft_1, cached_tokens_1 = self.send_long_prompt_request(
                 prompt_token_len=600, max_new_tokens=1
             )
-            self.assertEqual(cached_tokens_1, 0, msg="First request cached tokens should be 0")
+            self.assertEqual(
+                cached_tokens_1, 0, msg="First request cached tokens should be 0"
+            )
 
             # Second identical request
             ttft_2, cached_tokens_2 = self.send_long_prompt_request(
                 prompt_token_len=600, max_new_tokens=1
             )
             self.assertEqual(cached_tokens_2, 512, msg="Cache hit tokens should be 512")
-            self.assertLess(ttft_2, ttft_1, msg="TTFT should be reduced after cache hit")
+            self.assertLess(
+                ttft_2, ttft_1, msg="TTFT should be reduced after cache hit"
+            )
 
         finally:
             self.stop_sglang_thread()
