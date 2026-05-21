@@ -447,7 +447,7 @@ def launch_pd_separation_node(model_config):
 
     prefill_nnodes = get_nnodes_from_args(model_config["prefill_args"])
     decode_nnodes = get_nnodes_from_args(model_config["decode_args"])
-    
+
     is_prefill_node_rank_set = "--node-rank" in model_config["prefill_args"]
     is_decode_node_rank_set = "--node-rank" in model_config["decode_args"]
 
@@ -620,16 +620,16 @@ def launch_router(model_config):
     decode_url = []
     bootstrap_ports = []
     node_ip_list = []
-    
+
     prefill_nnodes = get_nnodes_from_args(model_config["prefill_args"])
     decode_nnodes = get_nnodes_from_args(model_config["decode_args"])
-    
+
     is_prefill_node_rank_set = "--node-rank" in model_config["prefill_args"]
     is_decode_node_rank_set = "--node-rank" in model_config["decode_args"]
-    
+
     is_multi_node_prefill_instance = not is_prefill_node_rank_set
     is_multi_node_decode_instance = not is_decode_node_rank_set
-    
+
     prefill_groups = set()
     decode_groups = set()
 
@@ -643,41 +643,61 @@ def launch_router(model_config):
             time.sleep(15)
             continue
         logger.info(f"Retrieved ConfigMap data: {configmap.data}")
-        
+
         for pod_name, pod_ip in configmap.data.items():
             pod_index = int(pod_name.rsplit("-", 1)[-1])
-            
+
             if "prefill" in pod_name:
-                if is_multi_node_prefill_instance and prefill_nnodes is not None and prefill_nnodes > 1:
+                if (
+                    is_multi_node_prefill_instance
+                    and prefill_nnodes is not None
+                    and prefill_nnodes > 1
+                ):
                     group_id = pod_index // prefill_nnodes
                     if group_id not in prefill_groups:
                         prefill_groups.add(group_id)
                         prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
                         bootstrap_ports.append(str(bootstrap_init_port + group_id))
                         node_ip_list.append(pod_ip)
-                        logger.info(f"Router: added prefill group {group_id} with ip {pod_ip}")
+                        logger.info(
+                            f"Router: added prefill group {group_id} with ip {pod_ip}"
+                        )
                 else:
-                    prefill_keyword = "prefill-0" if is_multi_node_prefill_instance else "prefill"
+                    prefill_keyword = (
+                        "prefill-0" if is_multi_node_prefill_instance else "prefill"
+                    )
                     if prefill_keyword in pod_name:
                         prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                        bootstrap_port = bootstrap_init_port if is_multi_node_prefill_instance else bootstrap_init_port + pod_index
+                        bootstrap_port = (
+                            bootstrap_init_port
+                            if is_multi_node_prefill_instance
+                            else bootstrap_init_port + pod_index
+                        )
                         bootstrap_ports.append(str(bootstrap_port))
                         node_ip_list.append(pod_ip)
-            
+ 
             if "decode" in pod_name:
-                if is_multi_node_decode_instance and decode_nnodes is not None and decode_nnodes > 1:
+                if (
+                    is_multi_node_decode_instance
+                    and decode_nnodes is not None
+                    and decode_nnodes > 1
+                ):
                     group_id = pod_index // decode_nnodes
                     if group_id not in decode_groups:
                         decode_groups.add(group_id)
                         decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
                         node_ip_list.append(pod_ip)
-                        logger.info(f"Router: added decode group {group_id} with ip {pod_ip}")
+                        logger.info(
+                            f"Router: added decode group {group_id} with ip {pod_ip}"
+                        )
                 else:
-                    decode_keyword = "decode-0" if is_multi_node_decode_instance else "decode"
+                    decode_keyword = (
+                        "decode-0" if is_multi_node_decode_instance else "decode"
+                    )
                     if decode_keyword in pod_name:
                         decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
                         node_ip_list.append(pod_ip)
-        
+
         if prefill_url and decode_url:
             is_ready = True
         else:
