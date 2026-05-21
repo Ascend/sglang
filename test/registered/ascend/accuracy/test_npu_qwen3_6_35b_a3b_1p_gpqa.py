@@ -5,7 +5,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestAscendAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    QWEN3_5_27B_W8A8_MODEL_PATH,
+    QWEN3_6_35B_A3B_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -16,7 +16,7 @@ register_npu_ci(
     disabled="accuracy testcase",
 )
 
-QWEN3_5_27B_3K5_1K5_HIGH_ENVS = {
+QWEN3_6_35B_A3B_1P_ACC_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -24,20 +24,16 @@ QWEN3_5_27B_3K5_1K5_HIGH_ENVS = {
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "ASCEND_USE_FIA": "1",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "1",
 }
 
-QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS = [
-    "--model-path",
-    QWEN3_5_27B_W8A8_MODEL_PATH,
+QWEN3_6_35B_A3B_1P_ACC_OTHER_ARGS = [
     "--tp-size",
     2,
     "--nnodes",
     1,
-    "--node-rank",
-    0,
     "--attention-backend",
     "ascend",
     "--device",
@@ -45,24 +41,24 @@ QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    60000,
+    65536,
     "--disable-radix-cache",
     "--trust-remote-code",
+    "--enable-prefill-delayer",
     "--max-running-requests",
-    48,
+    16,
     "--max-mamba-cache-size",
-    60,
+    20,
     "--mem-fraction-static",
-    0.7,
+    0.65,
     "--cuda-graph-bs",
     2,
+    4,
     8,
+    12,
+    14,
     16,
-    32,
-    48,
     "--enable-multimodal",
-    "--quantization",
-    "modelslim",
     "--mm-attention-backend",
     "ascend_attn",
     "--dtype",
@@ -80,22 +76,22 @@ QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_5_27B_1P_GPQA(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Qwen3.5-27B-W8A8 1p on GPQA"""
+class TestNPUQwen3_6_35B_A3B_1P_GPQA(TestAscendAccuracyTestCaseBase):
+    """Test NPU accuracy for Qwen3.6-35B-A3B 1p on GPQA"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    model = QWEN3_5_27B_W8A8_MODEL_PATH
-    other_args = QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS
-    envs = QWEN3_5_27B_3K5_1K5_HIGH_ENVS
-    accuracy = 85.5
+    model = QWEN3_6_35B_A3B_MODEL_PATH
+    other_args = QWEN3_6_35B_A3B_1P_ACC_OTHER_ARGS
+    envs = QWEN3_6_35B_A3B_1P_ACC_ENVS
+    accuracy = 86
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     output_len = 65536
     max_concurrency = 64
     generation_kwargs = "dict(temperature=1.0)"
 
-    def test_npu_qwen3_5_27b_1p_gpqa(self):
-        """Run NPU accuracy test for Qwen3.5-27B-W8A8 on GPQA"""
+    def test_npu_qwen3_6_35b_a3b_1p_gpqa(self):
+        """Run NPU accuracy test for Qwen3.6-35B-A3B on GPQA"""
         self.run_accuracy()
 
 

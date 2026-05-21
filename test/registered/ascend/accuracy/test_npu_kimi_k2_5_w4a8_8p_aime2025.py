@@ -99,12 +99,12 @@ class TestNPUKimiK2_5AIME25(TestAscendAccuracyTestCaseBase):
     model = KIMI_K2_5_W4A8_MODEL_PATH
     other_args = OTHER_ARGS
     envs = ENVS
-    accuracy = 0.3
+    accuracy = 96.1
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
-    max_concurrency = 128
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
-    max_out_len = 256000
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
+    output_len = 65536
 
     def test_npu_kimi_k2_5_aime25(self):
         """Run NPU accuracy test for Kimi-K2.5 on AIME 2025"""
