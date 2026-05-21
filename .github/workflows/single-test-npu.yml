@@ -1,4 +1,4 @@
-name: Single Test (NPU)
+﻿name: Single Test (NPU)
 # test round 2: LoRA overlap loading test case
 
 on:
