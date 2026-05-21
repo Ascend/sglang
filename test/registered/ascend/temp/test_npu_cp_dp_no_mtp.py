@@ -73,6 +73,10 @@ MODEL_CONFIG = {
         "in-seq-split",
         "--attn-cp-size",
         32,
+        "--dp-size",
+        2,
+        "--enable-dp-attention",
+        "--enable-dp-lm-head",
     ],
     "decode_args": [
         "--nnodes",
