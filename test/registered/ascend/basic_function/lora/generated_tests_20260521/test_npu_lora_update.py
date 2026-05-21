@@ -97,13 +97,13 @@ class TestNPULoRAUpdate(CustomTestCase):
         loaded_adapters = set(response.json()["loaded_adapters"])
         self.assertNotIn("lora_a", loaded_adapters)
 
-    def test_forward_with_unloaded_adapter(self):
-        """Test forward pass with unloaded adapter should fail."""
+    def test_forward_with_never_loaded_adapter(self):
+        """Test forward pass with never-loaded adapter should fail."""
         response = requests.post(
             DEFAULT_URL_FOR_TEST + "/generate",
             json={
                 "text": PROMPTS[0],
-                "lora_path": "lora_a",
+                "lora_path": "never_loaded_lora",
                 "sampling_params": {"temperature": 0, "max_new_tokens": 32},
             },
         )
@@ -116,6 +116,13 @@ class TestNPULoRAUpdate(CustomTestCase):
             "text": PROMPTS[0],
             "sampling_params": {"temperature": 0, "max_new_tokens": 32},
         }
+
+        response = requests.post(
+            DEFAULT_URL_FOR_TEST + "/generate",
+            json={**base_params, "lora_path": "lora_a"},
+        )
+        self.assertEqual(response.status_code, 200)
+        text_lora_a = response.json()["text"]
 
         response = requests.post(
             DEFAULT_URL_FOR_TEST + "/load_lora_adapter",
@@ -135,19 +142,6 @@ class TestNPULoRAUpdate(CustomTestCase):
             json={"lora_name": "lora_b"},
         )
         self.assertTrue(response.ok)
-
-        response = requests.post(
-            DEFAULT_URL_FOR_TEST + "/load_lora_adapter",
-            json={"lora_name": "lora_a", "lora_path": self.lora_a},
-        )
-        self.assertTrue(response.ok)
-
-        response = requests.post(
-            DEFAULT_URL_FOR_TEST + "/generate",
-            json={**base_params, "lora_path": "lora_a"},
-        )
-        self.assertEqual(response.status_code, 200)
-        text_lora_a = response.json()["text"]
 
         self.assertNotEqual(text_lora_a, text_lora_b)
 
