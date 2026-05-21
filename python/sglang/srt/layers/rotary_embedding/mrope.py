@@ -31,12 +31,68 @@ if _is_cuda:
 if _is_npu:
     import torch_npu
 
+import triton
+import triton.language as tl
 
-def apply_interleaved_rope(x: torch.Tensor, mrope_section: list) -> torch.Tensor:
-    x_t = x[0].clone()
-    x_t[..., 1 : mrope_section[1] * 3 : 3] = x[1, ..., 1 : mrope_section[1] * 3 : 3]
-    x_t[..., 2 : mrope_section[2] * 3 : 3] = x[2, ..., 2 : mrope_section[2] * 3 : 3]
-    return x_t
+
+@triton.jit
+def apply_interleaved_rope_kernel(
+        x_ptr,
+        out_ptr,
+        S: tl.constexpr,
+        D: tl.constexpr,
+        stride_x_s,
+        stride_out_s,
+        section_1_end,
+        section_2_end,
+        BLOCK_SIZE: tl.constexpr,
+):
+    seq_idx = tl.program_id(0)
+
+    dim_offset = tl.program_id(1) * BLOCK_SIZE
+    dim_indices = dim_offset + tl.arange(0, BLOCK_SIZE)
+    mask = dim_indices < D
+
+    val = tl.load(x_ptr + seq_idx * stride_x_s + dim_indices, mask=mask, other=0.0)
+
+    cond_a = (dim_indices % 3 == 1) & (dim_indices < section_1_end * 3)
+    val_a = tl.load(x_ptr + 1 * stride_x_s + seq_idx * stride_x_s + dim_indices, mask=mask & cond_a, other=0.0)
+
+    cond_b = (dim_indices % 3 == 2) & (dim_indices < section_2_end * 3)
+    val_b = tl.load(x_ptr + 2 * stride_x_s + seq_idx * stride_x_s + dim_indices, mask=mask & cond_b, other=0.0)
+
+    val = tl.where(cond_b, val_b, val)
+    val = tl.where(cond_a, val_a, val)
+
+    tl.store(out_ptr + seq_idx * stride_out_s + dim_indices, val, mask=mask)
+
+
+def apply_interleaved_rope_triton(x: torch.Tensor, mrope_section: list) -> torch.Tensor:
+    x = x.contiguous()
+
+    M, S, D = x.shape
+
+    out = torch.empty((S, D), dtype=x.dtype, device=x.device)
+
+    BLOCK_SIZE = 128
+    grid = (S, triton.cdiv(D, BLOCK_SIZE))
+
+    section_1_end = mrope_section[1]
+    section_2_end = mrope_section[2]
+
+    apply_interleaved_rope_kernel[grid](
+        x,
+        out,
+        S,
+        D,
+        x.stride(1),
+        out.stride(0),
+        section_1_end,
+        section_2_end,
+        BLOCK_SIZE=BLOCK_SIZE
+    )
+
+    return out
 
 
 class MRotaryEmbedding(RotaryEmbedding):
@@ -131,8 +187,8 @@ class MRotaryEmbedding(RotaryEmbedding):
         last_dim = cos_sin.size()[-1]
         cos, sin = cos_sin.chunk(2, dim=-1)
         if self.mrope_interleaved:
-            cos = apply_interleaved_rope(cos, self.mrope_section)
-            sin = apply_interleaved_rope(sin, self.mrope_section)
+            cos = apply_interleaved_rope_triton(cos, self.mrope_section)
+            sin = apply_interleaved_rope_triton(sin, self.mrope_section)
         else:
             cos = torch.cat(
                 [m[i] for i, m in enumerate(cos.split(self.mrope_section, dim=-1))],
@@ -169,8 +225,8 @@ class MRotaryEmbedding(RotaryEmbedding):
         if positions.ndim == 2:
             assert self.mrope_section
             if self.mrope_interleaved:
-                cos = apply_interleaved_rope(cos, self.mrope_section)
-                sin = apply_interleaved_rope(sin, self.mrope_section)
+                cos = apply_interleaved_rope_triton(cos, self.mrope_section)
+                sin = apply_interleaved_rope_triton(sin, self.mrope_section)
             else:
                 cos = torch.cat(
                     [m[i] for i, m in enumerate(cos.split(self.mrope_section, dim=-1))],
