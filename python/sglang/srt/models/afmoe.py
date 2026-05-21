@@ -46,7 +46,6 @@ from sglang.srt.layers.linear import (
     RowParallelLinear,
 )
 from sglang.srt.layers.logits_processor import LogitsProcessor
-from sglang.srt.layers.moe.fused_moe_triton import fused_moe
 from sglang.srt.layers.moe.moe_runner import MoeRunnerConfig
 from sglang.srt.layers.moe.topk import TopK
 from sglang.srt.layers.quantization.base_config import QuantizationConfig
@@ -58,8 +57,13 @@ from sglang.srt.layers.vocab_parallel_embedding import (
 )
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 from sglang.srt.model_loader.weight_utils import default_weight_loader
-from sglang.srt.utils import add_prefix
+from sglang.srt.utils import add_prefix, is_npu
+_is_npu = is_npu()
 
+if not _is_npu:
+    from sglang.srt.layers.moe.fused_moe_triton import fused_moe
+else:
+    from sglang.srt.hardware_backend.npu.quantization.fused_moe_method_npu import fused_moe_npu as fused_moe
 
 def get_attention_sliding_window_size(config: PretrainedConfig) -> Optional[int]:
     sliding_window = getattr(config, "sliding_window", None)
@@ -227,16 +231,31 @@ class AfmoeMoE(nn.Module):
             )
 
         renormalize = self.route_norm if self.score_func == "sigmoid" else False
-        self.topk = TopK(
-            top_k=self.top_k,
-            renormalize=renormalize,
-            use_grouped_topk=self.use_grouped_topk,
-            num_expert_group=self.n_group if self.use_grouped_topk else None,
-            topk_group=self.topk_group if self.use_grouped_topk else None,
-            custom_routing_function=custom_routing_fn,
-            correction_bias=correction_bias,
-            routed_scaling_factor=self.route_scale,
-        )
+
+        if not _is_npu:
+            self.topk = TopK(
+                top_k=self.top_k,
+                renormalize=renormalize,
+                use_grouped_topk=self.use_grouped_topk,
+                num_expert_group=self.n_group if self.use_grouped_topk else None,
+                topk_group=self.topk_group if self.use_grouped_topk else None,
+                custom_routing_function=custom_routing_fn,
+                correction_bias=correction_bias,
+                routed_scaling_factor=self.route_scale,
+            )
+        else:
+            self.topk = TopK(
+                top_k=self.top_k,
+                renormalize=False,
+                use_grouped_topk=self.use_grouped_topk,
+                num_expert_group=self.n_group if self.use_grouped_topk else None,
+                topk_group=self.topk_group if self.use_grouped_topk else None,
+                custom_routing_function=custom_routing_fn,
+                correction_bias=self.expert_bias,
+                scoring_func=self.score_func,
+                routed_scaling_factor=self.route_scale,
+            )
+
 
     def pack_params(self) -> None:
         w1: list[torch.Tensor] = []
@@ -266,7 +285,7 @@ class AfmoeMoE(nn.Module):
 
         router_logits, _ = self.gate(hidden_states)
         topk_output = self.topk(hidden_states, router_logits)
-        final_hidden_states = fused_moe.fused_moe(
+        final_hidden_states = fused_moe(
             hidden_states,
             w1=self.w1,
             w2=self.w2,
