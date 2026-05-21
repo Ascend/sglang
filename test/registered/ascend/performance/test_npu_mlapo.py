@@ -106,7 +106,7 @@ class TestNPUDeepSeekR1_W8A8_MLAPO(unittest.TestCase):
         
         # 启动服务器
         self.process = popen_launch_server(
-            DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH,
+            DEEPSEEK_R1_W8A8_MODEL_PATH,
             self.base_url,
             timeout=1800,
             other_args=DEEPSEEK_R1_BASE_ARGS,
@@ -117,7 +117,7 @@ class TestNPUDeepSeekR1_W8A8_MLAPO(unittest.TestCase):
         metrics = run_aisbench(
             host=self.host,
             port=str(self.port),
-            model_path=DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH,
+            model_path=DEEPSEEK_R1_W8A8_MODEL_PATH,
             dataset_type=TEST_PARAMS["aisbench_dataset_type"],
             dataset_path=None,
             input_len=TEST_PARAMS["input_len"],
