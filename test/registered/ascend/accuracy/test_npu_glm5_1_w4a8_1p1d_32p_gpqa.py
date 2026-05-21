@@ -52,6 +52,8 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     32,
     "--nnodes",
     2,
+    "--node-rank",
+    0,
     "--mem-fraction-static",
     0.75,
     "--attention-backend",
