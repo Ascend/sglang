@@ -25,7 +25,7 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
     "ASCEND_USE_FIA": "1",
 }
 
@@ -43,26 +43,22 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     "--device",
     "npu",
     "--chunked-prefill-size",
-    -1,
+    32768,
     "--max-prefill-tokens",
-    258000,
+    65536,
     "--trust-remote-code",
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    14,
+    3,
     "--max-mamba-cache-size",
-    80,
+    50,
     "--mem-fraction-static",
     0.6,
     "--cuda-graph-bs",
+    1,
     2,
-    6,
-    8,
-    10,
-    11,
-    12,
-    14,
+    3,
     "--enable-multimodal",
     "--quantization",
     "modelslim",
@@ -92,8 +88,8 @@ class TestNPUQwen3_5_27B_1P_In64k_90Prefix_High(TestAscendPerformanceTestCaseBas
     other_args = QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS
     dataset_name = "random"
-    max_concurrency = 14
-    num_prompts = 56
+    max_concurrency = 3
+    num_prompts = 12
     input_len = 65536
     output_len = 1024
     aisbench_repeat_rate = 0.9

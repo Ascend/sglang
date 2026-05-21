@@ -188,7 +188,7 @@ class TestNPUMiniMaxM2_5_W8A8_1P1D_24P_GPQA(
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 80
+    accuracy = 85.2
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 64
