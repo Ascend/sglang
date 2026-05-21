@@ -7,6 +7,7 @@
 
 
 from functools import lru_cache
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -342,6 +343,37 @@ class LayerNormFn(torch.autograd.Function):
         )
 
 
+@torch.library.custom_op("sglang::layernorm_gated_fwd", mutates_args=())
+def _layernorm_gated_fwd_op(
+    x: torch.Tensor,
+    weight: torch.Tensor,
+    bias: Optional[torch.Tensor],
+    z: Optional[torch.Tensor],
+    eps: float,
+    group_size: Optional[int],
+    norm_before_gate: bool,
+    is_rms_norm: bool,
+    activation: str,
+) -> torch.Tensor:
+    with torch.no_grad():
+        return LayerNormFn.apply(
+            x,
+            weight,
+            bias,
+            z,
+            eps,
+            group_size,
+            norm_before_gate,
+            is_rms_norm,
+            activation,
+        )
+
+
+@_layernorm_gated_fwd_op.register_fake
+def _(x, weight, bias, z, eps, group_size, norm_before_gate, is_rms_norm, activation):
+    return torch.empty_like(x)
+
+
 def layernorm_fn(
     x,
     weight,
@@ -353,7 +385,7 @@ def layernorm_fn(
     is_rms_norm=False,
     activation: str = "swish",
 ):
-    return LayerNormFn.apply(
+    return torch.ops.sglang.layernorm_gated_fwd(
         x, weight, bias, z, eps, group_size, norm_before_gate, is_rms_norm, activation
     )
 

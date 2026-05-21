@@ -46,6 +46,11 @@ class ForwardMetadata:
     mamba_track_mask_indices: Optional[torch.Tensor] = None
     conv_states_mask_indices: Optional[torch.Tensor] = None
 
+    # GDN chunked-prefill precomputed indices (Ascend NPU only).
+    # Set by AscendGDNAttnBackend.init_forward_metadata; None on all other
+    # backends and all non-extend forward modes.
+    non_spec_chunked_prefill_meta: Optional[object] = None
+
 
 @dataclass(kw_only=True)
 class Mamba2Metadata(ForwardMetadata):

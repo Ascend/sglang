@@ -1,3 +1,5 @@
+import inspect
+
 import torch
 
 from sglang.srt.layers.attention.linear.kernels.kernel_backend import (
@@ -29,6 +31,43 @@ elif is_cpu():
     fused_sigmoid_gating_delta_rule_update = (
         torch.ops.sgl_kernel.fused_sigmoid_gating_delta_rule_update_cpu
     )
+
+
+def _kernel_accepts_prebuilt_meta(fn) -> bool:
+    """Detect whether a chunk_gated_delta_rule implementation accepts a
+    `prebuilt_meta` keyword argument. Used to stay compatible with older
+    external `sgl_kernel_npu` builds that don't yet support the fast path."""
+    return _kernel_accepts_kwarg(fn, "prebuilt_meta")
+
+
+def _kernel_accepts_kwarg(fn, kwarg: str) -> bool:
+    try:
+        sig = inspect.signature(fn)
+    except (TypeError, ValueError):
+        return False
+    params = sig.parameters
+    if kwarg in params:
+        return True
+    return any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+
+
+try:
+    _CHUNK_GDR_ACCEPTS_PREBUILT_META = _kernel_accepts_prebuilt_meta(
+        chunk_gated_delta_rule
+    )
+    _CHUNK_GDR_ACCEPTS_MAX_T = _kernel_accepts_kwarg(chunk_gated_delta_rule, "max_T")
+    _CHUNK_GDR_ACCEPTS_CU_SEQ_LEN = _kernel_accepts_kwarg(
+        chunk_gated_delta_rule, "cu_seq_len"
+    )
+    _CHUNK_GDR_ACCEPTS_QUERY_START_LOC_CPU = _kernel_accepts_kwarg(
+        chunk_gated_delta_rule, "query_start_loc_cpu"
+    )
+except NameError:
+    # CPU+CUDA-only build imports were skipped above; leave detection off.
+    _CHUNK_GDR_ACCEPTS_PREBUILT_META = False
+    _CHUNK_GDR_ACCEPTS_MAX_T = False
+    _CHUNK_GDR_ACCEPTS_CU_SEQ_LEN = False
+    _CHUNK_GDR_ACCEPTS_QUERY_START_LOC_CPU = False
 
 
 class TritonGDNKernel(LinearAttnKernelBase):
@@ -133,6 +172,7 @@ class TritonGDNKernel(LinearAttnKernelBase):
         ssm_states: torch.Tensor,
         cache_indices: torch.Tensor,
         query_start_loc: torch.Tensor,
+        prebuilt_meta=None,
         **kwargs,
     ) -> tuple:
         recurrent_state = ssm_states
@@ -140,6 +180,16 @@ class TritonGDNKernel(LinearAttnKernelBase):
         if is_npu() or is_cpu():
             recurrent_state = ssm_states[cache_indices]
             recurrent_state_indices_args = {}
+        extra_kwargs = {}
+        if prebuilt_meta is not None:
+            if _CHUNK_GDR_ACCEPTS_PREBUILT_META:
+                extra_kwargs["prebuilt_meta"] = prebuilt_meta
+            if _CHUNK_GDR_ACCEPTS_MAX_T:
+                extra_kwargs["max_T"] = prebuilt_meta.max_T
+            if _CHUNK_GDR_ACCEPTS_CU_SEQ_LEN:
+                extra_kwargs["cu_seq_len"] = prebuilt_meta.cu_seq_len
+            if _CHUNK_GDR_ACCEPTS_QUERY_START_LOC_CPU:
+                extra_kwargs["query_start_loc_cpu"] = prebuilt_meta.query_start_loc_cpu
         return chunk_gated_delta_rule(
             q=q,
             k=k,
@@ -151,6 +201,7 @@ class TritonGDNKernel(LinearAttnKernelBase):
             head_first=False,
             use_qk_l2norm_in_kernel=True,
             **recurrent_state_indices_args,
+            **extra_kwargs,
         )
 
     def target_verify(

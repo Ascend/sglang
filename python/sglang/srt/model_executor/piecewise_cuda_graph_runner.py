@@ -383,7 +383,7 @@ class PiecewiseCudaGraphRunner:
                 dp_padding_mode=DpPaddingMode.get_default_mode_in_cuda_graph(),
                 global_dp_buffer_len=None,
                 mrope_positions=mrope_positions,
-                spec_algorithm=None,
+                spec_algorithm=self.model_runner.spec_algorithm,
                 spec_info=None,
                 capture_hidden_mode=CaptureHiddenMode.NULL,
                 num_token_non_padded=None,
@@ -540,7 +540,7 @@ class PiecewiseCudaGraphRunner:
                 dp_padding_mode=DpPaddingMode.get_default_mode_in_cuda_graph(),
                 global_dp_buffer_len=None,
                 mrope_positions=mrope_positions,
-                spec_algorithm=None,
+                spec_algorithm=self.model_runner.spec_algorithm,
                 spec_info=None,
                 capture_hidden_mode=CaptureHiddenMode.NULL,
                 num_token_non_padded=None,
@@ -787,6 +787,11 @@ class PiecewiseCudaGraphRunner:
                         hidden_states=(
                             output.hidden_states[: self.raw_num_tokens]
                             if output.hidden_states is not None
+                            else None
+                        ),
+                        mm_input_embeds=(
+                            output.mm_input_embeds[: self.raw_num_tokens]
+                            if output.mm_input_embeds is not None
                             else None
                         ),
                     )
