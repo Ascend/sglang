@@ -191,6 +191,9 @@ tl_out/
 work_dirs/
 *.csv
 
+# Trae IDE config
+.trae/
+
 !logo.png
 !docs_new/images/*.png
 
@@ -276,3 +279,4 @@ sgl-kernel/csrc/**/*_musa/
 *.ply
 *.npz
 artifacts/
+.claude/scheduled_tasks.lock

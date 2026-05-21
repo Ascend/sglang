@@ -1,0 +1,148 @@
+name: Single Test (NPU)
+
+on:
+  pull_request:
+    branches:
+      - testcases
+    paths:
+      - ".github/workflows/single-test-npu.yml"
+      - "test/registered/ascend/basic_function/HiCache_npu_new/**"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (branch, tag, or SHA) to test. If not provided, uses the default branch.'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: single-test-npu-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==================== HiCache NPU New Test Cases ====================
+  # HiCache functional tests - 1 NPU
+  hicache-npu-new-1-npu-a3:
+    runs-on: linux-aarch64-a3-1
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11
+    strategy:
+      fail-fast: false
+      matrix:
+        test_case:
+          # 1 NPU test cases
+          - test_npu_hicache_kv_events.py
+          - test_npu_hicache_3fs_backend.py
+          - test_npu_hicache_storage_file_backend.py
+          - test_npu_hicache_runtime_attach_detach.py
+          # EAGLE tests (skipped for now)
+          # - test_npu_hicache_eagle_variant.py
+          # - test_npu_hicache_spec_file_storage.py
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Mark repository safe
+        run: |
+          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+          RUSTUP_DIST_SERVER: "https://rsproxy.cn"
+          RUSTUP_UPDATE_ROOT: "https://rsproxy.cn/rustup"
+        run: |
+          # speed up by using infra cache services
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+
+          bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          # copy required file from our daily cache
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          # copy gsm8k dataset
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+
+      - name: Print Log Information
+        run: |
+          bash scripts/ci/npu/npu_log_print.sh
+
+      - name: Run test - ${{ matrix.test_case }}
+        timeout-minutes: 60
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+        run: |
+          cd test/registered/ascend/basic_function/HiCache_npu_new
+          python3 -m pytest ${{ matrix.test_case }} -v --tb=short
+
+  # HiCache functional tests - 4 NPU
+  hicache-npu-new-4-npu-a3:
+    runs-on: linux-aarch64-a3-4
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11
+    strategy:
+      fail-fast: false
+      matrix:
+        test_case:
+          # 4 NPU test cases
+          - test_npu_hicache_large_model.py
+          - test_npu_pp_with_hicache.py
+          - test_npu_hicache_mooncake_backend.py
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Mark repository safe
+        run: |
+          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+          RUSTUP_DIST_SERVER: "https://rsproxy.cn"
+          RUSTUP_UPDATE_ROOT: "https://rsproxy.cn/rustup"
+        run: |
+          # speed up by using infra cache services
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+
+          bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          # copy required file from our daily cache
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          # copy gsm8k dataset
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+
+      - name: Print Log Information
+        run: |
+          bash scripts/ci/npu/npu_log_print.sh
+
+      - name: Run test - ${{ matrix.test_case }}
+        timeout-minutes: 120
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+        run: |
+          cd test/registered/ascend/basic_function/HiCache_npu_new
+          python3 -m pytest ${{ matrix.test_case }} -v --tb=short
