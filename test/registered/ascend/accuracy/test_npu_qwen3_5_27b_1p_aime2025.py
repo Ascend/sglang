@@ -87,7 +87,7 @@ class TestNPUQwen3_5_27B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
     model = QWEN3_5_27B_W8A8_MODEL_PATH
     other_args = QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_3K5_1K5_HIGH_ENVS
-    accuracy = 80
+    accuracy = 92.6
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     output_len = 8192

@@ -178,7 +178,7 @@ class TestNPUGLM5_1_W4A8_1P1D_64P_GPQA(TestAscendAccuracyMultiNodePdSepTestCaseB
 
     model_config = GLM_5_1_PD_SEP_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 80
+    accuracy = 86.2
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 16
