@@ -239,6 +239,22 @@ def set_environment_variables(env_vars):
     return env_vars
 
 
+def get_nnodes_from_args(args):
+    """Get nnodes value from args.
+
+    Args:
+        args (list): List of arguments.
+
+    Returns:
+        int: nnodes value if found, None otherwise.
+    """
+    if "--nnodes" in args:
+        idx = args.index("--nnodes")
+        if idx + 1 < len(args):
+            return int(args[idx + 1])
+    return None
+
+
 def check_port_availability(host, port, timeout=3):
     """Check if the port is available.
 
@@ -429,8 +445,14 @@ def launch_pd_separation_node(model_config):
     master_prefill_ip = None
     master_decode_ip = None
 
-    is_prefill_instance_multi_node = "--node-rank" not in model_config["prefill_args"]
-    is_decode_instance_multi_node = "--node-rank" not in model_config["decode_args"]
+    prefill_nnodes = get_nnodes_from_args(model_config["prefill_args"])
+    decode_nnodes = get_nnodes_from_args(model_config["decode_args"])
+
+    is_prefill_node_rank_set = "--node-rank" in model_config["prefill_args"]
+    is_decode_node_rank_set = "--node-rank" in model_config["decode_args"]
+
+    is_prefill_instance_multi_node = not is_prefill_node_rank_set
+    is_decode_instance_multi_node = not is_decode_node_rank_set
 
     # Monitor ConfigMap ready
     is_ready = False
@@ -471,7 +493,6 @@ def launch_pd_separation_node(model_config):
     logger.info(f"Setting ENV_VAR ASCEND_MF_STORE_URL={mf_addr}")
 
     if role == "prefill":
-        # Current node is prefill
         dist_init_addr = f"{master_prefill_ip}:5000"
         logger.info(f"Launching prefill node with dist_init_addr={dist_init_addr}")
 
@@ -479,19 +500,36 @@ def launch_pd_separation_node(model_config):
 
         prefill_args = model_config["prefill_args"]
         if is_prefill_instance_multi_node:
-            logger.info(
-                "No node-rank specified - all prefill nodes will form a single instance."
-            )
-            prefill_args.extend(
-                [
-                    "--node-rank",
-                    pod_index,
-                    "--dist-init-addr",
-                    dist_init_addr,
-                    "--disaggregation-bootstrap-port",
-                    bootstrap_init_port,
-                ]
-            )
+            if prefill_nnodes is not None and prefill_nnodes > 1:
+                local_rank = pod_index % prefill_nnodes
+                group_id = pod_index // prefill_nnodes
+                logger.info(
+                    f"Multi-instance mode: prefill group {group_id}, local rank {local_rank} (pod_index={pod_index}, nnodes={prefill_nnodes})"
+                )
+                prefill_args.extend(
+                    [
+                        "--node-rank",
+                        str(local_rank),
+                        "--dist-init-addr",
+                        dist_init_addr,
+                        "--disaggregation-bootstrap-port",
+                        str(bootstrap_init_port + group_id),
+                    ]
+                )
+            else:
+                logger.info(
+                    "Single instance mode: all prefill nodes will form a single instance."
+                )
+                prefill_args.extend(
+                    [
+                        "--node-rank",
+                        str(pod_index),
+                        "--dist-init-addr",
+                        dist_init_addr,
+                        "--disaggregation-bootstrap-port",
+                        bootstrap_init_port,
+                    ]
+                )
         else:
             logger.info("Node-rank specified - each prefill node is an instance.")
             prefill_args.extend(
@@ -511,17 +549,32 @@ def launch_pd_separation_node(model_config):
 
         decode_args = model_config["decode_args"]
         if is_decode_instance_multi_node:
-            logger.info(
-                "No node-rank specified - all decode nodes will form a single instance."
-            )
-            decode_args.extend(
-                [
-                    "--node-rank",
-                    str(pod_index),
-                    "--dist-init-addr",
-                    dist_init_addr,
-                ]
-            )
+            if decode_nnodes is not None and decode_nnodes > 1:
+                local_rank = pod_index % decode_nnodes
+                group_id = pod_index // decode_nnodes
+                logger.info(
+                    f"Multi-instance mode: decode group {group_id}, local rank {local_rank} (pod_index={pod_index}, nnodes={decode_nnodes})"
+                )
+                decode_args.extend(
+                    [
+                        "--node-rank",
+                        str(local_rank),
+                        "--dist-init-addr",
+                        dist_init_addr,
+                    ]
+                )
+            else:
+                logger.info(
+                    "Single instance mode: all decode nodes will form a single instance."
+                )
+                decode_args.extend(
+                    [
+                        "--node-rank",
+                        str(pod_index),
+                        "--dist-init-addr",
+                        dist_init_addr,
+                    ]
+                )
         else:
             logger.info("Node-rank specified - each decode node is an instance.")
 
@@ -567,8 +620,18 @@ def launch_router(model_config):
     decode_url = []
     bootstrap_ports = []
     node_ip_list = []
-    is_multi_node_prefill_instance = "--node-rank" not in model_config["prefill_args"]
-    is_multi_node_decode_instance = "--node-rank" not in model_config["decode_args"]
+
+    prefill_nnodes = get_nnodes_from_args(model_config["prefill_args"])
+    decode_nnodes = get_nnodes_from_args(model_config["decode_args"])
+
+    is_prefill_node_rank_set = "--node-rank" in model_config["prefill_args"]
+    is_decode_node_rank_set = "--node-rank" in model_config["decode_args"]
+
+    is_multi_node_prefill_instance = not is_prefill_node_rank_set
+    is_multi_node_decode_instance = not is_decode_node_rank_set
+
+    prefill_groups = set()
+    decode_groups = set()
 
     is_ready = False
     bootstrap_init_port = BOOTSTRAP_INIT_PORT
@@ -580,24 +643,61 @@ def launch_router(model_config):
             time.sleep(15)
             continue
         logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+
         for pod_name, pod_ip in configmap.data.items():
             pod_index = int(pod_name.rsplit("-", 1)[-1])
-            prefill_keyword = (
-                "prefill-0" if is_multi_node_prefill_instance else "prefill"
-            )
-            if prefill_keyword in pod_name:
-                prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                bootstrap_port = (
-                    bootstrap_init_port
-                    if is_multi_node_prefill_instance
-                    else bootstrap_init_port + pod_index
-                )
-                bootstrap_ports.append(str(bootstrap_port))
-                node_ip_list.append(pod_ip)
-            decode_keyword = "decode-0" if is_multi_node_decode_instance else "decode"
-            if decode_keyword in pod_name:
-                decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                node_ip_list.append(pod_ip)
+
+            if "prefill" in pod_name:
+                if (
+                    is_multi_node_prefill_instance
+                    and prefill_nnodes is not None
+                    and prefill_nnodes > 1
+                ):
+                    group_id = pod_index // prefill_nnodes
+                    if group_id not in prefill_groups:
+                        prefill_groups.add(group_id)
+                        prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                        bootstrap_ports.append(str(bootstrap_init_port + group_id))
+                        node_ip_list.append(pod_ip)
+                        logger.info(
+                            f"Router: added prefill group {group_id} with ip {pod_ip}"
+                        )
+                else:
+                    prefill_keyword = (
+                        "prefill-0" if is_multi_node_prefill_instance else "prefill"
+                    )
+                    if prefill_keyword in pod_name:
+                        prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                        bootstrap_port = (
+                            bootstrap_init_port
+                            if is_multi_node_prefill_instance
+                            else bootstrap_init_port + pod_index
+                        )
+                        bootstrap_ports.append(str(bootstrap_port))
+                        node_ip_list.append(pod_ip)
+
+            if "decode" in pod_name:
+                if (
+                    is_multi_node_decode_instance
+                    and decode_nnodes is not None
+                    and decode_nnodes > 1
+                ):
+                    group_id = pod_index // decode_nnodes
+                    if group_id not in decode_groups:
+                        decode_groups.add(group_id)
+                        decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                        node_ip_list.append(pod_ip)
+                        logger.info(
+                            f"Router: added decode group {group_id} with ip {pod_ip}"
+                        )
+                else:
+                    decode_keyword = (
+                        "decode-0" if is_multi_node_decode_instance else "decode"
+                    )
+                    if decode_keyword in pod_name:
+                        decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                        node_ip_list.append(pod_ip)
+
         if prefill_url and decode_url:
             is_ready = True
         else:
