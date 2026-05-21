@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_MM_CUSTOM_GEN,
@@ -25,7 +25,7 @@ QWEN3_6_35B_A3B_1024_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "20",
 }
 
 QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
@@ -45,16 +45,20 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--max-running-requests",
-    64,
+    48,
     "--max-mamba-cache-size",
-    120,
+    90,
     "--mem-fraction-static",
     0.78,
     "--cuda-graph-bs",
     4,
     8,
+    12,
     16,
+    24,
     32,
+    40,
+    48,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -84,8 +88,8 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     other_args = QWEN3_6_35B_A3B_1024_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1024_ENVS
     dataset_name = "random"
-    max_concurrency = 48
-    num_prompts = 256
+    max_concurrency = 70
+    num_prompts = 280
     input_len = 30
     output_len = 1024
     random_range_ratio = 1

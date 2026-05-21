@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
@@ -25,7 +25,7 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
     "ASCEND_USE_FIA": "1",
 }
 
@@ -43,21 +43,21 @@ QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS = [
     "--device",
     "npu",
     "--chunked-prefill-size",
-    32768,
+    -1,
     "--max-prefill-tokens",
-    65536,
+    130000,
     "--trust-remote-code",
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
     4,
     "--max-mamba-cache-size",
-    50,
+    40,
     "--mem-fraction-static",
     0.6,
     "--cuda-graph-bs",
-    1,
     2,
+    4,
     "--enable-multimodal",
     "--quantization",
     "modelslim",

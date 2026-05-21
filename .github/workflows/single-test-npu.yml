@@ -1,4 +1,5 @@
 name: Single Test (NPU)
+# tuning round 15: 场景A增加并发(64k/128k prefix), 场景B降低并发(1080p/27b 64k 90prefix), 场景C标记失败(1024x1024), 场景D代码问题注释(minimax/397b/27b_w8a8_2p_64k)
 
 on:
   pull_request:
@@ -156,10 +157,11 @@ jobs:
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_1p_in1024x1024_30_out1024_50ms.py
           #   test_type: 'perf'
-          - name: test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
+          # FAILED - 吞吐不达标(TPOT已达上限): test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms
+          # - name: test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms
+          #   runner: linux-aarch64-a3-4
+          #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms.py
+          #   test_type: 'perf'
           # Qwen3.6-27B 64K/1K 50ms 新增
 #          - name: test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_50ms
 #            runner: linux-aarch64-a3-4
@@ -242,32 +244,37 @@ jobs:
           #   runner: linux-aarch64-a3-16
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms_prefix.py
           #   test_type: 'perf'
-          - name: test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix.py
-            test_type: 'perf'
+          # FAILED - 代码问题(capture_bs=[0]): test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix
+          # - name: test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix.py
+          #   test_type: 'perf'
           # MiniMax 调优
-          - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
-            test_type: 'perf'
+          # FAILED - 代码问题(服务启动失败/OOM): test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
+          # - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
+          #   test_type: 'perf'
           # 已通过 - 注释掉 (Round 2)
           # - name: test_npu_minimax_m2_5_w8a8_8p_in32k_out1k_50ms
           #   runner: linux-aarch64-a3-16
           #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in32k_out1k_50ms.py
           #   test_type: 'perf'
-          - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-          - name: test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-8
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-          - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
-            test_type: 'perf'
+          # FAILED - 代码问题(服务启动失败/OOM): test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms
+          # - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms.py
+          #   test_type: 'perf'
+          # FAILED - 代码问题(AttributeError): test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
+          # - name: test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
+          #   runner: linux-aarch64-a3-8
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
+          #   test_type: 'perf'
+          # FAILED - 代码问题(capture_bs=[0]): test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
+          # - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
+          #   test_type: 'perf'
           # Kimi 调优
 #          - name: test_npu_kimi_k2_5_w4a8_8p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
