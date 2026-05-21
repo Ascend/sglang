@@ -27,7 +27,6 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "TASK_QUEUE_ENABLE": "2",
-    "ENABLE_PROFILING": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
@@ -41,8 +40,9 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "HCCL_BUFFSIZE": "650",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "48",
     "TASK_QUEUE_ENABLE": "0",
+    "SGLANG_SCHEDULER_SKIP_ALL_GATHER": "1",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
@@ -57,7 +57,7 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--node-rank",
     0,
     "--mem-fraction-static",
-    0.75,
+    0.72,
     "--attention-backend",
     "ascend",
     "--device",
@@ -67,36 +67,15 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--disaggregation-transfer-backend",
     "ascend",
     "--max-running-requests",
-    64,
+    192,
     "--served-model-name",
     "glm-5",
     "--chunked-prefill-size",
-    524288,
-    "--max-prefill-tokens",
-    180000,
+    16384,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
     "normal",
-    "--disable-shared-experts-fusion",
-    "--disable-cuda-graph",
-    "--dtype",
-    "bfloat16",
-    "--dp-size",
-    4,
-    "--enable-dp-attention",
-    "--load-balance-method",
-    "round_robin",
-    "--enable-nsa-prefill-context-parallel",
-    "--nsa-prefill-cp-mode",
-    "in-seq-split",
-    "--attn-cp-size",
-    8,
-    "--enable-dp-lm-head",
-    "--moe-dense-tp",
-    1,
-    "--speculative-draft-model-quantization",
-    "unquant",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -105,24 +84,30 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     2,
+    "--speculative-draft-model-quantization",
+    "unquant",
+    "--disable-shared-experts-fusion",
+    "--disable-cuda-graph",
+    "--dtype",
+    "bfloat16",
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
     "--disaggregation-mode",
     "decode",
     "--tp-size",
-    32,
+    64,
     "--nnodes",
-    2,
-    "--dp-size",
     4,
+    "--dp-size",
+    64,
     "--ep-size",
-    32,
+    64,
     "--enable-dp-attention",
     "--mem-fraction-static",
-    0.87,
+    0.84,
     "--max-running-requests",
-    128,
+    192,
     "--attention-backend",
     "ascend",
     "--device",
@@ -133,8 +118,12 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "glm-5",
     "--moe-a2a-backend",
     "deepep",
+    "--enable-dp-attention",
     "--deepep-mode",
     "low_latency",
+    "--enable-dp-lm-head",
+    "--moe-dense-tp",
+    1,
     "--cuda-graph-bs",
     1,
     2,
@@ -145,14 +134,6 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     9000,
     "--context-length",
     180000,
-    "--tokenizer-worker-num",
-    4,
-    "--prefill-round-robin-balance",
-    "--disable-shared-experts-fusion",
-    "--dtype",
-    "bfloat16",
-    "--load-balance-method",
-    "round_robin",
     "--speculative-draft-model-quantization",
     "unquant",
     "--speculative-algorithm",
@@ -163,6 +144,14 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--tokenizer-worker-num",
+    4,
+    "--prefill-round-robin-balance",
+    "--disable-shared-experts-fusion",
+    "--dtype",
+    "bfloat16",
+    "--load-balance-method",
+    "round_robin",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {
@@ -171,7 +160,7 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
     "decode_args": GLM_5_1_PD_SEP_DECODE_ARGS,
     "prefill_envs": GLM_5_1_PD_SEP_PREFILL_ENVS,
     "decode_envs": GLM_5_1_PD_SEP_DECODE_ENVS,
-    "router_args": [],
+    "router_args": ["--policy", "round_robin"],
     "router_envs": {},
 }
 
@@ -183,14 +172,14 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 8
-    num_prompts = 32
-    input_len = 131072
-    output_len = 1024
+    max_concurrency = 128
+    num_prompts = 512
+    input_len = 6656
+    output_len = 1536
     random_range_ratio = 1
     tpot = 20
-    output_token_throughput = 3000
-    aisbench_repeat_rate = 0.9
+    output_token_throughput = 166145
+    aisbench_repeat_rate = 1.0
 
     def test_npu_glm5_1_w4a8_pd_sep_in3k5_out1k5(self):
         """Run NPU performance test for GLM-5.1-w4a8 PD separation"""
