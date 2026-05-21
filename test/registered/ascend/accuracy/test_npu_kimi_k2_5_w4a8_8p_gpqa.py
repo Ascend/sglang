@@ -103,8 +103,8 @@ class TestNPUKimiK2_5GPQA(TestAscendAccuracyTestCaseBase):
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 64
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
-    max_out_len = 3072
+    generation_kwargs = "dict(temperature=1.0)"
+    output_len = 65536
 
     def test_npu_kimi_k2_5_gpqa(self):
         """Run NPU accuracy test for Kimi-K2.5 on GPQA"""

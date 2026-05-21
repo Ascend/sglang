@@ -20,8 +20,12 @@ class TestNPUQwen3_6_35BA3B_1P_GPQA(TestAscendAccuracyTestCaseBase):
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_6_35B_A3B_MODEL_PATH
-    dataset_name = "gpqa"
+    dataset_type = "gpqa"
+    dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     accuracy = 86
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
+    output_len = 65536
 
     other_args = [
         "--tp-size",
@@ -47,8 +51,12 @@ class TestNPUQwen3_6_35BA3B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_6_35B_A3B_MODEL_PATH
-    dataset_name = "aime2025"
+    dataset_type = "aime2025"
+    dataset_name = "aime2025_gen"
     accuracy = 92.7
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
+    output_len = 65536
 
     other_args = [
         "--tp-size",

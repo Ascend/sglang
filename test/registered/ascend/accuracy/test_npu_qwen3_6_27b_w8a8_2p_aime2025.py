@@ -88,8 +88,9 @@ class TestNPUQwen3_6_27B_2P_AIME2025(TestAscendAccuracyTestCaseBase):
     accuracy = 94.1
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
-    output_len = 1500
-    max_concurrency = 1
+    output_len = 65536
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
     num_prompts = 100000
 
     def test_npu_qwen3_6_27b_2p_aime2025(self):

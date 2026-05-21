@@ -88,7 +88,7 @@ class TestNPUGLM5_1_W4A8_16P_GPQA(TestAscendAccuracyMultiNodePdMixTestCaseBase):
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 64
     output_len = 65536
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
+    generation_kwargs = "dict(temperature=1.0)"
 
     def test_npu_glm5_1_w4a8_16p_gpqa(self):
         """Run NPU accuracy test for GLM-5.1-w4a8 two node on GPQA"""
