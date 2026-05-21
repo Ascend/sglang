@@ -93,8 +93,6 @@ class TestNPUQwen3_5_27B_1P_GPQA(TestAscendAccuracyTestCaseBase):
     output_len = 65536
     max_concurrency = 64
     generation_kwargs = "dict(temperature=1.0)"
-    num_prompts = 100000
-
     def test_npu_qwen3_5_27b_1p_gpqa(self):
         """Run NPU accuracy test for Qwen3.5-27B-W8A8 on GPQA"""
         self.run_accuracy()
