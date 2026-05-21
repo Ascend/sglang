@@ -675,7 +675,7 @@ def launch_router(model_config):
                         )
                         bootstrap_ports.append(str(bootstrap_port))
                         node_ip_list.append(pod_ip)
- 
+
             if "decode" in pod_name:
                 if (
                     is_multi_node_decode_instance
