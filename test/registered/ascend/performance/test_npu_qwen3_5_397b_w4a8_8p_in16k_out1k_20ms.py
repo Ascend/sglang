@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
@@ -39,7 +39,7 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--tp-size",
     16,
     "--chunked-prefill-size",
-    -1,
+    16384,
     "--max-prefill-tokens",
     20480,
     "--disable-radix-cache",
@@ -47,7 +47,7 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--max-running-requests",
     4,
     "--mem-fraction-static",
-    0.65,
+    0.75,
     "--max-total-tokens",
     200000,
     "--cuda-graph-bs",
@@ -99,7 +99,7 @@ class TestNPUQwen3_5_397B_16K_1k_20ms(TestAscendPerformanceTestCaseBase):
     random_range_ratio = 1
     tpot = 20
     aisbench_request_rate = 1
-    # output_token_throughput = 150
+    # output_token_throughput = 439
 
     def test_npu_qwen3_5_397b_16K_1k_20ms(self):
         """Run NPU performance test for Qwen3.5-397B in3k5 out1k5"""

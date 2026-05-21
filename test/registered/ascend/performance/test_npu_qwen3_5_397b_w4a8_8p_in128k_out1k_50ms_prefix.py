@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
@@ -19,7 +19,6 @@ QWEN3_5_397B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "3000",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
@@ -39,24 +38,22 @@ QWEN3_5_397B_128K_OTHER_ARGS = [
     "--tp-size",
     16,
     "--chunked-prefill-size",
-    32768,
+    -1,
     "--max-prefill-tokens",
-    65536,
+    133120,
     "--max-total-tokens",
-    800000,
-    "--prefill-max-requests",
-    1,
+    600000,
     "--max-mamba-cache-size",
-    80,
+    160,
     "--trust-remote-code",
     "--max-running-requests",
-    2,
+    8,
     "--mem-fraction-static",
-    0.6,
+    0.7,
     "--cuda-graph-bs",
-    1,
     2,
     4,
+    8,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -97,15 +94,15 @@ class TestNPUQwen3_5_397B_128K(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_128K_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 4
-    num_prompts = 4
+    max_concurrency = 8
+    num_prompts = 8
     aisbench_repeat_rate = 0.9
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
     tpot = 50
     aisbench_request_rate = 1
-    # output_token_throughput = 200
+    # output_token_throughput = 385.9
 
     def test_npu_qwen3_5_397b_128k(self):
         """Run NPU performance test for Qwen3.5-397B in128k out1k"""

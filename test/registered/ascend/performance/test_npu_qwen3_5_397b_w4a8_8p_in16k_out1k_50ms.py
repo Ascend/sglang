@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
@@ -110,7 +110,7 @@ class TestNPUQwen3_5_397B_16K_1k_50ms(TestAscendPerformanceTestCaseBase):
     random_range_ratio = 1
     tpot = 50
     aisbench_request_rate = 1
-    # output_token_throughput = 200
+    # output_token_throughput = 907
 
     def test_npu_qwen3_5_397b_16k_1k_50ms(self):
         """Run NPU performance test for Qwen3.5-397B in3k5 out1k5"""
