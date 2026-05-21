@@ -89,6 +89,7 @@ class TestNPUQwen3_6_35B_A3B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
     output_len = 65536
     max_concurrency = 64
     generation_kwargs = "dict(temperature=1.0)"
+
     def test_npu_qwen3_6_35b_a3b_1p_aime2025(self):
         """Run NPU accuracy test for Qwen3.6-35B-A3B on AIME2025"""
         self.run_accuracy()
