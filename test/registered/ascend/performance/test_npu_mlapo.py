@@ -7,7 +7,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
-    DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH,
+    DEEPSEEK_R1_W8A8_MODEL_PATH,
     TestAscendPerformanceTestCaseBase,
     run_aisbench,
 )
