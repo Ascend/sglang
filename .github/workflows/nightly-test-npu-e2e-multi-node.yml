@@ -103,15 +103,20 @@ jobs:
       - name: Clear resources
         run: |
           cd ${ASCEND_E2E_TEST_CONFIG_PATH}
-          kubectl delete -f ./k8s_multi_pd_*.yaml --ignore-not-found=true || true
+          if ls ./k8s_multi_pd_*.yaml 1> /dev/null 2>&1; then
+            kubectl delete -f ./k8s_multi_pd_*.yaml --ignore-not-found=true
+          fi
 
           pod_name_prefix="${KUBE_JOB_NAME}-"
           echo "kube name space: $NAMESPACE, pod name prefix: ${pod_name_prefix}"
           while true; do
-            if kubectl get po -A -n $NAMESPACE | grep -q "${pod_name_prefix}"; then
+            if kubectl get po -A -n $NAMESPACE 2>/dev/null | grep -q "${pod_name_prefix}"; then
               echo "Found exist sglang job, sleeping for 30 seconds..."
               sleep 30
-              kubectl get pods | grep "${pod_name_prefix}" | awk '{print $1}' | xargs kubectl delete pod -n $NAMESPACE || true
+              pod_names=$(kubectl get pods -n $NAMESPACE 2>/dev/null | grep "${pod_name_prefix}" | awk '{print $1}')
+              if [ -n "$pod_names" ]; then
+                kubectl delete pod -n $NAMESPACE $pod_names
+              fi
             else
               echo "No sglang job exist, start test case..."
               break
@@ -205,18 +210,23 @@ jobs:
         if: always()
         run: |
           cd ${ASCEND_E2E_TEST_CONFIG_PATH}
-          kubectl get pods -n $NAMESPACE | grep $KUBE_JOB_NAME
-          kubectl delete -f ./k8s_multi_pd_*.yaml --ignore-not-found=true || true
+          kubectl get pods -n $NAMESPACE 2>/dev/null | grep $KUBE_JOB_NAME || true
+          if ls ./k8s_multi_pd_*.yaml 1> /dev/null 2>&1; then
+            kubectl delete -f ./k8s_multi_pd_*.yaml --ignore-not-found=true
+          fi
 
           pod_name_prefix="${KUBE_JOB_NAME}-"
           echo "kube name space: $NAMESPACE, pod name prefix: ${pod_name_prefix}"
           while true; do
-            if kubectl get po -A -n $NAMESPACE | grep -q "${pod_name_prefix}"; then
+            if kubectl get po -A -n $NAMESPACE 2>/dev/null | grep -q "${pod_name_prefix}"; then
               echo "Found exist sglang job, sleeping for 30 seconds..."
               sleep 30
-              kubectl get pods | grep "${pod_name_prefix}" | awk '{print $1}' | xargs kubectl delete pod -n $NAMESPACE || true
+              pod_names=$(kubectl get pods -n $NAMESPACE 2>/dev/null | grep "${pod_name_prefix}" | awk '{print $1}')
+              if [ -n "$pod_names" ]; then
+                kubectl delete pod -n $NAMESPACE $pod_names
+              fi
             else
-              echo "No sglang job exist, start test case..."
+              echo "No sglang job exist, post process completed..."
               break
             fi
           done
