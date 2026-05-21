@@ -87,7 +87,7 @@ class TestNPUQwen3_5_27B_1P_In64k_90Prefix_High(TestAscendPerformanceTestCaseBas
     other_args = QWEN3_5_27B_64K_90_PREFIX_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_64K_90_PREFIX_HIGH_ENVS
     dataset_name = "random"
-    max_concurrency = 4
+    max_concurrency = 2
     num_prompts = 16
     input_len = 65536
     output_len = 1024

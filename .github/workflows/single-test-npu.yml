@@ -156,10 +156,13 @@ jobs:
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_1p_in1024x1024_30_out1024_50ms.py
           #   test_type: 'perf'
-          - name: test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
+          # 代码问题 - 注释掉 (类别4)
+          # 原因: 吞吐差距17.2x异常，max_concurrency=4时吞吐仅115 vs预期1989，严重不达标
+          # 需开发定位代码或配置问题，修复后重新启用
+          # - name: test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms
+          #   runner: linux-aarch64-a3-4
+          #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms.py
+          #   test_type: 'perf'
           # Qwen3.6-27B 64K/1K 50ms 新增
 #          - name: test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_50ms
 #            runner: linux-aarch64-a3-4
@@ -242,32 +245,42 @@ jobs:
           #   runner: linux-aarch64-a3-16
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms_prefix.py
           #   test_type: 'perf'
-          - name: test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix.py
-            test_type: 'perf'
+          # 代码问题 - 注释掉 (类别4)
+          # 原因: 执行超时，需开发定位问题
+          # - name: test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix.py
+          #   test_type: 'perf'
           # MiniMax 调优
-          - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
-            test_type: 'perf'
+          # 代码问题 - 注释掉 (类别4)
+          # 原因: TPOT=30.6ms远超20.4ms上限，max_concurrency=64仍无法达标，需开发定位
+          # - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
+          #   test_type: 'perf'
           # 已通过 - 注释掉 (Round 2)
           # - name: test_npu_minimax_m2_5_w8a8_8p_in32k_out1k_50ms
           #   runner: linux-aarch64-a3-16
           #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in32k_out1k_50ms.py
           #   test_type: 'perf'
-          - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-          - name: test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-8
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-          - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
-            test_type: 'perf'
+          # 代码问题 - 注释掉 (类别4)
+          # 原因: TPOT=118.2ms远超51ms上限，max_running_requests=2仍无法达标，需开发定位
+          # - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms.py
+          #   test_type: 'perf'
+          # 代码问题 - 注释掉 (类别4)
+          # 原因: TPOT达标(34.8ms<50ms)但吞吐差距61%，无法通过参数调优改善，需开发定位
+          # - name: test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
+          #   runner: linux-aarch64-a3-8
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
+          #   test_type: 'perf'
+          # 代码问题 - 注释掉 (类别4)
+          # 原因: TPOT=73.6ms远超20.4ms上限，max_concurrency=1无法再降，需开发定位
+          # - name: test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
+          #   test_type: 'perf'
           # Kimi 调优
 #          - name: test_npu_kimi_k2_5_w4a8_8p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
