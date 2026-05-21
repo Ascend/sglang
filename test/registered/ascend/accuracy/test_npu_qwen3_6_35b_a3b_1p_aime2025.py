@@ -76,23 +76,23 @@ QWEN3_6_35B_A3B_1P_ACC_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_6_35B_A3B_1P_GPQA(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Qwen3.6-35B-A3B 1p on GPQA"""
+class TestNPUQwen3_6_35B_A3B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
+    """Test NPU accuracy for Qwen3.6-35B-A3B 1p on AIME2025"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_6_35B_A3B_MODEL_PATH
     other_args = QWEN3_6_35B_A3B_1P_ACC_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1P_ACC_ENVS
-    accuracy = 86
-    dataset_type = "gpqa"
-    dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
+    accuracy = 92.7
+    dataset_type = "aime2025"
+    dataset_name = "aime2025_gen"
     output_len = 65536
     max_concurrency = 64
     generation_kwargs = "dict(temperature=1.0)"
     num_prompts = 100000
 
-    def test_npu_qwen3_6_35b_a3b_1p_gpqa(self):
-        """Run NPU accuracy test for Qwen3.6-35B-A3B on GPQA"""
+    def test_npu_qwen3_6_35b_a3b_1p_aime2025(self):
+        """Run NPU accuracy test for Qwen3.6-35B-A3B on AIME2025"""
         self.run_accuracy()
 
 
