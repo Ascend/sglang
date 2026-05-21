@@ -114,13 +114,10 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms.py
             test_type: 'perf'
-          # TPOT达标但吞吐差距62% - 注释掉 (Round 14)
-          # 原因: max_concurrency=48时TPOT=49.2ms达标(≤51ms上限), 但吞吐875 vs预期2334差距62%
-          # 调优历程: 64→32(TPOT达标但吞吐差距52%)→48(TPOT达标但吞吐差距62%), 需开发定位架构问题
-          # - name: test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms
-          #   runner: linux-aarch64-a3-2
-          #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
-          #   test_type: 'perf'
+          - name: test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
+            test_type: 'perf'
 #          - name: test_npu_qwen3_6_35b_a3b_1p_in254k_out1k
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in254k_out1k.py
@@ -251,13 +248,10 @@ jobs:
           #   runner: linux-aarch64-a3-16
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix.py
           #   test_type: 'perf'
-          # MiniMax 调优
-          # 代码问题 - 注释掉 (类别4)
-          # 原因: TPOT=30.6ms远超20.4ms上限，max_concurrency=64仍无法达标，需开发定位
-          # - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
-          #   runner: linux-aarch64-a3-16
-          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
-          #   test_type: 'perf'
+          - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
+            test_type: 'perf'
           # 已通过 - 注释掉 (Round 2)
           # - name: test_npu_minimax_m2_5_w8a8_8p_in32k_out1k_50ms
           #   runner: linux-aarch64-a3-16
