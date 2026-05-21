@@ -83,7 +83,7 @@ class TestNPUGLM5_1_W4A8_16P_AIME2025(TestAscendAccuracyMultiNodePdMixTestCaseBa
 
     model_config = GLM_5_1_TWO_NODE_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 80
+    accuracy = 95.3
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 64

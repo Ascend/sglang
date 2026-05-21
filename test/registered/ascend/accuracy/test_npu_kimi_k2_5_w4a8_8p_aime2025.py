@@ -99,7 +99,7 @@ class TestNPUKimiK2_5AIME25(TestAscendAccuracyTestCaseBase):
     model = KIMI_K2_5_W4A8_MODEL_PATH
     other_args = OTHER_ARGS
     envs = ENVS
-    accuracy = 80
+    accuracy = 96.1
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 128

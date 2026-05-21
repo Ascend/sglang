@@ -85,7 +85,7 @@ class TestNPUQwen3_6_27B_2P_GPQA(TestAscendAccuracyTestCaseBase):
     model = QWEN3_6_27B_W8A8_MODEL_PATH
     other_args = QWEN3_6_27B_2P_ACC_OTHER_ARGS
     envs = QWEN3_6_27B_2P_ACC_ENVS
-    accuracy = 80
+    accuracy = 87.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     output_len = 1500

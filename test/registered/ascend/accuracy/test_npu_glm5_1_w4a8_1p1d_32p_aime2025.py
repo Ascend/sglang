@@ -181,7 +181,7 @@ class TestNPUGLM5_1_W4A8_1P1D_64P_AIME2025(
 
     model_config = GLM_5_1_PD_SEP_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 80
+    accuracy = 95.3
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 16
