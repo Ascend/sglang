@@ -122,11 +122,11 @@ matrix:
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/accuracy/test_npu_qwen3_6_35b_a3b_1p_aime2025.py
           #   test_type: 'accuracy'
-          # Qwen3.5-27B 1p (tp=2)
-          - name: test_npu_qwen3_5_27b_1p_gpqa
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/test_npu_qwen3_5_27b_1p_gpqa.py
-            test_type: 'accuracy'
+          # Qwen3.5-27B 1p (tp=2) - PASSED, commented out
+          # - name: test_npu_qwen3_5_27b_1p_gpqa
+          #   runner: linux-aarch64-a3-2
+          #   test_case: test/registered/ascend/accuracy/test_npu_qwen3_5_27b_1p_gpqa.py
+          #   test_type: 'accuracy'
           # - name: test_npu_qwen3_5_27b_1p_aime2025
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/accuracy/test_npu_qwen3_5_27b_1p_aime2025.py
