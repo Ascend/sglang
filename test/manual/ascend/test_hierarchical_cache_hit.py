@@ -2,6 +2,7 @@ import time
 import unittest
 
 import requests
+from transformers import AutoTokenizer
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     NIC_NAME,
@@ -122,6 +123,7 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendMultiNodePdSepTestCaseBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.tokenizer = AutoTokenizer.from_pretrained(DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH, trust_remote_code=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -129,37 +131,23 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendMultiNodePdSepTestCaseBase):
 
     @check_role(allowed_roles=["router"])
     def send_long_prompt_request(self, prompt_token_len=600, max_new_tokens=1):
-        """
-        Implement with the same API format as inference_once
-        return (ttft, cached_tokens)
-        """
-        # Generate long prompt (about 600 tokens)
-        prompt = "hello world " * 100
+        prompt = "hello world " * (prompt_token_len // 2 + 1)
+        prompt = self.tokenizer.decode(self.tokenizer.encode(prompt, add_special_tokens=False)[:prompt_token_len])
 
-        # Record time for TTFT
         start_time = time.time()
-
-        # SGLang API request (same format as your reference)
         response = requests.post(
             f"{self.base_url}/generate",
             json={
                 "text": prompt,
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": max_new_tokens,
-                },
+                "sampling_params": {"temperature": 0, "max_new_tokens": max_new_tokens},
             },
         )
-
-        # Calculate TTFT
         ttft = time.time() - start_time
 
-        # Check request success
         self.assertEqual(response.status_code, 200, "Failed to call generate API")
         result = response.json()
-
-        # Get cached tokens from response
         cached_tokens = result.get("cached_tokens", 0)
+        print(response.text)
         return ttft, cached_tokens
 
     def test_hierarchical_cache_hit_and_ttft_reduce(self):
@@ -168,7 +156,6 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendMultiNodePdSepTestCaseBase):
             self.start_pd_server()
             self.start_router_server()
 
-            # First request
             ttft_1, cached_tokens_1 = self.send_long_prompt_request(
                 prompt_token_len=600, max_new_tokens=1
             )
@@ -176,7 +163,6 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendMultiNodePdSepTestCaseBase):
                 cached_tokens_1, 0, msg="First request cached tokens should be 0"
             )
 
-            # Second identical request
             ttft_2, cached_tokens_2 = self.send_long_prompt_request(
                 prompt_token_len=600, max_new_tokens=1
             )

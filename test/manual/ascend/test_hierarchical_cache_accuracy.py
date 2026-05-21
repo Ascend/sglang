@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -9,6 +10,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
 )
+from test.run_eval import run_eval
 
 # ====================== Base Configuration ======================
 BASE_PREFILL_ENVS = {
@@ -128,11 +130,32 @@ class TestDeepSeekV32CacheAccuracy(TestAscendMultiNodePdSepTestCaseBase):
     @classmethod
     def setUpClass(cls):
         cls.degradation_tolerance = 0
+        cls.model = DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
         super().setUpClass()
 
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
+
+    def run_gsm8k_once(
+        self,
+        num_shots=5,
+        data_path=None,
+        num_examples=200,
+        max_tokens=512,
+        num_threads=128,
+    ):
+        args = SimpleNamespace(
+            base_url=self.base_url,
+            model=self.model,
+            eval_name="gsm8k",
+            data_path=data_path,
+            num_examples=num_examples,
+            num_threads=num_threads,
+            num_shots=num_shots,
+            max_tokens=max_tokens,
+        )
+        return run_eval(args)["score"]
 
     def run_gsm8k_with_config(self, config, repeat_times=5):
         self.__class__.model_config = config
