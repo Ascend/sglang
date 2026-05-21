@@ -92,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 3
-matrix:
+      matrix:
         test_config:
           # ========== Accuracy Tests (Single Node) ==========
           # Qwen3.6-27B-W8A8 1p (tp=2) - FAILED (model path missing)
