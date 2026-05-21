@@ -103,6 +103,7 @@ class TestNPUQwen3_5_397B_W4A8_1P_In3k5_Out1k5_High_AIME2025(
     output_len = 65536
     max_concurrency = 64
     generation_kwargs = "dict(temperature=1.0)"
+
     def test_npu_qwen3_5_397b_w4a8_1p_in3k5_out1k5_high_aime2025(self):
         self.run_accuracy()
 
