@@ -16,7 +16,7 @@ from sglang.test.test_utils import popen_launch_server, kill_process_tree
 
 register_npu_ci(
     est_time=2400,
-    suite="deepseek_mlapo",
+    suite="nightly-16-npu-a3",
     nightly=True,
     disabled=False,
 )
@@ -25,12 +25,9 @@ register_npu_ci(
 DEEPSEEK_R1_BASE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
-    "HCCL_SOCKET_IFNAME": NIC_NAME,
-    "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "16",
     "HCCL_BUFFSIZE": "1600",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "HCCL_ALGO": "level0:NA;level1:ring",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
 }
 
@@ -60,9 +57,7 @@ DEEPSEEK_R1_BASE_ARGS = [
     "--deepep-mode",
     "auto",
     "--quantization",
-    "w8a8_int8",
-    "--served-model-name",
-    "deepseek-r1",
+    "modelslim",
 ]
 
 # 测试参数
