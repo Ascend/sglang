@@ -100,10 +100,10 @@ class TestNPUQwen3_5_397B_W4A8_1P_In3k5_Out1k5_High_AIME2025(
     accuracy = 93.3
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen_0_shot_cot"
-    output_len = 8192
-    max_concurrency = 1
+    output_len = 65536
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
     num_prompts = 100000
-    generation_kwargs = '{"temperature": 0}'
 
     def test_npu_qwen3_5_397b_w4a8_1p_in3k5_out1k5_high_aime2025(self):
         self.run_accuracy()

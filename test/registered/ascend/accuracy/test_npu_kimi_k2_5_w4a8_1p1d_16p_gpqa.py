@@ -148,9 +148,9 @@ class TestNPUKimiK2_5_W4A8_1P1D_16P_GPQA(TestAscendAccuracyMultiNodePdSepTestCas
     accuracy = 87.6
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
-    max_concurrency = 128
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
-    output_len = 256000
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
+    output_len = 65536
 
     def test_npu_kimi_k2_5_w4a8_1p1d_16p_gpqa(self):
         """Run NPU accuracy test for Kimi-K2.5-w4a8 1p1d_16p on GPQA"""

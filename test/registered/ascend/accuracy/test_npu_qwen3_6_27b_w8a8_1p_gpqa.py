@@ -87,8 +87,9 @@ class TestNPUQwen3_6_27B_1P_GPQA(TestAscendAccuracyTestCaseBase):
     accuracy = 87.8
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
-    output_len = 1500
-    max_concurrency = 1
+    output_len = 65536
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
     num_prompts = 100000
 
     def test_npu_qwen3_6_27b_1p_gpqa(self):
