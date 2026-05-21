@@ -75,7 +75,7 @@ PREFILL_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    29000,
+    58000,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",

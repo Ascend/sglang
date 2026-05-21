@@ -19,7 +19,6 @@ QWEN3_5_397B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "3000",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
@@ -39,24 +38,25 @@ QWEN3_5_397B_128K_OTHER_ARGS = [
     "--tp-size",
     16,
     "--chunked-prefill-size",
-    32768,
+    -1,
     "--max-prefill-tokens",
-    65536,
+    133120,
     "--max-total-tokens",
-    800000,
-    "--prefill-max-requests",
-    1,
+    1000000,
     "--max-mamba-cache-size",
-    80,
+    320,
     "--trust-remote-code",
     "--max-running-requests",
-    2,
+    24,
     "--mem-fraction-static",
-    0.6,
+    0.7,
     "--cuda-graph-bs",
-    1,
     2,
     4,
+    8,
+    16,
+    24,
+    32,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -97,8 +97,8 @@ class TestNPUQwen3_5_397B_128K(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_128K_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 4
-    num_prompts = 4
+    max_concurrency = 24
+    num_prompts = 24
     aisbench_repeat_rate = 0.9
     input_len = 131072
     output_len = 1024

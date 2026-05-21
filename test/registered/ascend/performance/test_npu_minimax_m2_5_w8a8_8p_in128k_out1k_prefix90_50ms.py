@@ -50,21 +50,20 @@ MINIMAX_M2_5_128K_PREFIX_OTHER_ARGS = [
     2,
     "--enable-dp-attention",
     "--prefill-delayer-max-delay-passes",
-    80,
+    100,
     "--enable-prefill-delayer",
     "--mem-fraction-static",
     0.65,
     "--max-running-requests",
-    8,
+    36,
     "--chunked-prefill-size",
-    16384,
+    -1,
     "--max-prefill-tokens",
-    65536,
+    130000,
     "--cuda-graph-bs",
-    4,
     8,
-    12,
     16,
+    24,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -102,8 +101,8 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In128k_Out1k_Prefix90(
     other_args = MINIMAX_M2_5_128K_PREFIX_OTHER_ARGS
     envs = MINIMAX_M2_5_128K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 2
+    max_concurrency = 8
+    num_prompts = 32
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
