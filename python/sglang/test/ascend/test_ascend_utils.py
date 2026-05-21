@@ -16,11 +16,13 @@ import copy
 import logging
 import os
 import random
+import shlex
 import subprocess
+import sys
 import threading
 import time
 from types import SimpleNamespace
-from typing import Awaitable, Callable, List, NamedTuple, Optional
+from typing import Awaitable, Callable, List, NamedTuple, Optional, Tuple
 
 import requests
 
@@ -885,3 +887,59 @@ def send_concurrent_requests(
         t.join()
 
     return results
+
+
+def popen_with_error_check(
+        command: List[str],
+        return_stdout_stderr: Optional[tuple],
+) -> subprocess.Popen:
+    if return_stdout_stderr:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+
+        def _dump(src, sinks):
+            for line in iter(src.readline, ""):
+                for sink in sinks:
+                    sink.write(line)
+                    sink.flush()
+            src.close()
+
+        threading.Thread(
+            target=_dump,
+            args=(process.stdout, [return_stdout_stderr[0], sys.stdout]),
+            daemon=True,
+        ).start()
+        threading.Thread(
+            target=_dump,
+            args=(process.stderr, [return_stdout_stderr[1], sys.stderr]),
+            daemon=True,
+        ).start()
+    else:
+        process = subprocess.Popen(command, stdout=None, stderr=None)
+
+    def _run_and_check():
+        process.wait()
+
+        if process.returncode == -9:
+            return
+
+        if process.returncode != 0:
+            raise Exception(
+                f"{shlex.join(command)} exited with code {process.returncode}"
+            )
+
+    t = threading.Thread(target=_run_and_check, daemon=True)
+    t.start()
+    return process
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger(__name__)
