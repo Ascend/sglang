@@ -55,7 +55,7 @@ MINIMAX_M2_5_128K_PREFIX_OTHER_ARGS = [
     "--mem-fraction-static",
     0.65,
     "--max-running-requests",
-    4,
+    2,
     "--chunked-prefill-size",
     16384,
     "--max-prefill-tokens",

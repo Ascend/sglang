@@ -84,7 +84,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     other_args = QWEN3_6_35B_A3B_1024_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1024_ENVS
     dataset_name = "random"
-    max_concurrency = 32
+    max_concurrency = 48
     num_prompts = 256
     input_len = 30
     output_len = 1024

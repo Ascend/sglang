@@ -100,7 +100,7 @@ class TestNPUKimiK2_5_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     dataset_name = "image"
     image_resolution = "1920x1080"
     image_count = 1
-    max_concurrency = 16
+    max_concurrency = 20
     num_prompts = 20
     request_rate = 1
     input_len = 30
