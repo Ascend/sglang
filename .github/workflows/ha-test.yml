@@ -1,4 +1,4 @@
-name: CP Test (NPU)
+name: Single Nod Test (NPU)
 
 on:
   pull_request:
