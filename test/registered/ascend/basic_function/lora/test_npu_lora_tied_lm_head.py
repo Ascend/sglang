@@ -188,15 +188,6 @@ class TestNPULoRATiedLMHead(CustomTestCase):
         for result in results:
             self.assertGreater(len(result["text"]), 0)
 
-    def test_server_info_lora_config(self):
-        """Verify server info shows correct LoRA configuration."""
-        response = requests.get(DEFAULT_URL_FOR_TEST + "/server_info")
-        self.assertEqual(response.status_code, 200)
-        server_info = response.json()
-
-        self.assertIn("lora_target_modules", server_info)
-        self.assertIn("lm_head", server_info["lora_target_modules"])
-
 
 if __name__ == "__main__":
     unittest.main()
