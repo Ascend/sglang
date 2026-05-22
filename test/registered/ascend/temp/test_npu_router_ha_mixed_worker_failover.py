@@ -7,12 +7,16 @@ from urllib.parse import urlparse
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import logger, popen_with_error_check, QWEN3_32B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_32B_WEIGHTS_PATH,
+    logger,
+    popen_with_error_check,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
-    CustomTestCase,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
     popen_launch_server,
 )
 
@@ -22,16 +26,15 @@ register_npu_ci(
     nightly=True,
 )
 
-# ======================
-# Constants
-# ======================
 MODEL_PATH = QWEN3_32B_WEIGHTS_PATH
 TP_SIZE = 4
 MEM_FRACTION = "0.8"
 COMMON_ARGS = [
     "--trust-remote-code",
-    "--mem-fraction-static", MEM_FRACTION,
-    "--attention-backend", "ascend",
+    "--mem-fraction-static",
+    MEM_FRACTION,
+    "--attention-backend",
+    "ascend",
     "--disable-cuda-graph",
     "--disable-radix-cache",
 ]
@@ -83,10 +86,6 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
         cls._start_server(2, base_gpu_id=4)
         cls._launch_lb()
 
-    # ======================
-    # Server & LB helpers
-    # ======================
-
     @classmethod
     def _open_logs(cls, prefix):
         out = open(f"./{prefix}_out_log.txt", "w+", encoding="utf-8")
@@ -100,7 +99,12 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
         url = getattr(cls, f"server{idx}_url")
 
         out, err = cls._open_logs(f"server{idx}")
-        args = COMMON_ARGS + ["--tp-size", str(TP_SIZE), "--base-gpu-id", str(base_gpu_id)]
+        args = COMMON_ARGS + [
+            "--tp-size",
+            str(TP_SIZE),
+            "--base-gpu-id",
+            str(base_gpu_id),
+        ]
 
         cls.processes[f"server{idx}"] = popen_launch_server(
             MODEL_PATH,
@@ -115,15 +119,26 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
         out, err = cls._open_logs("lb")
 
         cmd = [
-            "python3", "-m", "sglang_router.launch_router",
-            "--worker-urls", cls.server1_url, cls.server2_url,
-            "--host", cls.base_host,
-            "--port", str(cls.lb_port),
-            "--policy", "round_robin",
-            "--health-failure-threshold", "2",
-            "--health-success-threshold", "2",
-            "--health-check-timeout-secs", "30",
-            "--health-check-interval-secs", "15",
+            "python3",
+            "-m",
+            "sglang_router.launch_router",
+            "--worker-urls",
+            cls.server1_url,
+            cls.server2_url,
+            "--host",
+            cls.base_host,
+            "--port",
+            str(cls.lb_port),
+            "--policy",
+            "round_robin",
+            "--health-failure-threshold",
+            "2",
+            "--health-success-threshold",
+            "2",
+            "--health-check-timeout-secs",
+            "30",
+            "--health-check-interval-secs",
+            "15",
         ]
 
         cls.processes["lb"] = popen_with_error_check(cmd, return_stdout_stderr=(out, err))
@@ -147,13 +162,8 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
 
             time.sleep(1)
 
-    # ======================
-    # Cleanup
-    # ======================
-
     @classmethod
     def tearDownClass(cls):
-        # Kill processes
         for name, proc in cls.processes.items():
             if proc:
                 try:
@@ -164,7 +174,6 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
 
         time.sleep(5)
 
-        # Close & delete logs
         for out, err in cls.log_files.values():
             for f in (out, err):
                 try:
@@ -181,10 +190,6 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
                 except Exception as e:
                     logger.warning(f"Failed to remove {path}: {e}")
 
-    # ======================
-    # Test helpers
-    # ======================
-
     def assert_generate_success(self, future):
         resp = future.result()
         self.assertEqual(resp.status_code, 200)
@@ -194,10 +199,6 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
         out, _ = self.log_files[log_name]
         out.seek(0)
         return out.read().count("POST /generate HTTP/1.1")
-
-    # ======================
-    # Tests
-    # ======================
 
     def test_1_normal_round_robin(self):
         """Verify normal load balancing across mixed workers."""
@@ -225,7 +226,9 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
         lb_log, _ = self.log_files["lb"]
         lb_log.seek(0)
         content = lb_log.read()
-        self.assertIn(f"HTTP health check failed for {self.server2_url}/health", content)
+        self.assertIn(
+            f"HTTP health check failed for {self.server2_url}/health", content
+        )
         self.assertIn("Failed to send typed request worker_url=", content)
 
 

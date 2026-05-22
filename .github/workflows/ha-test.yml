@@ -94,13 +94,13 @@ jobs:
       max-parallel: 3
       matrix:
         test_config:
-          - name: test_npu_ha_pd_mix
-            runner: linux-aarch64-a3-8
-            test_case: test/registered/ascend/temp/test_npu_ha_pd_mix.py
-            test_type: 'function'
-          - name: test_npu_ha_pd_sep
+          - name: test_npu_pd_disaggregation_ha_mixed_worker_failover
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/temp/test_npu_ha_pd_sep.py
+            test_case: test/registered/ascend/temp/test_npu_pd_disaggregation_ha_mixed_worker_failover.py
+            test_type: 'function'
+          - name: test_npu_router_ha_mixed_worker_failover
+            runner: linux-aarch64-a3-8
+            test_case: test/registered/ascend/temp/test_npu_router_ha_mixed_worker_failover.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:

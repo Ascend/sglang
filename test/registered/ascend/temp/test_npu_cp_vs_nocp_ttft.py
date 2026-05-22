@@ -122,40 +122,45 @@ MODEL_CONFIG_NOCPNOMTP = {
 
 MODEL_CONFIG_CPNOMTTP = {
     **MODEL_CONFIG_NOCPNOMTP,
-    "prefill_args": MODEL_CONFIG_NOCPNOMTP["prefill_args"]
-                    + [
-                        "--enable-nsa-prefill-context-parallel",
-                        "--nsa-prefill-cp-mode",
-                        "in-seq-split",
-                    ],
+    "prefill_args": MODEL_CONFIG_NOCPNOMTP["prefill_args"] + [
+        "--enable-nsa-prefill-context-parallel",
+        "--nsa-prefill-cp-mode",
+        "in-seq-split",
+    ],
 }
 
 
 def _run_benchmark(test_case):
-    bench_params = {
-        "host": test_case.host,
-        "port": str(test_case.port),
-        "model_path": test_case.model_config["model_path"],
-        "backend": test_case.backend,
-        "dataset_name": test_case.dataset_name,
-        "dataset_path": test_case.dataset_path,
-        "request_rate": test_case.request_rate,
-        "max_concurrency": test_case.max_concurrency,
-        "num_prompts": test_case.num_prompts,
-        "input_len": test_case.input_len,
-        "output_len": test_case.output_len,
-        "random_range_ratio": test_case.random_range_ratio,
-        "image_resolution": test_case.image_resolution,
-        "image_count": test_case.image_count,
-        "warmup_requests": test_case.warmup_requests,
-        "seed": test_case.seed,
-    }
-    logger.info(f"Starting benchmark with parameters: {bench_params}")
-    metrics = run_bench_serving(**bench_params)
-    logger.info(f"All extracted metrics: {metrics}")
+    logger.info(
+        "Starting benchmark host=%s port=%s model=%s",
+        test_case.host,
+        test_case.port,
+        test_case.model_config["model_path"],
+    )
+
+    metrics = run_bench_serving(
+        host=test_case.host,
+        port=str(test_case.port),
+        model_path=test_case.model_config["model_path"],
+        backend=test_case.backend,
+        dataset_name=test_case.dataset_name,
+        dataset_path=test_case.dataset_path,
+        request_rate=test_case.request_rate,
+        max_concurrency=test_case.max_concurrency,
+        num_prompts=test_case.num_prompts,
+        input_len=test_case.input_len,
+        output_len=test_case.output_len,
+        random_range_ratio=test_case.random_range_ratio,
+        image_resolution=test_case.image_resolution,
+        image_count=test_case.image_count,
+        warmup_requests=test_case.warmup_requests,
+        seed=test_case.seed,
+    )
 
     if not metrics:
         raise RuntimeError("No metrics obtained from benchmark")
+
+    logger.info("All extracted metrics: %s", metrics)
     return metrics
 
 
@@ -212,6 +217,7 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(TestAscendPerfMultiNodePdSepTe
     output_len = 1024
     random_range_ratio = 1
     ttft = 0
+    metrics_nocpnomtp = None
 
     @classmethod
     def tearDownClass(cls):
@@ -235,8 +241,11 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(TestAscendPerfMultiNodePdSepTe
 
     def test_ttft_reduced_with_cp_enabled(self):
         """Verify TTFT is reduced when CP is enabled compared to No-CP."""
-        if not hasattr(self, "metrics_nocpnomtp"):
+        if not hasattr(self, "metrics_nocpnomtp") or self.metrics_nocpnomtp is None:
             raise RuntimeError("test_throughput must be run before test_compare_ttft")
+
+        if not os.path.exists(TTFT_FILE):
+            raise FileNotFoundError(f"TTFT file not found: {TTFT_FILE}")
 
         metrics_cpnomttp_ttft = float(run_command(f"cat {TTFT_FILE}"))
         self.assertGreater(

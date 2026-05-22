@@ -8,15 +8,15 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_32B_WEIGHTS_PATH,
     logger,
     popen_with_error_check,
-    QWEN3_32B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
-    CustomTestCase,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
     popen_launch_server,
 )
 
@@ -26,15 +26,14 @@ register_npu_ci(
     nightly=True,
 )
 
-# ======================
-# Constants
-# ======================
 MODEL_PATH = QWEN3_32B_WEIGHTS_PATH
 
 COMMON_ARGS = [
     "--trust-remote-code",
-    "--mem-fraction-static", "0.8",
-    "--attention-backend", "ascend",
+    "--mem-fraction-static"
+    "0.8",
+    "--attention-backend",
+    "ascend",
     "--disable-cuda-graph",
     "--disable-radix-cache",
 ]
@@ -43,9 +42,6 @@ PROMPT_TEXT = "The capital of France is"
 EXPECTED_ANSWER = "Paris"
 
 
-# ======================
-# Request helper
-# ======================
 def send_request(url):
     return requests.post(
         f"{url}/generate",
@@ -78,9 +74,6 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
         cls._start_decode()
         cls._start_lb()
 
-    # ======================
-    # Port & URL setup
-    # ======================
     @classmethod
     def _init_ports(cls):
         parsed = urlparse(DEFAULT_URL_FOR_TEST)
@@ -103,16 +96,12 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
         cls.ascend_mf_store_url = f"tcp://{cls.base_host}:{base_port + 600}"
 
         cls.urls = {
-            name: f"http://{cls.base_host}:{port}"
-            for name, port in cls.ports.items()
+            name: f"http://{cls.base_host}:{port}" for name, port in cls.ports.items()
         }
 
         cls.lb_url = f"http://{cls.base_host}:{cls.lb_port}"
         cls.base_url = cls.lb_url
 
-    # ======================
-    # Log helpers
-    # ======================
     @classmethod
     def _open_logs(cls, name):
         out = open(f"./{name}_out_log.txt", "w+", encoding="utf-8")
@@ -120,9 +109,6 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
         cls.log_files[name] = (out, err)
         return out, err
 
-    # ======================
-    # Env helpers
-    # ======================
     @classmethod
     def _mf_env(cls):
         return {
@@ -130,19 +116,21 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
             "ASCEND_MF_STORE_URL": cls.ascend_mf_store_url,
         }
 
-    # ======================
-    # Server lifecycle
-    # ======================
     @classmethod
     def _start_prefill(cls, name, base_gpu_id):
         out, err = cls._open_logs(name)
 
         args = COMMON_ARGS + [
-            "--tp-size", "4",
-            "--base-gpu-id", str(base_gpu_id),
-            "--disaggregation-transfer-backend", "ascend",
-            "--disaggregation-mode", "prefill",
-            "--disaggregation-bootstrap-port", str(cls.bootstrap_ports[name]),
+            "--tp-size",
+            "4",
+            "--base-gpu-id",
+            str(base_gpu_id),
+            "--disaggregation-transfer-backend",
+            "ascend",
+            "--disaggregation-mode",
+            "prefill",
+            "--disaggregation-bootstrap-port",
+            str(cls.bootstrap_ports[name]),
         ]
 
         cls.processes[name] = popen_launch_server(
@@ -159,11 +147,16 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
         out, err = cls._open_logs("decode_1")
 
         args = COMMON_ARGS + [
-            "--tp-size", "4",
-            "--base-gpu-id", "8",
-            "--disaggregation-transfer-backend", "ascend",
-            "--disaggregation-mode", "decode",
-            "--load-balance-method", "round_robin",
+            "--tp-size",
+            "4",
+            "--base-gpu-id",
+            "8",
+            "--disaggregation-transfer-backend",
+            "ascend",
+            "--disaggregation-mode",
+            "decode",
+            "--load-balance-method",
+            "round_robin",
         ]
 
         cls.processes["decode_1"] = popen_launch_server(
@@ -180,18 +173,32 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
         out, err = cls._open_logs("lb")
 
         cmd = [
-            "python3", "-m", "sglang_router.launch_router",
+            "python3",
+            "-m",
+            "sglang_router.launch_router",
             "--pd-disaggregation",
-            "--decode", cls.urls["decode_1"],
-            "--prefill", cls.urls["prefill_1"], str(cls.bootstrap_ports["prefill_1"]),
-            "--prefill", cls.urls["prefill_2"], str(cls.bootstrap_ports["prefill_2"]),
-            "--host", cls.base_host,
-            "--port", str(cls.lb_port),
-            "--policy", "round_robin",
-            "--health-failure-threshold", "2",
-            "--health-success-threshold", "2",
-            "--health-check-timeout-secs", "30",
-            "--health-check-interval-secs", "15",
+            "--decode",
+            cls.urls["decode_1"],
+            "--prefill",
+            cls.urls["prefill_1"],
+            str(cls.bootstrap_ports["prefill_1"]),
+            "--prefill",
+            cls.urls["prefill_2"],
+            str(cls.bootstrap_ports["prefill_2"]),
+            "--host",
+            cls.base_host,
+            "--port",
+            str(cls.lb_port),
+            "--policy",
+            "round_robin",
+            "--health-failure-threshold",
+            "2",
+            "--health-success-threshold",
+            "2",
+            "--health-check-timeout-secs",
+            "30",
+            "--health-check-interval-secs",
+            "15",
         ]
 
         cls.processes["lb"] = popen_with_error_check(
@@ -218,12 +225,8 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
 
             time.sleep(1)
 
-    # ======================
-    # Cleanup
-    # ======================
     @classmethod
     def tearDownClass(cls):
-        # Kill processes
         for name, proc in cls.processes.items():
             if proc:
                 try:
@@ -234,7 +237,6 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
 
         time.sleep(5)
 
-        # Close & delete logs
         for out, err in cls.log_files.values():
             for f in (out, err):
                 try:
@@ -251,17 +253,11 @@ class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
                 except Exception as e:
                     logger.warning(f"Failed to remove {path}: {e}")
 
-    # ======================
-    # Test helpers
-    # ======================
     def count_requests(self, name):
         out, _ = self.log_files[name]
         out.seek(0)
         return out.read().count("POST /generate HTTP/1.1")
 
-    # ======================
-    # Tests
-    # ======================
     def test_1_normal_round_robin(self):
         """Verify normal load balancing across prefill nodes."""
         with ThreadPoolExecutor(max_workers=12) as ex:
