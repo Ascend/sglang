@@ -98,6 +98,11 @@ jobs:
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms.py
           #   test_type: 'perf'
+          # Qwen3.5-397B-A17B 8p single node (8 cards, tp-size=16 die)
+          - name: test_npu_qwen3_5_397b_a17b_w4a8_8p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-8
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms_mixed.py
+            test_type: 'perf'
           # - name: test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_50ms
           #   runner: linux-aarch64-a3-2
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_50ms.py
@@ -307,12 +312,12 @@ jobs:
       max-parallel: 2
       matrix:
         test_config:
-          # Qwen3.5-397B-A17B PD Mix (2 nodes)
-          - name: test_npu_qwen3_5_397b_a17b_w4a8_16p_in3k5_out1k5_50ms
-            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms_mixed.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'mix'
-            node_size: 2
+          # Qwen3.5-397B-A17B - moved to single-node
+          # - name: test_npu_qwen3_5_397b_a17b_w4a8_16p_in3k5_out1k5_50ms
+          #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms_mixed.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'mix'
+          #   node_size: 2
           # GLM PD Mix (2 nodes)
           - name: test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms
             test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
