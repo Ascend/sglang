@@ -22,7 +22,7 @@ import sys
 import threading
 import time
 from types import SimpleNamespace
-from typing import Awaitable, Callable, List, NamedTuple, Optional, Tuple
+from typing import Awaitable, Callable, List, NamedTuple, Optional
 
 import requests
 
@@ -890,8 +890,8 @@ def send_concurrent_requests(
 
 
 def popen_with_error_check(
-        command: List[str],
-        return_stdout_stderr: Optional[tuple],
+    command: List[str],
+    return_stdout_stderr: Optional[tuple],
 ) -> subprocess.Popen:
     """Start an external process and optionally tee its stdout/stderr while checking the exit code.
 
@@ -953,6 +953,7 @@ def popen_with_error_check(
     t = threading.Thread(target=_run_and_check, daemon=True)
     t.start()
     return process
+
 
 logging.basicConfig(
     level=logging.INFO,
