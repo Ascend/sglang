@@ -36,8 +36,6 @@ class TestNPUHiCacheMemLayoutPageFirst(CustomTestCase):
             "1.2",
             "--hicache-mem-layout",
             "page_first",
-            "--hicache-io-backend",
-            "direct",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
@@ -74,7 +72,7 @@ class TestNPUHiCacheMemLayoutPageFirst(CustomTestCase):
         """Test cache reuse with page_first memory layout."""
         import requests
 
-        prompt = "What is machine learning? " * 20
+        prompt = "What is machine learning? " * 60
         for i in range(2):
             response = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
@@ -114,8 +112,6 @@ class TestNPUHiCacheMemLayoutPageFirstDirect(CustomTestCase):
             "1.2",
             "--hicache-mem-layout",
             "page_first_direct",
-            "--hicache-io-backend",
-            "direct",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
@@ -152,7 +148,7 @@ class TestNPUHiCacheMemLayoutPageFirstDirect(CustomTestCase):
         """Test cache reuse with page_first_direct memory layout."""
         import requests
 
-        prompt = "Explain quantum computing in detail. " * 20
+        prompt = "Explain quantum computing in detail. " * 60
         for i in range(2):
             response = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
@@ -192,8 +188,6 @@ class TestNPUHiCacheMemLayoutPageFirstKVSplit(CustomTestCase):
             "1.2",
             "--hicache-mem-layout",
             "page_first_kv_split",
-            "--hicache-io-backend",
-            "direct",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
@@ -230,7 +224,7 @@ class TestNPUHiCacheMemLayoutPageFirstKVSplit(CustomTestCase):
         """Test cache reuse with page_first_kv_split memory layout."""
         import requests
 
-        prompt = "What are the benefits of cloud computing? " * 20
+        prompt = "What are the benefits of cloud computing? " * 60
         for i in range(2):
             response = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
@@ -273,8 +267,6 @@ class TestNPUHiCacheMemLayoutWithTP(CustomTestCase):
             "1.2",
             "--hicache-mem-layout",
             "page_first_direct",
-            "--hicache-io-backend",
-            "direct",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
@@ -312,7 +304,7 @@ class TestNPUHiCacheMemLayoutWithTP(CustomTestCase):
         """Test cache reuse with memory layout and TP=2."""
         import requests
 
-        prompt = "Describe the history of artificial intelligence. " * 20
+        prompt = "Describe the history of artificial intelligence. " * 60
         for i in range(2):
             response = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
