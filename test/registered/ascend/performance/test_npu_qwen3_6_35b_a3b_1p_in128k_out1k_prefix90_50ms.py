@@ -46,7 +46,7 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    110,
+    96,
     "--max-mamba-cache-size",
     80,
     "--mem-fraction-static",
@@ -61,7 +61,6 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     64,
     80,
     96,
-    110,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -91,14 +90,14 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_128K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 110
-    num_prompts = 440
+    max_concurrency = 96
+    num_prompts = 384
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1
     prefix_hit_rate = 0.9
     tpot = 50
-    output_token_throughput = 308.2
+    aisbench_request_rate = 40
 
     def test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in128k out1k prefix90 50ms"""

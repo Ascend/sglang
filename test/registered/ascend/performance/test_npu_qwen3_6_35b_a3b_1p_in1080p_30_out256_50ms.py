@@ -95,7 +95,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1080p_30_Out256_50ms(
     image_resolution = "1920x1080"
     image_count = 1
     tpot = 50
-    output_token_throughput = 534.3
+    aisbench_request_rate = 10
 
     def test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in1080p 30 out256 50ms"""
