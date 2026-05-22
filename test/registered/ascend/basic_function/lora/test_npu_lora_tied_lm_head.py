@@ -26,7 +26,7 @@ except ImportError:
 from transformers import AutoModelForCausalLM
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -102,7 +102,7 @@ class TestNPULoRATiedLMHead(CustomTestCase):
     """
 
     _adapter_dir = None
-    base_model = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
+    base_model = QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH
 
     @classmethod
     def setUpClass(cls):
