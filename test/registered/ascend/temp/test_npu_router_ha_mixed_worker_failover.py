@@ -141,7 +141,9 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
             "15",
         ]
 
-        cls.processes["lb"] = popen_with_error_check(cmd, return_stdout_stderr=(out, err))
+        cls.processes["lb"] = popen_with_error_check(
+            cmd, return_stdout_stderr=(out, err)
+        )
         cls._wait_ready(cls.lb_url + "/health")
         logger.info("Waiting 60 seconds for the server to fully initialize...")
         time.sleep(60)

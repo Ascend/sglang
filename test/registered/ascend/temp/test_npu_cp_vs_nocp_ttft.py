@@ -2,15 +2,15 @@ import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import run_command
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     BENCHSERVING,
     DEEPSEEK_V32_W8A8_MODEL_PATH,
+    TestAscendPerfMultiNodePdSepTestCaseBase,
     logger,
     run_bench_serving,
-    TestAscendPerfMultiNodePdSepTestCaseBase,
 )
+from sglang.test.ascend.test_ascend_utils import run_command
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
@@ -122,11 +122,12 @@ MODEL_CONFIG_NOCPNOMTP = {
 
 MODEL_CONFIG_CPNOMTTP = {
     **MODEL_CONFIG_NOCPNOMTP,
-    "prefill_args": MODEL_CONFIG_NOCPNOMTP["prefill_args"] + [
-        "--enable-nsa-prefill-context-parallel",
-        "--nsa-prefill-cp-mode",
-        "in-seq-split",
-    ],
+    "prefill_args": MODEL_CONFIG_NOCPNOMTP["prefill_args"]
+                    + [
+                        "--enable-nsa-prefill-context-parallel",
+                        "--nsa-prefill-cp-mode",
+                        "in-seq-split",
+                    ],
 }
 
 
@@ -164,7 +165,9 @@ def _run_benchmark(test_case):
     return metrics
 
 
-class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(TestAscendPerfMultiNodePdSepTestCaseBase):
+class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(
+    TestAscendPerfMultiNodePdSepTestCaseBase
+):
     """Verify long-context inference works correctly with CP enabled and MTP disabled
 
     [Test Category] Functional
@@ -200,7 +203,9 @@ class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(TestAscendPerfMultiNodePdSepTest
             run_command(f"echo {metrics['mean_ttft']} > {TTFT_FILE}")
 
 
-class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(TestAscendPerfMultiNodePdSepTestCaseBase):
+class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
+    TestAscendPerfMultiNodePdSepTestCaseBase
+):
     """Verify CP reduces TTFT compared to No-CP configuration (MTP disabled)
 
     [Test Category] Functional
@@ -248,16 +253,21 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(TestAscendPerfMultiNodePdSepTe
             raise FileNotFoundError(f"TTFT file not found: {TTFT_FILE}")
 
         metrics_cpnomttp_ttft = float(run_command(f"cat {TTFT_FILE}"))
-        self.assertGreater(
-            self.metrics_nocpnomtp["mean_ttft"],
-            metrics_cpnomttp_ttft
-        )
+        self.assertGreater(self.metrics_nocpnomtp["mean_ttft"], metrics_cpnomttp_ttft)
 
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestDeepSeekV32W8A8PdSepCpNoMtpFunctional("test_long_context_inference_with_cp_enabled"))
-    suite.addTest(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_baseline_ttft_without_cp"))
-    suite.addTest(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_ttft_reduced_with_cp_enabled"))
+    suite.addTest(
+        TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(
+            "test_long_context_inference_with_cp_enabled"
+        )
+    )
+    suite.addTest(
+        TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_baseline_ttft_without_cp")
+    )
+    suite.addTest(
+        TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_ttft_reduced_with_cp_enabled")
+    )
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
