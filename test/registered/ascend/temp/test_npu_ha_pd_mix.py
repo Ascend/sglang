@@ -122,7 +122,7 @@ class DisaggregationHiCacheBase(CustomTestCase):
 
         cls.processes["lb"] = popen_with_error_check(cmd, return_stdout_stderr=(out, err))
         cls._wait_ready(cls.lb_url + "/health")
-        logger.info("LB ready, waiting 60s for full warm-up...")
+        logger.info("Waiting 60 seconds for the server to fully initialize...")
         time.sleep(60)
 
     @classmethod
@@ -130,13 +130,15 @@ class DisaggregationHiCacheBase(CustomTestCase):
         start = time.perf_counter()
         while True:
             try:
-                if requests.get(url, timeout=5).status_code == 200:
+                if requests.get(url).status_code == 200:
+                    logger.info(f"Server {url} is ready")
                     return
             except Exception:
                 pass
 
             if time.perf_counter() - start > timeout:
-                raise RuntimeError(f"Service not ready: {url}")
+                raise RuntimeError(f"Server {url} failed to start in {timeout}s")
+
             time.sleep(1)
 
     # ======================

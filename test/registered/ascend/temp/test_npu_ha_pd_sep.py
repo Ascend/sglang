@@ -7,14 +7,17 @@ from urllib.parse import urlparse
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import logger, popen_with_error_check, QWEN3_32B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    logger,
+    popen_with_error_check,
+    QWEN3_32B_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     CustomTestCase,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     popen_launch_server,
-
 )
 
 register_npu_ci(
@@ -23,12 +26,31 @@ register_npu_ci(
     nightly=True,
 )
 
+# ======================
+# Constants
+# ======================
+MODEL_PATH = "/home/weights/Qwen3-32B"
 
-def send_request(base_url):
+COMMON_ARGS = [
+    "--trust-remote-code",
+    "--mem-fraction-static", "0.8",
+    "--attention-backend", "ascend",
+    "--disable-cuda-graph",
+    "--disable-radix-cache",
+]
+
+PROMPT_TEXT = "The capital of France is"
+EXPECTED_ANSWER = "Paris"
+
+
+# ======================
+# Request helper
+# ======================
+def send_request(url):
     return requests.post(
-        f"{base_url}/generate",
+        f"{url}/generate",
         json={
-            "text": "The capital of France is",
+            "text": PROMPT_TEXT,
             "sampling_params": {
                 "temperature": 0,
                 "max_new_tokens": 100,
@@ -37,269 +59,235 @@ def send_request(base_url):
     )
 
 
-def _get_log_content(log_file):
-    log_file.seek(0)
-    log_file.flush()
-    os.fsync(log_file.fileno())
-    return log_file.read()
-
-
 class DisaggregationHiCacheBase(CustomTestCase):
+
     @classmethod
     def setUpClass(cls):
-        parsed_url = urlparse(DEFAULT_URL_FOR_TEST)
-        cls.base_host = parsed_url.hostname
-        base_port = str(parsed_url.port)
+        cls._init_ports()
+        cls.log_files = {}
+        cls.processes = {}
+
+        cls._start_prefill("prefill_1", base_gpu_id=0)
+        cls._start_prefill("prefill_2", base_gpu_id=4)
+        cls._start_decode()
+        cls._start_lb()
+
+    # ======================
+    # Port & URL setup
+    # ======================
+    @classmethod
+    def _init_ports(cls):
+        parsed = urlparse(DEFAULT_URL_FOR_TEST)
+        cls.base_host = parsed.hostname
+
+        base_port = int(parsed.port)
         cls.lb_port = base_port
-        cls.prefill_1_port = f"{int(base_port) + 100}"
-        cls.prefill_2_port = f"{int(base_port) + 200}"
-        cls.decode_1_port = f"{int(base_port) + 300}"
-        cls.prefill_1_bootstrap_port = f"{int(base_port) + 400}"
-        cls.prefill_2_bootstrap_port = f"{int(base_port) + 500}"
-        cls.ascend_mf_store_url = f"tcp://{cls.base_host}:{int(base_port) + 600}"
-        cls.prefill_1_url = f"http://{cls.base_host}:{cls.prefill_1_port}"
-        cls.prefill_2_url = f"http://{cls.base_host}:{cls.prefill_2_port}"
-        cls.decode_1_url = f"http://{cls.base_host}:{cls.decode_1_port}"
+
+        cls.ports = {
+            "prefill_1": base_port + 100,
+            "prefill_2": base_port + 200,
+            "decode_1": base_port + 300,
+        }
+
+        cls.bootstrap_ports = {
+            "prefill_1": base_port + 400,
+            "prefill_2": base_port + 500,
+        }
+
+        cls.ascend_mf_store_url = f"tcp://{cls.base_host}:{base_port + 600}"
+
+        cls.urls = {
+            name: f"http://{cls.base_host}:{port}"
+            for name, port in cls.ports.items()
+        }
+
         cls.lb_url = f"http://{cls.base_host}:{cls.lb_port}"
-        cls.process_lb, cls.process_prefill_1, cls.process_prefill_2, cls.process_decode_1 = None, None, None, None
         cls.base_url = cls.lb_url
-        # cls.model = QWEN3_32B_WEIGHTS_PATH
-        cls.model = "/home/weights/Qwen3-32B"
-        cls.start_prefill_1()
-        cls.start_prefill_2()
-        cls.start_decode_1()
-        cls.launch_lb()
+
+    # ======================
+    # Log helpers
+    # ======================
+    @classmethod
+    def _open_logs(cls, name):
+        out = open(f"./{name}_out_log.txt", "w+", encoding="utf-8")
+        err = open(f"./{name}_err_log.txt", "w+", encoding="utf-8")
+        cls.log_files[name] = (out, err)
+        return out, err
+
+    # ======================
+    # Env helpers
+    # ======================
+    @classmethod
+    def _mf_env(cls):
+        return {
+            **os.environ,
+            "ASCEND_MF_STORE_URL": cls.ascend_mf_store_url,
+        }
+
+    # ======================
+    # Server lifecycle
+    # ======================
+    @classmethod
+    def _start_prefill(cls, name, base_gpu_id):
+        out, err = cls._open_logs(name)
+
+        args = COMMON_ARGS + [
+            "--tp-size", "4",
+            "--base-gpu-id", str(base_gpu_id),
+            "--disaggregation-transfer-backend", "ascend",
+            "--disaggregation-mode", "prefill",
+            "--disaggregation-bootstrap-port", str(cls.bootstrap_ports[name]),
+        ]
+
+        cls.processes[name] = popen_launch_server(
+            MODEL_PATH,
+            cls.urls[name],
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=args,
+            env=cls._mf_env(),
+            return_stdout_stderr=(out, err),
+        )
 
     @classmethod
-    def tearDownClass(cls):
-        cls.lb_out_log.close()
-        cls.lb_err_log.close()
-        cls.prefill_1_out_log.close()
-        cls.prefill_1_err_log.close()
-        cls.prefill_2_out_log.close()
-        cls.prefill_2_err_log.close()
-        cls.decode_1_out_log.close()
-        cls.decode_1_err_log.close()
-        # os.remove("./prefill_1_out_log.txt")
-        # os.remove("./prefill_1_err_log.txt")
-        # os.remove("./prefill_2_out_log.txt")
-        # os.remove("./prefill_2_err_log.txt")
-        # os.remove("./lb_out_log.txt")
-        # os.remove("./lb_err_log.txt")
+    def _start_decode(cls):
+        out, err = cls._open_logs("decode_1")
 
-        for process in [cls.process_lb, cls.process_prefill_1, cls.process_prefill_2, cls.process_decode_1]:
-            if process:
-                try:
-                    kill_process_tree(process.pid)
-                except Exception as e:
-                    logger.info(f"Error killing process {process.pid}: {e}")
+        args = COMMON_ARGS + [
+            "--tp-size", "4",
+            "--base-gpu-id", "8",
+            "--disaggregation-transfer-backend", "ascend",
+            "--disaggregation-mode", "decode",
+            "--load-balance-method", "round_robin",
+        ]
 
-        # wait for 5 seconds
-        time.sleep(5)
+        cls.processes["decode_1"] = popen_launch_server(
+            MODEL_PATH,
+            cls.urls["decode_1"],
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=args,
+            env=cls._mf_env(),
+            return_stdout_stderr=(out, err),
+        )
 
     @classmethod
-    def wait_server_ready(cls, url, timeout=120):
-        start_time = time.perf_counter()
+    def _start_lb(cls):
+        out, err = cls._open_logs("lb")
+
+        cmd = [
+            "python3", "-m", "sglang_router.launch_router",
+            "--pd-disaggregation",
+            "--decode", cls.urls["decode_1"],
+            "--prefill", cls.urls["prefill_1"], str(cls.bootstrap_ports["prefill_1"]),
+            "--prefill", cls.urls["prefill_2"], str(cls.bootstrap_ports["prefill_2"]),
+            "--host", cls.base_host,
+            "--port", str(cls.lb_port),
+            "--policy", "round_robin",
+            "--health-failure-threshold", "2",
+            "--health-success-threshold", "2",
+            "--health-check-timeout-secs", "30",
+            "--health-check-interval-secs", "15",
+        ]
+
+        cls.processes["lb"] = popen_with_error_check(
+            cmd, return_stdout_stderr=(out, err)
+        )
+
+        cls._wait_ready(f"{cls.lb_url}/health")
+        logger.info("Waiting 60 seconds for the server to fully initialize...")
+        time.sleep(60)
+
+    @classmethod
+    def _wait_ready(cls, url, timeout=120):
+        start = time.perf_counter()
         while True:
             try:
-                response = requests.get(url)
-                if response.status_code == 200:
+                if requests.get(url).status_code == 200:
                     logger.info(f"Server {url} is ready")
                     return
             except Exception:
                 pass
 
-            if time.perf_counter() - start_time > timeout:
+            if time.perf_counter() - start > timeout:
                 raise RuntimeError(f"Server {url} failed to start in {timeout}s")
+
             time.sleep(1)
 
+    # ======================
+    # Cleanup
+    # ======================
     @classmethod
-    def start_prefill_1(cls):
-        cls.prefill_1_out_log = open("./prefill_1_out_log.txt", "w+", encoding="utf-8")
-        cls.prefill_1_err_log = open("./prefill_1_err_log.txt", "w+", encoding="utf-8")
-        other_args = [
-            "--trust-remote-code",
-            "--mem-fraction-static",
-            "0.8",
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--disable-radix-cache",
-            "--tp-size",
-            "4",
-            "--base-gpu-id",
-            0,
-            "--disaggregation-transfer-backend",
-            "ascend",
-            "--disaggregation-mode",
-            "prefill",
-            "--disaggregation-bootstrap-port",
-            cls.prefill_1_bootstrap_port,
+    def tearDownClass(cls):
+        # Kill processes
+        for name, proc in cls.processes.items():
+            if proc:
+                try:
+                    kill_process_tree(proc.pid)
+                    logger.info(f"Killed {name} pid={proc.pid}")
+                except Exception as e:
+                    logger.warning(f"Failed to kill {name}: {e}")
 
-        ]
-        env = {
-            **os.environ,
-            "ASCEND_MF_STORE_URL": cls.ascend_mf_store_url,
-        }
-        cls.process_prefill_1 = popen_launch_server(
-            cls.model,
-            cls.prefill_1_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=other_args,
-            env=env,
-            return_stdout_stderr=(cls.prefill_1_out_log, cls.prefill_1_err_log)
+        time.sleep(5)
+
+        # Close & delete logs
+        for out, err in cls.log_files.values():
+            for f in (out, err):
+                try:
+                    f.close()
+                except Exception:
+                    pass
+
+        for name in list(cls.log_files.keys()):
+            for suffix in ("out_log.txt", "err_log.txt"):
+                path = f"./{name}_{suffix}"
+                try:
+                    if os.path.exists(path):
+                        os.remove(path)
+                except Exception as e:
+                    logger.warning(f"Failed to remove {path}: {e}")
+
+    # ======================
+    # Test helpers
+    # ======================
+    def count_requests(self, name):
+        out, _ = self.log_files[name]
+        out.seek(0)
+        return out.read().count("POST /generate HTTP/1.1")
+
+    # ======================
+    # Tests
+    # ======================
+    def test_1_normal_round_robin(self):
+        with ThreadPoolExecutor(max_workers=12) as ex:
+            futures = [ex.submit(send_request, self.base_url) for _ in range(12)]
+            for f in futures:
+                resp = f.result()
+                self.assertEqual(resp.status_code, 200)
+                self.assertIn("Paris", resp.text)
+                logger.info(resp.json())
+
+        self.assertGreaterEqual(self.count_requests("prefill_1"), 6)
+        self.assertGreaterEqual(self.count_requests("prefill_2"), 6)
+
+    def test_2_failover_when_prefill_down(self):
+        if self.processes.get("prefill_2"):
+            kill_process_tree(self.processes["prefill_2"].pid)
+
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            futures = [ex.submit(send_request, self.base_url) for _ in range(10)]
+            for f in futures:
+                resp = f.result()
+                self.assertEqual(resp.status_code, 200)
+                self.assertIn("Paris", resp.text)
+                logger.info(resp.json())
+
+        self.assertGreaterEqual(self.count_requests("prefill_1"), 16)
+
+        lb_log, _ = self.log_files["lb"]
+        lb_log.seek(0)
+        self.assertIn(
+            f"HTTP health check failed for {self.urls['prefill_2']}/health",
+            lb_log.read(),
         )
-
-    @classmethod
-    def start_prefill_2(cls):
-        cls.prefill_2_out_log = open("./prefill_2_out_log.txt", "w+", encoding="utf-8")
-        cls.prefill_2_err_log = open("./prefill_2_err_log.txt", "w+", encoding="utf-8")
-        other_args = [
-            "--trust-remote-code",
-            "--mem-fraction-static",
-            "0.8",
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--disable-radix-cache",
-            "--tp-size",
-            "4",
-            "--base-gpu-id",
-            4,
-            "--disaggregation-transfer-backend",
-            "ascend",
-            "--disaggregation-mode",
-            "prefill",
-            "--disaggregation-bootstrap-port",
-            cls.prefill_2_bootstrap_port,
-        ]
-        env = {
-            **os.environ,
-            "ASCEND_MF_STORE_URL": cls.ascend_mf_store_url,
-        }
-        cls.process_prefill_2 = popen_launch_server(
-            cls.model,
-            cls.prefill_2_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=other_args,
-            env=env,
-            return_stdout_stderr=(cls.prefill_2_out_log, cls.prefill_2_err_log),
-        )
-
-    @classmethod
-    def start_decode_1(cls):
-        cls.decode_1_out_log = open("./decode_1_out_log.txt", "w+", encoding="utf-8")
-        cls.decode_1_err_log = open("./decode_1_err_log.txt", "w+", encoding="utf-8")
-        other_args = [
-            "--trust-remote-code",
-            "--mem-fraction-static",
-            "0.8",
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--disable-radix-cache",
-            "--tp-size",
-            "4",
-            "--base-gpu-id",
-            8,
-            "--disaggregation-transfer-backend",
-            "ascend",
-            "--disaggregation-mode",
-            "decode",
-            "--load-balance-method",
-            "round_robin",
-        ]
-        env = {
-            **os.environ,
-            "ASCEND_MF_STORE_URL": cls.ascend_mf_store_url,
-        }
-        cls.process_decode_1 = popen_launch_server(
-            cls.model,
-            cls.decode_1_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=other_args,
-            env=env,
-            return_stdout_stderr=(cls.decode_1_out_log, cls.decode_1_err_log),
-        )
-
-    @classmethod
-    def launch_lb(cls):
-        cls.lb_out_log = open("./lb_out_log.txt", "w+", encoding="utf-8")
-        cls.lb_err_log = open("./lb_err_log.txt", "w+", encoding="utf-8")
-        lb_command = [
-            "python3",
-            "-m",
-            "sglang_router.launch_router",
-            "--pd-disaggregation",
-            "--decode",
-            cls.decode_1_url,
-            "--prefill",
-            cls.prefill_1_url,
-            cls.prefill_1_bootstrap_port,
-            "--prefill",
-            cls.prefill_2_url,
-            cls.prefill_2_bootstrap_port,
-            "--host",
-            cls.base_host,
-            "--port",
-            cls.lb_port,
-            "--policy",
-            "round_robin",
-            "--health-failure-threshold",
-            "2",
-            "--health-success-threshold",
-            "2",
-            "--health-check-timeout-secs",
-            "30",
-            "--health-check-interval-secs",
-            "15",
-        ]
-        cls.process_lb = popen_with_error_check(lb_command, return_stdout_stderr=(cls.lb_out_log, cls.lb_err_log))
-        cls.wait_server_ready(cls.lb_url + "/health")
-        logger.info(
-            f"Waiting 60 seconds for the server to fully initialize..."
-        )
-        time.sleep(60)
-
-    def test_1(self):
-        with ThreadPoolExecutor(max_workers=12) as executor:
-            futures = [
-                executor.submit(send_request, self.base_url)
-                for _ in range(12)
-            ]
-
-            for future in futures:
-                response = future.result()
-                self.assertEqual(response.status_code, 200)
-                self.assertIn("Paris", response.text)
-                logger.info(response.json())
-        self.prefill_1_out_log.seek(0)
-        self.assertGreaterEqual(self.prefill_1_out_log.read().count("POST /generate HTTP/1.1"), 6)
-        self.prefill_2_out_log.seek(0)
-        self.assertGreaterEqual(self.prefill_2_out_log.read().count("POST /generate HTTP/1.1"), 6)
-
-    def test_2(self):
-        if self.process_prefill_2:
-            try:
-                kill_process_tree(self.process_prefill_2.pid)
-            except Exception as e:
-                logger.error(f"Error killing process {self.process_prefill_2.pid}: {e}")
-
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [
-                executor.submit(send_request, self.base_url)
-                for _ in range(10)
-            ]
-
-            for future in futures:
-                response = future.result()
-                self.assertEqual(response.status_code, 200)
-                self.assertIn("Paris", response.text)
-                logger.info(response.json())
-        self.prefill_1_out_log.seek(0)
-        self.assertGreaterEqual(self.prefill_1_out_log.read().count("POST /generate HTTP/1.1"), 16)
-        self.lb_out_log.seek(0)
-        self.assertIn(f"HTTP health check failed for {self.prefill_2_url}/health", self.lb_out_log.read())
 
 
 if __name__ == "__main__":
