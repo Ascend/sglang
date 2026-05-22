@@ -123,7 +123,9 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendMultiNodePdSepTestCaseBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.tokenizer = AutoTokenizer.from_pretrained(DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH, trust_remote_code=True)
+        cls.tokenizer = AutoTokenizer.from_pretrained(
+            DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH, trust_remote_code=True
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -132,7 +134,9 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendMultiNodePdSepTestCaseBase):
     @check_role(allowed_roles=["router"])
     def send_long_prompt_request(self, prompt_token_len=600, max_new_tokens=1):
         prompt = "hello world " * (prompt_token_len // 2 + 1)
-        prompt = self.tokenizer.decode(self.tokenizer.encode(prompt, add_special_tokens=False)[:prompt_token_len])
+        prompt = self.tokenizer.decode(
+            self.tokenizer.encode(prompt, add_special_tokens=False)[:prompt_token_len]
+        )
 
         start_time = time.time()
         response = requests.post(

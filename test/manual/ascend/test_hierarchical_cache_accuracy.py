@@ -10,7 +10,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
 )
-from test.run_eval import run_eval
+from sglang.test.run_eval import run_eval
 
 # ====================== Base Configuration ======================
 BASE_PREFILL_ENVS = {
