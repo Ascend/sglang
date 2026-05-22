@@ -104,7 +104,7 @@ def create_lora_adapter_with_lm_head(base_model_path: str, output_dir: str):
     print(f"  lm_head keys: {lm_head_keys}")
 
     del peft_model, model
-    torch.npu.empty_cache()
+    torch.cuda.empty_cache()
 
 
 class TestNPULoRATiedLMHead(CustomTestCase):
