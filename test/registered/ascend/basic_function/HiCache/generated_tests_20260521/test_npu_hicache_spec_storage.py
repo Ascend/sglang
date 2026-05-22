@@ -30,16 +30,16 @@ register_npu_ci(est_time=500, suite="nightly-2-npu-a3", nightly=True)
 
 class TestNPUHiCacheSpecFileStorage(CustomTestCase):
     """Testcase: E2E test for HiCache file storage with EAGLE3 speculative decoding on NPU.
-    
+
     Verifies that speculative accept length is maintained after file storage loadback.
-    
+
     [Test Category] HiCache + Speculative Decoding
     [Test Target] --hicache-storage-backend file + --speculative-algorithm EAGLE3
     """
-    
+
     model = QWEN3_32B_WEIGHTS_PATH
     draft_model = QWEN3_32B_EAGLE3_WEIGHTS_PATH
-    
+
     input_token_len = 512
     max_new_tokens = 100
     page_size = 128
@@ -47,18 +47,18 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
     min_second_to_first_accept_ratio = 0.85
     storage_wait_timeout = 30
     first_measure_new_tokens = 64
-    
+
     @classmethod
     def setUpClass(cls):
         cls.temp_dir = tempfile.mkdtemp()
         default_port = int(DEFAULT_URL_FOR_TEST.rsplit(":", 1)[1])
         cls.base_url = f"http://127.0.0.1:{find_available_port(default_port)}"
-        
+
         cls.tokenizer = get_tokenizer(cls.model)
         cls.prompt_input_ids = cls._build_long_repetitive_prompt_ids(
             cls.tokenizer, cls.input_token_len
         )
-        
+
         extra_config = {
             "hicache_storage_pass_prefix_keys": True,
         }
@@ -102,7 +102,7 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
         }
         cls.process = None
         cls._launch_server()
-    
+
     @classmethod
     def _launch_server(cls):
         cls.process = popen_launch_server(
@@ -117,19 +117,19 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             process=cls.process,
         )
-    
+
     @classmethod
     def _stop_server(cls):
         if getattr(cls, "process", None) is None:
             return
-        
+
         process = cls.process
         try:
             root = psutil.Process(process.pid)
             watched_procs = [root] + root.children(recursive=True)
         except psutil.NoSuchProcess:
             watched_procs = []
-        
+
         try:
             kill_process_tree(process.pid, wait_timeout=60)
         except RuntimeError:
@@ -144,20 +144,20 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
                 raise
         finally:
             cls.process = None
-    
+
     @classmethod
     def _restart_server(cls):
         cls._stop_server()
         time.sleep(2)
         cls._launch_server()
-    
+
     @classmethod
     def _count_file_storage_pages(cls):
         try:
             filenames = os.listdir(cls.temp_dir)
         except FileNotFoundError:
             return 0, 0
-        
+
         target_pages = 0
         draft_pages = 0
         for filename in filenames:
@@ -168,34 +168,34 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
             else:
                 target_pages += 1
         return target_pages, draft_pages
-    
+
     @classmethod
     def _wait_for_file_storage_pages(cls):
         min_pages = (cls.input_token_len - 2 * cls.page_size) // cls.page_size
         deadline = time.monotonic() + cls.storage_wait_timeout
         target_pages = draft_pages = 0
-        
+
         while time.monotonic() < deadline:
             target_pages, draft_pages = cls._count_file_storage_pages()
             if target_pages >= min_pages and draft_pages >= min_pages:
                 return target_pages, draft_pages
             time.sleep(0.5)
-        
+
         raise AssertionError(
             "Timed out waiting for HiCache file storage pages before restart: "
             f"{target_pages=}, {draft_pages=}, {min_pages=}"
         )
-    
+
     @classmethod
     def tearDownClass(cls):
         cls._stop_server()
         if hasattr(cls, "temp_dir"):
             shutil.rmtree(cls.temp_dir, ignore_errors=True)
-    
+
     @classmethod
     def _encode_without_special_tokens(cls, tokenizer, text: str) -> List[int]:
         return tokenizer.encode(text, add_special_tokens=False)
-    
+
     @classmethod
     def _build_long_repetitive_prompt_ids(cls, tokenizer, target_len: int) -> List[int]:
         bos_ids = (
@@ -218,14 +218,14 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
                 "Prompt suffix is too long: "
                 f"{len(bos_ids)=}, {len(suffix_ids)=}, {target_len=}."
             )
-        
+
         prefix_len = target_len - len(bos_ids) - len(suffix_ids)
         repeats = (prefix_len + len(repeat_ids) - 1) // len(repeat_ids)
         prefix_ids = (repeat_ids * repeats)[:prefix_len]
         prompt_ids = bos_ids + prefix_ids + suffix_ids
         assert len(prompt_ids) == target_len
         return prompt_ids
-    
+
     def _send_long_prompt(self, max_new_tokens: int = None) -> Dict:
         if max_new_tokens is None:
             max_new_tokens = self.max_new_tokens
@@ -247,7 +247,7 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
             f"Request failed: {response.status_code} - {response.text}",
         )
         return response.json()
-    
+
     def _get_spec_accept_length(self, response_json: Dict) -> float:
         meta_info = response_json.get("meta_info", {})
         self.assertIn(
@@ -256,7 +256,7 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
             f"Missing spec_accept_length in meta_info: {meta_info}",
         )
         return float(meta_info["spec_accept_length"])
-    
+
     def test_file_storage_loadback_keeps_spec_accept_length(self):
         """Test that EAGLE3 speculative accept length is maintained after file storage loadback."""
         first = self._send_long_prompt(max_new_tokens=self.first_measure_new_tokens)
@@ -266,23 +266,23 @@ class TestNPUHiCacheSpecFileStorage(CustomTestCase):
             self.min_expected_accept_length,
             f"First prompt accept length is too low: {first_accept_length=}",
         )
-        
+
         target_pages, draft_pages = self._wait_for_file_storage_pages()
         print(f"file_storage_before_restart: {target_pages=}, {draft_pages=}")
-        
+
         self._restart_server()
-        
+
         second = self._send_long_prompt()
         second_accept_length = self._get_spec_accept_length(second)
         second_meta = second.get("meta_info", {})
         cached_details = second_meta.get("cached_tokens_details") or {}
         storage_cached_tokens = int(cached_details.get("storage", 0))
-        
+
         print(
             f"{first_accept_length=:.3f}, {second_accept_length=:.3f}, "
             f"{storage_cached_tokens=}, {cached_details=}"
         )
-        
+
         self.assertGreaterEqual(
             storage_cached_tokens,
             self.input_token_len - 2 * self.page_size,

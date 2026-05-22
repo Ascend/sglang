@@ -22,21 +22,21 @@ register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
 
 class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
     """Testcase: E2E check for HiCache storage runtime attach/detach on NPU.
-    
+
     Tests launching server with hierarchical cache enabled but WITHOUT storage backend,
     then attaches/detaches storage backend via HTTP endpoints.
-    
+
     [Test Category] HiCache
     [Test Target] PUT/DELETE /hicache/storage-backend HTTP API
     """
-    
+
     @classmethod
     def setUpClass(cls):
         cls.temp_dir = tempfile.mkdtemp()
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         default_port = int(DEFAULT_URL_FOR_TEST.rsplit(":", 1)[1])
         cls.base_url = f"http://127.0.0.1:{find_available_port(default_port)}"
-        
+
         cls.other_args = [
             "--enable-hierarchical-cache",
             "--mem-fraction-static",
@@ -52,18 +52,19 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             "ascend",
             "--disable-cuda-graph",
         ]
-        
+
         cls.env = {
             **os.environ,
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "SGLANG_ENABLE_DETERMINISTIC_INFERENCE": "1",
         }
-    
+
     @classmethod
     def tearDownClass(cls):
         import shutil
+
         shutil.rmtree(cls.temp_dir, ignore_errors=True)
-    
+
     @classmethod
     def _wait_for_server_ready(
         cls, base_url: str, timeout: int = 60, process=None
@@ -74,7 +75,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             process=process,
         )
         return True
-    
+
     @staticmethod
     def _http_get(url: str, timeout: int = 10, headers: dict = None):
         try:
@@ -84,7 +85,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         except error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
             return e.code, body
-    
+
     @staticmethod
     def _http_post_json(url: str, payload: dict = None, timeout: int = 30):
         data = None
@@ -99,7 +100,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         except error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
             return e.code, body
-    
+
     @staticmethod
     def _http_put_json_with_headers(
         url: str,
@@ -119,11 +120,9 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         except error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
             return e.code, body
-    
+
     @staticmethod
-    def _http_delete_with_headers(
-        url: str, timeout: int = 30, headers: dict = None
-    ):
+    def _http_delete_with_headers(url: str, timeout: int = 30, headers: dict = None):
         all_headers = dict(headers or {})
         req = request.Request(url, headers=all_headers, method="DELETE")
         try:
@@ -132,14 +131,14 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         except error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
             return e.code, body
-    
+
     def _get_backend_status(self, base_url: str, headers: dict = None):
         code, body = self._http_get(
             f"{base_url}/hicache/storage-backend", timeout=10, headers=headers
         )
         self.assertEqual(code, 200, body)
         return json.loads(body)
-    
+
     def _attach_backend(
         self,
         base_url: str,
@@ -161,20 +160,20 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             timeout=30,
             headers=headers,
         )
-    
+
     def _detach_backend(self, base_url: str, headers: dict = None):
         return self._http_delete_with_headers(
             f"{base_url}/hicache/storage-backend",
             timeout=30,
             headers=headers,
         )
-    
+
     def test_runtime_attach_detach(self):
         """Test runtime attach/detach of HiCache storage backend via HTTP API."""
-        
+
         phase_a_port = find_available_port(int(self.base_url.rsplit(":", 1)[1]))
         phase_a_url = f"http://127.0.0.1:{phase_a_port}"
-        
+
         process1 = popen_launch_server(
             self.model,
             phase_a_url,
@@ -184,7 +183,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         )
         try:
             self._wait_for_server_ready(phase_a_url, process=process1)
-            
+
             code_info, _body_info = self._http_get(
                 f"{phase_a_url}/hicache/storage-backend", timeout=10
             )
@@ -200,7 +199,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         finally:
             kill_process_tree(process1.pid)
             time.sleep(2)
-        
+
         admin_key = "sglang-test-admin-key"
         phase_b_port = find_available_port(phase_a_port + 1)
         phase_b_url = f"http://127.0.0.1:{phase_b_port}"
@@ -214,28 +213,28 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
         )
         try:
             self._wait_for_server_ready(phase_b_url, process=process2)
-            
+
             code_info2_unauth, _ = self._http_get(
                 f"{phase_b_url}/hicache/storage-backend", timeout=10
             )
             self.assertEqual(code_info2_unauth, 401)
-            
+
             admin_headers = {"Authorization": f"Bearer {admin_key}"}
             status0 = self._get_backend_status(phase_b_url, headers=admin_headers)
             self.assertIsNone(status0.get("hicache_storage_backend"))
-            
+
             extra_cfg = {
                 "hicache_storage_pass_prefix_keys": True,
                 "prefetch_threshold": 256,
                 "prefetch_timeout_base": 3,
                 "prefetch_timeout_per_ki_token": 0.01,
             }
-            
+
             code_attach_unauth, _ = self._attach_backend(
                 base_url=phase_b_url, backend="file", extra_cfg=extra_cfg
             )
             self.assertEqual(code_attach_unauth, 401)
-            
+
             code_attach, body_attach = self._attach_backend(
                 base_url=phase_b_url,
                 backend="file",
@@ -245,7 +244,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
                 headers=admin_headers,
             )
             self.assertEqual(code_attach, 200, f"{code_attach} - {body_attach}")
-            
+
             status1 = self._get_backend_status(phase_b_url, headers=admin_headers)
             self.assertEqual(status1.get("hicache_storage_backend"), "file")
             self.assertEqual(
@@ -254,7 +253,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             )
             self.assertEqual(status1.get("hicache_storage_prefetch_policy"), "timeout")
             self.assertEqual(status1.get("hicache_write_policy"), "write_back")
-            
+
             code_attach_again, body_attach_again = self._attach_backend(
                 base_url=phase_b_url,
                 backend="file",
@@ -266,7 +265,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             self.assertEqual(
                 code_attach_again, 200, f"{code_attach_again} - {body_attach_again}"
             )
-            
+
             status2 = self._get_backend_status(phase_b_url, headers=admin_headers)
             self.assertEqual(
                 status2.get("hicache_storage_backend_extra_config"),
@@ -278,7 +277,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             self.assertEqual(
                 status2.get("hicache_write_policy"), "write_through_selective"
             )
-            
+
             code_attach_again, body_attach_again = self._attach_backend(
                 base_url=phase_b_url,
                 backend="mooncake",
@@ -286,7 +285,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
                 headers=admin_headers,
             )
             self.assertNotEqual(code_attach_again, 200, body_attach_again)
-            
+
             code_detach, body_detach = self._detach_backend(
                 phase_b_url, headers=admin_headers
             )
@@ -299,7 +298,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             self.assertEqual(
                 status3.get("hicache_write_policy"), "write_through_selective"
             )
-            
+
             code_detach_again, body_detach_again = self._detach_backend(
                 phase_b_url, headers=admin_headers
             )
@@ -308,7 +307,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
                 200,
                 f"{code_detach_again} - {body_detach_again}",
             )
-            
+
             code_attach2, body_attach2 = self._attach_backend(
                 base_url=phase_b_url,
                 backend="file",
@@ -324,7 +323,7 @@ class TestNPUHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             )
             self.assertEqual(status4.get("hicache_storage_prefetch_policy"), "timeout")
             self.assertEqual(status4.get("hicache_write_policy"), "write_through")
-            
+
             code_detach2, body_detach2 = self._detach_backend(
                 phase_b_url, headers=admin_headers
             )

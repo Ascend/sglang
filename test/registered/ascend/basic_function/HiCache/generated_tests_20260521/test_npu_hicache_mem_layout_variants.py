@@ -18,13 +18,13 @@ register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
 
 class TestNPUHiCacheMemLayoutPageFirst(CustomTestCase):
     """Testcase: HiCache with page_first memory layout on NPU.
-    
+
     [Test Category] HiCache
     [Test Target] --hicache-mem-layout page_first
     """
-    
+
     model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-    
+
     @classmethod
     def setUpClass(cls):
         cls.base_url = DEFAULT_URL_FOR_TEST
@@ -48,14 +48,15 @@ class TestNPUHiCacheMemLayoutPageFirst(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
         )
-    
+
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-    
+
     def test_page_first_layout_basic(self):
         """Test basic inference with page_first memory layout."""
         import requests
+
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
             json={
@@ -68,10 +69,11 @@ class TestNPUHiCacheMemLayoutPageFirst(CustomTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("Paris", response.text)
-    
+
     def test_page_first_layout_cache_reuse(self):
         """Test cache reuse with page_first memory layout."""
         import requests
+
         prompt = "What is machine learning? " * 20
         for i in range(2):
             response = requests.post(
@@ -94,13 +96,13 @@ class TestNPUHiCacheMemLayoutPageFirst(CustomTestCase):
 
 class TestNPUHiCacheMemLayoutPageFirstDirect(CustomTestCase):
     """Testcase: HiCache with page_first_direct memory layout on NPU.
-    
+
     [Test Category] HiCache
     [Test Target] --hicache-mem-layout page_first_direct
     """
-    
+
     model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-    
+
     @classmethod
     def setUpClass(cls):
         cls.base_url = DEFAULT_URL_FOR_TEST
@@ -124,14 +126,15 @@ class TestNPUHiCacheMemLayoutPageFirstDirect(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
         )
-    
+
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-    
+
     def test_page_first_direct_layout_basic(self):
         """Test basic inference with page_first_direct memory layout."""
         import requests
+
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
             json={
@@ -144,10 +147,11 @@ class TestNPUHiCacheMemLayoutPageFirstDirect(CustomTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("Paris", response.text)
-    
+
     def test_page_first_direct_layout_cache_reuse(self):
         """Test cache reuse with page_first_direct memory layout."""
         import requests
+
         prompt = "Explain quantum computing in detail. " * 20
         for i in range(2):
             response = requests.post(
@@ -170,13 +174,13 @@ class TestNPUHiCacheMemLayoutPageFirstDirect(CustomTestCase):
 
 class TestNPUHiCacheMemLayoutPageFirstKVSplit(CustomTestCase):
     """Testcase: HiCache with page_first_kv_split memory layout on NPU.
-    
+
     [Test Category] HiCache
     [Test Target] --hicache-mem-layout page_first_kv_split
     """
-    
+
     model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-    
+
     @classmethod
     def setUpClass(cls):
         cls.base_url = DEFAULT_URL_FOR_TEST
@@ -200,14 +204,15 @@ class TestNPUHiCacheMemLayoutPageFirstKVSplit(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
         )
-    
+
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-    
+
     def test_page_first_kv_split_layout_basic(self):
         """Test basic inference with page_first_kv_split memory layout."""
         import requests
+
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
             json={
@@ -220,10 +225,11 @@ class TestNPUHiCacheMemLayoutPageFirstKVSplit(CustomTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("Paris", response.text)
-    
+
     def test_page_first_kv_split_layout_cache_reuse(self):
         """Test cache reuse with page_first_kv_split memory layout."""
         import requests
+
         prompt = "What are the benefits of cloud computing? " * 20
         for i in range(2):
             response = requests.post(
@@ -249,13 +255,13 @@ register_npu_ci(est_time=500, suite="nightly-2-npu-a3", nightly=True)
 
 class TestNPUHiCacheMemLayoutWithTP(CustomTestCase):
     """Testcase: HiCache memory layout with TP=2 on NPU.
-    
+
     [Test Category] HiCache
     [Test Target] --hicache-mem-layout with --tp-size 2
     """
-    
+
     model = QWEN3_32B_WEIGHTS_PATH
-    
+
     @classmethod
     def setUpClass(cls):
         cls.base_url = DEFAULT_URL_FOR_TEST
@@ -281,14 +287,15 @@ class TestNPUHiCacheMemLayoutWithTP(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
         )
-    
+
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-    
+
     def test_mem_layout_with_tp_basic(self):
         """Test basic inference with memory layout and TP=2."""
         import requests
+
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
             json={
@@ -300,10 +307,11 @@ class TestNPUHiCacheMemLayoutWithTP(CustomTestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-    
+
     def test_mem_layout_with_tp_cache_reuse(self):
         """Test cache reuse with memory layout and TP=2."""
         import requests
+
         prompt = "Describe the history of artificial intelligence. " * 20
         for i in range(2):
             response = requests.post(
