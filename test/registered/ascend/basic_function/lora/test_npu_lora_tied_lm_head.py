@@ -26,7 +26,7 @@ except ImportError:
 from transformers import AutoModelForCausalLM
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -51,9 +51,9 @@ def create_lora_adapter_with_lm_head(base_model_path: str, output_dir: str):
         device_map="cpu",
     )
 
-    assert model.config.tie_word_embeddings, (
-        f"{base_model_path} does not have tie_word_embeddings=True"
-    )
+    assert (
+        model.config.tie_word_embeddings
+    ), f"{base_model_path} does not have tie_word_embeddings=True"
 
     lora_config = LoraConfig(
         r=8,
@@ -79,13 +79,13 @@ def create_lora_adapter_with_lm_head(base_model_path: str, output_dir: str):
     f = safe_open(safetensors_path, framework="pt")
     lm_head_keys = [k for k in f.keys() if "lm_head" in k]
 
-    assert os.path.isdir(output_dir), f"LoRA adapter directory not created: {output_dir}"
-    assert os.path.isfile(safetensors_path), (
-        f"adapter_model.safetensors not found in {output_dir}"
-    )
-    assert len(lm_head_keys) > 0, (
-        f"No lm_head keys found in adapter at {output_dir}"
-    )
+    assert os.path.isdir(
+        output_dir
+    ), f"LoRA adapter directory not created: {output_dir}"
+    assert os.path.isfile(
+        safetensors_path
+    ), f"adapter_model.safetensors not found in {output_dir}"
+    assert len(lm_head_keys) > 0, f"No lm_head keys found in adapter at {output_dir}"
 
     del peft_model, model
     torch.npu.empty_cache()
@@ -102,7 +102,7 @@ class TestNPULoRATiedLMHead(CustomTestCase):
     """
 
     _adapter_dir = None
-    base_model = QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH
+    base_model = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 
     @classmethod
     def setUpClass(cls):
