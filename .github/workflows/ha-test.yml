@@ -115,7 +115,7 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-      - multi-node-tests
+      - single-node-tests
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:
