@@ -248,10 +248,10 @@ jobs:
           #   runner: linux-aarch64-a3-16
           #   test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix.py
           #   test_type: 'perf'
-          - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
-            test_type: 'perf'
+          # - name: test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
+          #   test_type: 'perf'
           # 已通过 - 注释掉 (Round 2)
           # - name: test_npu_minimax_m2_5_w8a8_8p_in32k_out1k_50ms
           #   runner: linux-aarch64-a3-16
@@ -280,10 +280,10 @@ jobs:
 #            runner: linux-aarch64-a3-16
 #            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
-          - name: test_npu_kimi_k2_5_w4a8_8p_in1080p_30_out256_50ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in1080p_30_out256_50ms.py
-            test_type: 'perf'
+          # - name: test_npu_kimi_k2_5_w4a8_8p_in1080p_30_out256_50ms
+          #   runner: linux-aarch64-a3-16
+          #   test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_8p_in1080p_30_out256_50ms.py
+          #   test_type: 'perf'
           # 已移到多节点测试 (PD分离需要multi-node workflow)
           # - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms
           #   runner: linux-aarch64-a3-24
