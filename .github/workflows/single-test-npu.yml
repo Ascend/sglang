@@ -307,6 +307,12 @@ jobs:
       max-parallel: 2
       matrix:
         test_config:
+          # Qwen3.5-397B-A17B PD Mix (2 nodes)
+          - name: test_npu_qwen3_5_397b_a17b_w4a8_16p_in3k5_out1k5_50ms
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms_mixed.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'mix'
+            node_size: 2
           # GLM PD Mix (2 nodes)
           - name: test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms
             test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
