@@ -72,7 +72,7 @@ MODEL_CONFIG = {
         "--nsa-prefill-cp-mode",
         "in-seq-split",
         "--attn-cp-size",
-        32,
+        16,
         "--dp-size",
         2,
         "--enable-dp-attention",

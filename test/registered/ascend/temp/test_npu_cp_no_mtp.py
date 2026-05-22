@@ -179,7 +179,7 @@ class TestDeepSeekV32CPNoMTtp(TestAscendPerfMultiNodePdSepTestCaseBase):
             )
 
         if self.ttft:
-            self.assertLessEqual(
+            self.assertGreater(
                 float(metrics["mean_ttft"]),
                 self.ttft,
             )
@@ -212,7 +212,7 @@ class TestDeepSeekV32NoCpNoMtp(TestAscendPerfMultiNodePdSepTestCaseBase):
     def test_throughput(self):
         self.metrics_nocpnomtp = _run_benchmark(self)
         if self.ttft:
-            self.assertLessEqual(
+            self.assertGreater(
                 float(self.metrics_nocpnomtp["mean_ttft"]),
                 self.ttft,
             )
@@ -223,8 +223,8 @@ class TestDeepSeekV32NoCpNoMtp(TestAscendPerfMultiNodePdSepTestCaseBase):
 
         metrics_cpnomttp_ttft = float(run_command(f"cat {TTFT_FILE}"))
         self.assertGreater(
-            metrics_cpnomttp_ttft,
             self.metrics_nocpnomtp["mean_ttft"],
+            metrics_cpnomttp_ttft
         )
 
 

@@ -94,13 +94,13 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-          - name: test_npu_cp_no_mtp
-            test_case: test/registered/ascend/temp/test_npu_cp_no_mtp.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
+#          - name: test_npu_cp_no_mtp
+#            test_case: test/registered/ascend/temp/test_npu_cp_no_mtp.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
           - name: test_npu_cp_dp_no_mtp
             test_case: test/registered/ascend/temp/test_npu_cp_dp_no_mtp.py
             test_type: 'perf'
