@@ -30,7 +30,7 @@ MODEL_PATH = QWEN3_32B_WEIGHTS_PATH
 
 COMMON_ARGS = [
     "--trust-remote-code",
-    "--mem-fraction-static"
+    "--mem-fraction-static",
     "0.8",
     "--attention-backend",
     "ascend",
