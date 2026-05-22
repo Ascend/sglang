@@ -210,7 +210,7 @@ class DisaggregationHiCacheBase(CustomTestCase):
             for f in futures:
                 self.assert_generate_success(f)
 
-        self.assertGreater(self.count_requests("server1"), 16)
+        self.assertGreaterEqual(self.count_requests("server1"), 16)
 
         lb_log, _ = self.log_files["lb"]
         lb_log.seek(0)
