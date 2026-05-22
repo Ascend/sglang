@@ -54,7 +54,13 @@ def send_request(base_url):
     )
 
 
-class DisaggregationHiCacheBase(CustomTestCase):
+class RouterHAMixedWorkerFailoverTest(CustomTestCase):
+    """Verify router high availability and failover under mixed-worker deployment.
+
+    [Test Category] Functional
+    [Test Target] Router High Availability (HA)
+    --health-failure-threshold; --health-success-threshold; --health-check-timeout-secs; --health-check-interval-secs
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -194,6 +200,7 @@ class DisaggregationHiCacheBase(CustomTestCase):
     # ======================
 
     def test_1_normal_round_robin(self):
+        """Verify normal load balancing across mixed workers."""
         with ThreadPoolExecutor(max_workers=12) as ex:
             futures = [ex.submit(send_request, self.lb_url) for _ in range(12)]
             for f in futures:
@@ -203,6 +210,7 @@ class DisaggregationHiCacheBase(CustomTestCase):
         self.assertGreaterEqual(self.count_requests("server2"), 6)
 
     def test_2_failover_when_worker_down(self):
+        """Verify worker failover when a backend node becomes unhealthy."""
         proc = self.processes.get("server2")
         if proc:
             kill_process_tree(proc.pid)

@@ -159,7 +159,14 @@ def _run_benchmark(test_case):
     return metrics
 
 
-class TestDeepSeekV32CPNoMTtp(TestAscendPerfMultiNodePdSepTestCaseBase):
+class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(TestAscendPerfMultiNodePdSepTestCaseBase):
+    """Verify long-context inference works correctly with CP enabled and MTP disabled
+
+    [Test Category] Functional
+    [Test Target] Long-Context Inference Correctness (CP enabled, No MTP)
+    --enable-nsa-prefill-context-parallel; --nsa-prefill-cp-mode
+    """
+
     model_config = MODEL_CONFIG_CPNOMTTP
     benchmark_tool = BENCHSERVING
     dataset_name = "random"
@@ -170,7 +177,8 @@ class TestDeepSeekV32CPNoMTtp(TestAscendPerfMultiNodePdSepTestCaseBase):
     random_range_ratio = 1
     output_token_throughput = 0
 
-    def test_throughput(self):
+    def test_long_context_inference_with_cp_enabled(self):
+        """Verify 64K long-context inference runs correctly with CP enabled and MTP disabled."""
         metrics = _run_benchmark(self)
         if self.output_token_throughput:
             self.assertGreater(
@@ -187,7 +195,14 @@ class TestDeepSeekV32CPNoMTtp(TestAscendPerfMultiNodePdSepTestCaseBase):
             run_command(f"echo {metrics['mean_ttft']} > {TTFT_FILE}")
 
 
-class TestDeepSeekV32NoCpNoMtp(TestAscendPerfMultiNodePdSepTestCaseBase):
+class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(TestAscendPerfMultiNodePdSepTestCaseBase):
+    """Verify CP reduces TTFT compared to No-CP configuration (MTP disabled)
+
+    [Test Category] Functional
+    [Test Target] CP reduces TTFT
+    --enable-nsa-prefill-context-parallel; --nsa-prefill-cp-mode
+    """
+
     model_config = MODEL_CONFIG_NOCPNOMTP
     benchmark_tool = BENCHSERVING
     dataset_name = "random"
@@ -209,7 +224,8 @@ class TestDeepSeekV32NoCpNoMtp(TestAscendPerfMultiNodePdSepTestCaseBase):
                 if os.path.exists(TTFT_FILE):
                     os.remove(TTFT_FILE)
 
-    def test_throughput(self):
+    def test_baseline_ttft_without_cp(self):
+        """Collect TTFT baseline with CP disabled and MTP disabled."""
         self.metrics_nocpnomtp = _run_benchmark(self)
         if self.ttft:
             self.assertGreater(
@@ -217,7 +233,8 @@ class TestDeepSeekV32NoCpNoMtp(TestAscendPerfMultiNodePdSepTestCaseBase):
                 self.ttft,
             )
 
-    def test_compare_ttft(self):
+    def test_ttft_reduced_with_cp_enabled(self):
+        """Verify TTFT is reduced when CP is enabled compared to No-CP."""
         if not hasattr(self, "metrics_nocpnomtp"):
             raise RuntimeError("test_throughput must be run before test_compare_ttft")
 
@@ -230,8 +247,8 @@ class TestDeepSeekV32NoCpNoMtp(TestAscendPerfMultiNodePdSepTestCaseBase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestDeepSeekV32CPNoMTtp("test_throughput"))
-    suite.addTest(TestDeepSeekV32NoCpNoMtp("test_throughput"))
-    suite.addTest(TestDeepSeekV32NoCpNoMtp("test_compare_ttft"))
+    suite.addTest(TestDeepSeekV32W8A8PdSepCpNoMtpFunctional("test_long_context_inference_with_cp_enabled"))
+    suite.addTest(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_baseline_ttft_without_cp"))
+    suite.addTest(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_ttft_reduced_with_cp_enabled"))
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)

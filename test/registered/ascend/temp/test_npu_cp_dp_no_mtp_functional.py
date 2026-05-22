@@ -121,7 +121,14 @@ MODEL_CONFIG = {
 }
 
 
-class TestDeepSeekV32(TestAscendPerfMultiNodePdSepTestCaseBase):
+class TestDeepSeekV32W8A8CpDpNoMtpFunctional(TestAscendPerfMultiNodePdSepTestCaseBase):
+    """Verify functional correctness with CP and DP enabled, MTP disabled
+
+    [Test Category] Functional
+    [Test Target] Inference Correctness (CP + DP, No MTP)
+    --enable-nsa-prefill-context-parallel; --nsa-prefill-cp-mode
+    """
+
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHSERVING
     dataset_name = "random"
@@ -132,7 +139,8 @@ class TestDeepSeekV32(TestAscendPerfMultiNodePdSepTestCaseBase):
     random_range_ratio = 1
     output_token_throughput = 0
 
-    def test_throughput(self):
+    def test_long_context_inference_with_cp_dp_enabled(self):
+        """Verify 64K long-context inference runs correctly with CP and DP enabled, MTP disabled."""
         self.run_throughput()
 
 

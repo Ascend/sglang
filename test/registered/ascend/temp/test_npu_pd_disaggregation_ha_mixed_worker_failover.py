@@ -59,7 +59,13 @@ def send_request(url):
     )
 
 
-class DisaggregationHiCacheBase(CustomTestCase):
+class PDDisaggregationHAMixedWorkerFailoverTest(CustomTestCase):
+    """Verify PD disaggregation high availability under prefill node failure
+
+    [Test Category] Functional
+    [Test Target] PD Disaggregation High Availability (HA)
+    --health-failure-threshold; --health-success-threshold; --health-check-timeout-secs; --health-check-interval-secs
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -257,6 +263,7 @@ class DisaggregationHiCacheBase(CustomTestCase):
     # Tests
     # ======================
     def test_1_normal_round_robin(self):
+        """Verify normal load balancing across prefill nodes."""
         with ThreadPoolExecutor(max_workers=12) as ex:
             futures = [ex.submit(send_request, self.base_url) for _ in range(12)]
             for f in futures:
@@ -269,6 +276,7 @@ class DisaggregationHiCacheBase(CustomTestCase):
         self.assertGreaterEqual(self.count_requests("prefill_2"), 6)
 
     def test_2_failover_when_prefill_down(self):
+        """Verify prefill node failover under health check failures."""
         if self.processes.get("prefill_2"):
             kill_process_tree(self.processes["prefill_2"].pid)
 
