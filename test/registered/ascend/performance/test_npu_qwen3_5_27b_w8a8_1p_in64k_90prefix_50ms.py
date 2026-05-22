@@ -96,6 +96,7 @@ class TestNPUQwen3_5_27B_1P_In64k_90Prefix_High(TestAscendPerformanceTestCaseBas
     random_range_ratio = 0.1
     tpot = 50
     aisbench_request_rate = 10
+    output_token_throughput = 110
 
     def test_npu_qwen3_5_27b_1p_in64k_90prefix_high(self):
         """Run NPU performance test for Qwen3.5-27B-W8A8 in64k 90% prefix"""

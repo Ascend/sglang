@@ -98,6 +98,7 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     prefix_hit_rate = 0.9
     tpot = 50
     aisbench_request_rate = 40
+    output_token_throughput = 308.2
 
     def test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in128k out1k prefix90 50ms"""
