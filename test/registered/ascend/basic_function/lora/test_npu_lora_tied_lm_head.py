@@ -16,7 +16,7 @@ except ImportError:
             "install",
             "peft",
             "accelerate",
-            "torchao>=0.16.0",
+            #"torchao>=0.16.0",
             "-i",
             "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
         ]
