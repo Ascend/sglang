@@ -29,7 +29,7 @@ register_npu_ci(
 # ======================
 # Constants
 # ======================
-MODEL_PATH = "/home/weights/Qwen3-32B"
+MODEL_PATH = QWEN3_32B_WEIGHTS_PATH
 
 COMMON_ARGS = [
     "--trust-remote-code",
