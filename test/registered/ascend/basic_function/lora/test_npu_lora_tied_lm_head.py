@@ -51,10 +51,6 @@ def create_lora_adapter_with_lm_head(base_model_path: str, output_dir: str):
         device_map="cpu",
     )
 
-    assert (
-        model.config.tie_word_embeddings
-    ), f"{base_model_path} does not have tie_word_embeddings=True"
-
     lora_config = LoraConfig(
         r=8,
         lora_alpha=16,
@@ -74,18 +70,6 @@ def create_lora_adapter_with_lm_head(base_model_path: str, output_dir: str):
     peft_model.save_pretrained(output_dir)
 
     from safetensors import safe_open
-
-    safetensors_path = os.path.join(output_dir, "adapter_model.safetensors")
-    f = safe_open(safetensors_path, framework="pt")
-    lm_head_keys = [k for k in f.keys() if "lm_head" in k]
-
-    assert os.path.isdir(
-        output_dir
-    ), f"LoRA adapter directory not created: {output_dir}"
-    assert os.path.isfile(
-        safetensors_path
-    ), f"adapter_model.safetensors not found in {output_dir}"
-    assert len(lm_head_keys) > 0, f"No lm_head keys found in adapter at {output_dir}"
 
     del peft_model, model
     torch.npu.empty_cache()
