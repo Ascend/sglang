@@ -146,12 +146,13 @@ MODEL_CONFIG_FUSION_DISABLED = {
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": BASE_DECODE_ENVS,
     "prefill_args": BASE_PREFILL_ARGS,
-    "decode_args": BASE_DECODE_ARGS + [
-        "--moe-a2a-backend", 
-        "deepep",
-        "--deepep-mode", 
-        "low_latency",
-    ],
+    "decode_args": BASE_DECODE_ARGS
+                   + [
+                       "--moe-a2a-backend",
+                       "deepep",
+                       "--deepep-mode",
+                       "low_latency",
+                   ],
     "router_args": ["--mini-lb"],
 }
 
@@ -160,11 +161,11 @@ MODEL_CONFIG_FUSION_ENABLED = {
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": BASE_DECODE_ENVS,
     "prefill_args": BASE_PREFILL_ARGS,
-    "decode_args": BASE_DECODE_ARGS + 
-    [
-        "--moe-a2a-backend", 
-        "ascend_fuseep",
-    ],
+    "decode_args": BASE_DECODE_ARGS
+                   + [
+                       "--moe-a2a-backend",
+                       "ascend_fuseep",
+                   ],
     "router_args": ["--mini-lb"],
 }
 
@@ -252,6 +253,7 @@ class TestQwen235bFusionOperator(TestAscendPerfMultiNodePdSepTestCaseBase):
         Per-layer latency reduction = (TPOT_disabled - TPOT_enabled) / number_of_layers
         Target: per-layer reduction >= 50us = 0.05ms
         """
+
         # Test without fusion operator (average over num_test_runs)
         print("Testing WITHOUT fusion operator...")
         tpot_disabled_avg = self.run_test_with_config(MODEL_CONFIG_FUSION_DISABLED)
@@ -267,15 +269,17 @@ class TestQwen235bFusionOperator(TestAscendPerfMultiNodePdSepTestCaseBase):
         per_layer_reduction_ms = total_latency_reduction_ms / self.model_layers
 
         print(f"\nTotal TPOT reduction: {total_latency_reduction_ms}ms")
-        print(f"Per-layer reduction: {per_layer_reduction_ms}ms (target: {self.expected_per_layer_reduction_ms}ms)")
+        print(
+            f"Per-layer reduction: {per_layer_reduction_ms}ms (target: {self.expected_per_layer_reduction_ms}ms)"
+        )
 
         # Verify per-layer latency reduction meets the requirement
         self.assertGreaterEqual(
             per_layer_reduction_ms,
             self.expected_per_layer_reduction_ms,
             msg=f"Per-layer latency reduction {per_layer_reduction_ms}ms is less than expected {self.expected_per_layer_reduction_ms}ms. "
-            f"TPOT (disabled avg): {tpot_disabled_avg}ms, TPOT (enabled avg): {tpot_enabled_avg}ms, "
-            f"Total reduction: {total_latency_reduction_ms}ms, Layers: {self.model_layers}"
+                f"TPOT (disabled avg): {tpot_disabled_avg}ms, TPOT (enabled avg): {tpot_enabled_avg}ms, "
+                f"Total reduction: {total_latency_reduction_ms}ms, Layers: {self.model_layers}",
         )
 
 

@@ -178,7 +178,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
             ]
         )
         return config
-    
+
     def is_router_server_running(self):
         """检查router服务器是否正常运行"""
         try:
@@ -192,7 +192,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
             return result == 0
         except Exception:
             return False
-    
+
     def test_bucket_adjust_interval_secs_validation(self):
         """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
         print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
@@ -205,7 +205,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
         # 等待PD节点启动
         print("等待PD节点启动...")
         time.sleep(30)
-        
+
         try:
             # 依次测试每个参数值
             for value, should_succeed, description in self.test_cases:
@@ -213,28 +213,26 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
                 print(f"测试: {description}")
                 print(f"参数值: '{value}'")
                 print(f"期望结果: {'启动成功' if should_succeed else '启动失败'}")
-                print("="*60)
-                
+                print("=" * 60)
+
                 # 更新配置
                 self.__class__.model_config = self.create_model_config_with_param(value)
-                
+
                 # 启动router并检查结果
                 success = self._test_single_value()
                 
                 # 验证结果
                 if should_succeed:
                     self.assertTrue(
-                        success,
-                        msg=f"参数 '{value}' 应该启动成功，但实际失败"
+                        success, msg=f"参数 '{value}' 应该启动成功，但实际失败"
                     )
                     print(f"✓ 验证通过: 服务启动成功")
                 else:
                     self.assertFalse(
-                        success,
-                        msg=f"参数 '{value}' 应该启动失败，但实际成功"
+                        success, msg=f"参数 '{value}' 应该启动失败，但实际成功"
                     )
                     print(f"✓ 验证通过: 服务启动失败（预期行为）")
-                
+
                 # 清理当前router（为下一次测试做准备）
                 self.stop_sglang_thread()
                 time.sleep(5)  # 等待完全停止
@@ -243,32 +241,32 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
             # 最后清理PD节点
             print("\n清理PD节点...")
             self.stop_sglang_thread()
-        
-        print("\n" + "="*60)
+
+        print("\n" + "=" * 60)
         print("所有测试完成!")
-        print("="*60)
-    
+        print("=" * 60)
+
     def _test_single_value(self):
         """测试单个参数值的router启动情况"""
         try:
             self.start_router_server()
-            
+
             # 等待并检查启动状态
             start_time = time.time()
             while time.time() - start_time < self.router_startup_timeout:
                 time.sleep(self.check_interval)
-                
+
                 # 检查服务是否正常
                 if self.is_router_server_running():
                     return True
-                
+
                 # 检查线程是否异常退出
                 if not self.sglang_thread.is_alive():
                     return False
-            
+
             # 超时判断
             return self.is_router_server_running()
-        
+
         except Exception as e:
             print(f"启动过程发生异常: {e}")
             return False
