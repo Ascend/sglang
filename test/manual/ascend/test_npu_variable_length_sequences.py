@@ -289,10 +289,10 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
             initial = initial_metrics.get(ip, {})
             final = final_metrics.get(ip, {})
             req_diff = final.get('sglang_prefill_requests_total', 0) - initial.get(
-                'sglang_prefill_requests_total', 0
+                "sglang_prefill_requests_total", 0
             )
             tok_diff = final.get('sglang_prefill_tokens_total', 0) - initial.get(
-                'sglang_prefill_tokens_total', 0
+                "sglang_prefill_tokens_total", 0
             )
             total_requests += req_diff
             total_tokens += tok_diff
