@@ -160,10 +160,19 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
         import subprocess
         try:
             result = subprocess.run(
-                ["kubectl", "get", "configmap", configmap_name, "-n", namespace, "-o", "json"],
+                [
+                    "kubectl",
+                    "get",
+                    "configmap",
+                    configmap_name,
+                    "-n",
+                    namespace,
+                    "-o",
+                    "json"
+                ],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
             if result.returncode == 0:
                 import json
@@ -239,7 +248,9 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
                 print(f"\nP节点 {ip} 统计:")
                 print(f"  - 请求数: {m.get('sglang_prefill_requests_total', 0):.0f}")
                 print(f"  - Tokens数: {m.get('sglang_prefill_tokens_total', 0):.0f}")
-                print(f"  - 平均延迟: {m.get('sglang_prefill_latency_seconds', 0):.4f}s")
+                print(
+                    f"  - 平均延迟: {m.get('sglang_prefill_latency_seconds', 0):.4f}s"
+                )
         return metrics
 
     def test_throughput_with_prefill_stats(self):
@@ -267,8 +278,12 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
         for ip in prefill_ips:
             initial = initial_metrics.get(ip, {})
             final = final_metrics.get(ip, {})
-            req_diff = final.get('sglang_prefill_requests_total', 0) - initial.get('sglang_prefill_requests_total', 0)
-            tok_diff = final.get('sglang_prefill_tokens_total', 0) - initial.get('sglang_prefill_tokens_total', 0)
+            req_diff = final.get('sglang_prefill_requests_total', 0) - initial.get(
+                'sglang_prefill_requests_total', 0
+            )
+            tok_diff = final.get('sglang_prefill_tokens_total', 0) - initial.get(
+                'sglang_prefill_tokens_total', 0
+            )
             total_requests += req_diff
             total_tokens += tok_diff
             print(f"\nP节点 {ip}:")
@@ -276,7 +291,9 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
             print(f"  - 处理Tokens数: {tok_diff:.0f}")
 
         print(f"\n=== 总计 ===")
-        print(f"所有P节点共处理: {total_requests:.0f} 个请求, {total_tokens:.0f} 个tokens")
+        print(
+            f"所有P节点共处理: {total_requests:.0f} 个请求, {total_tokens:.0f} 个tokens"
+        )
 
     def test_throughput(self):
         self.run_throughput()
