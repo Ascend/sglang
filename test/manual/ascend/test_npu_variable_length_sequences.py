@@ -63,7 +63,7 @@ MODEL_CONFIG = {
         "--nnodes",
         3,
         "--tp",
-        48,
+        16,
         "--trust-remote-code",
         "--attention-backend",
         "ascend",
