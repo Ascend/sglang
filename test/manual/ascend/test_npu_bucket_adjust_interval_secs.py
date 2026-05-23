@@ -34,7 +34,6 @@ MODEL_CONFIG_BASE = {
         # "HCCL_SOCKET_IFNAME": NIC_NAME,
         # "GLOO_SOCKET_IFNAME": NIC_NAME,
         "TRANSFORMERS_VERBOSITY": "error",
-
     },
     "decode_envs": {
         "SGLANG_SET_CPU_AFFINITY": "1",
@@ -245,9 +244,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
 
             # 验证结果
             if should_succeed:
-                self.assertTrue(
-                    success, msg=f"参数 '{value}' 应该启动成功，但实际失败"
-                )
+                self.assertTrue(success, msg=f"参数 '{value}' 应该启动成功，但实际失败")
                 print(f"✓ 验证通过: 服务启动成功")
             else:
                 self.assertFalse(
