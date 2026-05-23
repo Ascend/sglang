@@ -1,6 +1,5 @@
-import unittest
 import time
-import os
+import unittest
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -139,7 +138,7 @@ MODEL_CONFIG_BASE = {
 
 class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCaseBase):
     """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
-    
+
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model_config = MODEL_CONFIG_BASE
@@ -150,7 +149,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
     input_len = 32
     output_len = 1
     random_range_ratio = 1
-    
+
     # 测试参数
     test_cases = [
         # (value, should_succeed, description)
@@ -162,20 +161,22 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
         ("abc", False, "非法值: 纯字母字符串"),
         ("@#$", False, "非法值: 特殊字符"),
     ]
-    
+
     # 等待router启动的超时时间（秒）
     router_startup_timeout = 60
     # 检查间隔
     check_interval = 5
-    
+
     def create_model_config_with_param(self, bucket_interval):
         """创建带有指定 bucket-adjust-interval-secs 参数的配置"""
         config = MODEL_CONFIG_BASE.copy()
         config["router_args"] = MODEL_CONFIG_BASE["router_args"].copy()
-        config["router_args"].extend([
-            "--bucket-adjust-interval-secs",
-            bucket_interval,
-        ])
+        config["router_args"].extend(
+            [
+                "--bucket-adjust-interval-secs",
+                bucket_interval,
+            ]
+        )
         return config
     
     def is_router_server_running(self):
@@ -183,6 +184,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
         try:
             # 尝试连接到router服务
             import socket
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
             result = sock.connect_ex(("127.0.0.1", self.port))
@@ -194,12 +196,12 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
     def test_bucket_adjust_interval_secs_validation(self):
         """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
         print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
-        
+
         # 先拉起PD节点（只拉一次，后续复用）
         print("步骤1: 启动PD节点（prefill + decode）")
         self.__class__.model_config = self.create_model_config_with_param("1")
         self.start_pd_server()
-        
+
         # 等待PD节点启动
         print("等待PD节点启动...")
         time.sleep(30)
