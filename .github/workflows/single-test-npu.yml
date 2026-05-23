@@ -111,7 +111,21 @@ jobs:
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
+          # - name: test_npu_variable_length_sequences
+          #   test_case: test/manual/ascend/test_npu_variable_length_sequences.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          #   prefill_size: 3
+          #   decode_size: 1
+          #   router_size: 1
 
+          - name: test_npu_load_balance
+            test_case: test\manual\ascend\test_npu_load_balance.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 3
+            decode_size: 1
+            router_size: 1
           - name: test_ascend_fusion_operator
             test_case: test/manual/ascend/test_npu_fusion_operator.py
             test_type: 'perf'
@@ -119,20 +133,13 @@ jobs:
             prefill_size: 1
             decode_size: 2
             router_size: 1
-          - name: test_npu_variable_length_sequences
-            test_case: test/manual/ascend/test_npu_variable_length_sequences.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 3
-            decode_size: 1
-            router_size: 1
-          - name: test_npu_bucket_adjust_interval_secs
-            test_case: test/manual/ascend/test_npu_bucket_adjust_interval_secs.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 3
-            decode_size: 1
-            router_size: 1
+          # - name: test_npu_bucket_adjust_interval_secs
+          #   test_case: test/manual/ascend/test_npu_bucket_adjust_interval_secs.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          #   prefill_size: 3
+          #   decode_size: 1
+          #   router_size: 1
 
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:

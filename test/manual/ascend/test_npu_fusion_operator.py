@@ -28,6 +28,7 @@ BASE_PREFILL_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
+    "TRANSFORMERS_VERBOSITY": "error",
 }
 
 BASE_DECODE_ENVS = {
@@ -44,6 +45,7 @@ BASE_DECODE_ENVS = {
     # "GLOO_SOCKET_IFNAME": NIC_NAME,
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
+    "TRANSFORMERS_VERBOSITY": "error",
 }
 
 BASE_PREFILL_ARGS = [
@@ -145,7 +147,7 @@ MODEL_CONFIG_FUSION_DISABLED = {
     "model_path": QWEN3_235B_W8A8_MODEL_PATH,
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": BASE_DECODE_ENVS,
-    "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
+    "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1", "TRANSFORMERS_VERBOSITY": "error"},
     "prefill_args": BASE_PREFILL_ARGS,
     "decode_args": BASE_DECODE_ARGS
     + [
