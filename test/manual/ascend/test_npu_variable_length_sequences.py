@@ -32,6 +32,8 @@ MODEL_CONFIG = {
         "ENABLE_MOE_NZ": "1",
         "PROFILING_MODE": "dynamic",
         "HCCL_OP_EXPANSION_MODE": "AIV",
+
+        "TRANSFORMERS_VERBOSITY": "error",
     },
     "decode_envs": {
         "SGLANG_SET_CPU_AFFINITY": "1",
@@ -48,14 +50,18 @@ MODEL_CONFIG = {
         "HCCL_OP_EXPANSION_MODE": "AIV",
         "TASK_QUEUE_ENABLE": "0",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+
         # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
         # "HCCL_SOCKET_IFNAME": "enp23s0f3",
         # "GLOO_SOCKET_IFNAME": "enp23s0f3",
+
+        "TRANSFORMERS_VERBOSITY": "error",
     },
     "router_envs": {
         # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
         # "HCCL_SOCKET_IFNAME": NIC_NAME,
         # "GLOO_SOCKET_IFNAME": NIC_NAME,
+        "TRANSFORMERS_VERBOSITY": "error",
     },
     "prefill_args": [
         "--disaggregation-mode",
