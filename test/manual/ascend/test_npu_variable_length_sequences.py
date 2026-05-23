@@ -264,6 +264,7 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
             if m:
                 metrics[ip] = m
                 print(f"\nP节点 {ip} 统计:")
+                print(f"  - metric返回值: {m}")
                 print(f"  - 请求数: {m.get('sglang_prefill_requests_total', 0):.0f}")
                 print(f"  - Tokens数: {m.get('sglang_prefill_tokens_total', 0):.0f}")
                 print(
@@ -312,9 +313,6 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
         print(
             f"所有P节点共处理: {total_requests:.0f} 个请求, {total_tokens:.0f} 个tokens"
         )
-
-    def test_throughput(self):
-        self.run_throughput()
 
 
 if __name__ == "__main__":
