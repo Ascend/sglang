@@ -98,7 +98,7 @@ MODEL_CONFIG = {
         "--disaggregation-mode",
         "decode",
         "--tp-size",
-        16,
+        32,
         "--mem-fraction-static",
         0.8,
         "--quantization",
