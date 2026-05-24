@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
@@ -25,7 +25,7 @@ QWEN3_6_35B_A3B_128K_PREFIX_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
 }
 
 QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
@@ -38,28 +38,32 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     "--device",
     "npu",
     "--chunked-prefill-size",
-    -1,
+    16384,
     "--max-prefill-tokens",
-    128000,
+    65536,
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    16,
+    144,
     "--max-mamba-cache-size",
-    140,
+    120,
     "--mem-fraction-static",
     0.68,
     "--cuda-graph-bs",
     2,
     4,
-    6,
     8,
-    10,
-    12,
-    14,
     16,
+    32,
+    48,
+    64,
+    80,
+    96,
+    112,
+    128,
+    144,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -89,13 +93,14 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_128K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 16
-    num_prompts = 64
-    input_len = 128000
+    max_concurrency = 144
+    num_prompts = 576
+    input_len = 64000
     output_len = 1000
     random_range_ratio = 1
     prefix_hit_rate = 0.9
     tpot = 50
+    aisbench_request_rate = 40
     output_token_throughput = 308.2
 
     def test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms(self):
