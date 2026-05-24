@@ -1,6 +1,7 @@
 import os
 import time
 import unittest
+from time import sleep
 
 # import logger
 
@@ -233,6 +234,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
     def kill_process_if_alive(self):
         try:
             kill_process_tree(self.process.pid)
+            sleep(100)
         except Exception:
             # 忽略清理异常，可能进程已提前退出
             pass

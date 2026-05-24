@@ -176,7 +176,7 @@ class TestQwen235bFusionOperator(TestAscendPerfMultiNodePdSepTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     max_attempts = 3
-    model_config = MODEL_CONFIG
+    model_config = MODEL_CONFIG_FUSION_ENABLED
     backend = "sglang-oai"
     dataset_name = "random"
     max_concurrency = 860

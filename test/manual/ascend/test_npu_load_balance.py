@@ -563,32 +563,32 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
         self.assert_prefill_load_balance(prefill_requests)
 
 
-        print("\n=== 测试结束后的P节点统计 ===")
-        final_metrics = self.collect_prefill_metrics(prefill_ips)
+        # print("\n=== 测试结束后的P节点统计 ===")
+        # final_metrics = self.collect_prefill_metrics(prefill_ips)
+        #
+        # # 计算增量
+        # print("\n=== 测试期间的增量统计 ===")
+        # total_requests = 0
+        # total_tokens = 0
+        # for ip in prefill_ips:
+        #     initial = initial_metrics.get(ip, {})
+        #     final = final_metrics.get(ip, {})
+        #     req_diff = final.get("sglang_prefill_requests_total", 0) - initial.get(
+        #         "sglang_prefill_requests_total", 0
+        #     )
+        #     tok_diff = final.get("sglang_prefill_tokens_total", 0) - initial.get(
+        #         "sglang_prefill_tokens_total", 0
+        #     )
+        #     total_requests += req_diff
+        #     total_tokens += tok_diff
+        #     print(f"\nP节点 {ip}:")
+        #     print(f"  - 处理请求数: {req_diff:.0f}")
+        #     print(f"  - 处理Tokens数: {tok_diff:.0f}")
 
-        # 计算增量
-        print("\n=== 测试期间的增量统计 ===")
-        total_requests = 0
-        total_tokens = 0
-        for ip in prefill_ips:
-            initial = initial_metrics.get(ip, {})
-            final = final_metrics.get(ip, {})
-            req_diff = final.get("sglang_prefill_requests_total", 0) - initial.get(
-                "sglang_prefill_requests_total", 0
-            )
-            tok_diff = final.get("sglang_prefill_tokens_total", 0) - initial.get(
-                "sglang_prefill_tokens_total", 0
-            )
-            total_requests += req_diff
-            total_tokens += tok_diff
-            print(f"\nP节点 {ip}:")
-            print(f"  - 处理请求数: {req_diff:.0f}")
-            print(f"  - 处理Tokens数: {tok_diff:.0f}")
-
-        print(f"\n=== 总计 ===")
-        print(
-            f"所有P节点共处理: {total_requests:.0f} 个请求, {total_tokens:.0f} 个tokens"
-        )
+        # print(f"\n=== 总计 ===")
+        # print(
+        #     f"所有P节点共处理: {total_requests:.0f} 个请求, {total_tokens:.0f} 个tokens"
+        # )
 
 
 if __name__ == "__main__":
