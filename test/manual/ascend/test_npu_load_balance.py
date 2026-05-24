@@ -157,6 +157,8 @@ MODEL_CONFIG = {
         32,
         "--bucket-adjust-interval-secs",
         5,
+        "--enable-metrics",
+        "--collect-tokens-histogram",
     ],
 }
 

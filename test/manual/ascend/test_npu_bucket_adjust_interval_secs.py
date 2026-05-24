@@ -1,7 +1,8 @@
+import os
 import time
 import unittest
 
-import logger
+# import logger
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
@@ -12,6 +13,10 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     ROUND_ROBIN,
     TestAscendPerfMultiNodePdSepTestCaseBase,
 )
+
+# ConfigMap相关配置
+CONFIGMAP_NAME = os.environ.get("KUBE_CONFIG_MAP")
+NAMESPACE = os.environ.get("NAMESPACE")
 
 # ====================== Base Configuration ======================
 MODEL_CONFIG_BASE = {
@@ -256,7 +261,8 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
             try:
                 kill_process_tree(self.process.pid)
             except Exception as e:
-                logger.error(f"Error during tearDown: {e}")
+                # logger.error(f"Error during tearDown: {e}")
+                pass
             time.sleep(5)  # 等待完全停止
 
         print("\n" + "=" * 60)
