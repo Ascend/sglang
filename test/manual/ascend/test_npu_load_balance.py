@@ -1,3 +1,4 @@
+import math
 import os
 import unittest
 
@@ -406,9 +407,106 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
         
         # 打印一些关键的router指标（如果存在）
         for key, value in metrics.items():
-            # 过滤出与router相关的关键指标
-            if any(kw in key.lower() for kw in ["router", "prefill", "decode", "request", "token", "latency", "throughput"]):
+            if any(kw in key.lower() for kw in ["router_requests", "http_requests_total{method=\"post\""]):
                 print(f"  - {key}: {value}")
+
+    def parse_worker_requests(self, metrics):
+        """解析各worker节点处理的请求数量
+        
+        Args:
+            metrics (dict): Router返回的metrics字典
+        
+        Returns:
+            tuple: (prefill_requests, decode_requests)
+                prefill_requests: dict, key为worker地址，value为处理请求数
+                decode_requests: dict, key为worker地址，value为处理请求数
+        """
+        import re
+        
+        prefill_requests = {}
+        decode_requests = {}
+        
+        for key, value in metrics.items():
+            # 匹配 smg_worker_cb_outcomes_total{worker="http://xxx:8000",outcome="success"}
+            match = re.search(r'smg_worker_cb_outcomes_total\{worker="([^"]+)",outcome="success"\}', key)
+            if match:
+                worker_url = match.group(1)
+                # 判断是prefill还是decode节点
+                # 从smg_worker_health指标判断
+                for health_key in metrics.keys():
+                    if worker_url in health_key and "worker_type=\"prefill\"" in health_key:
+                        prefill_requests[worker_url] = value
+                        break
+                    elif worker_url in health_key and "worker_type=\"decode\"" in health_key:
+                        decode_requests[worker_url] = value
+                        break
+        
+        # 如果通过health指标无法判断，则通过smg_worker_selection_total辅助判断
+        if not prefill_requests and not decode_requests:
+            # 直接统计所有success的请求
+            for key, value in metrics.items():
+                match = re.search(r'smg_worker_cb_outcomes_total\{worker="([^"]+)",outcome="success"\}', key)
+                if match:
+                    worker_url = match.group(1)
+                    # 默认假设为prefill节点（如果无法区分）
+                    prefill_requests[worker_url] = value
+        
+        return prefill_requests, decode_requests
+
+    def assert_prefill_decode_equal(self, p_total, d_total):
+        """断言P节点和D节点处理请求总数相等"""
+        print(f"  - 验证P节点总计({p_total:.0f}) == D节点总计({d_total:.0f})")
+        try:
+            assert abs(p_total - d_total) <= 1, f"P节点处理请求数({p_total})与D节点({d_total})不相等"
+            print("  - ✓ 断言通过：P节点和D节点处理请求总数相等")
+        except AssertionError as e:
+            print(f"  - ✗ 断言失败：{e}")
+            raise
+
+    def assert_prefill_load_balance(self, prefill_requests, tolerance_ratio=0.1):
+        """断言P节点处理请求负载均衡
+        
+        Args:
+            prefill_requests (dict): 各P节点处理请求数
+            tolerance_ratio (float): 容忍偏差比例，默认为10%
+        """
+        if not prefill_requests:
+            return
+        
+        total = sum(prefill_requests.values())
+        count = len(prefill_requests)
+        avg = total / count if count > 0 else 0
+        tolerance_abs = max(math.ceil(avg * tolerance_ratio), 1)
+        
+        
+        
+        print(f"  - P节点平均处理请求数: {avg:.0f}")
+        print(f"  - 负载均衡容忍偏差: ±{tolerance_ratio*100:.0f}%")
+        print(f"  - 负载均衡容忍偏差绝对值: ±{tolerance_abs} 请求")
+        
+        max_deviation_abs = 0
+        unbalanced_workers = []
+        
+        for worker, req_count in prefill_requests.items():
+            deviation_abs = abs(req_count - avg)
+            
+            max_deviation_abs = max(max_deviation_abs, deviation_abs)
+            
+            if deviation_abs > tolerance_abs:
+                unbalanced_workers.append((worker, req_count, deviation_abs))
+            print(f"    - {worker}: {req_count:.0f} 请求, 绝对偏差: {deviation_abs:.1f} 请求")
+        
+        try:
+            assert max_deviation_abs <= tolerance_abs, \
+                f"P节点负载不均衡，最大绝对偏差{max_deviation_abs:.1f}请求超过容忍阈值{tolerance_abs}请求"
+            print(f"  - ✓ 断言通过：P节点负载均衡（最大绝对偏差{max_deviation_abs:.1f}请求 ≤ 容忍阈值{tolerance_abs}请求）")
+        except AssertionError as e:
+            print(f"  - ✗ 断言失败：{e}")
+            if unbalanced_workers:
+                print("    不均衡节点详情:")
+                for worker, req_count, deviation_abs in unbalanced_workers:
+                    print(f"      - {worker}: {req_count:.0f} 请求, 绝对偏差: {deviation_abs:.1f} 请求")
+            raise
 
     def collect_prefill_metrics(self, prefill_ips=None):
         """收集所有P节点的metrics并打印统计
@@ -442,23 +540,28 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
         return metrics
 
     def test_throughput_with_prefill_stats(self):
-        """测试吞吐量并统计每个P节点的请求数和tokens数"""
-        # 获取P节点IP（一次性获取，复用）
-        prefill_ips = self.get_prefill_ips_from_configmap()
-        print(f"发现P节点IP: {prefill_ips}")
+        # """测试吞吐量并统计每个P节点的请求数和tokens数"""
+        # # 获取P节点IP（一次性获取，复用）
+        # prefill_ips = self.get_prefill_ips_from_configmap()
+        # print(f"发现P节点IP: {prefill_ips}")
 
-        print("=== 测试开始前的P节点统计 ===")
-        initial_metrics = self.collect_prefill_metrics(prefill_ips)
+        # print("=== 测试开始前的P节点统计 ===")
+        # initial_metrics = self.collect_prefill_metrics(prefill_ips)
 
-        # 运行主测试
-        print("\n=== 开始运行吞吐量测试 ===")
+        # # 运行主测试
+        # print("\n=== 开始运行吞吐量测试 ===")
         self.run_throughput()
 
         # 获取Router节点的metrics
         print("\n=== 获取Router节点的Metrics ===")
         router_metrics = self.get_router_metrics()
-        if router_metrics:
-            self.print_router_metrics(router_metrics)
+        # if router_metrics:
+        #     self.print_router_metrics(router_metrics)
+        prefill_requests, decode_requests = self.parse_worker_requests(router_metrics)
+        print(f"  - P节点处理请求数: {prefill_requests}")
+        print(f"  - D节点处理请求数: {decode_requests}")
+        self.assert_prefill_load_balance(prefill_requests)
+
 
         print("\n=== 测试结束后的P节点统计 ===")
         final_metrics = self.collect_prefill_metrics(prefill_ips)

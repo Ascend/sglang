@@ -5,7 +5,7 @@ import unittest
 # import logger
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, check_role
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -163,12 +163,35 @@ MODEL_CONFIG_BASE = {
 }
 
 
+def create_model_config_with_param(bucket_interval):
+    """创建带有指定 bucket-adjust-interval-secs 参数的配置"""
+    config = MODEL_CONFIG_BASE.copy()
+    config["router_args"] = MODEL_CONFIG_BASE["router_args"].copy()
+    config["router_args"].extend(
+        [
+            "--bucket-adjust-interval-secs",
+            bucket_interval,
+        ]
+    )
+    return config
+
+
 class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCaseBase):
     """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
 
+    test_cases = [
+        {"value": "1", "should_succeed": True, "description": "合法值: 最小正整数"},
+        {"value": "4294967295", "should_succeed": True, "description": "合法值: 最大无符号32位整数"},
+        {"value": "0", "should_succeed": False, "description": "非法值: 0（小于最小值）"},
+        {"value": "4294967296", "should_succeed": False, "description": "非法值: 超过最大无符号32位整数"},
+        {"value": "5.1", "should_succeed": False, "description": "非法值: 浮点数"},
+        {"value": "abc", "should_succeed": False, "description": "非法值: 纯字母字符串"},
+        {"value": "@#$", "should_succeed": False, "description": "非法值: 特殊字符"},
+    ]
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    model_config = MODEL_CONFIG_BASE
+    initial_value = test_cases[0]["value"]
+    model_config = create_model_config_with_param(initial_value)
     dataset_name = "random"
     request_rate = 1
     max_concurrency = 1
@@ -177,122 +200,84 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
     output_len = 1
     random_range_ratio = 1
 
-    # 测试参数
-    test_cases = [
-        # (value, should_succeed, description)
-        ("1", True, "合法值: 最小正整数"),
-        ("4294967295", True, "合法值: 最大无符号32位整数"),
-        ("0", False, "非法值: 0（小于最小值）"),
-        ("4294967296", False, "非法值: 超过最大无符号32位整数"),
-        ("5.1", False, "非法值: 浮点数"),
-        ("abc", False, "非法值: 纯字母字符串"),
-        ("@#$", False, "非法值: 特殊字符"),
-    ]
-
     # 等待router启动的超时时间（秒）
     router_startup_timeout = 60
     # 检查间隔
     check_interval = 5
 
-    def create_model_config_with_param(self, bucket_interval):
-        """创建带有指定 bucket-adjust-interval-secs 参数的配置"""
-        config = MODEL_CONFIG_BASE.copy()
-        config["router_args"] = MODEL_CONFIG_BASE["router_args"].copy()
-        config["router_args"].extend(
-            [
-                "--bucket-adjust-interval-secs",
-                bucket_interval,
-            ]
-        )
-        return config
-
     def is_router_server_running(self):
         """检查router服务器是否正常运行"""
         try:
-            # 尝试连接到router服务
             import socket
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
             result = sock.connect_ex(("127.0.0.1", self.port))
             sock.close()
+            print(f"result is {result}")
             return result == 0
         except Exception:
             return False
 
+    def print_test_case_info(self, test_case):
+        """打印测试用例信息"""
+        value = test_case["value"]
+        should_succeed = test_case["should_succeed"]
+        description = test_case["description"]
+        print(f"\n{'=' * 60}")
+        print(f"测试: {description}")
+        print(f"参数值: '{value}'")
+        print(f"期望结果: {'启动成功' if should_succeed else '启动失败'}")
+        print("=" * 60)
+
+    def kill_process_if_alive(self):
+        try:
+            kill_process_tree(self.process.pid)
+        except Exception:
+            # 忽略清理异常，可能进程已提前退出
+            pass
+
+    @check_role(allowed_roles=["router"])
     def test_bucket_adjust_interval_secs_validation(self):
         """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
         print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
 
-        # 先拉起PD节点（只拉一次，后续复用）
-        print("步骤1: 启动PD节点（prefill + decode）")
-        self.__class__.model_config = self.create_model_config_with_param("1")
-        self.start_pd_server()
-
-        # 等待PD节点启动
-        print("等待PD节点启动...")
-        time.sleep(30)
+        self.print_test_case_info(self.test_cases[0])
+        self.assert_result(self.test_cases[0]["value"], self.is_router_server_running(), self.test_cases[0]["should_succeed"])
+        self.kill_process_if_alive()
+        time.sleep(5)  # 等待完全停止
 
         # 依次测试每个参数值
-        for value, should_succeed, description in self.test_cases:
-            print(f"\n{'='*60}")
-            print(f"测试: {description}")
-            print(f"参数值: '{value}'")
-            print(f"期望结果: {'启动成功' if should_succeed else '启动失败'}")
-            print("=" * 60)
+        for test_case in self.test_cases:
+            if test_case["value"] == self.initial_value:
+                continue
+            
+            self.print_test_case_info(test_case)
 
-            # 更新配置
-            self.__class__.model_config = self.create_model_config_with_param(value)
+            value = test_case["value"]
+            should_succeed = test_case["should_succeed"]
 
-            # 启动router并检查结果
-            success = self._test_single_value()
+            self.__class__.model_config = create_model_config_with_param(value)
+            self.start_router_server()
+            self.assert_result(value, self.is_router_server_running(), should_succeed)
 
-            # 验证结果
-            if should_succeed:
-                self.assertTrue(success, msg=f"参数 '{value}' 应该启动成功，但实际失败")
-                print(f"✓ 验证通过: 服务启动成功")
-            else:
-                self.assertFalse(
-                    success, msg=f"参数 '{value}' 应该启动失败，但实际成功"
-                )
-                print(f"✓ 验证通过: 服务启动失败（预期行为）")
-
-            # 清理当前router（为下一次测试做准备）
-            try:
-                kill_process_tree(self.process.pid)
-            except Exception as e:
-                # logger.error(f"Error during tearDown: {e}")
-                pass
+            self.kill_process_if_alive()
             time.sleep(5)  # 等待完全停止
 
         print("\n" + "=" * 60)
         print("所有测试完成!")
         print("=" * 60)
 
-    def _test_single_value(self):
-        """测试单个参数值的router启动情况"""
-        try:
-            self.start_router_server()
-
-            # 等待并检查启动状态
-            start_time = time.time()
-            while time.time() - start_time < self.router_startup_timeout:
-                time.sleep(self.check_interval)
-
-                # 检查服务是否正常
-                if self.is_router_server_running():
-                    return True
-
-                # 检查线程是否异常退出
-                if not self.sglang_thread.is_alive():
-                    return False
-
-            # 超时判断
-            return self.is_router_server_running()
-
-        except Exception as e:
-            print(f"启动过程发生异常: {e}")
-            return False
+    def assert_result(self, value, success, should_succeed):
+        """断言测试结果"""
+        if should_succeed:
+            self.assertTrue(success, msg=f"参数 '{value}' 应该启动成功，但实际失败")
+            print(f"✓ 验证通过: 服务启动成功")
+        else:
+            self.assertFalse(
+                success, msg=f"参数 '{value}' 应该启动失败，但实际成功"
+            )
+            print(f"✓ 验证通过: 服务启动失败（预期行为）")
 
 
 if __name__ == "__main__":
