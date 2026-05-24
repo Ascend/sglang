@@ -45,9 +45,9 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--max-running-requests",
-    115,
+    120,
     "--max-mamba-cache-size",
-    230,
+    240,
     "--mem-fraction-static",
     0.78,
     "--cuda-graph-bs",
@@ -61,7 +61,7 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     80,
     96,
     112,
-    115,
+    120,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -91,15 +91,15 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     other_args = QWEN3_6_35B_A3B_1024_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1024_ENVS
     dataset_name = "random"
-    max_concurrency = 115
-    num_prompts = 460
+    max_concurrency = 120
+    num_prompts = 480
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
     image_resolution = "1024x1024"
     image_count = 1
     tpot = 50
-    aisbench_request_rate = 25
+    aisbench_request_rate = 60
     output_token_throughput = 2382.2
 
     def test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms(self):
