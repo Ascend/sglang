@@ -6,7 +6,7 @@ from time import sleep
 # import logger
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, check_role
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, check_role, TestAscendMultiNodePdSepTestCaseBase
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -177,7 +177,7 @@ def create_model_config_with_param(bucket_interval):
     return config
 
 
-class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCaseBase):
+class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBase):
     """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
 
     test_cases = [
@@ -205,6 +205,16 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
     router_startup_timeout = 60
     # 检查间隔
     check_interval = 5
+
+    @classmethod
+    def setUpClass(cls):
+        cls.degradation_tolerance = 0
+        cls.model = DEEPSEEK_R1_W8A8_MODEL_PATH
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
 
     def is_router_server_running(self):
         """检查router服务器是否正常运行"""
@@ -234,7 +244,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
     def kill_process_if_alive(self):
         try:
             kill_process_tree(self.process.pid)
-            sleep(100)
+            sleep(30)
         except Exception:
             # 忽略清理异常，可能进程已提前退出
             pass
@@ -244,15 +254,15 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
         """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
         print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
 
-        self.print_test_case_info(self.test_cases[0])
-        self.assert_result(self.test_cases[0]["value"], self.is_router_server_running(), self.test_cases[0]["should_succeed"])
-        self.kill_process_if_alive()
-        time.sleep(5)  # 等待完全停止
+        # self.print_test_case_info(self.test_cases[0])
+        # self.assert_result(self.test_cases[0]["value"], self.is_router_server_running(), self.test_cases[0]["should_succeed"])
+        # self.kill_process_if_alive()
+        # time.sleep(5)  # 等待完全停止
 
         # 依次测试每个参数值
         for test_case in self.test_cases:
-            if test_case["value"] == self.initial_value:
-                continue
+            # if test_case["value"] == self.initial_value:
+            #     continue
             
             self.print_test_case_info(test_case)
 
@@ -260,10 +270,18 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
             should_succeed = test_case["should_succeed"]
 
             self.__class__.model_config = create_model_config_with_param(value)
-            self.start_router_server()
-            self.assert_result(value, self.is_router_server_running(), should_succeed)
 
-            self.kill_process_if_alive()
+            caught_exception = False
+            try:
+                self.start_pd_server()
+                self.start_router_server()
+            except Exception:
+                caught_exception = True
+            finally:
+                self.stop_sglang_thread()
+
+            self.assert_result(value, not caught_exception, should_succeed)
+
             time.sleep(5)  # 等待完全停止
 
         print("\n" + "=" * 60)
