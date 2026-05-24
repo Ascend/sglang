@@ -157,8 +157,10 @@ MODEL_CONFIG = {
         32,
         "--bucket-adjust-interval-secs",
         5,
-        "--enable-metrics",
-        "--collect-tokens-histogram",
+        "--prometheus-host",
+        "0.0.0.0",
+        "--prometheus-port",
+        "29000",
     ],
 }
 
@@ -368,6 +370,46 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
                     pass
         return parsed
 
+    def get_router_metrics(self):
+        """获取Router节点的metrics（使用prometheus端口29000）"""
+        from sglang.test.ascend.e2e.test_npu_multi_node_utils import SERVICE_PORT
+        
+        # 获取router地址
+        router_host = os.environ.get("POD_IP", "127.0.0.1")
+        # router的prometheus端口（从配置中读取）
+        router_prometheus_port = 29000
+        
+        # 如果当前节点不是router，尝试从环境变量获取router地址
+        hostname = os.environ.get("HOSTNAME", "")
+        if not hostname or "router" not in hostname.lower():
+            router_host = os.environ.get("ROUTER_IP", router_host)
+        
+        print(f"Querying router metrics from: {router_host}:{router_prometheus_port}")
+        
+        try:
+            response = requests.get(f"http://{router_host}:{router_prometheus_port}/metrics", timeout=30)
+            if response.status_code == 200:
+                print(f"Successfully fetched router metrics (length: {len(response.text)})")
+                return self.parse_metrics(response.text)
+            else:
+                print(f"Failed to get router metrics, status code: {response.status_code}")
+        except Exception as e:
+            print(f"Error fetching router metrics: {e}")
+        
+        return None
+
+    def print_router_metrics(self, metrics):
+        """打印Router节点的关键metrics"""
+        print("\nRouter节点统计:")
+        print(f"  - metric返回值数量: {len(metrics)}")
+        print(f"  - metric:\n{metrics}")
+        
+        # 打印一些关键的router指标（如果存在）
+        for key, value in metrics.items():
+            # 过滤出与router相关的关键指标
+            if any(kw in key.lower() for kw in ["router", "prefill", "decode", "request", "token", "latency", "throughput"]):
+                print(f"  - {key}: {value}")
+
     def collect_prefill_metrics(self, prefill_ips=None):
         """收集所有P节点的metrics并打印统计
         
@@ -411,6 +453,12 @@ class TestManualDeploy(TestAscendPerfMultiNodePdSepTestCaseBase):
         # 运行主测试
         print("\n=== 开始运行吞吐量测试 ===")
         self.run_throughput()
+
+        # 获取Router节点的metrics
+        print("\n=== 获取Router节点的Metrics ===")
+        router_metrics = self.get_router_metrics()
+        if router_metrics:
+            self.print_router_metrics(router_metrics)
 
         print("\n=== 测试结束后的P节点统计 ===")
         final_metrics = self.collect_prefill_metrics(prefill_ips)
