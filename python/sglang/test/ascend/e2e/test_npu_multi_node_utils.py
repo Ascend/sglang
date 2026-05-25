@@ -611,7 +611,10 @@ def launch_router(model_config):
             continue
         logger.info(f"Retrieved ConfigMap data: {configmap.data}")
         for pod_name, pod_ip in configmap.data.items():
-            pod_index = int(pod_name.rsplit("-", 1)[-1])
+            last_part = pod_name.rsplit("-", 1)[-1]
+            if not last_part.isdigit():
+                continue
+            pod_index = int(last_part)
             prefill_keyword = (
                 "prefill-0" if is_multi_node_prefill_instance else "prefill"
             )

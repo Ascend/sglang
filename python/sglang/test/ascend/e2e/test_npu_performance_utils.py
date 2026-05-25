@@ -1020,6 +1020,7 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        logger.info("Start exec tearDownClass")
         if cls.process:
             try:
                 kill_process_tree(cls.process.pid)
