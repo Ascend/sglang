@@ -78,16 +78,7 @@ jobs:
           # Enable load_lm_head_from_target on DeepseekV3ForCausalLMNextN so that
           # eagle_worker.py uses the existing set_embed_and_head (from DeepseekV2ForCausalLM)
           # instead of calling the non-existent set_embed.
-          # This leverages existing sglang source logic without adding new methods.
-          python -c "
-path = '${sglang_pkg_path}/sglang/srt/models/deepseek_nextn.py'
-content = open(path).read()
-old = 'self.logits_processor = LogitsProcessor(config)'
-new = 'self.logits_processor = LogitsProcessor(config)\n        self.load_lm_head_from_target = True'
-content = content.replace(old, new)
-open(path, 'w').write(content)
-print('Added load_lm_head_from_target=True to DeepseekV3ForCausalLMNextN')
-"
+          python -c "f=open('${sglang_pkg_path}/sglang/srt/models/deepseek_nextn.py');c=f.read();f.close();c=c.replace('self.logits_processor = LogitsProcessor(config)','self.logits_processor = LogitsProcessor(config)\n        self.load_lm_head_from_target = True');f=open('${sglang_pkg_path}/sglang/srt/models/deepseek_nextn.py','w');f.write(c);f.close();print('Added load_lm_head_from_target=True')"
 
           current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
