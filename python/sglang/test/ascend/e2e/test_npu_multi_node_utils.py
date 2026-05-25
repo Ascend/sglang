@@ -732,6 +732,7 @@ def wait_for_prefill_decode_exit(
     while time.time() - start_time < timeout:
         configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
         if not configmap or not configmap.data:
+            logger.info(f"ConfigMap data is not available yet, waiting for 15s...")
             time.sleep(poll_interval)
             continue
 
