@@ -18,9 +18,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="nightly-8-npu-a3", nightly=True)
 
 
-class TestNPUDsv32TPMTP(
-    CustomTestCase, GSM8KMixin, SpecDecodingMixin
-):
+class TestNPUDsv32TPMTP(CustomTestCase, GSM8KMixin, SpecDecodingMixin):
     """Test DeepSeek-V3.2 with EAGLE speculative decoding on NPU (TP=8).
 
     [Test Category] E2E Speculative Decoding
