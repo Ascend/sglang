@@ -2,7 +2,7 @@ import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, check_role
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     BENCHSERVING,
     DEEPSEEK_V32_W8A8_MODEL_PATH,
@@ -10,7 +10,6 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     logger,
     run_bench_serving,
 )
-from sglang.test.ascend.test_ascend_utils import run_command
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
@@ -19,8 +18,6 @@ register_npu_ci(
     nightly=True,
     disabled="performance testcase",
 )
-
-TTFT_FILE = "./cpnomttp_ttft.txt"
 
 MODEL_CONFIG_NOCPNOMTP = {
     "model_path": DEEPSEEK_V32_W8A8_MODEL_PATH,
@@ -123,11 +120,11 @@ MODEL_CONFIG_NOCPNOMTP = {
 MODEL_CONFIG_CPNOMTTP = {
     **MODEL_CONFIG_NOCPNOMTP,
     "prefill_args": MODEL_CONFIG_NOCPNOMTP["prefill_args"]
-    + [
-        "--enable-nsa-prefill-context-parallel",
-        "--nsa-prefill-cp-mode",
-        "in-seq-split",
-    ],
+                    + [
+                        "--enable-nsa-prefill-context-parallel",
+                        "--nsa-prefill-cp-mode",
+                        "in-seq-split",
+                    ],
 }
 
 
@@ -165,6 +162,34 @@ def _run_benchmark(test_case):
     return metrics
 
 
+# ===== Global shared context (valid within a single Python process) =====
+class BenchmarkContext:
+    """
+    Shared context for passing benchmark results
+    between multiple TestCase classes running in the same process.
+    """
+
+    def __init__(self):
+        # TTFT (Time To First Token) when CP is enabled
+        self.cp_enabled_ttft = None
+
+    def ensure_cp_enabled_ttft(self):
+        """
+        Ensure that the CP-enabled TTFT has been recorded.
+
+        This must be called after the CP-enabled benchmark test has run.
+        """
+        if self.cp_enabled_ttft is None:
+            raise RuntimeError(
+                "cp_enabled_ttft is not set. "
+                "Did TestDeepSeekV32W8A8PdSepCpNoMtpFunctional run first?"
+            )
+
+
+# Singleton instance shared by all test classes
+benchmark_ctx = BenchmarkContext()
+
+
 class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(
     TestAscendPerfMultiNodePdSepTestCaseBase
 ):
@@ -184,23 +209,24 @@ class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(
     output_len = 1024
     random_range_ratio = 1
     output_token_throughput = 0
+    ttft = 0
 
+    @check_role(allowed_roles=["router"])
     def test_long_context_inference_with_cp_enabled(self):
         """Verify 64K long-context inference runs correctly with CP enabled and MTP disabled."""
         metrics = _run_benchmark(self)
-        if self.output_token_throughput:
-            self.assertGreater(
-                float(metrics["total_tps"]),
-                self.output_token_throughput,
-            )
 
-        if self.ttft:
-            self.assertGreater(
-                float(metrics["mean_ttft"]),
-                self.ttft,
-            )
-            run_command(f"rm -f {TTFT_FILE}")
-            run_command(f"echo {metrics['mean_ttft']} > {TTFT_FILE}")
+        self.assertGreater(float(metrics["total_tps"]), self.output_token_throughput)
+
+        mean_ttft = float(metrics["mean_ttft"])
+        self.assertGreater(mean_ttft, self.ttft)
+
+        # Store TTFT in shared context
+        benchmark_ctx.cp_enabled_ttft = mean_ttft
+        logger.info(
+            "Stored cp_enabled_ttft into benchmark_ctx: %.3f",
+            benchmark_ctx.cp_enabled_ttft,
+        )
 
 
 class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
@@ -222,38 +248,31 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
     output_len = 1024
     random_range_ratio = 1
     ttft = 0
-    metrics_nocpnomtp = None
 
-    @classmethod
-    def tearDownClass(cls):
-        if cls.process:
-            try:
-                kill_process_tree(cls.process.pid)
-            except Exception as e:
-                logger.error(f"Error during tearDown: {e}")
-            finally:
-                if os.path.exists(TTFT_FILE):
-                    os.remove(TTFT_FILE)
-
-    def test_baseline_ttft_without_cp(self):
-        """Collect TTFT baseline with CP disabled and MTP disabled."""
-        self.metrics_nocpnomtp = _run_benchmark(self)
-        if self.ttft:
-            self.assertGreater(
-                float(self.metrics_nocpnomtp["mean_ttft"]),
-                self.ttft,
-            )
-
+    @check_role(allowed_roles=["router"])
     def test_ttft_reduced_with_cp_enabled(self):
         """Verify TTFT is reduced when CP is enabled compared to No-CP."""
-        if not hasattr(self, "metrics_nocpnomtp") or self.metrics_nocpnomtp is None:
-            raise RuntimeError("test_throughput must be run before test_compare_ttft")
+        benchmark_ctx.ensure_cp_enabled_ttft()
 
-        if not os.path.exists(TTFT_FILE):
-            raise FileNotFoundError(f"TTFT file not found: {TTFT_FILE}")
+        metrics_no_cp = _run_benchmark(self)
+        ttft_no_cp = float(metrics_no_cp["mean_ttft"])
 
-        metrics_cpnomttp_ttft = float(run_command(f"cat {TTFT_FILE}"))
-        self.assertGreater(self.metrics_nocpnomtp["mean_ttft"], metrics_cpnomttp_ttft)
+        self.assertGreater(ttft_no_cp, self.ttft)
+
+        self.assertGreater(
+            ttft_no_cp,
+            benchmark_ctx.cp_enabled_ttft,
+            msg=(
+                f"TTFT should be lower with CP enabled: "
+                f"no_cp={ttft_no_cp}, cp={benchmark_ctx.cp_enabled_ttft}"
+            ),
+        )
+
+        logger.info(
+            "TTFT comparison: no_cp=%.3f, cp=%.3f",
+            ttft_no_cp,
+            benchmark_ctx.cp_enabled_ttft,
+        )
 
 
 if __name__ == "__main__":
@@ -262,9 +281,6 @@ if __name__ == "__main__":
         TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(
             "test_long_context_inference_with_cp_enabled"
         )
-    )
-    suite.addTest(
-        TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_baseline_ttft_without_cp")
     )
     suite.addTest(
         TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare("test_ttft_reduced_with_cp_enabled")

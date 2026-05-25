@@ -15,12 +15,17 @@ from sglang.test.ascend.e2e.gen_dataset_fixed_len import (
     save_jsonl,
 )
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    ACTIVE_TEST_CLASS,
+    CONFIGMAP_NAME,
+    NAMESPACE,
     SERVICE_PORT,
     check_role,
     launch_pd_mix_node,
     launch_pd_separation_node,
     launch_router,
+    query_configmap,
     wait_server_ready,
+    wait_for_prefill_decode_exit,
 )
 from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
@@ -1024,6 +1029,7 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
     @classmethod
     @check_role(allowed_roles=["router"])
     def start_router_server(cls):
+        wait_for_prefill_decode_exit(key=ACTIVE_TEST_CLASS, value=cls.__name__)
         logger.info(f"Starting router in thread...")
         sglang_thread = threading.Thread(target=launch_router, args=(cls.model_config,))
         sglang_thread.daemon = True
@@ -1048,6 +1054,13 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
         # Loop to check if the process is still running
         while True:
             if cls.process.poll() is None:
+                configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+                if configmap and configmap.data:
+                    router_exec_completed = configmap.data.get(ACTIVE_TEST_CLASS)
+                    if router_exec_completed and router_exec_completed != cls.__name__:
+                        logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+                        logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
+                        return
                 # Process is still running
                 time.sleep(30)
             else:
