@@ -206,9 +206,9 @@ jobs:
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms.py
             test_type: 'perf'
-          - name: test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms_prefix
+          - name: test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms_prefix.py
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
           - name: test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms
             runner: linux-aarch64-a3-16
@@ -218,9 +218,9 @@ jobs:
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms.py
             test_type: 'perf'
-          - name: test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix
+          - name: test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms_prefix.py
+            test_case: test/registered/ascend/performance/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms.py
             test_type: 'perf'
 
           # ========== Kimi 8p Performance ==========
