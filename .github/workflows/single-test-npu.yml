@@ -75,8 +75,19 @@ jobs:
           # Install additional dependencies
           pip install tabulate
 
-          # Apply runtime monkey-patch for missing set_embed/get_embed on DeepseekV2ForCausalLM
-          python -c "import base64,sys;exec(base64.b64decode(sys.argv[1]))" "ZnJvbSBzZ2xhbmcuc3J0Lm1vZGVscy5kZWVwc2Vla192MiBpbXBvcnQgRGVlcHNlZWtWMkZvckNhdXNhbExNCmltcG9ydCB0b3JjaAoKZGVmIF9zZXRfZW1iZWQoc2VsZiwgZW1iZWQpOgogICAgZGVsIHNlbGYubW9kZWwuZW1iZWRfdG9rZW5zLndlaWdodAogICAgc2VsZi5tb2RlbC5lbWJlZF90b2tlbnMud2VpZ2h0ID0gZW1iZWQKICAgIHRvcmNoLmN1ZGEuZW1wdHlfY2FjaGUoKQogICAgdG9yY2guY3VkYS5zeW5jaHJvbml6ZSgpCgpkZWYgX2dldF9lbWJlZChzZWxmKToKICAgIHJldHVybiBzZWxmLm1vZGVsLmVtYmVkX3Rva2Vucy53ZWlnaHQKCkRlZXBzZWVrVjJGb3JDYXVzYWxMTS5zZXRfZW1iZWQgPSBfc2V0X2VtYmVkCkRlZXBzZWVrVjJGb3JDYXVzYWxMTS5nZXRfZW1iZWQgPSBfZ2V0X2VtYmVkCnByaW50KCdBcHBsaWVkIG1vbmtleS1wYXRjaCBmb3Igc2V0X2VtYmVkL2dldF9lbWJlZCBvbiBEZWVwc2Vla1YyRm9yQ2F1c2FsTE0nKQo="
+          # Enable load_lm_head_from_target on DeepseekV3ForCausalLMNextN so that
+          # eagle_worker.py uses the existing set_embed_and_head (from DeepseekV2ForCausalLM)
+          # instead of calling the non-existent set_embed.
+          # This leverages existing sglang source logic without adding new methods.
+          python -c "
+path = '${sglang_pkg_path}/sglang/srt/models/deepseek_nextn.py'
+content = open(path).read()
+old = 'self.logits_processor = LogitsProcessor(config)'
+new = 'self.logits_processor = LogitsProcessor(config)\n        self.load_lm_head_from_target = True'
+content = content.replace(old, new)
+open(path, 'w').write(content)
+print('Added load_lm_head_from_target=True to DeepseekV3ForCausalLMNextN')
+"
 
           current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
