@@ -425,15 +425,15 @@ jobs:
             test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in64k_out1k_90.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-            prefill_size: 1
-            decode_size: 1
+            prefill_size: 2
+            decode_size: 4
             router_size: 1
           - name: test_npu_glm5_1_w4a8_1p1d_48p_in128k_out1k_90
             test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in128k_out1k_90.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
             prefill_size: 2
-            decode_size: 2
+            decode_size: 4
             router_size: 1
 
           # ========== MiniMax PD (5 nodes: 2+2+1) ==========
