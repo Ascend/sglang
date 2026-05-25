@@ -331,7 +331,7 @@ jobs:
     if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'multi') }}
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 1
       matrix:
         test_config:
           # ========== GLM PD Mix (2 nodes) ==========
