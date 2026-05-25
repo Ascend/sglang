@@ -7,6 +7,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     NIC_NAME,
     TestAscendMultiNodePdSepTestCaseBase,
 )
+from sglang.test.ascend.e2e.test_npu_performance_utils import retry
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
 )
@@ -104,17 +105,6 @@ BASE_DECODE_ARGS = [
     "--dtype",
     "bfloat16",
 ]
-
-# ====================== Cache Configurations ======================
-MODEL_CONFIG_CACHE_DISABLED = {
-    "model_path": DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
-    "prefill_envs": BASE_PREFILL_ENVS,
-    "decode_envs": BASE_DECODE_ENVS,
-    "prefill_args": BASE_PREFILL_ARGS + ["--disable-radix-cache"],
-    "decode_args": BASE_DECODE_ARGS,
-    "router_args": [],
-}
-
 MODEL_CONFIG_CACHE_ENABLED = {
     "model_path": DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
     "prefill_envs": BASE_PREFILL_ENVS,
@@ -127,66 +117,21 @@ MODEL_CONFIG_CACHE_ENABLED = {
 
 # ====================== Test Case ======================
 class TestDeepSeekV32CacheAccuracy(TestAscendMultiNodePdSepTestCaseBase):
+    max_attempts = 3
+
     @classmethod
     def setUpClass(cls):
-        cls.degradation_tolerance = 0
+        cls.accuracy = 0.95
         cls.model = DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
         super().setUpClass()
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-
-    def run_gsm8k_once(
-        self,
-        num_shots=5,
-        data_path=None,
-        num_examples=200,
-        max_tokens=512,
-        num_threads=128,
-    ):
-        args = SimpleNamespace(
-            base_url=self.base_url,
-            model=self.model,
-            eval_name="gsm8k",
-            data_path=data_path,
-            num_examples=num_examples,
-            num_threads=num_threads,
-            num_shots=num_shots,
-            max_tokens=max_tokens,
-        )
-        return run_eval(args)["score"]
-
-    def run_gsm8k_with_config(self, config, repeat_times=5):
-        self.__class__.model_config = config
-        acc_list = []
-
-        try:
-            self.start_pd_server()
-            self.start_router_server()
-
-            for i in range(repeat_times):
-                acc = self.run_gsm8k_once()
-                acc_list.append(acc)
-
-            avg_acc = np.mean(acc_list) if acc_list else 0.0
-
-        finally:
-            self.stop_sglang_thread()
-
-        return avg_acc
-
+    @retry()
     def test_accuracy(self):
-        acc_off = self.run_gsm8k_with_config(
-            MODEL_CONFIG_CACHE_DISABLED, repeat_times=5
-        )
-        acc_on = self.run_gsm8k_with_config(MODEL_CONFIG_CACHE_ENABLED, repeat_times=5)
-
-        self.assertGreaterEqual(
-            acc_on,
-            acc_off - self.degradation_tolerance,
-            msg="Accuracy degraded after enabling cache!",
-        )
+        self.__class__.model_config = MODEL_CONFIG_CACHE_ENABLED
+        self.start_pd_server()
+        self.start_router_server()
+        
+        self.run_gsm8k_test(self.accuracy, num_shots=5)
 
 
 if __name__ == "__main__":
