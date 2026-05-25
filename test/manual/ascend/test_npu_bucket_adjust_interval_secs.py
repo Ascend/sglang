@@ -189,27 +189,12 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
         {"value": "abc", "should_succeed": False, "description": "非法值: 纯字母字符串"},
         {"value": "@#$", "should_succeed": False, "description": "非法值: 特殊字符"},
     ]
-    benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    initial_value = test_cases[0]["value"]
-    model_config = create_model_config_with_param(initial_value)
-    dataset_name = "random"
-    request_rate = 1
-    max_concurrency = 1
-    num_prompts = 1
-    input_len = 32
-    output_len = 1
-    random_range_ratio = 1
-
-    # 等待router启动的超时时间（秒）
-    router_startup_timeout = 60
-    # 检查间隔
-    check_interval = 5
 
     @classmethod
     def setUpClass(cls):
         cls.degradation_tolerance = 0
         cls.model = DEEPSEEK_R1_W8A8_MODEL_PATH
+        cls.config = MODEL_CONFIG_BASE.copy()
         super().setUpClass()
 
     @classmethod
@@ -249,7 +234,6 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
             # 忽略清理异常，可能进程已提前退出
             pass
 
-    @check_role(allowed_roles=["router"])
     def test_bucket_adjust_interval_secs_validation(self):
         """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
         print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
@@ -258,6 +242,19 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
         # self.assert_result(self.test_cases[0]["value"], self.is_router_server_running(), self.test_cases[0]["should_succeed"])
         # self.kill_process_if_alive()
         # time.sleep(5)  # 等待完全停止
+        try:
+            self.start_pd_server()
+
+            for test_case in self.test_cases:
+                self.print_test_case_info(test_case)
+
+                value = test_case["value"]
+                should_succeed = test_case["should_succeed"]
+
+                self.__class__.model_config = create_model_config_with_param(value)
+
+        finally:
+            self.stop_sglang_thread()
 
         # 依次测试每个参数值
         for test_case in self.test_cases:
