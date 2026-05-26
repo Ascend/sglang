@@ -130,7 +130,7 @@ class TestDeepSeekV32W8A8CpDpNoMtpFunctional(TestAscendPerfMultiNodePdSepTestCas
     output_token_throughput = 0
 
     def test_long_context_inference_with_cp_dp_enabled(self):
-        """Verify 64K long-context inference runs correctly with CP and DP enabled, MTP disabled."""
+        """Verify 64K long-context inference runs correctly with CP and DP enabled, MTP disabled"""
         self.run_throughput()
 
 
