@@ -53,7 +53,7 @@ MODEL_CONFIG = {
         "--max-prefill-tokens",
         68000,
         "--max-running-requests",
-        1,
+        2,
         "--moe-a2a-backend",
         "deepep",
         "--deepep-mode",
