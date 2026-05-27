@@ -30,6 +30,7 @@ MODEL_CONFIG_NOCPNOMTP = {
         "TASK_QUEUE_ENABLE": "2",
         "HCCL_SOCKET_IFNAME": NIC_NAME,
         "GLOO_SOCKET_IFNAME": NIC_NAME,
+        "TRANSFORMERS_VERBOSITY": "error",
     },
     "decode_envs": {
         "SGLANG_SET_CPU_AFFINITY": "1",
@@ -41,6 +42,7 @@ MODEL_CONFIG_NOCPNOMTP = {
         "GLOO_SOCKET_IFNAME": NIC_NAME,
         "HCCL_BUFFSIZE": "400",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "8",
+        "TRANSFORMERS_VERBOSITY": "error",
     },
     "router_envs": {},
     "prefill_args": [
