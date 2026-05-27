@@ -231,7 +231,7 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
 
     [Test Category] Functional
     [Test Target] CP reduces TTFT
-    --enable-nsa-prefill-context-parallel; --nsa-prefill-cp-mode
+    --enable-nsa-prefill-context-parallel;  --nsa-prefill-cp-mode
     """
 
     model_config = MODEL_CONFIG_CPNOMTTP
