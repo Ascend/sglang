@@ -101,8 +101,8 @@ jobs:
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
-          - name: test_npu_cp_vs_nocp_ttft
-            test_case: test/registered/ascend/temp/test_npu_cp_vs_nocp_ttft.py
+          - name: test_npu_cp_vs_nocp_ttft_bak
+            test_case: test/registered/ascend/temp/test_npu_cp_vs_nocp_ttft_bak.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
             prefill_size: 2
