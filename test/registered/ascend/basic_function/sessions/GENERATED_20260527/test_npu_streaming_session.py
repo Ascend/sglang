@@ -36,7 +36,6 @@ class TestNPUStreamingSession(unittest.TestCase, StreamingSessionKitMixin):
 
     @classmethod
     def setUpClass(cls):
-        from sglang.srt.utils import kill_process_tree
         from sglang.srt.utils.hf_transformers_utils import get_tokenizer
         from sglang.test.test_utils import (
             DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -89,7 +88,6 @@ class TestNPUStreamingSessionAbortLeakRepro(unittest.TestCase, AbortLeakReproKit
 
     @classmethod
     def setUpClass(cls):
-        from sglang.srt.utils import kill_process_tree
         from sglang.srt.utils.hf_transformers_utils import get_tokenizer
         from sglang.test.test_utils import (
             DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
