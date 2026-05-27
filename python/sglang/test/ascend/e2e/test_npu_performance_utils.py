@@ -1032,8 +1032,17 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
         if cls.process:
             try:
                 kill_process_tree(cls.process.pid)
+                for _ in range(60):
+                    if cls.process.poll() is not None:
+                        logger.info("Process fully exited")
+                        break
+                    time.sleep(1)
+                else:
+                    logger.warning("Process did NOT exit in time")
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
+
+        logger.info("tearDownClass finished")
 
     @classmethod
     @check_role(allowed_roles=["router"])
@@ -1065,8 +1074,8 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
             if cls.process.poll() is None:
                 configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
                 if configmap and configmap.data:
-                    router_exec_completed = configmap.data.get(ACTIVE_TEST_CLASS)
-                    if router_exec_completed and router_exec_completed != cls.__name__:
+                    executing_class = configmap.data.get(ACTIVE_TEST_CLASS)
+                    if executing_class and executing_class != cls.__name__:
                         logger.info(f"Retrieved ConfigMap data: {configmap.data}")
                         logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
                         return
