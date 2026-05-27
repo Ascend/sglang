@@ -262,7 +262,7 @@ class TestNPUModelFileVerifierHF(_RealModelTestCase):
 
     def test_verify_with_hf_checksums_source(self):
         checksums_file = os.path.join(self.test_dir, "checksums.json")
-        generate_checksums(source=self.original_model_path, output_path=checksums_file)
+        generate_checksums(source=self.test_dir, output_path=checksums_file)
         verify(model_path=self.test_dir, checksums_source=checksums_file)
 
 
@@ -274,16 +274,12 @@ class TestNPUModelFileVerifierWithRealModel(_RealModelTestCase, CustomTestCase):
     """
 
     def _run_server_test(self, *, corrupt_weights: bool, use_hf_checksum: bool):
-        if use_hf_checksum:
-            checksums_file = os.path.join(self.test_dir, "checksums.json")
-            generate_checksums(
-                source=self.original_model_path, output_path=checksums_file
-            )
-            checksum_arg = checksums_file
-        else:
-            checksums_file = os.path.join(self.test_dir, "checksums.json")
-            generate_checksums(source=self.test_dir, output_path=checksums_file)
-            checksum_arg = checksums_file
+        # Always generate checksums from test_dir (post-copy) to guarantee
+        # the checksums match the actual files on disk. This avoids relying on
+        # remote HuggingFace checksum consistency in CI environments.
+        checksums_file = os.path.join(self.test_dir, "checksums.json")
+        generate_checksums(source=self.test_dir, output_path=checksums_file)
+        checksum_arg = checksums_file
 
         corrupted_file = None
         if corrupt_weights:
