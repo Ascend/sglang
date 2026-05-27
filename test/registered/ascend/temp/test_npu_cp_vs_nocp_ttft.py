@@ -72,8 +72,6 @@ MODEL_CONFIG_NOCPNOMTP = {
         "--disable-cuda-graph",
         "--moe-dense-tp-size",
         1,
-        "--attn-cp-size",
-        32,
     ],
     "decode_args": [
         "--nnodes",
