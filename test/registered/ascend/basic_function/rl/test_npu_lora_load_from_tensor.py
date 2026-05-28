@@ -27,9 +27,9 @@ class TestNPULoRALoadFromTensor(CustomTestCase):
     [Test Target] Engine.load_lora_adapter_from_tensors
     """
 
-    def test_lora_e2e_load_from_tensor_params(self):
-        """Test basic LoRA loading from tensor and inference."""
-        engine = sgl.Engine(
+    def setUp(self):
+        """Set up test instance with Engine."""
+        self.engine = sgl.Engine(
             model_path=MODEL_PATH,
             trust_remote_code=True,
             enable_lora=True,
@@ -39,49 +39,53 @@ class TestNPULoRALoadFromTensor(CustomTestCase):
             log_level="error",
         )
 
-        try:
-            # Load LoRA from local path
-            lora_tensors = load_file(
-                os.path.join(LORA_PATH, "adapter_model.safetensors")
-            )
-            with open(os.path.join(LORA_PATH, "adapter_config.json"), "r") as f:
-                lora_config_dict = json.load(f)
+        # Load LoRA from local path
+        self.lora_tensors = load_file(
+            os.path.join(LORA_PATH, "adapter_model.safetensors")
+        )
+        with open(os.path.join(LORA_PATH, "adapter_config.json"), "r") as f:
+            self.lora_config_dict = json.load(f)
 
-            result = engine.load_lora_adapter_from_tensors(
-                lora_name="tool_calling_lora",
-                tensors=lora_tensors,
-                config_dict=lora_config_dict,
-            )
-            self.assertTrue(
-                result.success,
-                f"Failed to load LoRA from tensors: {result.error_message}",
-            )
+    def tearDown(self):
+        """Clean up test instance."""
+        if hasattr(self, "engine"):
+            self.engine.shutdown()
 
-            output_without_lora = engine.generate(
-                prompt=[TEST_PROMPT],
-                sampling_params={
-                    "max_new_tokens": MAX_NEW_TOKENS,
-                    "temperature": 0.0,
-                },
-            )
+    def test_lora_e2e_load_from_tensor_params(self):
+        """Test basic LoRA loading from tensor and inference."""
+        result = self.engine.load_lora_adapter_from_tensors(
+            lora_name="tool_calling_lora",
+            tensors=self.lora_tensors,
+            config_dict=self.lora_config_dict,
+        )
+        self.assertTrue(
+            result.success,
+            f"Failed to load LoRA from tensors: {result.error_message}",
+        )
 
-            output_lora = engine.generate(
-                prompt=[TEST_PROMPT],
-                sampling_params={
-                    "max_new_tokens": MAX_NEW_TOKENS,
-                    "temperature": 0.0,
-                },
-                lora_path=["tool_calling_lora"],
-            )
+        output_without_lora = self.engine.generate(
+            prompt=[TEST_PROMPT],
+            sampling_params={
+                "max_new_tokens": MAX_NEW_TOKENS,
+                "temperature": 0.0,
+            },
+        )
 
-            # Verify LoRA produces different output than base model
-            self.assertNotEqual(
-                output_without_lora[0]["text"],
-                output_lora[0]["text"],
-                "LoRA should produce different output than base model",
-            )
-        finally:
-            engine.shutdown()
+        output_lora = self.engine.generate(
+            prompt=[TEST_PROMPT],
+            sampling_params={
+                "max_new_tokens": MAX_NEW_TOKENS,
+                "temperature": 0.0,
+            },
+            lora_path=["tool_calling_lora"],
+        )
+
+        # Verify LoRA produces different output than base model
+        self.assertNotEqual(
+            output_without_lora[0]["text"],
+            output_lora[0]["text"],
+            "LoRA should produce different output than base model",
+        )
 
 
 if __name__ == "__main__":
