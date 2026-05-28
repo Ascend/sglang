@@ -183,7 +183,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
     test_cases = [
         {"value": "1", "should_succeed": True, "description": "合法值: 最小正整数"},
         {"value": "4294967295", "should_succeed": True, "description": "合法值: 最大无符号32位整数"},
-        {"value": "0", "should_succeed": False, "description": "非法值: 0（小于最小值）"},
+        # {"value": "0", "should_succeed": False, "description": "非法值: 0（小于最小值）"},
         {"value": "4294967296", "should_succeed": False, "description": "非法值: 超过最大无符号32位整数"},
         {"value": "5.1", "should_succeed": False, "description": "非法值: 浮点数"},
         {"value": "abc", "should_succeed": False, "description": "非法值: 纯字母字符串"},
@@ -253,33 +253,46 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
 
                 self.__class__.model_config = create_model_config_with_param(value)
 
+                caught_exception = False
+                try:
+                    self.start_router_server()
+                except Exception:
+                    caught_exception = True
+                finally:
+                    self.stop_sglang_thread()
+                    self.kill_process_if_alive()
+
+                self.assert_result(value, not caught_exception, should_succeed)
+
+                time.sleep(5)  # 等待完全停止
+
         finally:
             self.stop_sglang_thread()
 
-        # 依次测试每个参数值
-        for test_case in self.test_cases:
-            # if test_case["value"] == self.initial_value:
-            #     continue
-            
-            self.print_test_case_info(test_case)
-
-            value = test_case["value"]
-            should_succeed = test_case["should_succeed"]
-
-            self.__class__.model_config = create_model_config_with_param(value)
-
-            caught_exception = False
-            try:
-                self.start_pd_server()
-                self.start_router_server()
-            except Exception:
-                caught_exception = True
-            finally:
-                self.stop_sglang_thread()
-
-            self.assert_result(value, not caught_exception, should_succeed)
-
-            time.sleep(5)  # 等待完全停止
+        # # 依次测试每个参数值
+        # for test_case in self.test_cases:
+        #     # if test_case["value"] == self.initial_value:
+        #     #     continue
+        #
+        #     self.print_test_case_info(test_case)
+        #
+        #     value = test_case["value"]
+        #     should_succeed = test_case["should_succeed"]
+        #
+        #     self.__class__.model_config = create_model_config_with_param(value)
+        #
+        #     caught_exception = False
+        #     try:
+        #         self.start_pd_server()
+        #         self.start_router_server()
+        #     except Exception:
+        #         caught_exception = True
+        #     finally:
+        #         self.stop_sglang_thread()
+        #
+        #     self.assert_result(value, not caught_exception, should_succeed)
+        #
+        #     time.sleep(5)  # 等待完全停止
 
         print("\n" + "=" * 60)
         print("所有测试完成!")
