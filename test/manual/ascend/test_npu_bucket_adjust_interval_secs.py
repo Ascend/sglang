@@ -3,16 +3,13 @@ import time
 import unittest
 from time import sleep
 
-# import logger
-
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, check_role, TestAscendMultiNodePdSepTestCaseBase
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    TestAscendMultiNodePdSepTestCaseBase,
+)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    AISBENCHMARK_DATASET_DEFAULT,
-    BENCHMARK_TOOL_DEFAULT,
     DEEPSEEK_R1_W8A8_MODEL_PATH,
     ROUND_ROBIN,
-    TestAscendPerfMultiNodePdSepTestCaseBase,
 )
 
 # ConfigMap相关配置

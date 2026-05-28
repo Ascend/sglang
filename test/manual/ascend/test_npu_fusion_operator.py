@@ -2,14 +2,18 @@ import unittest
 
 import numpy as np
 
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, check_role, TestAscendMultiNodePdSepTestCaseBase
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    NIC_NAME,
+    TestAscendMultiNodePdSepTestCaseBase,
+    check_role,
+)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
     QWEN3_235B_A22B_EAGLE_MODEL_PATH,
     QWEN3_235B_W8A8_MODEL_PATH,
-    TestAscendPerfMultiNodePdSepTestCaseBase,
-    run_aisbench, SHAREGPT_DATASET_TEST_FILE,
+    SHAREGPT_DATASET_TEST_FILE,
+    run_aisbench,
 )
 from sglang.test.test_utils import DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
