@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: test large max_new_tokens and HTTP2 server on NPU
+# test round 2: retrigger CI after fixing timeout issue in test_npu_large_max_new_tokens
 
 on:
   pull_request:
