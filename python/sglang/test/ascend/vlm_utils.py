@@ -1,13 +1,10 @@
+import glob
+import json
 import os
-import warnings
-from types import SimpleNamespace
+import subprocess
 
 from sglang.srt.utils import kill_process_tree
-<<<<<<< HEAD
-from sglang.test.run_eval import run_eval
-=======
 from sglang.test.ascend.test_ascend_utils import write_results_to_github_step_summary
->>>>>>> 505f37a63dbcf376ee122592295d027bfa2e6094
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -46,13 +43,6 @@ class TestVLMModels(CustomTestCase):
         os.environ["OPENAI_API_KEY"] = cls.api_key
         os.environ["OPENAI_API_BASE"] = f"{cls.base_url}/v1"
 
-<<<<<<< HEAD
-    def _run_vlm_mmmu_test(self, test_name="", custom_env=None):
-        warnings.filterwarnings(
-            "ignore", category=ResourceWarning, message="unclosed.*socket"
-        )
-        process = None
-=======
         os.environ["TRANSFORMERS_VERBOSITY"] = os.getenv(
             "TRANSFORMERS_VERBOSITY", "error"
         )
@@ -141,13 +131,19 @@ class TestVLMModels(CustomTestCase):
         process = None
         server_output = ""
         mmmu_accuracy = None
->>>>>>> 505f37a63dbcf376ee122592295d027bfa2e6094
 
         try:
             # Prepare environment variables
             process_env = os.environ.copy()
             if custom_env:
                 process_env.update(custom_env)
+
+            # Prepare stdout/stderr redirection if needed
+            stdout_file = None
+            stderr_file = None
+            if capture_output:
+                stdout_file = open("/tmp/server_stdout.log", "w")
+                stderr_file = open("/tmp/server_stderr.log", "w")
 
             process = popen_launch_server(
                 self.model,
@@ -156,36 +152,29 @@ class TestVLMModels(CustomTestCase):
                 api_key=self.api_key,
                 other_args=self.other_args,
                 env=process_env,
+                return_stdout_stderr=(
+                    (stdout_file, stderr_file) if capture_output else None
+                ),
             )
 
-<<<<<<< HEAD
-            args = SimpleNamespace(
-                base_url=self.base_url,
-                model=self.model,
-                eval_name="mmmu",
-                num_examples=100,
-                num_threads=64,
-                max_tokens=30,
-            )
-=======
             model_metrics["server"] = subprocess.list2cmdline(process.args)
 
             # Run evaluation
             model_metrics["client"] = self.run_mmmu_eval(self.model, output_path, limit)
->>>>>>> 505f37a63dbcf376ee122592295d027bfa2e6094
 
-            args.return_latency = True
+            # Get the result file
+            result_file_path = glob.glob(f"{output_path}/*.json")[0]
 
-            metrics, latency = run_eval(args)
+            with open(result_file_path, "r") as f:
+                result = json.load(f)
+                print(f"Result{test_name}\n: {result}")
 
-            metrics["score"] = round(metrics["score"], 4)
-            metrics["latency"] = round(latency, 4)
+            # Process the result
+            mmmu_accuracy = result["results"]["mmmu_val"]["mmmu_acc,none"]
             print(
-                f"{'=' * 42}\n{self.model} - metrics={metrics} score={metrics['score']}\n{'=' * 42}\n"
+                f"Model {self.model} achieved accuracy{test_name}: {mmmu_accuracy:.4f}"
             )
 
-<<<<<<< HEAD
-=======
             # Capture server output if requested
             if capture_output and process:
                 server_output = self._read_output_from_files()
@@ -193,12 +182,13 @@ class TestVLMModels(CustomTestCase):
             model_metrics["accuracy"] = mmmu_accuracy
 
             # Assert performance meets expected threshold
->>>>>>> 505f37a63dbcf376ee122592295d027bfa2e6094
             self.assertGreaterEqual(
-                metrics["score"],
+                mmmu_accuracy,
                 self.mmmu_accuracy,
-                f"Model {self.model} accuracy ({metrics['score']}) below expected threshold ({self.mmmu_accuracy:.4f}){test_name}",
+                f"Model {self.model} accuracy ({mmmu_accuracy:.4f}) below expected threshold ({self.mmmu_accuracy:.4f}){test_name}",
             )
+
+            return server_output
 
         except Exception as e:
             model_metrics["error"] = e
@@ -214,3 +204,34 @@ class TestVLMModels(CustomTestCase):
                     kill_process_tree(process.pid)
                 except Exception as e:
                     print(f"Error killing process: {e}")
+
+            # clean up temporary files
+            if capture_output:
+                if stdout_file:
+                    stdout_file.close()
+                if stderr_file:
+                    stderr_file.close()
+                for filename in ["/tmp/server_stdout.log", "/tmp/server_stderr.log"]:
+                    try:
+                        if os.path.exists(filename):
+                            os.remove(filename)
+                    except Exception as e:
+                        print(f"Error removing {filename}: {e}")
+
+    def _read_output_from_files(self):
+        output_lines = []
+
+        log_files = [
+            ("/tmp/server_stdout.log", "[STDOUT]"),
+            ("/tmp/server_stderr.log", "[STDERR]"),
+        ]
+        for filename, tag in log_files:
+            try:
+                if os.path.exists(filename):
+                    with open(filename, "r") as f:
+                        for line in f:
+                            output_lines.append(f"{tag} {line.rstrip()}")
+            except Exception as e:
+                print(f"Error reading {tag.lower()} file: {e}")
+
+        return "\n".join(output_lines)

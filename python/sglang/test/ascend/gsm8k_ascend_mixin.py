@@ -42,7 +42,6 @@ class GSM8KAscendMixin(ABC):
         "SGLANG_ENBLE_TORCH_COMILE": "1",
         "AUTO_USE_UC_MEMORY": "0",
         "P2P_HCCL_BUFFSIZE": "20",
-        "TRANSFORMERS_VERBOSITY": os.getenv("TRANSFORMERS_VERBOSITY", "error"),
     }
 
     @classmethod
@@ -78,21 +77,22 @@ class GSM8KAscendMixin(ABC):
 
         try:
             args = SimpleNamespace(
+                max_tokens=512,
+                base_url=self.base_url,
+                model=self.model,
+                eval_name="gsm8k",
+                api="completion",
+                num_examples=200,
+                num_threads=128,
                 num_shots=self.gsm8k_num_shots,
-                data_path=None,
-                num_questions=self.num_questions,
-                max_new_tokens=512,
-                parallel=128,
-                host="http://127.0.0.1",
-                port=int(self.base_url.split(":")[-1]),
             )
             metrics = run_eval(args)
             model_metrics["accuracy"] = metrics["accuracy"]
             model_metrics["output_throughput"] = metrics["output_throughput"]
             self.assertGreaterEqual(
-                metrics["accuracy"],
+                metrics["score"],
                 accuracy_threshold,
-                f'Accuracy of {self.model} is {str(metrics["accuracy"])}, is lower than {accuracy_threshold}',
+                f'Accuracy of {self.model} is {str(metrics["score"])}, is lower than {accuracy_threshold}',
             )
             self.assertGreaterEqual(
                 metrics["output_throughput"],

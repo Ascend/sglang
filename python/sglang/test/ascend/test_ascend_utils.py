@@ -622,7 +622,6 @@ def run_bench_serving(
     return res
 
 
-<<<<<<< HEAD
 # hook factory
 def create_attention_monitor_hook_factory(config):
     """
@@ -892,7 +891,6 @@ def send_concurrent_requests(
         t.join()
 
     return results
-=======
 HEADER = """
 ### Models
 | Model | Server | Client | Output Throughput | Expected Output Throughput | Latency | Expected Latency | Accuracy | Expected Accuracy | Status |
@@ -934,4 +932,3 @@ def write_github_step_summary_once(summary: str):
         return
     write_github_step_summary_once.has_written = True
     write_github_step_summary(summary)
->>>>>>> 505f37a63dbcf376ee122592295d027bfa2e6094
