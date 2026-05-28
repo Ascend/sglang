@@ -32,7 +32,7 @@ class TestLlavaOneVision(TestVLMModels):
         "--enable-multimodal",
         "--disable-fast-image-processor",
     ]
-    num_threads = 16
+    num_threads = 2
 
     def test_vlm_mmmu_benchmark(self):
         self._run_vlm_mmmu_test()
