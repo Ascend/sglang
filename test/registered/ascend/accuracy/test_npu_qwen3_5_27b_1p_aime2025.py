@@ -45,7 +45,7 @@ QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    600000,
+    60000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
@@ -53,7 +53,7 @@ QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS = [
     "--max-mamba-cache-size",
     60,
     "--mem-fraction-static",
-    0.8,
+    0.7,
     "--cuda-graph-bs",
     2,
     8,
@@ -91,7 +91,7 @@ class TestNPUQwen3_5_27B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     output_len = 81920
-    max_concurrency = 4
+    max_concurrency = 8
     generation_kwargs = "dict(temperature=1.0)"
 
     def test_npu_qwen3_5_27b_1p_in3k5_out1k5_high_aime2025(self):

@@ -41,7 +41,7 @@ QWEN3_6_27B_1P_ACC_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    600000,
+    60000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
@@ -49,7 +49,7 @@ QWEN3_6_27B_1P_ACC_OTHER_ARGS = [
     "--max-mamba-cache-size",
     64,
     "--mem-fraction-static",
-    0.8,
+    0.7,
     "--cuda-graph-bs",
     2,
     8,
@@ -88,7 +88,7 @@ class TestNPUQwen3_6_27B_1P_GPQA(TestAscendAccuracyTestCaseBase):
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     output_len = 81920
-    max_concurrency = 4
+    max_concurrency = 8
     generation_kwargs = "dict(temperature=1.0)"
 
     def test_npu_qwen3_6_27b_1p_gpqa(self):
