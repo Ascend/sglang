@@ -36,7 +36,7 @@ class TestMoreRunnerBackendTriton(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                "0.5",
+                "0.8",
                 "--tp-size",
                 "2",
                 "--ep",
@@ -55,7 +55,7 @@ class TestMoreRunnerBackendTriton(CustomTestCase):
                 # "--moe-runner-backend",
                 # cls.moe_runner_backend,
                 "--base-gpu-id",
-                "2",
+                "0"
             ],
             env={
                 "SGLANG_NPUDISABLE_ACL_FORMAT_WEIGHT": "1",

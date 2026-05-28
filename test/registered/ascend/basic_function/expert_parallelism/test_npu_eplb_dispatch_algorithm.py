@@ -21,7 +21,6 @@ class TestEPLBDispatchAlgorithmStatic(CustomTestCase):
     [Test Category] Parameter
     [Test Target] --ep-dispatch-algorithm, --moe-a2a-backend
     """
-
     model = DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
     ep_dispatch_algorithm = "static"
 
@@ -37,9 +36,9 @@ class TestEPLBDispatchAlgorithmStatic(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                "0.5",
+                "0.8",
                 "--tp-size",
-                "8",
+                "2",
                 "--expert-parallel-size",
                 "2",
                 "--enable-eplb",
@@ -47,6 +46,7 @@ class TestEPLBDispatchAlgorithmStatic(CustomTestCase):
                 "4",
                 "--ep-dispatch-algorithm",
                 cls.ep_dispatch_algorithm,
+
             ],
             env={
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",

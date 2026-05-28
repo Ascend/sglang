@@ -5,10 +5,8 @@ import unittest
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
-    run_command,
-)
+from sglang.test.ascend.test_ascend_utils import run_command
+from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -43,7 +41,7 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                "0.5",
+                "0.8",
                 "--tp-size",
                 "2",
                 "--expert-parallel-size",
@@ -57,8 +55,6 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
                 "4",
                 "--expert-distribution-recorder-mode",
                 cls.expert_distribution_recorder_mode,
-                "--base-gpu-id",
-                "12",
             ],
             env={
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
@@ -113,9 +109,7 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
         )
 
 
-class TestExpertDistributionRecorderModeStatApprox(
-    TestExpertDistributionRecorderModeStatic
-):
+class TestExpertDistributionRecorderModeStatApprox(TestExpertDistributionRecorderModeStatic):
     expert_distribution_recorder_mode = "stat_approx"
 
 
