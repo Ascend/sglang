@@ -94,6 +94,7 @@ class TestDeepepLowlatencyDeepseekR1(CustomTestCase):
                 "SGLANG_NPU_USE_MLAPO": "1",
                 "SGLANG_ENABLE_SPEC_V2": "1",
                 "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+                "TRANSFORMERS_VERBOSITY": "error",
                 **os.environ,
             },
         )
@@ -129,6 +130,7 @@ class TestDeepepLowlatencyDeepseekR1(CustomTestCase):
             num_threads=300,
             num_shots=5,
             max_tokens=512,
+            api="completion",
         )
         # Execute GSM8K evaluation and get metrics
         metrics = run_eval(args)

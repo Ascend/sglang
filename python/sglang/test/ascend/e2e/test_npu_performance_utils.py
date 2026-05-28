@@ -86,6 +86,11 @@ QWEN3_5_27B_W8A8_MODEL_PATH = (
 QWEN3_30B_A3B_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-Instruct-2507"
 )
+QWEN3_6_35B_A3B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-35B-A3B"
+QWEN3_6_27B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-27B"
+QWEN3_6_27B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.6-27B-w8a8"
+)
 QWEN3_30B_A3B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-w8a8"
 )
@@ -106,6 +111,9 @@ QWEN3_235B_W8A8_MODEL_PATH = (
 )
 QWEN3_235B_A22B_EAGLE_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Qwen/Qwen3-235B-A22B-Eagle3"
+)
+QWEN3_235B_A22B_INSTRUCT_2507_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/zcgy26/Qwen3-235B-A22B-Instruct-2507-w8a8"
 )
 QWEN3_480B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Qwen3-Coder-480B-A35B-Instruct-w8a8-QuaRot"
@@ -141,7 +149,7 @@ MINIMAX_M2_5_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
 )
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-eagel-model-0318"
+    "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )
 
 QWEN3_5_397B_W8A8_MODEL_PATH = (

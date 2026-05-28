@@ -13,9 +13,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="nightly-16-npu-a3",
     nightly=True,
-    disabled="accuracy testcase",
 )
 
 MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS = {
@@ -91,7 +90,7 @@ class TestNPUMiniMaxM2_5_W8A8_8P_GPQA(TestAscendAccuracyTestCaseBase):
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
     other_args = MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS
     envs = MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS
-    accuracy = 80
+    accuracy = 85.2
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     max_concurrency = 64
