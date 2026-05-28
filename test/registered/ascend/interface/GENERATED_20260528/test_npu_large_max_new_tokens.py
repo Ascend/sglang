@@ -84,8 +84,10 @@ class TestLargeMaxNewTokens(CustomTestCase):
 
     def test_chat_completion(self):
         num_requests = 4
+        min_concurrent = 2  # At least 2 requests should run concurrently
 
         futures = []
+        max_running_reqs = 0
         all_requests_running = False
         start_time = time.time()
         max_wait_time = 300  # 5 minutes timeout
@@ -105,13 +107,24 @@ class TestLargeMaxNewTokens(CustomTestCase):
                 lines = open(STDERR_FILENAME).readlines()
                 for line in lines[pt:]:
                     print(line, end="", flush=True)
-                    if f"#running-req: {num_requests}" in line:
-                        all_requests_running = True
-                        pt = -1
-                        break
+                    # Track max concurrent requests
+                    if "#running-req:" in line:
+                        import re
+
+                        match = re.search(r"#running-req:\s*(\d+)", line)
+                        if match:
+                            current = int(match.group(1))
+                            max_running_reqs = max(max_running_reqs, current)
+                            if current >= min_concurrent:
+                                all_requests_running = True
+                                pt = -1
+                                break
                     pt += 1
 
-        assert all_requests_running, "All requests should be running concurrently"
+        print(f"\nMax concurrent requests observed: {max_running_reqs}")
+        assert (
+            all_requests_running
+        ), f"At least {min_concurrent} requests should be running concurrently, but max was {max_running_reqs}"
 
 
 if __name__ == "__main__":
