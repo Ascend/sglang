@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: LoRA eviction and update test cases (new PR)
+# test round 5: Sessions test cases
 
 on:
   pull_request:
@@ -40,8 +40,9 @@ jobs:
 
           # Test cases
           test_cases=(
-            "test/registered/ascend/basic_function/lora/generated_tests_20260521/test_npu_lora_eviction.py"
-            "test/registered/ascend/basic_function/lora/generated_tests_20260521/test_npu_lora_update.py"
+            "test/registered/ascend/basic_function/sessions/GENERATED_20260527/test_npu_session_control.py"
+            "test/registered/ascend/basic_function/sessions/GENERATED_20260527/test_npu_session_latency.py"
+            "test/registered/ascend/basic_function/sessions/GENERATED_20260527/test_npu_streaming_session.py"
           )
 
           for test_case in "${test_cases[@]}"; do
