@@ -188,7 +188,7 @@ benchmark_ctx = BenchmarkContext()
 class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(
     TestAscendPerfMultiNodePdSepTestCaseBase
 ):
-    """Verify long-context inference works correctly with CP enabled and MTP disabled
+    """Verify long-context inference  works correctly with CP enabled and MTP disabled
 
     [Test Category] Functional
     [Test Target] Long-Context Inference Correctness (CP enabled, No MTP)
