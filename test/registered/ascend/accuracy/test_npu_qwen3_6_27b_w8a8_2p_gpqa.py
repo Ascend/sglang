@@ -90,7 +90,7 @@ class TestNPUQwen3_6_27B_2P_GPQA(TestAscendAccuracyTestCaseBase):
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     output_len = 81920
     max_concurrency = 8
-    generation_kwargs = "dict(temperature=1.0)"
+    generation_kwargs = "dict(temperature=0.7, top_p=0.95, seed=None, repetition_penalty=1.0)"
 
     def test_npu_qwen3_6_27b_2p_gpqa(self):
         """Run NPU accuracy test for Qwen3.6-27B-W8A8 on GPQA"""
