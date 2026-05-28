@@ -161,7 +161,7 @@ def _run_benchmark(test_case):
 class BenchmarkContext:
     """
     Shared context for passing benchmark results
-    between multiple TestCase classes running in the same process.
+    between multiple TestCase  classes running in the same process.
     """
 
     def __init__(self):
