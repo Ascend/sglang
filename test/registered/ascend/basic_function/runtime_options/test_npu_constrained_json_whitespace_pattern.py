@@ -22,7 +22,7 @@ class TestJSONModeMixin:
     """Mixin class containing JSON mode test methods"""
 
     def test_json_mode_response(self):
-        """Test that response_format json_object (also known as "JSON mode") produces valid JSON even when JSON is not mentioned in the system prompt."""
+        """Test that response_format json_object (also known as "JSON mode") produces valid JSON even when JSON is not mentioned in the system promp t."""
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
