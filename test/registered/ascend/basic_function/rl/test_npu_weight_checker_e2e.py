@@ -1,9 +1,10 @@
+import pickle
 import unittest
 
 import requests
 import torch
 
-from sglang.srt.utils import MultiprocessingSerializer, kill_process_tree
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -55,12 +56,12 @@ class TestNPUWeightCheckerE2E(CustomTestCase):
         )
 
     def _update_weights(self, named_tensors):
+        # Use pickle instead of MultiprocessingSerializer to avoid auth issues on NPU
+        serialized = pickle.dumps(named_tensors).hex()
         return requests.post(
             f"{self.url}/update_weights_from_tensor",
             json={
-                "serialized_named_tensors": [
-                    MultiprocessingSerializer.serialize(named_tensors, output_str=True)
-                ],
+                "serialized_named_tensors": [serialized],
                 "flush_cache": True,
             },
             timeout=120,
