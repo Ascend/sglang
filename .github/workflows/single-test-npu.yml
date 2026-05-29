@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: prefill-only tests - add score_api test
+# test round 6: prefill-only tests - all four test cases
 
 on:
   pull_request:
@@ -44,6 +44,9 @@ jobs:
 
           # Test cases - prefill-only tests
           test_cases=(
+            "test/registered/ascend/basic_function/prefill_only/test_npu_gte_embedding.py"
+            "test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states.py"
+            "test/registered/ascend/basic_function/prefill_only/test_npu_score_engine.py"
             "test/registered/ascend/basic_function/prefill_only/test_npu_score_api.py"
           )
 
