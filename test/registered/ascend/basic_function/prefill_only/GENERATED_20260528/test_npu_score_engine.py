@@ -14,9 +14,7 @@ from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=85, suite="nightly-2-npu-a3", nightly=True)
 
-_CAUSAL_LM_MODEL = os.environ.get(
-    "TEST_MODEL_NAME", LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-)
+_CAUSAL_LM_MODEL = os.environ.get("TEST_MODEL_NAME", LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH)
 _SEQCLS_MODEL = os.environ.get(
     "TEST_CLASSIFICATION_BASE_MODEL", QWEN3_0_6B_WEIGHTS_PATH
 )
