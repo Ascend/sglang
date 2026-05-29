@@ -170,7 +170,7 @@ class BenchmarkContext:
 
     def ensure_cp_enabled_ttft(self):
         """
-        Ensure that the CP-enabled TTFT has been recorded.
+        Ensure that the  CP-enabled TTFT has been recorded.
 
         This must be called after the CP-enabled benchmark test has run.
         """
