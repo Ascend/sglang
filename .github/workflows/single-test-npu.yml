@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: NPU models test - fixed tearDownClass process cleanup
+# test round 4: NPU models test - fix end of files lint
 
 on:
   pull_request:
