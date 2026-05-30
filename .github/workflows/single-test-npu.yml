@@ -483,7 +483,7 @@ jobs:
 
   multi-node-mix-tests:
     name: multi-node-mix-poc
-    needs: [ set-image-config ]
+    needs: [ set-image-config, multi-node-tests ]
     if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'multi') }}
     strategy:
       fail-fast: false
