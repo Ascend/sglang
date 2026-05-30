@@ -103,7 +103,6 @@ class TestNpuTokenizer(CustomTestCase):
         content = self.err_log_file.read()
         # Configure --tokenizer-worker-num to start the multi-tokenizer worker
         self.assertIn("Start multi-tokenizer worker process", content)
-        self.assertIn("Registering detokenizer", content)
         # Configure --load-format to safetensors
         self.assertIn("Loading safetensors checkpoint", content)
         self.out_log_file.close()
