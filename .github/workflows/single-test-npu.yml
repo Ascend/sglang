@@ -526,26 +526,25 @@ jobs:
 #            exit 1
 #          fi
 #          echo "✅ All selected scope jobs passed"
-          
+
 
   check-all-jobs:
-  needs:
-    - set-image-config
+    needs:
+      - set-image-config
 #    - single-node-tests
-    - multi-node-tests
-    - multi-node-mix-tests
-  runs-on: ubuntu-latest
-  if: ${{ always() }}
-  steps:
-    - name: Check job status
-      run: |
-        FAILED=0
-        echo "=== Check non-skipped jobs ==="
-        ${{ contains(needs.*.result, 'failure') }} && FAILED=1
-        ${{ contains(needs.*.result, 'cancelled') }} && FAILED=1
-        if [ $FAILED -eq 1 ]; then
-          echo "❌ Some jobs failed or cancelled"
-          exit 1
-        fi
-        echo "✅ All selected scope jobs passed"
-
+      - multi-node-tests
+      - multi-node-mix-tests
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Check job status
+        run: |
+          FAILED=0
+          echo "=== Check non-skipped jobs ==="
+          ${{ contains(needs.*.result, 'failure') }} && FAILED=1
+          ${{ contains(needs.*.result, 'cancelled') }} && FAILED=1
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ Some jobs failed or cancelled"
+            exit 1
+          fi
+          echo "✅ All selected scope jobs passed"
