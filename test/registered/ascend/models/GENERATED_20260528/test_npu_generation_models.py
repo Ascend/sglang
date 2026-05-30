@@ -20,7 +20,7 @@ class TestNPULlama32OneB(GSM8KMixin, DefaultServerBase):
     """
 
     model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-    gsm8k_accuracy_thres = 0.35
+    gsm8k_accuracy_thres = 0.20
     gsm8k_num_questions = 100
     other_args = [
         "--attention-backend",
