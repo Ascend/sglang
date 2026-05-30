@@ -83,12 +83,12 @@ class BaseTestNPURequestLogger:
         raise NotImplementedError
 
     def _wait_until_verified(
-            self,
-            verify_fn,
-            get_content_fn,
-            source_name: str,
-            timeout: float = 10.0,
-            interval: float = 0.1,
+        self,
+        verify_fn,
+        get_content_fn,
+        source_name: str,
+        timeout: float = 10.0,
+        interval: float = 0.1,
     ):
         deadline = time.time() + timeout
         last_error = None
