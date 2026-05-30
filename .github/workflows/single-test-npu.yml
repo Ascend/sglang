@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: NPU models test - fix end of files lint
+# test round 5: NPU models test - fix VLM CUDA IPC issue
 
 on:
   pull_request:
