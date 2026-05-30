@@ -28,7 +28,7 @@ class TestNPUPPAccuracy(CustomTestCase):
     """Test pipeline parallelism accuracy on NPU.
 
     [Test Category] Distributed
-    [Test Target] Pipeline parallelism (PP=2)
+    [Test Target] Pipeline parallelism (PP=2, TP=1)
     """
 
     @classmethod
@@ -42,7 +42,7 @@ class TestNPUPPAccuracy(CustomTestCase):
             "npu",
             "--disable-cuda-graph",
             "--tp-size",
-            "2",
+            "1",
             "--pp-size",
             "2",
             "--chunked-prefill-size",
@@ -103,7 +103,7 @@ class TestNPUPPMixedChunk(CustomTestCase):
     """Test pipeline parallelism with mixed chunk on NPU.
 
     [Test Category] Distributed
-    [Test Target] PP with mixed chunk prefill
+    [Test Target] PP with mixed chunk prefill (PP=2, TP=1)
     """
 
     @classmethod
@@ -117,7 +117,7 @@ class TestNPUPPMixedChunk(CustomTestCase):
             "npu",
             "--disable-cuda-graph",
             "--tp-size",
-            "2",
+            "1",
             "--pp-size",
             "2",
             "--enable-mixed-chunk",

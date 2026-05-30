@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: Distributed tests - data parallelism and pipeline parallelism (DP attention skipped due to NPU kernel limitation)
+# test round 4: Distributed tests - data parallelism and pipeline parallelism (fixed PP config for 2 NPU devices)
 
 on:
   pull_request:
