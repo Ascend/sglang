@@ -26,6 +26,10 @@ jobs:
         run: |
           npu-smi info
 
+      - name: Install granian
+        run: |
+          pip install granian || echo "Warning: granian installation failed"
+
       - name: Run test
         timeout-minutes: 120
         env:
