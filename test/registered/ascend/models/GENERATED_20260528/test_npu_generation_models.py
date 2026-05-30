@@ -1,5 +1,6 @@
 import unittest
 
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
     QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH,
@@ -30,6 +31,10 @@ class TestNPULlama32OneB(GSM8KMixin, DefaultServerBase):
         "0.7",
     ]
 
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+
 
 class TestNPUQwen3EightB(GSM8KMixin, DefaultServerBase):
     """Test Qwen3-8B generation model on NPU.
@@ -50,6 +55,10 @@ class TestNPUQwen3EightB(GSM8KMixin, DefaultServerBase):
         "--trust-remote-code",
     ]
 
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+
 
 class TestNPUQwen25SevenB(GSM8KMixin, DefaultServerBase):
     """Test Qwen2.5-7B-Instruct generation model on NPU.
@@ -68,6 +77,10 @@ class TestNPUQwen25SevenB(GSM8KMixin, DefaultServerBase):
         "--mem-fraction-static",
         "0.7",
     ]
+
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
 
 
 if __name__ == "__main__":
