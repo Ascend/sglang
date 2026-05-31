@@ -253,8 +253,7 @@ class TestNPUBalance(TestAscendPerfMultiNodePdSepTestCaseBase):
 
             # 计算差值
             handled_request = {
-                key: requests_after[key] - requests_before[key]
-                for key in after_keys
+                key: requests_after[key] - requests_before[key] for key in after_keys
             }
         else:
             handled_request = requests_after
@@ -284,7 +283,7 @@ class TestNPUBalance(TestAscendPerfMultiNodePdSepTestCaseBase):
 
         try:
             assert (
-                    max_deviation_abs <= tolerance_abs
+                max_deviation_abs <= tolerance_abs
             ), f"P节点负载不均衡，最大绝对偏差{max_deviation_abs:.1f}请求超过容忍阈值{tolerance_abs}请求"
             print(
                 f"  - ✓ 断言通过：P节点负载均衡（最大绝对偏差{max_deviation_abs:.1f}请求 ≤ 容忍阈值{tolerance_abs}请求）"
@@ -294,7 +293,9 @@ class TestNPUBalance(TestAscendPerfMultiNodePdSepTestCaseBase):
             if unbalanced_workers:
                 print("    不均衡节点详情:")
                 for worker, req_count, deviation_abs in unbalanced_workers:
-                    print(f"      - {worker}: {req_count:.0f} 请求, 绝对偏差: {deviation_abs:.1f} 请求")
+                    print(
+                        f"      - {worker}: {req_count:.0f} 请求, 绝对偏差: {deviation_abs:.1f} 请求"
+                    )
             raise
 
     def test_throughput_with_prefill_stats(self):
