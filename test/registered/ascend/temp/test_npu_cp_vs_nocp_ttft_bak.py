@@ -227,7 +227,7 @@ class TestDeepSeekV32W8A8PdSepCpNoMtpFunctional(
 class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
     TestAscendPerfMultiNodePdSepTestCaseBase
 ):
-    """Verify CP reduces TTFT compared to No-CP configuration (MTP disabled)
+    """Verify CP reduces TTFT  compared to No-CP configuration (MTP disabled)
 
     [Test Category] Functional
     [Test Target] CP reduces TTFT
