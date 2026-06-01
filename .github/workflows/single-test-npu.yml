@@ -1,5 +1,5 @@
-﻿name: Single Test (NPU)
-# test round 1: <娴嬭瘯鐢ㄤ緥鎻忚堪>
+name: Single Test (NPU)
+# test round 2: LoRA 7 test cases from GENERATED_20260529
 
 on:
   pull_request:
@@ -38,9 +38,16 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 浣跨敤鏃舵浛鎹负瀹為檯鐨勬祴璇曠敤渚嬭矾寰?          test_cases=(
-            "<TEST_CASE_PATH>"
-          )
+          # Test cases - 使用时替换为实际的测试用例路径
+          test_cases=(
+    "test/registered/ascend/basic_function/lora/GENERATED_20260529/test_npu_embedding_lora_support.py"
+    "test/registered/ascend/basic_function/lora/GENERATED_20260529/test_npu_lora_drainer.py"
+    "test/registered/ascend/basic_function/lora/GENERATED_20260529/test_npu_lora_radix_cache.py"
+    "test/registered/ascend/basic_function/lora/GENERATED_20260529/test_npu_lora_tied_lm_head.py"
+    "test/registered/ascend/basic_function/lora/GENERATED_20260529/test_npu_lora_tp.py"
+    "test/registered/ascend/basic_function/lora/GENERATED_20260529/test_npu_lora_update.py"
+    "test/registered/ascend/basic_function/lora/GENERATED_20260529/test_npu_multi_lora_backend.py"
+)
 
           for test_case in "${test_cases[@]}"; do
             if [ ! -f "${sglang_source_path}/${test_case}" ]; then
