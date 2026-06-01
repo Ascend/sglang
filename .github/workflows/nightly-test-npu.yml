@@ -134,6 +134,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -209,6 +210,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -285,6 +287,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -361,6 +364,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -437,6 +441,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset

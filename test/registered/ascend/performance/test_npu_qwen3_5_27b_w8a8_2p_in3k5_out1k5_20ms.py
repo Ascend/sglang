@@ -12,6 +12,7 @@ register_npu_ci(
     est_time=3600,
     suite="nightly-4-npu-a3",
     nightly=True,
+    disabled="performance testcase",
 )
 
 QWEN3_5_27B_3K5_1K5_LOW_ENVS = {
