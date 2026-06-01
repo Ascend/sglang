@@ -60,7 +60,8 @@ class TestNPUEmbeddingLoRASupport(unittest.TestCase):
             text=["A", "B"], lora_path="adapter", lora_id="shared-id"
         )
         req.normalize_batch_and_arguments()
-        self.assertEqual(req.lora_id, ["shared-id", "shared-id"])
+        # lora_id is kept as the original string value
+        self.assertEqual(req.lora_id, "shared-id")
 
     def test_embedding_request_without_lora(self):
         req = EmbeddingReqInput(text=["Hello", "World"], lora_path=None)
