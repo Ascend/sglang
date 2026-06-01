@@ -1,5 +1,5 @@
-name: Single Test (NPU)
-# test round 3: LoRA 7 test cases from GENERATED_20260529
+﻿name: Single Test (NPU)
+# test round 4: LoRA 7 test cases from GENERATED_20260529 - fixed test expectation
 
 on:
   pull_request:
