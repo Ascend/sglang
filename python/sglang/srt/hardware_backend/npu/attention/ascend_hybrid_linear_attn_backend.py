@@ -205,7 +205,9 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
 
 
 class AscendMamba2AttnBackend(AscendMambaAttnBackendBase):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.conv_states_shape = [2048, 2]
 
 
 class AscendHybridLinearAttnBackend(HybridLinearAttnBackend):
