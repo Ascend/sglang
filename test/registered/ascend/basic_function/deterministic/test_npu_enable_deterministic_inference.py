@@ -74,8 +74,10 @@ class TestNpuDeterministicNoTp(CustomTestCase):
             "python3",
             "-m",
             "sglang.test.test_deterministic",
-            "--host", self.host,
-            "--port", str(self.port),
+            "--host",
+            self.host,
+            "--port",
+            str(self.port),
             *extra_args,
         ]
         logger.info(f"command={shlex.join(command)}")
@@ -117,11 +119,15 @@ class TestNpuDeterministicNoTp(CustomTestCase):
 
             output = self.run_deterministic(
                 [
-                    "--n-start", "1",
-                    "--n-trials", "50",
-                    "--test-mode", "prefix",
+                    "--n-start",
+                    "1",
+                    "--n-trials",
+                    "50",
+                    "--test-mode",
+                    "prefix",
                     "--return-logprob",
-                    "--temperature", t,
+                    "--temperature",
+                    t,
                 ],
                 [
                     "Unique samples: 1",
