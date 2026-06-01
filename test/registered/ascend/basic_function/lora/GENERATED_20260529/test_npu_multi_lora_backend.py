@@ -95,12 +95,14 @@ class TestNPUMultiLoRABackend(CustomTestCase):
         self.assertEqual(len(results), len(prompts))
 
     def test_multi_lora_with_none_adapter(self):
-        prompts = ["The capital of France is", "What is AI", "Explain neural networks"]
+        # Use only 2 prompts to stay within max-loaded-loras=2 limit
+        # None counts as a separate adapter, so [lora_a, None] = 2 adapters
+        prompts = ["The capital of France is", "What is AI"]
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
             json={
                 "text": prompts,
-                "lora_path": [self.lora_a, None, self.lora_b],
+                "lora_path": [self.lora_a, None],
                 "sampling_params": {"temperature": 0, "max_new_tokens": 32},
             },
         )
