@@ -48,8 +48,6 @@ class TestAscendDistTimeout(CustomTestCase):
             "--disable-cuda-graph",
             "--speculative-moe-a2a-backend",
             "ascend_fuseep",
-            "--speculative-algorithm",
-            "NEXTN",
             "--speculative-num-steps",
             1,
             "--speculative-eagle-topk",
