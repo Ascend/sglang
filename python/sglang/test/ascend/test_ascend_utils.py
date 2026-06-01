@@ -895,6 +895,49 @@ def send_concurrent_requests(
     return results
 
 
+HEADER = """
+### Models
+| Model | Server | Client | Output Throughput | Expected Output Throughput | Latency | Expected Latency | Accuracy | Expected Accuracy | Status |
+| ----- | ------ | ------ | -------- | ------------------ | ------- | ---------------- | -------- | --------- | ------ |
+"""
+
+
+def write_results_to_github_step_summary(results: dict):
+    if not is_in_ci():
+        return
+
+    write_github_step_summary_once(HEADER)
+
+    get_float = lambda metrics, item, precision: (
+        f"{metrics[item]:.{precision}f}"
+        if isinstance(metrics.get(item, "-"), (int, float))
+        else metrics.get(item, "-")
+    )
+
+    summary = ""
+    for model, metrics in results.items():
+        model = model.replace(MODEL_WEIGHTS_DIR, "").replace(HF_MODEL_WEIGHTS_DIR, "")
+        output_throughput = get_float(metrics, "output_throughput", 2)
+        output_throughput_threshold = metrics.get("output_throughput_threshold", "N/A")
+        accuracy = get_float(metrics, "accuracy", 4)
+        accuracy_threshold = metrics.get("accuracy_threshold", "N/A")
+        latency = get_float(metrics, "latency", 4)
+        latency_threshold = metrics.get("latency_threshold", "N/A")
+        server = metrics.get("server", "N/A")
+        client = metrics.get("client", "N/A")
+        error = metrics.get("error", "")
+        status = "✅" if error == "" else "❌ " + str(error)
+        summary += f"| {model} | {server} | {client} | {output_throughput} | {output_throughput_threshold} | {latency} | {latency_threshold} | {accuracy} | {accuracy_threshold} | {status} |\n"
+    write_github_step_summary(summary)
+
+
+def write_github_step_summary_once(summary: str):
+    if getattr(write_github_step_summary_once, "has_written", False):
+        return
+    write_github_step_summary_once.has_written = True
+    write_github_step_summary(summary)
+
+
 def popen_with_error_check(
     command: List[str],
     return_stdout_stderr: Optional[tuple],
@@ -967,44 +1010,3 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
-HEADER = """
-### Models
-| Model | Server | Client | Output Throughput | Expected Output Throughput | Latency | Expected Latency | Accuracy | Expected Accuracy | Status |
-| ----- | ------ | ------ | -------- | ------------------ | ------- | ---------------- | -------- | --------- | ------ |
-"""
-
-
-def write_results_to_github_step_summary(results: dict):
-    if not is_in_ci():
-        return
-
-    write_github_step_summary_once(HEADER)
-
-    get_float = lambda metrics, item, precision: (
-        f"{metrics[item]:.{precision}f}"
-        if isinstance(metrics.get(item, "-"), (int, float))
-        else metrics.get(item, "-")
-    )
-
-    summary = ""
-    for model, metrics in results.items():
-        model = model.replace(MODEL_WEIGHTS_DIR, "").replace(HF_MODEL_WEIGHTS_DIR, "")
-        output_throughput = get_float(metrics, "output_throughput", 2)
-        output_throughput_threshold = metrics.get("output_throughput_threshold", "N/A")
-        accuracy = get_float(metrics, "accuracy", 4)
-        accuracy_threshold = metrics.get("accuracy_threshold", "N/A")
-        latency = get_float(metrics, "latency", 4)
-        latency_threshold = metrics.get("latency_threshold", "N/A")
-        server = metrics.get("server", "N/A")
-        client = metrics.get("client", "N/A")
-        error = metrics.get("error", "")
-        status = "✅" if error == "" else "❌ " + str(error)
-        summary += f"| {model} | {server} | {client} | {output_throughput} | {output_throughput_threshold} | {latency} | {latency_threshold} | {accuracy} | {accuracy_threshold} | {status} |\n"
-    write_github_step_summary(summary)
-
-
-def write_github_step_summary_once(summary: str):
-    if getattr(write_github_step_summary_once, "has_written", False):
-        return
-    write_github_step_summary_once.has_written = True
-    write_github_step_summary(summary)
