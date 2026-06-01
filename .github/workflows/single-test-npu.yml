@@ -86,15 +86,23 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
-#  single-node-tests:
-#    name: single-node-poc
-#    needs: [ set-image-config ]
-#    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'single') }}
-#    strategy:
-#      fail-fast: false
-#      max-parallel: 3
-#      matrix:
-#        test_config:
+  single-node-tests:
+    name: single-node-poc
+    needs: [ set-image-config ]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'single') }}
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        test_config:
+          - name: test_ascend_qwen3_14b_w8a8_1p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/performance/qwen3_14b/test_ascend_qwen3_14b_w8a8_1p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+          - name: test_ascend_deepseek_r1_w4a8_8p_in2k_out2k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/deepseek_r1/test_ascend_deepseek_r1_w4a8_8p_in2k_out2k_50ms.py
+            test_type: 'perf'
 #          - name: test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms
 #            runner: linux-aarch64-a3-4
 #            test_case: test/registered/ascend/performance/test_npu_qwen3_6_27b_w8a8_2p_in64k_out1k_prefix90_50ms.py
@@ -319,15 +327,15 @@ jobs:
 #            test_case: test/registered/ascend/accuracy/test_npu_qwen3_5_397b_aime2025_8p.py
 #            test_type: 'accuracy'
 #
-#    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
-#    with:
-#      runner: ${{ matrix.test_config.runner }}
-#      test_type: ${{ matrix.test_config.test_type }}
-#      test_config_name: ${{ matrix.test_config.name }}
-#      test_case: ${{ matrix.test_config.test_case }}
-#      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260528'
-#      install_sglang_from_source: false
-#      transformers_version: ''
+    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
+    with:
+      runner: ${{ matrix.test_config.runner }}
+      test_type: ${{ matrix.test_config.test_type }}
+      test_config_name: ${{ matrix.test_config.name }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260528'
+      install_sglang_from_source: false
+      transformers_version: ''
 
   multi-node-tests:
     name: multi-node-poc
@@ -338,56 +346,63 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
+          - name: test_ascend_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/ascend/performance/deepseek_r1/test_ascend_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           # ========== GLM PD Separation ==========
-          - name: test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-          - name: test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 2
-            decode_size: 4
-            router_size: 1
-          - name: test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_20ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-          - name: test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-          - name: test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_50ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-          - name: test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 4
-            decode_size: 1
-            router_size: 1
-          - name: test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 2
-            decode_size: 1
-            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 4
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_20ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in64k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 4
+#            decode_size: 1
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in128k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 1
+#            router_size: 1
 #
 #          # ========== MiniMax PD (5 nodes: 2+2+1) ==========
 #          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms
@@ -397,75 +412,126 @@ jobs:
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
-#          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms
-#            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms.py
+#          - name: test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 4
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_20ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_20ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
-#
-#          # ========== Kimi PD (3 nodes: 1+1+1) ==========
-#          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_in64k_out1k5_100ms
-#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_16p_in64k_out1k5_100ms.py
+#          - name: test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms.py
 #            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_in128k_out1k_100ms
-#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_16p_in128k_out1k_100ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#          - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in128k_out1k_prefix90_100ms
-#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in128k_out1k_prefix90_100ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#          - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms
-#            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#
-#          # ========== Kimi PD Accuracy ==========
-#          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_gpqa
-#            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_1p1d_16p_gpqa.py
-#            test_type: 'accuracy'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_aime2025
-#            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_1p1d_16p_aime2025.py
-#            test_type: 'accuracy'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#
-#          # ========== MiniMax PD Accuracy ==========
-#          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_gpqa
-#            test_case: test/registered/ascend/accuracy/test_npu_minimax_m2_5_w8a8_1p1d_16p_gpqa.py
-#            test_type: 'accuracy'
 #            prefill_decode_deployment: 'separation'
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
-#          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_aime2025
-#            test_case: test/registered/ascend/accuracy/test_npu_minimax_m2_5_w8a8_1p1d_16p_aime2025.py
-#            test_type: 'accuracy'
+#          - name: test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_50ms.py
+#            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in64k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 4
+#            decode_size: 1
+#            router_size: 1
+#          - name: test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_1p1d_48p_in128k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 2
+#            decode_size: 1
+#            router_size: 1
+##
+##          # ========== MiniMax PD (5 nodes: 2+2+1) ==========
+##          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms
+##            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms.py
+##            test_type: 'perf'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 2
+##            decode_size: 2
+##            router_size: 1
+##          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms
+##            test_case: test/registered/ascend/performance/test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms.py
+##            test_type: 'perf'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 2
+##            decode_size: 2
+##            router_size: 1
+##
+##          # ========== Kimi PD (3 nodes: 1+1+1) ==========
+##          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_in64k_out1k5_100ms
+##            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_16p_in64k_out1k5_100ms.py
+##            test_type: 'perf'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 1
+##            decode_size: 1
+##            router_size: 1
+##          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_in128k_out1k_100ms
+##            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_16p_in128k_out1k_100ms.py
+##            test_type: 'perf'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 1
+##            decode_size: 1
+##            router_size: 1
+##          - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in128k_out1k_prefix90_100ms
+##            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in128k_out1k_prefix90_100ms.py
+##            test_type: 'perf'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 1
+##            decode_size: 1
+##            router_size: 1
+##          - name: test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms
+##            test_case: test/registered/ascend/performance/test_npu_kimi_k2_5_w4a8_1p1d_24p_in64k_out1k5_prefix90_100ms.py
+##            test_type: 'perf'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 1
+##            decode_size: 1
+##            router_size: 1
+##
+##          # ========== Kimi PD Accuracy ==========
+##          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_gpqa
+##            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_1p1d_16p_gpqa.py
+##            test_type: 'accuracy'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 1
+##            decode_size: 1
+##            router_size: 1
+##          - name: test_npu_kimi_k2_5_w4a8_1p1d_16p_aime2025
+##            test_case: test/registered/ascend/accuracy/test_npu_kimi_k2_5_w4a8_1p1d_16p_aime2025.py
+##            test_type: 'accuracy'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 1
+##            decode_size: 1
+##            router_size: 1
+##
+##          # ========== MiniMax PD Accuracy ==========
+##          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_gpqa
+##            test_case: test/registered/ascend/accuracy/test_npu_minimax_m2_5_w8a8_1p1d_16p_gpqa.py
+##            test_type: 'accuracy'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 2
+##            decode_size: 2
+##            router_size: 1
+##          - name: test_npu_minimax_m2_5_w8a8_1p1d_16p_aime2025
+##            test_case: test/registered/ascend/accuracy/test_npu_minimax_m2_5_w8a8_1p1d_16p_aime2025.py
+##            test_type: 'accuracy'
+##            prefill_decode_deployment: 'separation'
+##            prefill_size: 2
+##            decode_size: 2
+##            router_size: 1
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-aarch64-a3-0
@@ -481,31 +547,31 @@ jobs:
       transformers_version: ''
 
 
-  multi-node-mix-tests:
-    name: multi-node-mix-poc
-    needs: [ set-image-config, multi-node-tests ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'multi') }}
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        test_config:
-          # ========== GLM PD Mix (2 nodes) ==========
-          - name: test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms
-            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
-            node_size: 2
-
-    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
-    with:
-      runner: linux-aarch64-a3-0
-      test_type: 'perf'
-      test_config_name: ${{ matrix.test_config.name }}
-      node_size: ${{ matrix.test_config.node_size }}
-      test_case: ${{ matrix.test_config.test_case }}
-      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260528'
-      install_sglang_from_source: false
-      prefill_decode_deployment: 'mix'
-      transformers_version: ''
+#  multi-node-mix-tests:
+#    name: multi-node-mix-poc
+#    needs: [ set-image-config, multi-node-tests ]
+#    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'multi') }}
+#    strategy:
+#      fail-fast: false
+#      max-parallel: 1
+#      matrix:
+#        test_config:
+#          # ========== GLM PD Mix (2 nodes) ==========
+#          - name: test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms
+#            test_case: test/registered/ascend/performance/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
+#            node_size: 2
+#
+#    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
+#    with:
+#      runner: linux-aarch64-a3-0
+#      test_type: 'perf'
+#      test_config_name: ${{ matrix.test_config.name }}
+#      node_size: ${{ matrix.test_config.node_size }}
+#      test_case: ${{ matrix.test_config.test_case }}
+#      image: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260528'
+#      install_sglang_from_source: false
+#      prefill_decode_deployment: 'mix'
+#      transformers_version: ''
 
 #  check-all-jobs:
 #    needs:
@@ -531,9 +597,9 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-#    - single-node-tests
-      - multi-node-tests
-      - multi-node-mix-tests
+      - single-node-tests
+#      - multi-node-tests
+#      - multi-node-mix-tests
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:

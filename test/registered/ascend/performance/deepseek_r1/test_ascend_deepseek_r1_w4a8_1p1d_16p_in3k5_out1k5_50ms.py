@@ -98,7 +98,7 @@ MODEL_CONFIG = {
         "--dp-size",
         16,
         "--mem-fraction-static",
-        0.805,
+        0.89,
         "--max-running-requests",
         416,
         "--quantization",

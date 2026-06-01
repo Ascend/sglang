@@ -44,7 +44,7 @@ QWEN3_14B_OTHER_ARGS = [
     "modelslim",
     "--disable-radix-cache",
     "--mem-fraction-static",
-    0.89,
+    0.885,
     "--tp-size",
     1,
     "--dp-size",
