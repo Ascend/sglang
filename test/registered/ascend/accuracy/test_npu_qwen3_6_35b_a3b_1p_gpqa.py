@@ -5,7 +5,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestAscendAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    QWEN3_5_397B_W4A8_MODEL_PATH,
+    QWEN3_6_35B_A3B_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -16,7 +16,7 @@ register_npu_ci(
     disabled="accuracy testcase",
 )
 
-QWEN3_5_397B_W4A8_1P_HIGH_ENVS = {
+QWEN3_6_35B_A3B_1P_ACC_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -24,20 +24,16 @@ QWEN3_5_397B_W4A8_1P_HIGH_ENVS = {
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "ASCEND_USE_FIA": "1",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "1",
 }
 
-QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS = [
-    "--model-path",
-    QWEN3_5_397B_W4A8_MODEL_PATH,
+QWEN3_6_35B_A3B_1P_ACC_OTHER_ARGS = [
     "--tp-size",
-    16,
+    2,
     "--nnodes",
     1,
-    "--node-rank",
-    0,
     "--attention-backend",
     "ascend",
     "--device",
@@ -45,30 +41,24 @@ QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    60000,
-    "--max-total-tokens",
-    80000,
+    65536,
     "--disable-radix-cache",
     "--trust-remote-code",
+    "--enable-prefill-delayer",
     "--max-running-requests",
-    4,
+    16,
     "--max-mamba-cache-size",
-    60,
+    20,
     "--mem-fraction-static",
-    0.75,
+    0.65,
     "--cuda-graph-bs",
     2,
     4,
-    6,
     8,
+    12,
+    14,
     16,
-    "--moe-a2a-backend",
-    "ascend_fuseep",
-    "--deepep-mode",
-    "auto",
     "--enable-multimodal",
-    "--quantization",
-    "modelslim",
     "--mm-attention-backend",
     "ascend_attn",
     "--dtype",
@@ -83,29 +73,25 @@ QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
-    "--speculative-draft-model-quantization",
-    "unquant",
 ]
 
 
-class TestNPUQwen3_5_397B_W4A8_1P_In3k5_Out1k5_High_GPQA(
-    TestAscendAccuracyTestCaseBase
-):
-    """Test NPU accuracy for Qwen3.5-397B-W4A8 1p in3k5 out1k5 high throughput on GPQA"""
+class TestNPUQwen3_6_35B_A3B_1P_GPQA(TestAscendAccuracyTestCaseBase):
+    """Test NPU accuracy for Qwen3.6-35B-A3B 1p on GPQA"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    model = QWEN3_5_397B_W4A8_MODEL_PATH
-    other_args = QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS
-    envs = QWEN3_5_397B_W4A8_1P_HIGH_ENVS
-    accuracy = 88.4
+    model = QWEN3_6_35B_A3B_MODEL_PATH
+    other_args = QWEN3_6_35B_A3B_1P_ACC_OTHER_ARGS
+    envs = QWEN3_6_35B_A3B_1P_ACC_ENVS
+    accuracy = 86
     dataset_type = "gpqa"
     dataset_name = "gpqa_gen_0_shot_cot_chat_prompt"
     output_len = 65536
     max_concurrency = 64
     generation_kwargs = "dict(temperature=1.0)"
-    num_prompts = 448
 
-    def test_npu_qwen3_5_397b_w4a8_1p_in3k5_out1k5_high_gpqa(self):
+    def test_npu_qwen3_6_35b_a3b_1p_gpqa(self):
+        """Run NPU accuracy test for Qwen3.6-35B-A3B on GPQA"""
         self.run_accuracy()
 
 

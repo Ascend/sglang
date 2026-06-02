@@ -83,12 +83,12 @@ class TestNPUGLM5_1_W4A8_16P_AIME2025(TestAscendAccuracyMultiNodePdMixTestCaseBa
 
     model_config = GLM_5_1_TWO_NODE_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.8
+    accuracy = 95.3
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 64
     output_len = 65536
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
+    generation_kwargs = "dict(temperature=1.0)"
 
     def test_npu_glm5_1_w4a8_16p_aime2025(self):
         """Run NPU accuracy test for GLM-5.1-w4a8 two node on AIME 2025"""

@@ -188,7 +188,7 @@ class TestNPUMiniMaxM2_5_W8A8_1P1D_24P_AIME2025(
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 80
+    accuracy = 86.3
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
     max_concurrency = 64

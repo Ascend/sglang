@@ -87,12 +87,14 @@ class TestNPUQwen3_5_27B_1P_AIME2025(TestAscendAccuracyTestCaseBase):
     model = QWEN3_5_27B_W8A8_MODEL_PATH
     other_args = QWEN3_5_27B_3K5_1K5_HIGH_OTHER_ARGS
     envs = QWEN3_5_27B_3K5_1K5_HIGH_ENVS
-    accuracy = 0.1
+    accuracy = 92.6
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
-    output_len = 8192
-    max_concurrency = 1
-    num_prompts = 100000
+    output_len = 81920
+    max_concurrency = 8
+    generation_kwargs = (
+        "dict(temperature=0.7, top_p=0.95, seed=None, repetition_penalty=1.0)"
+    )
 
     def test_npu_qwen3_5_27b_1p_in3k5_out1k5_high_aime2025(self):
         """Run NPU accuracy test for Qwen3.5-27B-W8A8 on AIME2025"""
