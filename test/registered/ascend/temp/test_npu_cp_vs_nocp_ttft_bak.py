@@ -258,7 +258,7 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
             ttft_no_cp,
             benchmark_ctx.cp_enabled_ttft,
             msg=(
-                f"TTFT should be lower with CP enabled: "
+                f"TTFT should be lower with CP ena bled: "
                 f"no_cp={ttft_no_cp}, cp={benchmark_ctx.cp_enabled_ttft}"
             ),
         )
