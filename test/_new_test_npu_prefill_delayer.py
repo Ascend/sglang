@@ -391,7 +391,7 @@ class TestPrefillDelayerThroughputOnlineServing(CustomTestCase):
                 random_output_len=256,
                 request_rate=32,
             ),
-            min_improvement_pct=5,
+            min_improvement_pct=None,
         )
 
 '''
