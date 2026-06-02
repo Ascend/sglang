@@ -80,6 +80,7 @@ jobs:
         SGLANG_USE_MODELSCOPE: true
         HF_ENDPOINT: https://hf-mirror.com
         TRANSFORMERS_VERBOSITY: "error"
+        GDN_ATTN_BACKEND_TRITON: 1
     steps:
       - name: Install dependencies
         run: |
