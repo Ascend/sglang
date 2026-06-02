@@ -7,7 +7,7 @@ from sglang.test.test_utils import CustomTestCase, run_bench_serving, run_mmlu_t
 
 register_npu_ci(
     est_time=400,
-    suite="nightly-1-npu-a3",
+    suite="full-1-npu-a3",
     nightly=True,
 )
 

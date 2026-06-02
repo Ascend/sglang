@@ -19,7 +19,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 os.environ["SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN"] = "1"
 os.environ["SGLANG_ENABLE_OVERLAP_PLAN_SITEAM"] = "1"

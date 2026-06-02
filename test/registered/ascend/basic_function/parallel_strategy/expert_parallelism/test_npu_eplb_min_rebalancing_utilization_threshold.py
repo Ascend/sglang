@@ -13,7 +13,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 
 class TestEplbMinRebalancingUtilizationThresholdBase(CustomTestCase):

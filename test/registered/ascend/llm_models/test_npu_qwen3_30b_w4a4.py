@@ -6,7 +6,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="per-commit-2-npu-a2")
-register_npu_ci(est_time=400, suite="nightly-2-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
 
 class TestQwen317BGPTQInt8(GSM8KAscendMixin, CustomTestCase):

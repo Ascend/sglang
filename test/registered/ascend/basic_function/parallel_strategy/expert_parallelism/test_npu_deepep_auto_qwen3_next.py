@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(
     est_time=200,
-    suite="nightly-8-npu-a3",
+    suite="full-8-npu-a3",
     nightly=True,
 )
 
