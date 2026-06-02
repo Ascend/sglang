@@ -22,7 +22,6 @@ class TestAscendDeterministic(TestDeterministicBase):
             "--trust-remote-code",
             "--cuda-graph-max-bs",
             "32",
-            "--enable-deterministic-inference",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
