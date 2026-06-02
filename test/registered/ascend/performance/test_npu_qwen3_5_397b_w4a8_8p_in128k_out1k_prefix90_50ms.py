@@ -9,7 +9,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=1800,
+    est_time=3600,
     suite="nightly-16-npu-a3",
     nightly=True,
     disabled="performance testcase",
@@ -19,10 +19,9 @@ QWEN3_5_397B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "3000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
@@ -31,7 +30,7 @@ QWEN3_5_397B_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
-QWEN3_5_397B_3K5_OTHER_ARGS = [
+QWEN3_5_397B_128K_OTHER_ARGS = [
     "--attention-backend",
     "ascend",
     "--device",
@@ -43,21 +42,24 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--max-prefill-tokens",
     133120,
     "--max-total-tokens",
-    300000,
-    "--disable-radix-cache",
+    600000,
+    "--max-mamba-cache-size",
+    160,
     "--trust-remote-code",
     "--max-running-requests",
-    2,
+    8,
     "--mem-fraction-static",
-    0.75,
+    0.7,
     "--cuda-graph-bs",
     2,
     4,
     8,
-    16,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
+    "--dp-size",
+    2,
+    "--enable-dp-attention",
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -78,29 +80,32 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--mamba-scheduler-strategy",
+    "extra_buffer",
 ]
 
 
-class TestNPUQwen3_5_397B_128K_1k_20ms(TestAscendPerformanceTestCaseBase):
+class TestNPUQwen3_5_397B_128K(TestAscendPerformanceTestCaseBase):
     """Test NPU performance for Qwen3.5-397B-w4a8 16p in128k out1k"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W4A8_MODEL_PATH
-    other_args = QWEN3_5_397B_3K5_OTHER_ARGS
+    other_args = QWEN3_5_397B_128K_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 1
+    max_concurrency = 8
+    num_prompts = 8
+    aisbench_repeat_rate = 0.9
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
-    tpot = 20
+    tpot = 50
     aisbench_request_rate = 1
-    # output_token_throughput = 40.6
+    # output_token_throughput = 385.9
 
-    def test_npu_qwen3_5_397b_128K_1k_20ms(self):
-        """Run NPU performance test for Qwen3.5-397B in128k"""
+    def test_npu_qwen3_5_397b_128k(self):
+        """Run NPU performance test for Qwen3.5-397B in128k out1k"""
         self.run_throughput()
 
 

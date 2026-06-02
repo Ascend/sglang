@@ -54,7 +54,7 @@ QWEN3_14B_OTHER_ARGS = [
     "--max-running-requests",
     144,
     "--max-prefill-tokens",
-    12288,
+    10240,
     "--served-model-name",
     "Qwen3-14B",
     "--chunked-prefill-size",

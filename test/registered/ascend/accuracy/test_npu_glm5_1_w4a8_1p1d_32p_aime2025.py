@@ -181,12 +181,12 @@ class TestNPUGLM5_1_W4A8_1P1D_64P_AIME2025(
 
     model_config = GLM_5_1_PD_SEP_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.8
+    accuracy = 95.3
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
-    max_concurrency = 16
+    max_concurrency = 64
     output_len = 65536
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
+    generation_kwargs = "dict(temperature=1.0)"
 
     def test_npu_glm5_1_w4a8_1p1d_64p_aime2025(self):
         """Run NPU accuracy test for GLM-5.1-w4a8 1p1d_64p on AIME 2025"""

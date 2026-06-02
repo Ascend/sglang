@@ -147,12 +147,12 @@ class TestNPUKimiK2_5_W4A8_1P1D_16P_AIME2025(
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    accuracy = 0.8
+    accuracy = 96.1
     dataset_type = "aime2025"
     dataset_name = "aime2025_gen"
-    max_concurrency = 128
-    generation_kwargs = "dict(temperature=1.0, top_p=0.95)"
-    output_len = 256000
+    max_concurrency = 64
+    generation_kwargs = "dict(temperature=1.0)"
+    output_len = 65536
 
     def test_npu_kimi_k2_5_w4a8_1p1d_16p_aime2025(self):
         """Run NPU accuracy test for Kimi-K2.5-w4a8 1p1d_16p on AIME 2025"""

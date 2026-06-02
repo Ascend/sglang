@@ -9,29 +9,35 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=1800,
+    est_time=3600,
     suite="nightly-16-npu-a3",
     nightly=True,
     disabled="performance testcase",
 )
 
-QWEN3_5_397B_ENVS = {
+QWEN3_5_397B_A17B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "3000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "59648",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "ZBAL_ENABLE_GRAPH": "1",
 }
 
-QWEN3_5_397B_3K5_OTHER_ARGS = [
+QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS = [
     "--attention-backend",
     "ascend",
     "--device",
@@ -41,20 +47,32 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    133120,
+    17500,
     "--max-total-tokens",
-    300000,
+    280000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    2,
+    432,
     "--mem-fraction-static",
     0.75,
     "--cuda-graph-bs",
     2,
     4,
+    6,
     8,
+    12,
     16,
+    20,
+    24,
+    28,
+    32,
+    36,
+    40,
+    44,
+    48,
+    52,
+    56,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -68,6 +86,10 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "bfloat16",
     "--mamba-ssm-dtype",
     "bfloat16",
+    "--dp-size",
+    8,
+    "--enable-dp-attention",
+    "--enable-dp-lm-head",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -78,29 +100,31 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--enable-prefill-delayer",
+    "--prefill-delayer-max-delay-passes",
+    200,
 ]
 
 
-class TestNPUQwen3_5_397B_128K_1k_20ms(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Qwen3.5-397B-w4a8 16p in128k out1k"""
+class TestNPUQwen3_5_397B_A17B_3K5_1K5_50ms(TestAscendPerformanceTestCaseBase):
+    """Test NPU performance for Qwen3.5-397B-A17B 16p in3k5 out1k5 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W4A8_MODEL_PATH
-    other_args = QWEN3_5_397B_3K5_OTHER_ARGS
-    envs = QWEN3_5_397B_ENVS
+    other_args = QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS
+    envs = QWEN3_5_397B_A17B_ENVS
     dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 1
-    input_len = 131072
-    output_len = 1024
+    max_concurrency = 352
+    num_prompts = 352
+    input_len = 3500
+    output_len = 1500
     random_range_ratio = 1
-    tpot = 20
-    aisbench_request_rate = 1
-    # output_token_throughput = 40.6
+    tpot = 50
+    aisbench_request_rate = 176
 
-    def test_npu_qwen3_5_397b_128K_1k_20ms(self):
-        """Run NPU performance test for Qwen3.5-397B in128k"""
+    def test_npu_qwen3_5_397b_a17b_3k5_1k5(self):
+        """Run NPU performance test for Qwen3.5-397B-A17B in3k5 out1k5"""
         self.run_throughput()
 
 
