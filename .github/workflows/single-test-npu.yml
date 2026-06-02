@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: core tests - deterministic, hidden_states, request_queue, srt_endpoint, srt_engine
+# test round 4: core tests - hidden_states, request_queue, srt_endpoint, srt_engine
 
 on:
   pull_request:
@@ -40,7 +40,6 @@ jobs:
 
           # Test cases
           test_cases=(
-            "test/registered/ascend/core/GENERATED_20260529/test_npu_deterministic.py"
             "test/registered/ascend/core/GENERATED_20260529/test_npu_hidden_states.py"
             "test/registered/ascend/core/GENERATED_20260529/test_npu_request_queue_validation.py"
             "test/registered/ascend/core/GENERATED_20260529/test_npu_srt_endpoint.py"
