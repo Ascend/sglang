@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: core tests - deterministic, hidden_states, request_queue, srt_endpoint, srt_engine
+# test round 3: core tests - deterministic, hidden_states, request_queue, srt_endpoint, srt_engine
 
 on:
   pull_request:
