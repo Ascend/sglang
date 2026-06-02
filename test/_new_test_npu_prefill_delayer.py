@@ -535,6 +535,7 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
         # The kv cache size here is deliberately small, thus we use smaller token usage
         self._run(token_usage_low_watermark=0.5)
 
+    @unittest.skip("blocked by sgl-project/sglang#22511")
     def test_2_without_low_watermark(self):
         self._run(token_usage_low_watermark=None)
 
