@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=180, suite="nightly-2-npu-a3", nightly=True)
+register_npu_ci(est_time=180, suite="full-test-2-npu-a3", nightly=True)
 
 
 class TestNPUSchedulerStatusLogger(CustomTestCase):
