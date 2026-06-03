@@ -113,8 +113,8 @@ class TestQwen30B_A3B_aime25(TestAscendAccuracyTestCaseBase):
     accuracy = 61.3
     datasets = ["aime25"]
     few_shot_num = 5
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
-    max_concurrency = 16
+    generation_config = {"max_tokens": 40960, "temperature": 1.0}
+    eval_batch_size = 16
 
     def test_accuracy(self):
         self.run_accuracy()
