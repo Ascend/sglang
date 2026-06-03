@@ -32,7 +32,7 @@ class TestNPUDeepSeek_V3_2_8P_AIME2025(TestAscendAccuracyTestCaseBase):
 
     model = DEEPSEEK_V3_2_EXP_W8A8_WEIGHTS_PATH
     other_args = OTHER_ARGS
-    accuracy = 93.1
+    accuracy = 0.931
     datasets = ["aime25"]
     few_shot_num = 0
     generation_config = {"max_tokens": 65536, "temperature": 1.0}
