@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-4
+    runs-on: linux-aarch64-a3-8
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260528
     steps:
@@ -39,11 +39,8 @@ jobs:
           ln -sf ${sglang_source_path} /root/sglang
 
           # Test cases
-          test_cases=(
-            "test/registered/ascend/radix_cache/GENERATED_20260529/test_npu_radix_attention.py"
-            "test/registered/ascend/radix_cache/GENERATED_20260529/test_npu_radix_cache_hit.py"
-            "test/registered/ascend/radix_cache/GENERATED_20260529/test_npu_unified_radix_cache_kl.py"
-          )
+          test_cases="test/registered/ascend/basic_function/memory_and_scheduling/test_npu_prefill_delayer.py"
+            
 
           for test_case in "${test_cases[@]}"; do
             if [ ! -f "${sglang_source_path}/${test_case}" ]; then
