@@ -114,7 +114,7 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_aime25(TestAscendAccuracyTestCaseB
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
     envs = MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS
     other_args = MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS
-    accuracy = 86.3
+    accuracy = 0.863
     datasets = ["aime25"]
     few_shot_num = 5
     generation_config = {"max_tokens": 65536, "temperature": 1.0}
