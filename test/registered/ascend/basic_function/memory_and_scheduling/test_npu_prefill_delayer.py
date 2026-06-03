@@ -412,7 +412,7 @@ class TestPrefillDelayerThroughputOfflineGen(CustomTestCase):
                 "200000",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                #"--disable-cuda-graph",
             ],
             other_benchmark_args=dict(
                 num_prompts=800,
