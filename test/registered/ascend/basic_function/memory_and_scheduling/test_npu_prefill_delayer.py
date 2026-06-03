@@ -392,7 +392,6 @@ class TestPrefillDelayerThroughputOnlineServing(CustomTestCase):
                 random_output_len=256,
                 request_rate=32,
             ),
-            # TODO: re-enable a throughput-improvement assertion once a
             # Inheritance community testing is currently experiencing fluctuations
             min_improvement_pct=None,
         )
