@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -40,7 +41,7 @@ class TestNPUVLMEncoderDP(TestVLMModels):
         "ascend",
         "--disable-cuda-graph",
         "--tp-size",
-        "4",
+        "1",
         "--mm-enable-dp-encoder",
     ]
 

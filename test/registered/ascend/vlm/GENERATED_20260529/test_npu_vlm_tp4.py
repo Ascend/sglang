@@ -29,6 +29,7 @@ class TestNPUVLMTP4(CustomTestCase):
     def setUpClass(cls):
         cls.model = MODEL
         cls.base_url = DEFAULT_URL_FOR_TEST
+        # Use tp-size=1 for CI environment (only 1 NPU available)
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -41,7 +42,7 @@ class TestNPUVLMTP4(CustomTestCase):
                 "--device",
                 "npu",
                 "--tp-size",
-                "4",
+                "1",
                 "--cuda-graph-max-bs",
                 "32",
                 "--mem-fraction-static",
