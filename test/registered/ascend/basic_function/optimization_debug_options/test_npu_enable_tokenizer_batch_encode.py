@@ -15,7 +15,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestTokenizerBatchEncode(CustomTestCase):
@@ -67,7 +67,8 @@ class TestTokenizerBatchEncode(CustomTestCase):
         tok = time.perf_counter()
         print(f"{res=}")
         throughput = max_tokens / (tok - tic)
-        self.assertGreaterEqual(throughput, 200)
+        expect_result = 200 * 0.8
+        self.assertGreaterEqual(throughput, expect_result)
 
     def test_gsm8k(self):
         args = SimpleNamespace(

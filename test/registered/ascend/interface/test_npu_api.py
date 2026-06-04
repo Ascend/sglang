@@ -23,10 +23,10 @@ GLOBAL_SERVER_PROCESS = None
 GLOBAL_SERVER_INITIALIZED = False
 OUTPUT_DIR = "./profiler_dir"
 
-register_npu_ci(est_time=1600, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=1600, suite="full-1-npu-a3", nightly=True)
 
 
-class TestNpuApi(CustomTestCase):
+class Test01_NpuApi(CustomTestCase):
     """Testcase: Verify that the basic functions of the API interfaces work properly and the returned parameters are consistent with the configurations.
 
     [Test Category] Interface

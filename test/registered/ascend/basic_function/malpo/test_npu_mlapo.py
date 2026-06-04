@@ -13,7 +13,7 @@ from sglang.test.test_utils import kill_process_tree, popen_launch_server
 
 register_npu_ci(
     est_time=2400,
-    suite="nightly-16-npu-a3",
+    suite="full-16-npu-a3",
     nightly=True,
     disabled="performance testcase",
 )

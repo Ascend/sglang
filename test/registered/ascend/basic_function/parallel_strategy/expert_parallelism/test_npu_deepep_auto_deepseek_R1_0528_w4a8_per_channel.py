@@ -54,7 +54,7 @@ class TestDeepEpAutoDeepseekR1(CustomTestCase):
                 "21",
                 "22",
                 "--mem-fraction-static",
-                "0.78",
+                "0.72",
                 "--max-running-requests",
                 "352",
                 "--disable-radix-cache",

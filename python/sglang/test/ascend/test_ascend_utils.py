@@ -341,7 +341,20 @@ SKYWORK_REWARD_LLAMA_3_1_8B_V0_2_WEIGHTS_PATH = os.path.join(
     HF_MODEL_WEIGHTS_DIR,
     "models--Skywork--Skywork-Reward-Llama-3.1-8B-v0.2/snapshots/d4117fbfd81b72f41b96341238baa1e3e90a4ce1",
 )
-
+KIMI_K2_6_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/Kimi-K2.6-w4a8")
+KIMI_K2_6_EAGLE3_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "lightseekorg/kimi-k2.6-eagle3"
+)
+GLM_4_6V_FLASH_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/GLM-4.6V-Flash")
+QWEN3_VL_8B_THINKING_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-8B-Thinking"
+)
+QWEN3_VL_30B_A3B_THINKING_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-30B-A3B-Thinking"
+)
+QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Thinking"
+)
 # Images path
 IMAGES_EXAMPLE_PATH = os.path.join(IMAGES_DIR, "example_image.png")
 IMAGES_023_PATH = os.path.join(IMAGES_DIR, "023.jpg")

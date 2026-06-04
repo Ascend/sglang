@@ -13,7 +13,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=500, suite="nightly-4-npu-a3", nightly=True)
+register_npu_ci(est_time=500, suite="full-4-npu-a3", nightly=True)
 
 QWEN3_30B_MODEL = QWEN3_30B_A3B_WEIGHTS_PATH
 GSM8K_MIN_ACCURACY = 0.92
