@@ -39,7 +39,7 @@ class TestNPUVLMEncoderDP(TestVLMModels):
         "ascend",
         "--disable-cuda-graph",
         "--tp-size",
-        "1",
+        "4",
         "--mm-enable-dp-encoder",
     ]
 
