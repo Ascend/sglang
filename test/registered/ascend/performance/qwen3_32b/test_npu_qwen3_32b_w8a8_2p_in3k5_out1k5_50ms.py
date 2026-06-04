@@ -114,7 +114,7 @@ class TestQwen32B_mmlupro(TestAscendAccuracyTestCaseBase):
     datasets = ["gpqa_diamond"]
     few_shot_num = 5
     eval_batch_size = 64
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
+    generation_config = {"max_tokens": 40960, "temperature": 1.0}
 
     def test_accuracy(self):
         self.run_accuracy()
