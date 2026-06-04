@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 
 # Qwen3 <|endoftext|> token ID, used as multi-item scoring delimiter.
 _DELIMITER_TOKEN_ID = 151643

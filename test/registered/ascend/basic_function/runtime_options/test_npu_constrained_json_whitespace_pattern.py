@@ -15,7 +15,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestJSONModeMixin:
@@ -111,21 +111,33 @@ class TestJSONModeMixin:
 
     def _verify_whitespace_pattern_constraint(self, json_str):
         """
-        Verify that the --constrained-json-whitespace-pattern parameter only takes effect (JSON output contains newline whitespace)
-        when the grammar backend is outlines/llguidance (pattern: [\n]?); for other backends, the parameter has no effect (no whitespace).
-        """
-        # Detect newline whitespace (\n) in JSON string (matching pattern [\n]?)
-        has_newline_whitespace = bool(re.search(r"\n", json_str))
+        Verify structural whitespace behavior of --constrained-json-whitespace-pattern
+        under outlines/llguidance.
 
-        # Expect newline whitespace (parameter takes effect)
+        - The pattern applies only to structural JSON whitespace, not to spaces inside string values.
+        - Pattern [\n]? allows zero or one newline character.
+        - Other structural whitespace (spaces, tabs, carriage returns) must not appear.
+        - Actual presence of newlines depends on the grammar backend and model behavior.
+        """
+
+        # Remove string literals so that structural whitespace can be checked safely.
+        no_strings = re.sub(r'"[^"]*"', '""', json_str)
+        print(f"[{self.backend}] no_strings: {no_strings}")
+
+        # Assert that the JSON contains only non-whitespace characters and optional newlines
+        # after removing string contents. This guarantees no structural spaces, tabs,
+        # or carriage returns are present.
+        has_newline_whitespace = bool(re.search(r"^[\S\n]*$", no_strings))
+
         self.assertTrue(
             has_newline_whitespace,
-            f"[{self.backend}] Missing expected newline whitespace after enabling --constrained-json-whitespace-pattern! JSON: {json_str}",
+            f"[{self.backend}] JSON contains illegal structural whitespace. JSON: {json_str}",
         )
 
 
 class ServerWithGrammarBackend(CustomTestCase):
-    """Testcase: Verify that when the grammar backend is outlines/llguidance, --constrained-json-whitespace-pattern=[\n]? takes effect (JSON output contains newline whitespace)
+    """Testcase: Verify that when the grammar backend is outlines/llguidance, --constrained-json-whitespace-pattern=[\n]?
+    takes effect (JSON output may contain newline whitespace and must not contain structural spaces, tabs, or carriage returns)
 
     [Test Category] Parameter
     [Test Target] --constrained-json-whitespace-pattern
@@ -136,6 +148,7 @@ class ServerWithGrammarBackend(CustomTestCase):
     @classmethod
     def setUpClass(cls):
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = "/home/weights/Llama-3.2-1B-Instruct"
         cls.base_url = DEFAULT_URL_FOR_TEST
         os.environ["TORCH_COMPILE_DISABLE"] = "1"
 

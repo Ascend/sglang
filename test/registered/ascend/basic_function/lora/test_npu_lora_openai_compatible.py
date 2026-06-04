@@ -29,7 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TestLoRAOpenAICompatible")
 
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 def get_real_lora_adapter() -> str:

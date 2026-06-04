@@ -12,7 +12,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="stage-b-test-4-npu-a3", nightly=False)
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestLLaDA2Mini(GSM8KAscendMixin, CustomTestCase):
