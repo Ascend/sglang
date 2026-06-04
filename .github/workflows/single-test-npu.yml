@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: radix cache tests - radix_attention, radix_cache_hit, unified_radix_cache_kl
+# test round 4: radix cache tests - radix_attention, radix_cache_hit, unified_radix_cache_kl
 
 on:
   pull_request:
