@@ -1,4 +1,3 @@
-import tempfile
 import unittest
 from types import SimpleNamespace
 
@@ -53,10 +52,7 @@ class TestNPUVLMEncoderDP(TestVLMModels):
         for model in models_to_test:
             self.model = model.model
             self.mmmu_accuracy = model.mmmu_accuracy
-            with tempfile.TemporaryDirectory(
-                prefix=f"encoder_dp_{model.model.replace('/', '_')}_"
-            ) as output_path:
-                self._run_vlm_mmmu_test(output_path=output_path)
+            self._run_vlm_mmmu_test()
 
 
 if __name__ == "__main__":
