@@ -68,12 +68,10 @@ PREFILL_ARGS = [
     "npu",
     "--tp-size",
     16,
-    "--disable-radix-cache",
-    "--disable-cuda-graph",
     "--mem-fraction-static",
     0.78,
     "--max-running-requests",
-    1,
+    2,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -81,9 +79,9 @@ PREFILL_ARGS = [
     "--chunked-prefill-size",
     16384,
     "--prefill-max-requests",
-    1,
+    2,
     "--max-prefill-tokens",
-    131072,
+    65536,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -112,10 +110,10 @@ DECODE_ARGS = [
     "--mem-fraction-static",
     0.82,
     "--max-running-requests",
-    1,
+    2,
     "--enable-dp-attention",
     "--dp-size",
-    1,
+    2,
     "--enable-dp-lm-head",
     "--disable-radix-cache",
     "--enable-multimodal",
@@ -134,7 +132,6 @@ DECODE_ARGS = [
     6,
     8,
     12,
-    16,
 ]
 
 MODEL_CONFIG = {
@@ -148,26 +145,28 @@ MODEL_CONFIG = {
 }
 
 
-class TestNPUKimiK2_6_W4A8_1P1D_16p_In128k_Out1k_100ms(
+class TestNPUKimiK2_6_W4A8_1P1D_16p_In64k_Out1k5_Prefix90_100ms(
     TestAscendPerfMultiNodePdSepTestCaseBase
 ):
-    """Test NPU performance for Kimi-K2.6-w4a8 1P+1D 16p: input_len=131072, output_len=1024, 0 cache, TPOT=100ms"""
+    """Test NPU performance for Kimi-K2.6-w4a8 1P+1D 16p: input_len=65536, output_len=1536, 90% prefix cache, TPOT=100ms"""
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 1
+    max_concurrency = 2
+    num_prompts = 16
     request_rate = 1
-    input_len = 131072
-    output_len = 1024
+    aisbench_repeat_rate = 0.9
+    input_len = 65536
+    output_len = 1536
     random_range_ratio = 1
     tpot = 100
-    output_token_throughput = 21
+    ttft = 3000
+    output_token_throughput = 13445
 
-    def test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms(self):
-        """Run NPU performance test for 1P+1D 16p with 128k input, 1k output, 0 cache, TPOT=100ms"""
+    def test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms(self):
+        """Run NPU performance test for 1P+1D 16p with 64k input, 1k5 output, 90% prefix cache, TPOT=100ms"""
         self.run_throughput()
 
 
