@@ -84,7 +84,7 @@ class TestLargeMaxNewTokens(CustomTestCase):
 
     def test_chat_completion(self):
         num_requests = 4
-        min_concurrent = 2  # At least 2 requests should run concurrently
+        min_concurrent = 4
 
         futures = []
         max_running_reqs = 0
@@ -93,9 +93,10 @@ class TestLargeMaxNewTokens(CustomTestCase):
         max_wait_time = 300  # 5 minutes timeout
 
         with ThreadPoolExecutor(num_requests) as executor:
+            # Send multiple requests
             for i in range(num_requests):
                 futures.append(executor.submit(self.run_chat_completion))
-
+            # Ensure that they are running concurrently
             pt = 0
             while pt >= 0:
                 time.sleep(5)
@@ -121,7 +122,6 @@ class TestLargeMaxNewTokens(CustomTestCase):
                                 break
                     pt += 1
 
-        print(f"\nMax concurrent requests observed: {max_running_reqs}")
         assert (
             all_requests_running
         ), f"At least {min_concurrent} requests should be running concurrently, but max was {max_running_reqs}"
