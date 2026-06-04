@@ -97,7 +97,7 @@ class TestQwen32B_MMLUPro(TestAscendAccuracyTestCaseBase):
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 64
-    generation_config = {"max_tokens": 40960, "temperature": 1.0}
+    generation_config = {"max_tokens": 40000, "temperature": 1.0}
 
     @classmethod
     def tearDownClass(cls):
