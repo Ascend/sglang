@@ -22,6 +22,7 @@ class TestNPUVLMEncoderDP(TestVLMModels):
 
     [Test Category] VLM Feature
     [Test Target] --mm-enable-dp-encoder, VLM Encoder DP
+    [Test Environment] Requires 4 NPU devices (A3 instance)
     """
 
     model = QWEN2_5_VL_3B_INSTRUCT_WEIGHTS_PATH
