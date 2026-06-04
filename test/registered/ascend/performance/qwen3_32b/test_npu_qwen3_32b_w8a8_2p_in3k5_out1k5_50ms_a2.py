@@ -93,11 +93,11 @@ class TestQwen32B_MMLUPro(TestAscendAccuracyTestCaseBase):
     model = QWEN3_32B_W8A8_MODEL_PATH
     other_args = QWEN3_32B_OTHER_ARGS
     envs = QWEN3_32B_ENVS
-    accuracy = 65.54
-    datasets = ["mmlu_pro"]
+    accuracy = 0.516
+    datasets = ["gpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 64
-    generation_config = {"max_tokens": 8192, "temperature": 1.0}
+    generation_config = {"max_tokens": 40960, "temperature": 1.0}
 
     @classmethod
     def tearDownClass(cls):
