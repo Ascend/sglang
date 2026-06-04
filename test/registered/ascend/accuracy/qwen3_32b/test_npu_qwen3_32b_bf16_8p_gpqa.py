@@ -42,7 +42,7 @@ QWEN3_32B_OTHER_ARGS = [
     "--device",
     "npu",
     "--max-running-requests",
-    1,
+    64,
     "--disable-radix-cache",
     "--speculative-draft-model-quantization",
     "unquant",
@@ -65,29 +65,24 @@ QWEN3_32B_OTHER_ARGS = [
     "--mem-fraction-static",
     0.72,
     "--cuda-graph-bs",
-    1,
+    64,
     "--dtype",
     "bfloat16",
 ]
 
 
-class TestQwen32B(TestAscendPerformanceTestCaseBase):
-    benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+class TestQwen32B_GPQA(TestAscendAccuracyTestCaseBase):
     model = QWEN3_32B_MODEL_PATH
-    other_args = QWEN3_32B_OTHER_ARGS
     envs = QWEN3_32B_ENVS
-    dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 1
-    input_len = 18000
-    output_len = 4000
-    random_range_ratio = 1
-    tpot = 6
-    output_token_throughput = 171
+    other_args = QWEN3_32B_OTHER_ARGS
+    accuracy = 0.516
+    datasets = ["gpqa_diamond"]
+    few_shot_num = 0
+    eval_batch_size = 64
+    generation_config = {"max_tokens": 65536, "temperature": 1.0}
 
-    def test_qwen3_32b(self):
-        self.run_throughput()
+    def test_accuracy(self):
+        self.run_accuracy()
 
 
 if __name__ == "__main__":

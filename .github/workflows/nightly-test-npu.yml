@@ -151,14 +151,17 @@ jobs:
             runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/performance/qwen3_32b/test_npu_qwen3_32b_w8a8_2p_in3k5_out1k5_50ms.py
             test_type: 'perf'
-          - name: test_npu_qwen3_32b_w8a8_2p_in3k5_out1k5_50ms_a2
+          - name: qwen3_32b_w8a8_2p_in3k5_out1k5_50ms_a2
             runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/performance/qwen3_32b/test_npu_qwen3_32b_w8a8_2p_in3k5_out1k5_50ms_a2.py
             test_type: 'perf'
-          - name: qwen3_32b_bf16_8p_in18k_out4k_6ms_gpqa
+          - name: qwen3_32b_bf16_8p_in18k_out4k_6ms
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/qwen3_32b/test_npu_qwen3_32b_bf16_8p_in18k_out4k_6ms.py
             test_type: 'perf'
+          - name: qwen3_32b_bf16_8p_gpqa
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/accuracy/qwen3_32b/test_npu_qwen3_32b_bf16_8p_gpqa.py
           # qwen3_30b_a3b performance tests
           - name: qwen3_30b_w8a8_1p_in3k5_out1k5_50ms_aime25
             runner: linux-aarch64-a3-2
@@ -185,7 +188,7 @@ jobs:
             test_type: 'perf'
           - name: minimax_m2_5_w8a8_8p_in64k_out1k_prefix90_50ms_aime25
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in64k_out1k_prefix90_50ms.py
+            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
           # deepseek_v3_2 accuracy tests
           - name: deepseek_v3_2_8p_aime2025

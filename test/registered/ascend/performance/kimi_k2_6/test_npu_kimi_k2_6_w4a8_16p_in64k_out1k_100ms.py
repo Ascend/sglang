@@ -105,11 +105,7 @@ class TestNPUKimiK2_6_W4A8_8P_AIME2025(TestAscendAccuracyMultiNodePdMixTestCaseB
     datasets = ["aime25"]
     few_shot_num = 0
     eval_batch_size = 64
-    generation_config = {"max_tokens": 8192, "temperature": 1.0}
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
+    generation_config = {"max_tokens": 65536, "temperature": 1.0}
 
     def test_aime2025(self):
         self.run_accuracy()
@@ -130,10 +126,6 @@ class TestNPUKimiK2_6_W4A8_8P_In64k_Out1k_50ms(TestAscendPerformanceTestCaseBase
     random_range_ratio = 1
     tpot = 100
     output_token_throughput = 1000
-
-    @classmethod
-    def setUpClass(cls):
-        pass
 
     def test_npu_kimi_k2_6_w4a8_8p_in64k_out1k_50ms(self):
         self.run_throughput()

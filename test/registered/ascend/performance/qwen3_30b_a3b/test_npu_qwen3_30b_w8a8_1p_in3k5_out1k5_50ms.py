@@ -115,7 +115,7 @@ class TestQwen30B_A3B_aime25(TestAscendAccuracyTestCaseBase):
     other_args = QWEN3_30B_A3B_OTHER_ARGS
     accuracy = 0.613
     datasets = ["aime25"]
-    few_shot_num = 5
+    few_shot_num = 0
     generation_config = {"max_tokens": 32768, "temperature": 1.0}
     eval_batch_size = 16
 
