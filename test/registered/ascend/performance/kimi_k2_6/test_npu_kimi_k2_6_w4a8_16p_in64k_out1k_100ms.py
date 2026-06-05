@@ -108,13 +108,15 @@ class TestNPUKimiK2_6_W4A8_8P_AIME2025(TestAscendAccuracyMultiNodePdMixTestCaseB
     accuracy = 0.961
     datasets = ["aime25"]
     eval_batch_size = 64
-    generation_config = {"max_tokens": 8192, "temperature": 1.0}
+    generation_config = {"max_tokens": 65536, "temperature": 1.0}
 
     def test_aime2025(self):
         self.run_accuracy()
 
 
-class TestNPUKimiK2_6_W4A8_8P_In64k_Out1k_50ms(TestAscendPerfMultiNodePdMixTestCaseBase):
+class TestNPUKimiK2_6_W4A8_8P_In64k_Out1k_50ms(
+    TestAscendPerfMultiNodePdMixTestCaseBase
+):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model_config = MODEL_CONFIG

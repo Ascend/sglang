@@ -17,31 +17,28 @@ register_npu_ci(
 )
 
 QWEN3_NEXT_80B_A3B_2P_ENVS = {
-    "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
-    "HCCL_SOCKET_IFNAME": "lo",
-    "GLOO_SOCKET_IFNAME": "lo",
-    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "330",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "5",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3000",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "400",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "10",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
     "HCCL_OP_EXPANSION_MODE": "AIV",
+    "TASK_QUEUE_ENABLE": "1",
     "ASCEND_USE_FIA": "1",
     "SGLANG_NPU_USE_MULTI_STREAM": "0",
-    "ENABLE_PROFILING": "0",
     "SGLANG_WARMUP_TIMEOUT": "3600",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "FORCE_DRAFT_MODEL_NON_QUANT": "1",
-    "HCCL_BUFFSIZE": "64",
-    "ZBAL_HCCL_OP": "allreduce,_allgather_base,allgather,broadcast,scatter,reduce_scatter,_reduce_scatter_base,alltoall_base",
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "59648",
+    "HCCL_BUFFSIZE": "2000",
+    "ZBCCL_LOCAL_MEM_SIZE": "60416",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
-    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "ZBAL_ENABLE_GRAPH": "1",
+    "ZBCCL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+    "ZBCCL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "ZBCCL_ENABLE_GRAPH": "1",
+    "HCCL_SOCKET_IFNAME": "lo",
+    "GLOO_SOCKET_IFNAME": "lo",
 }
 
 QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS = [
@@ -55,22 +52,18 @@ QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS = [
     "--page-size",
     128,
     "--tp-size",
-    4,
+    2,
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.75,
+    0.85,
     "--disable-radix-cache",
     "--max-prefill-tokens",
-    14080,
+    28672,
     "--context-length",
     26384,
-    "--chunked-prefill-size",
-    -1,
-    "--max-running-requests",
-    300,
-    "--mamba-ssm-dtype",
-    "bfloat16",
+    "--max-total-tokens",
+    122304,
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -81,74 +74,35 @@ QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--chunked-prefill-size",
+    -1,
+    "--max-running-requests",
+    2,
+    "--cuda-graph-bs",
+    2,
+    "--mamba-ssm-dtype",
+    "bfloat16",
     "--speculative-draft-model-path",
     QWEN3_NEXT_80B_A3B_MODEL_PATH,
-    "--dp-size",
-    2,
-    "--enable-dp-attention",
-    "--enable-dp-lm-head",
-    "--moe-a2a-backend",
-    "deepep",
-    "--deepep-mode",
-    "auto",
-    "--cuda-graph-bs",
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    10,
-    12,
-    14,
-    16,
-    18,
-    20,
-    22,
-    24,
-    26,
-    28,
-    30,
-    32,
-    40,
-    44,
-    48,
-    52,
-    56,
-    60,
-    64,
-    72,
-    80,
-    88,
-    96,
-    104,
-    112,
-    120,
-    128,
-    136,
-    144,
-    150,
 ]
 
 
-class TestNPUQwen3Next80BA3B2PIn3k5Out1k5_50ms(TestAscendPerformanceTestCaseBase):
+class TestNPUQwen3Next80BA3B2PIn3k5Out1k5_20ms(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH
     other_args = QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS
     envs = QWEN3_NEXT_80B_A3B_2P_ENVS
     dataset_name = "random"
-    max_concurrency = 220
-    num_prompts = 220
+    max_concurrency = 1
+    num_prompts = 1
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
-    tpot = 50
-    output_token_throughput = 4293
+    tpot = 20
+    output_token_throughput = 82.24
 
-    def test_npu_qwen3_next_80b_a3b_2p_in3k5_out1k5_50ms(self):
+    def test_npu_qwen3_next_80b_a3b_2p_in3k5_out1k5_20ms(self):
         self.run_throughput()
 
 

@@ -88,7 +88,7 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     output_len = 1000
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 110
+    output_token_throughput = 122.6
 
     def test_npu_qwen3_6_27b_2p_in64k_out1k_50ms(self):
         """Run NPU performance test for Qwen3.6-27B-w8a8 in64k out1k 50ms"""

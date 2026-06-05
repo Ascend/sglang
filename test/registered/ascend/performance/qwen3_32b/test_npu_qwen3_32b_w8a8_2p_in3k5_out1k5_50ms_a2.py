@@ -87,21 +87,25 @@ QWEN3_32B_OTHER_ARGS = [
 ]
 
 
-class TestQwen32B_gpqa(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Qwen3-32B-W8A8 on MMLU-Pro"""
+class TestQwen32B_GPQA(TestAscendAccuracyTestCaseBase):
+    """Test NPU accuracy for Qwen3-32B-W8A8 on qpqa"""
 
     base_url = DEFAULT_URL_FOR_TEST
     model = QWEN3_32B_W8A8_MODEL_PATH
     other_args = QWEN3_32B_OTHER_ARGS
     envs = QWEN3_32B_ENVS
     accuracy = 0.516
-    datasets = ["gpqa_diamond"]
+    datasets = ["qpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 64
     generation_config = {"max_tokens": 40000, "temperature": 1.0}
 
-    def test_qwen3_32b_mmlu_pro(self):
-        """Run NPU accuracy test for Qwen3-32B-W8A8 on MMLU-Pro"""
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    def test_qwen3_32b_qpqa(self):
+        """Run NPU accuracy test for Qwen3-32B-W8A8 on qpqa"""
         self.run_accuracy()
 
 

@@ -1,11 +1,11 @@
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
+    TestAscendAccuracyTestCaseBase,
+)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    AISBENCHMARK_DATASET_DEFAULT,
-    BENCHMARK_TOOL_DEFAULT,
-    QWEN3_235B_A22B_EAGLE_MODEL_PATH,
-    QWEN3_235B_MODEL_PATH,
-    TestAscendPerformanceTestCaseBase,
+    QWEN3_32B_EAGLE_MODEL_PATH,
+    QWEN3_32B_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -16,18 +16,19 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
-QWEN3_235B_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+QWEN3_32B_ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
-    "HCCL_BUFFSIZE": "1600",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
 }
 
-QWEN3_235B_OTHER_ARGS = [
+QWEN3_32B_OTHER_ARGS = [
     "--trust-remote-code",
     "--nnodes",
     "1",
@@ -38,53 +39,47 @@ QWEN3_235B_OTHER_ARGS = [
     "--device",
     "npu",
     "--max-running-requests",
-    1,
-    "--dtype",
-    "bfloat16",
+    64,
+    "--disable-radix-cache",
+    "--speculative-draft-model-quantization",
+    "unquant",
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    16384,
-    "--speculative-draft-model-quantization",
-    "unquant",
+    65536,
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
-    QWEN3_235B_A22B_EAGLE_MODEL_PATH,
+    QWEN3_32B_EAGLE_MODEL_PATH,
     "--speculative-num-steps",
     4,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
     5,
-    "--disable-radix-cache",
-    "--enable-dp-lm-head",
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.78,
+    0.72,
     "--cuda-graph-bs",
-    1,
+    64,
+    "--dtype",
+    "bfloat16",
 ]
 
 
-class TestQwen235B(TestAscendPerformanceTestCaseBase):
-    benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    model = QWEN3_235B_MODEL_PATH
-    other_args = QWEN3_235B_OTHER_ARGS
-    envs = QWEN3_235B_ENVS
-    dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 1
-    input_len = 11000
-    output_len = 1000
-    random_range_ratio = 1
-    tpot = 9.24
-    output_token_throughput = 99
+class TestQwen32B_GPQA(TestAscendAccuracyTestCaseBase):
+    model = QWEN3_32B_MODEL_PATH
+    envs = QWEN3_32B_ENVS
+    other_args = QWEN3_32B_OTHER_ARGS
+    accuracy = 0.516
+    datasets = ["gpqa_diamond"]
+    few_shot_num = 0
+    eval_batch_size = 64
+    generation_config = {"max_tokens": 40000, "temperature": 1.0}
 
-    def test_qwen3_235b(self):
-        self.run_throughput()
+    def test_accuracy(self):
+        self.run_accuracy()
 
 
 if __name__ == "__main__":

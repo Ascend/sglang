@@ -168,9 +168,8 @@ class TestNPUGLM5_1_W4A8_PD_SEP_AIME2026(TestAscendAccuracyMultiNodePdSepTestCas
     model_config = GLM_5_1_PD_SEP_MODEL_CONFIG
     accuracy = 0.953
     datasets = ["aime26"]
-    few_shot_num = 0
     eval_batch_size = 64
-    generation_config = {"max_tokens": 8192, "temperature": 1.0}
+    generation_config = {"max_tokens": 65536, "temperature": 1.0}
 
     def test_npu_glm5_1_w4a8_pd_sep_aime2026(self):
         """Run NPU accuracy test for GLM-5.1-w4a8 PD separation on AIME2026"""
