@@ -142,7 +142,8 @@ jobs:
           echo "Log path: ${log_path}"
 
           echo "Running test case ${test_case}"
-          ${PYTHON_FOR_SGLANG} -u ${test_case} 2>&1 | tee /tmp/test_output.log || true
+          test_exit_code=0
+          ${PYTHON_FOR_SGLANG} -u ${test_case} 2>&1 | tee /tmp/test_output.log || test_exit_code=$?
           test_exit_code=${PIPESTATUS[0]}
           echo "Finished test case ${test_case}"
 
