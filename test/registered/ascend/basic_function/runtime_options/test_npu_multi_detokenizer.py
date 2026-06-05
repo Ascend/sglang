@@ -2,7 +2,7 @@ import unittest
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+    QWEN3_0_6B_WEIGHTS_PATH,
     run_bench_serving,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -25,7 +25,7 @@ class TestMultiDetokenizer(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.process = popen_launch_server(
             cls.model,
