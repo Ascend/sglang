@@ -104,7 +104,7 @@ class TestNPUQwen3_6_35BA3B_1P_In3k5_Out1k5_aime26(TestAscendAccuracyTestCaseBas
     model = QWEN3_6_35B_A3B_MODEL_PATH
     envs = QWEN3_6_35B_A3B_3K5_1K5_ENVS
     other_args = QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS
-    accuracy = 0.927
+    accuracy = 11
     datasets = ["aime26"]
     few_shot_num = 0
     eval_batch_size = 64
