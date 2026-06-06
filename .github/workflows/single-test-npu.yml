@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: scheduler basic function tests - mixed chunked prefill, routing key scheduling, scheduler control (fix chunked_prefill_size)
+# test round 3: scheduler basic function tests - fix end of files lint issues
 
 on:
   pull_request:
