@@ -66,11 +66,9 @@ class TestNPUConstrainedDecodingSpecReasoning(CustomTestCase):
             "--speculative-num-steps",
             "5",
             "--speculative-eagle-topk",
-            "4",
+            "1",
             "--speculative-num-draft-tokens",
             "8",
-            "--page-size",
-            "1",
         ]
 
         cls.process = popen_launch_server(
