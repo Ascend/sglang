@@ -186,15 +186,17 @@ jobs:
               echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
               echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
               echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
+              echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
               echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
-              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} |')" >> /tmp/parse_metrics.py
+              echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
+              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
               python3 /tmp/parse_metrics.py
             fi
           done > /tmp/metrics_table.txt
 
           if [ "${has_metrics}" = "true" ]; then
-            echo "| Test Case | Type | Status | Metrics |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Test Case | Type | Status | Metrics | Baseline |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|------|--------|---------|----------|" >> $GITHUB_STEP_SUMMARY
             cat /tmp/metrics_table.txt >> $GITHUB_STEP_SUMMARY
           else
             echo "No per-test metrics available (artifacts not found)." >> $GITHUB_STEP_SUMMARY
