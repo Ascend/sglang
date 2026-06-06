@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: scheduler basic function tests - fix end of files lint issues
+# test round 4: scheduler basic function tests - fix chunked_prefill_size to 128 for NPU page_size
 
 on:
   pull_request:
