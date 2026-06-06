@@ -24,6 +24,7 @@ register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
 
 NPU_ENV = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "TRANSFORMERS_VERBOSITY": "error",
 }
 
 

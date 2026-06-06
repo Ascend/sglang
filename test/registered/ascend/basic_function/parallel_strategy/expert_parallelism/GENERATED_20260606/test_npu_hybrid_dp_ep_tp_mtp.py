@@ -24,6 +24,7 @@ NPU_ENV = {
     "HCCL_BUFFSIZE": "2048",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "TASK_QUEUE_ENABLE": "0",
+    "TRANSFORMERS_VERBOSITY": "error",
 }
 
 
