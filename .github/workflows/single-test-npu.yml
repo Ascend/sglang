@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: piecewise CUDA graph VLM + elastic EP + hybrid DP/EP/TP/MTP (3 NPU tests)
+# test round 2: piecewise CUDA graph VLM + elastic EP + hybrid DP/EP/TP/MTP (3 NPU tests, runner upgraded to a3-16)
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-16
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260605
     steps:
