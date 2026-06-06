@@ -26,7 +26,7 @@ class TestNPUExternalModels(CustomTestCase):
             model_path=model_path,
             attention_backend="ascend",
             disable_cuda_graph=True,
-            mem_fraction_static=0.8,
+            mem_fraction_static=0.9,
             max_total_tokens=64,
             enable_multimodal=True,
         )

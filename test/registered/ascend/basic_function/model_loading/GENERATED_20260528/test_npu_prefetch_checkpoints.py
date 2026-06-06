@@ -31,7 +31,7 @@ class TestNPUPrefetchCheckpoints(CustomTestCase):
             tp_size=1,
             attention_backend="ascend",
             disable_cuda_graph=True,
-            mem_fraction_static=0.8,
+            mem_fraction_static=0.9,
             weight_loader_prefetch_checkpoints=True,
             cuda_graph_max_bs=1,
             max_total_tokens=256,
