@@ -26,7 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Register CI task for NPU environment
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 # ===================== Common Env Var Management Functions =====================
 TEST_RELATED_ENVS = ["SGLANG_IS_IN_CI", "SGLANG_TEST_STUCK_DETOKENIZER"]

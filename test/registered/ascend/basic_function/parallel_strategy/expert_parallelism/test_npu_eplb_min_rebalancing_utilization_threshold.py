@@ -13,7 +13,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 
 class TestEplbMinRebalancingUtilizationThresholdBase(CustomTestCase):
@@ -147,7 +147,6 @@ class TestEplbMinRebalancingUtilizationThreshold095(
                 "SGLANG_ENABLE_JIT_DEEPGEMM": "0",
                 "SGLANG_EXPERT_LOCATION_UPDATER_CANARY": "1",
                 "HCCL_BUFFSIZE": "1024",
-                "SGLANG_DEEPEP_BF16_DISPATCH": "1",
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
                 "TRANSFORMERS_VERBOSITY": "error",
                 **os.environ,

@@ -5,7 +5,7 @@ from sglang.test.ascend.test_ascend_utils import PHI_4_MULTIMODAL_INSTRUCT_WEIGH
 from sglang.test.ascend.vlm_utils import TestVLMModels
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=800, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=800, suite="full-1-npu-a3", nightly=True)
 
 
 class TestPhi4MultimodalLatencyCompare(TestVLMModels):

@@ -42,61 +42,56 @@ class TestVLMModels(CustomTestCase):
         os.environ["OPENAI_API_KEY"] = cls.api_key
         os.environ["OPENAI_API_BASE"] = f"{cls.base_url}/v1"
 
-    def _run_vlm_mmmu_test(self, test_name="", custom_env=None):
+        # Prepare environment variables
+        process_env = os.environ.copy()
+
+        cls.process = popen_launch_server(
+            cls.model,
+            base_url=cls.base_url,
+            timeout=cls.timeout_for_server_launch,
+            api_key=cls.api_key,
+            other_args=cls.other_args,
+            env=process_env,
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.process and cls.process.poll() is None:
+            print(f"Cleaning up server process {cls.process.pid}")
+            try:
+                kill_process_tree(cls.process.pid)
+            except Exception as e:
+                print(f"Error killing server process: {e}")
+
+    def _run_vlm_mmmu_test(self, test_name=""):
         warnings.filterwarnings(
             "ignore", category=ResourceWarning, message="unclosed.*socket"
         )
-        process = None
 
-        try:
-            # Prepare environment variables
-            process_env = os.environ.copy()
-            if custom_env:
-                process_env.update(custom_env)
+        args = SimpleNamespace(
+            base_url=self.base_url,
+            model=self.model,
+            eval_name="mmmu",
+            num_examples=100,
+            num_threads=64,
+            max_tokens=30,
+            return_latency=True,
+        )
 
-            process = popen_launch_server(
-                self.model,
-                base_url=self.base_url,
-                timeout=self.timeout_for_server_launch,
-                api_key=self.api_key,
-                other_args=self.other_args,
-                env=process_env,
-            )
+        metrics, latency = run_eval(args)
 
-            args = SimpleNamespace(
-                base_url=self.base_url,
-                model=self.model,
-                eval_name="mmmu",
-                num_examples=100,
-                num_threads=64,
-                max_tokens=30,
-            )
+        metrics["score"] = round(metrics["score"], 4)
+        metrics["latency"] = round(latency, 4)
 
-            args.return_latency = True
+        print(
+            f"\n{'=' * 42}\n"
+            f"{self.model} - metrics={metrics} score={metrics['score']}\n"
+            f"{'=' * 42}\n"
+        )
 
-            metrics, latency = run_eval(args)
-
-            metrics["score"] = round(metrics["score"], 4)
-            metrics["latency"] = round(latency, 4)
-            print(
-                f"{'=' * 42}\n{self.model} - metrics={metrics} score={metrics['score']}\n{'=' * 42}\n"
-            )
-
-            self.assertGreaterEqual(
-                metrics["score"],
-                self.mmmu_accuracy,
-                f"Model {self.model} accuracy ({metrics['score']}) below expected threshold ({self.mmmu_accuracy:.4f}){test_name}",
-            )
-
-        except Exception as e:
-            print(f"Error testing {self.model}{test_name}: {e}")
-            self.fail(f"Test failed for {self.model}{test_name}: {e}")
-
-        finally:
-            # Ensure process cleanup happens regardless of success/failure
-            if process is not None and process.poll() is None:
-                print(f"Cleaning up process {process.pid}")
-                try:
-                    kill_process_tree(process.pid)
-                except Exception as e:
-                    print(f"Error killing process: {e}")
+        self.assertGreaterEqual(
+            metrics["score"],
+            self.mmmu_accuracy,
+            f"Model {self.model} accuracy ({metrics['score']}) "
+            f"below expected threshold ({self.mmmu_accuracy:.4f}){test_name}",
+        )
