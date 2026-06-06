@@ -104,10 +104,11 @@ class TestNPUProfileV2(CustomTestCase):
         self.assertTrue(
             os.path.isdir(self.output_dir), "Output directory does not exist."
         )
+        # Use rglob for recursive search in subdirectories
         self.assertEqual(
-            len(list(Path(self.output_dir).glob(pattern))) > 0,
+            len(list(Path(self.output_dir).rglob(pattern))) > 0,
             expect_existence,
-            f"Does not find {pattern=} ({list(Path(self.output_dir).glob('**/*'))=})",
+            f"Does not find {pattern=} ({list(Path(self.output_dir).rglob('PROF_*'))=})",
         )
 
 
