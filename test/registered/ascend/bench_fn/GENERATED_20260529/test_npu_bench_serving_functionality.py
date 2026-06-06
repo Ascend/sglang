@@ -2,7 +2,6 @@ import json
 import tempfile
 import threading
 import time
-import traceback
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -185,9 +184,8 @@ class TestNpuBenchServingCustomHeaders(CustomTestCase):
             args.warmup_requests = 0
             args.disable_tqdm = True
             run_benchmark(args)
-        except Exception as e:
-            print(f"Benchmark failed: {e}")
-            traceback.print_exc()
+        except Exception:
+            pass
         finally:
             server.shutdown()
 
