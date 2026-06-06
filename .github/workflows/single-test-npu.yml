@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: PD disaggregation tests - failure, pause/resume, retract (use ascend backend)
+# test round 3: PD disaggregation tests - failure, pause/resume, retract (fix lint)
 
 on:
   pull_request:
