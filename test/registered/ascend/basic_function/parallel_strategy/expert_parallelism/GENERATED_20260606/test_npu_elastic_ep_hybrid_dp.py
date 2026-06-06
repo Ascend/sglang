@@ -68,6 +68,8 @@ class TestElasticEPTP(CustomTestCase):
                 "HCCL_OP_EXPANSION_MODE": "AIV",
                 "TASK_QUEUE_ENABLE": "0",
                 "TRANSFORMERS_VERBOSITY": "error",
+                "TRANSFORMERS_NO_ADVISORY_WARNINGS": "1",
+                "PYTHONWARNINGS": "ignore::FutureWarning,ignore::UserWarning,ignore::DeprecationWarning",
                 **os.environ,
             },
         )
