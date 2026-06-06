@@ -31,7 +31,9 @@ from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     auto_config_device,
+    is_in_ci,
     popen_launch_server,
+    write_github_step_summary,
 )
 
 STDERR_FILENAME = "/tmp/stderr.txt"
@@ -127,6 +129,9 @@ LLAMA_3_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 LLAMA_4_SCOUT_17B_16E_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "meta-llama/Llama-4-Scout-17B-16E-Instruct"
 )
+LLaDA2_0_MINI_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "inclusionAI/LLaDA2.0-mini"
+)
 META_LLAMA_3_1_8B_INSTRUCT = os.path.join(
     MODEL_WEIGHTS_DIR, "LLM-Research/Meta-Llama-3.1-8B-Instruct"
 )
@@ -212,7 +217,7 @@ MINIMAX_M2_5_W8A8_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
 )
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = os.path.join(
-    MODEL_WEIGHTS_DIR, "Eco-Tech/MiniMax-M2.5-eagle3"
+    MODEL_WEIGHTS_DIR, "sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )
 EAGLE3_LLAMA3_1_INSTRUCT_8B_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "sglang-EAGLE3-LLaMA3.1-Instruct-8B"
@@ -334,7 +339,20 @@ SKYWORK_REWARD_LLAMA_3_1_8B_V0_2_WEIGHTS_PATH = os.path.join(
     HF_MODEL_WEIGHTS_DIR,
     "models--Skywork--Skywork-Reward-Llama-3.1-8B-v0.2/snapshots/d4117fbfd81b72f41b96341238baa1e3e90a4ce1",
 )
-
+KIMI_K2_6_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/Kimi-K2.6-w4a8")
+KIMI_K2_6_EAGLE3_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "lightseekorg/kimi-k2.6-eagle3"
+)
+GLM_4_6V_FLASH_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/GLM-4.6V-Flash")
+QWEN3_VL_8B_THINKING_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-8B-Thinking"
+)
+QWEN3_VL_30B_A3B_THINKING_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-30B-A3B-Thinking"
+)
+QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Thinking"
+)
 # Images path
 IMAGES_EXAMPLE_PATH = os.path.join(IMAGES_DIR, "example_image.png")
 IMAGES_023_PATH = os.path.join(IMAGES_DIR, "023.jpg")
@@ -885,3 +903,46 @@ def send_concurrent_requests(
         t.join()
 
     return results
+
+
+HEADER = """
+### Models
+| Model | Server | Client | Output Throughput | Expected Output Throughput | Latency | Expected Latency | Accuracy | Expected Accuracy | Status |
+| ----- | ------ | ------ | -------- | ------------------ | ------- | ---------------- | -------- | --------- | ------ |
+"""
+
+
+def write_results_to_github_step_summary(results: dict):
+    if not is_in_ci():
+        return
+
+    write_github_step_summary_once(HEADER)
+
+    get_float = lambda metrics, item, precision: (
+        f"{metrics[item]:.{precision}f}"
+        if isinstance(metrics.get(item, "-"), (int, float))
+        else metrics.get(item, "-")
+    )
+
+    summary = ""
+    for model, metrics in results.items():
+        model = model.replace(MODEL_WEIGHTS_DIR, "").replace(HF_MODEL_WEIGHTS_DIR, "")
+        output_throughput = get_float(metrics, "output_throughput", 2)
+        output_throughput_threshold = metrics.get("output_throughput_threshold", "N/A")
+        accuracy = get_float(metrics, "accuracy", 4)
+        accuracy_threshold = metrics.get("accuracy_threshold", "N/A")
+        latency = get_float(metrics, "latency", 4)
+        latency_threshold = metrics.get("latency_threshold", "N/A")
+        server = metrics.get("server", "N/A")
+        client = metrics.get("client", "N/A")
+        error = metrics.get("error", "")
+        status = "✅" if error == "" else "❌ " + str(error)
+        summary += f"| {model} | {server} | {client} | {output_throughput} | {output_throughput_threshold} | {latency} | {latency_threshold} | {accuracy} | {accuracy_threshold} | {status} |\n"
+    write_github_step_summary(summary)
+
+
+def write_github_step_summary_once(summary: str):
+    if getattr(write_github_step_summary_once, "has_written", False):
+        return
+    write_github_step_summary_once.has_written = True
+    write_github_step_summary(summary)

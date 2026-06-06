@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
     popen_with_error_check,
 )
 
-register_npu_ci(est_time=300, suite="nightly-2-npu-a3", nightly=True)
+register_npu_ci(est_time=300, suite="full-2-npu-a3", nightly=True)
 
 
 class TestAscendGrpcModePDMixed(CustomTestCase):

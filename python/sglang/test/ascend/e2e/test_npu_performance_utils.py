@@ -25,6 +25,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
 from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    dump_metric,
     popen_launch_server,
 )
 
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 AISBENCHMARK = "aisbench"
 BENCHSERVING = "bench-serving"
-BENCHMARK_TOOL_DEFAULT = AISBENCHMARK
+BENCHMARK_TOOL_DEFAULT = BENCHSERVING
 AISBENCHMARK_DATASET_GSM8K = "gsm8k"
 AISBENCHMARK_DATASET_SHAREGPT = "sharegpt"
 AISBENCHMARK_DATASET_MM_CUSTOM_GEN = "mm-custom-gen"
@@ -149,7 +150,7 @@ MINIMAX_M2_5_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
 )
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-eagel-model-0318"
+    "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )
 
 QWEN3_5_397B_W8A8_MODEL_PATH = (
@@ -158,7 +159,20 @@ QWEN3_5_397B_W8A8_MODEL_PATH = (
 QWEN3_5_397B_W4A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
 )
-
+KIMI_K2_6_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/Kimi-K2.6-w4a8"
+KIMI_K2_6_EAGLE3_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/lightseekorg/kimi-k2.6-eagle3"
+)
+GLM_4_6V_FLASH_MODEL_PATH = "/root/.cache/modelscope/hub/models/ZhipuAI/GLM-4.6V-Flash"
+QWEN3_VL_8B_THINKING_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-VL-8B-Thinking"
+)
+QWEN3_VL_30B_A3B_THINKING_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-VL-30B-A3B-Thinking"
+)
+QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-Omni-30B-A3B-Thinking"
+)
 ROUND_ROBIN = "round_robin"
 
 DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 3600
@@ -709,6 +723,52 @@ def assert_metrics(self, metrics):
     """
     if not metrics:
         raise Exception("No metrics obtained from benchmark")
+
+    tc_name = self.__class__.__name__
+    if self.tpot and metrics.get("mean_tpot"):
+        dump_metric(
+            "tpot",
+            float(metrics["mean_tpot"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "tpot_baseline",
+            float(self.tpot),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.output_token_throughput and metrics.get("total_tps"):
+        dump_metric(
+            "throughput",
+            float(metrics["total_tps"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "throughput_baseline",
+            float(self.output_token_throughput),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.ttft and metrics.get("mean_ttft"):
+        dump_metric(
+            "ttft",
+            float(metrics["mean_ttft"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "ttft_baseline",
+            float(self.ttft),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.mean_e2e_latency and metrics.get("mean_e2e_latency"):
+        dump_metric(
+            "e2e_latency",
+            float(metrics["mean_e2e_latency"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "e2e_latency_baseline",
+            float(self.mean_e2e_latency),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
 
     if self.tpot:
         if self.tpot < TPOT_THRESHOLD:

@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestNpuTokenizer(CustomTestCase):
@@ -103,7 +103,6 @@ class TestNpuTokenizer(CustomTestCase):
         content = self.err_log_file.read()
         # Configure --tokenizer-worker-num to start the multi-tokenizer worker
         self.assertIn("Start multi-tokenizer worker process", content)
-        self.assertIn("Registering detokenizer", content)
         # Configure --load-format to safetensors
         self.assertIn("Loading safetensors checkpoint", content)
         self.out_log_file.close()

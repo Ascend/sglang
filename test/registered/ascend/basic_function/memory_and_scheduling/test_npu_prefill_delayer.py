@@ -29,7 +29,7 @@ from sglang.test.test_utils import (
     run_distributed_test,
 )
 
-register_npu_ci(est_time=400, suite="nightly-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 WORLD_SIZE = os.environ.get("SGLANG_TEST_WORLD_SIZE", "8")
 
