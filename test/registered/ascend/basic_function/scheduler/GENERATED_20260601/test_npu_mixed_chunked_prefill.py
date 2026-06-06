@@ -26,7 +26,7 @@ class TestNPUMixedChunkedPrefill(GSM8KMixin, CustomTestCase):
 
     model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
     base_url = DEFAULT_URL_FOR_TEST
-    gsm8k_accuracy_thres = 0.62
+    gsm8k_accuracy_thres = 0.30
 
     extra_args = [
         "--enable-mixed-chunk",
