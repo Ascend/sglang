@@ -1,9 +1,7 @@
 import asyncio
-import os
 import unittest
 
 import aiohttp
-import requests
 
 from sglang.test.ascend.test_ascend_utils import QWEN3_32B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci

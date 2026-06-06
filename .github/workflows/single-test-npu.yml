@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: PD disaggregation tests - failure, pause/resume, retract (fix lint)
+# test round 4: PD disaggregation tests - failure, pause/resume, retract (fix unused imports)
 
 on:
   pull_request:
