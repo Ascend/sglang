@@ -1,4 +1,3 @@
-import os
 import unittest
 
 from sglang.srt.environ import envs
@@ -72,8 +71,8 @@ class TestNPUStandaloneSpeculativeDecodingBase(CustomTestCase):
         envs.SGLANG_ENABLE_SPEC_V2.clear()
 
     def test_gsm8k(self):
-        import requests
         from types import SimpleNamespace
+        import requests
         from sglang.test.few_shot_gsm8k import run_eval
 
         requests.get(self.base_url + "/flush_cache", timeout=30)

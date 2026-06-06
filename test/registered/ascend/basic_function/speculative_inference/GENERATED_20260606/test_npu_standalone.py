@@ -1,4 +1,3 @@
-import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree
@@ -64,8 +63,8 @@ class TestNPUStandaloneV2SpeculativeDecodingBase(CustomTestCase):
         kill_process_tree(cls.process.pid)
 
     def test_gsm8k(self):
-        import requests
         from types import SimpleNamespace
+        import requests
         from sglang.test.few_shot_gsm8k import run_eval
 
         requests.get(self.base_url + "/flush_cache", timeout=30)

@@ -62,6 +62,7 @@ class TestNPU_NgramSpeculativeDecodingAscend(CustomTestCase):
 
     def test_gsm8k(self):
         from types import SimpleNamespace
+
         from sglang.test.few_shot_gsm8k import run_eval
 
         requests.get(self.base_url + "/flush_cache", timeout=30)
