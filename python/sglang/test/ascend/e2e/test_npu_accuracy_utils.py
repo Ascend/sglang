@@ -220,7 +220,7 @@ def assert_metrics(self, metrics):
         dump_metric(
             "accuracy_baseline",
             float(self.accuracy),
-            labels={"test_case": self.__class__.__name__, "type": "accuracy"}
+            labels={"test_case": self.__class__.__name__, "type": "accuracy"},
         )
         self.assertGreaterEqual(
             float(metrics["accuracy"]),
