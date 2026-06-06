@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 10: PD disaggregation tests - reduce mem-fraction-static to 0.5
+# test round 11: PD disaggregation tests - use mem-fraction-static=0.65
 
 on:
   pull_request:
