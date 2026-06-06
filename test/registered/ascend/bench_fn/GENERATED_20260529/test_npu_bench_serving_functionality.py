@@ -182,8 +182,10 @@ class TestNpuBenchServingCustomHeaders(CustomTestCase):
             args.warmup_requests = 0
             args.disable_tqdm = True
             run_benchmark(args)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Benchmark failed: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
             server.shutdown()
 
