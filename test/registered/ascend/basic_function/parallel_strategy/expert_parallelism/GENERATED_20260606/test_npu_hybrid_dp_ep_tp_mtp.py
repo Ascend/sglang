@@ -66,7 +66,7 @@ class TestHybridTPOnly(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -108,7 +108,7 @@ class TestHybridDPAttention(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -150,7 +150,7 @@ class TestHybridFullDPAttention(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -191,7 +191,7 @@ class TestHybridDenseTPOne(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -234,7 +234,7 @@ class TestHybridDPLMHead(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -275,7 +275,7 @@ class TestHybridEPOnly(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -319,7 +319,7 @@ class TestHybridDPEPCombined(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -362,7 +362,7 @@ class TestHybridDeepEPAuto(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -408,7 +408,7 @@ class TestHybridDeepEPDPAttention(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
@@ -457,7 +457,7 @@ class TestHybridDeepEPFullStack(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                0.82,
+                0.75,
             ],
             env={**NPU_ENV, **os.environ},
         )
