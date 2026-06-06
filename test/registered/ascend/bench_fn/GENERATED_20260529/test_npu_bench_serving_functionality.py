@@ -151,7 +151,7 @@ class TestNpuBenchServingCustomHeaders(CustomTestCase):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 if self.path == "/v1/models":
-                    self.wfile.write(json.dumps({"data": [{"id": "gpt2"}]}).encode())
+                    self.wfile.write(json.dumps({"data": [{"id": "Qwen/Qwen3-0.6B"}]}).encode())
                 elif self.path == "/generate":
                     self.wfile.write(
                         json.dumps(
@@ -174,7 +174,7 @@ class TestNpuBenchServingCustomHeaders(CustomTestCase):
                 base_url=f"http://127.0.0.1:{port}",
                 backend="sglang",
                 dataset_name="random",
-                tokenizer="gpt2",
+                tokenizer=MODEL,
                 num_prompts=1,
                 random_input_len=8,
                 random_output_len=8,
