@@ -59,7 +59,7 @@ class TestElasticEPTP(CustomTestCase):
                 "--max-running-requests",
                 "32",
                 "--mem-fraction-static",
-                0.82,
+                0.9,
                 *cls.extra_args,
             ],
             env={
