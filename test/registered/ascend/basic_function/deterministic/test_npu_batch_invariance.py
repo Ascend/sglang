@@ -22,7 +22,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
 
 
-class TestNpuDeterministicNoTp(CustomTestCase):
+class TestNpuBatchInvarianceNoTp(CustomTestCase):
     """Testcase: Using sglang.test.test_deterministic, verified that with parallelism strategies disabled, batch invariance
     is stably maintained across no-shared-prefix, shared-prefix, and radix cache scenarios, thereby achieving the goal of inference consistency
 
@@ -39,8 +39,6 @@ class TestNpuDeterministicNoTp(CustomTestCase):
         "ascend",
         "--sampling-backend",
         "ascend",
-        "--device",
-        "npu",
         "--chunked-prefill-size",
         "2048",
         "--mem-fraction-static",
@@ -153,7 +151,7 @@ class TestNpuDeterministicNoTp(CustomTestCase):
             )
 
 
-class TestNpuDeterministicTp(TestNpuDeterministicNoTp):
+class TestNpuBatchInvarianceTp(TestNpuBatchInvarianceNoTp):
     """Testcase：Using sglang.test.test_deterministic, verified that with parallelism strategies enabled, batch invariance
     is stably maintained across no-shared-prefix, shared-prefix, and radix cache scenarios, thereby achieving the goal of inference consistency
 
@@ -167,8 +165,6 @@ class TestNpuDeterministicTp(TestNpuDeterministicNoTp):
         "ascend",
         "--sampling-backend",
         "ascend",
-        "--device",
-        "npu",
         "--chunked-prefill-size",
         "2048",
         "--mem-fraction-static",
