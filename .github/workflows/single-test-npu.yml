@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 9: PD disaggregation tests - use Qwen3-0.6B model with TP=1
+# test round 10: PD disaggregation tests - reduce mem-fraction-static to 0.5
 
 on:
   pull_request:

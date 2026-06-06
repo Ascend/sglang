@@ -56,7 +56,7 @@ class TestNPUDisaggregationMooncakeFailure(PDDisaggregationServerBase):
             "ascend",
             "--disable-cuda-graph",
             "--mem-fraction-static",
-            "0.85",
+            "0.5",
         ]
         prefill_args += cls.transfer_backend + cls.rdma_devices
         cls.process_prefill = popen_launch_pd_server(
@@ -82,7 +82,7 @@ class TestNPUDisaggregationMooncakeFailure(PDDisaggregationServerBase):
             "ascend",
             "--disable-cuda-graph",
             "--mem-fraction-static",
-            "0.85",
+            "0.5",
         ]
         decode_args += cls.transfer_backend + cls.rdma_devices
         cls.process_decode = popen_launch_pd_server(

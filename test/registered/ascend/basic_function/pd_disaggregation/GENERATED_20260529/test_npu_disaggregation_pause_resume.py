@@ -55,7 +55,7 @@ class TestNPUDisaggregationPauseResumePrefillLeak(PDDisaggregationServerBase):
             "ascend",
             "--disable-cuda-graph",
             "--mem-fraction-static",
-            "0.85",
+            "0.5",
             "--max-running-requests",
             str(cls.MAX_RUNNING),
             "--enable-metrics",
@@ -84,7 +84,7 @@ class TestNPUDisaggregationPauseResumePrefillLeak(PDDisaggregationServerBase):
             "ascend",
             "--disable-cuda-graph",
             "--mem-fraction-static",
-            "0.85",
+            "0.5",
         ]
         decode_args += cls.transfer_backend + cls.rdma_devices
         cls.process_decode = popen_launch_pd_server(
