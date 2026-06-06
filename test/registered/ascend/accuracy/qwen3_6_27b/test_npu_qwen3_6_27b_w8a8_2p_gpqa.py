@@ -1,10 +1,10 @@
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
+    TestAscendAccuracyTestCaseBase,
+)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    AISBENCHMARK_DATASET_DEFAULT,
-    BENCHMARK_TOOL_DEFAULT,
     QWEN3_6_27B_W8A8_MODEL_PATH,
-    TestAscendPerformanceTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -15,23 +15,22 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
-QWEN3_6_27B_16K_1k_ENVS = {
+QWEN3_6_27B_64K_PREFIX_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
     "ASCEND_USE_FIA": "1",
+    "GDN_ATTN_BACKEND_TRITON": "1",
 }
 
-QWEN3_6_27B_16K_1k_OTHER_ARGS = [
+QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     "--tp-size",
-    4,
+    2,
     "--nnodes",
     1,
     "--attention-backend",
@@ -39,30 +38,33 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     "--device",
     "npu",
     "--chunked-prefill-size",
-    -1,
+    32768,
     "--max-prefill-tokens",
-    50000,
-    "--disable-radix-cache",
+    32768,
+    "--mamba-scheduler-strategy",
+    "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
-    28,
+    20,
     "--max-mamba-cache-size",
-    50,
+    120,
     "--mem-fraction-static",
-    0.7,
+    0.8,
     "--cuda-graph-bs",
+    1,
     2,
+    4,
     8,
+    10,
     12,
     16,
+    18,
     20,
-    24,
-    28,
-    "--enable-multimodal",
-    "--quantization",
-    "modelslim",
-    "--mm-attention-backend",
-    "ascend_attn",
+    "--enable-prefill-delayer",
+    "--prefill-delayer-queue-min-ratio",
+    0.5,
+    "--prefill-delayer-max-delay-ms",
+    30000,
     "--dtype",
     "bfloat16",
     "--mamba-ssm-dtype",
@@ -78,26 +80,18 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for Qwen3.6-27B-w8a8 2p in16k out1k 50ms"""
-
-    benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_gpqa(TestAscendAccuracyTestCaseBase):
     model = QWEN3_6_27B_W8A8_MODEL_PATH
-    other_args = QWEN3_6_27B_16K_1k_OTHER_ARGS
-    envs = QWEN3_6_27B_16K_1k_ENVS
-    dataset_name = "random"
-    max_concurrency = 28
-    num_prompts = 112
-    input_len = 16000
-    output_len = 1000
-    random_range_ratio = 1
-    tpot = 50
-    output_token_throughput = 426.1
+    envs = QWEN3_6_27B_64K_PREFIX_ENVS
+    other_args = QWEN3_6_27B_64K_PREFIX_OTHER_ARGS
+    accuracy = 0.855
+    datasets = ["gpqa_diamond"]
+    few_shot_num = 0
+    eval_batch_size = 64
+    generation_config = {"max_tokens": 81920, "temperature": 1.0}
 
-    def test_npu_qwen3_6_27b_2p_in16k_out1k_50ms(self):
-        """Run NPU performance test for Qwen3.6-27B-w8a8 in16k out1k 50ms"""
-        self.run_throughput()
+    def test_gpqa(self):
+        self.run_accuracy()
 
 
 if __name__ == "__main__":

@@ -21,8 +21,8 @@ QWEN3_5_397B_A17B_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "3000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
+    "HCCL_BUFFSIZE": "0",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
     "DEEPEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "GDN_ATTN_BACKEND_TRITON": "1",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
@@ -31,7 +31,6 @@ QWEN3_5_397B_A17B_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_NPU_USE_MULTI_STREAM": "1",
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "59648",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
@@ -57,7 +56,7 @@ QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS = [
     "--max-running-requests",
     432,
     "--mem-fraction-static",
-    0.75,
+    0.8,
     "--cuda-graph-bs",
     2,
     4,
@@ -73,8 +72,9 @@ QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS = [
     40,
     44,
     48,
+    50,
     52,
-    56,
+    54,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -102,9 +102,6 @@ QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
-    "--enable-prefill-delayer",
-    "--prefill-delayer-max-delay-passes",
-    200,
 ]
 
 
@@ -117,8 +114,8 @@ class TestNPUQwen3_5_397B_A17B_3K5_1K5_50ms(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS
     envs = QWEN3_5_397B_A17B_ENVS
     dataset_name = "random"
-    max_concurrency = 352
-    num_prompts = 1408
+    max_concurrency = 432
+    num_prompts = 432
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1

@@ -18,21 +18,19 @@ register_npu_ci(
 QWEN3_5_397B_128K_PREFIX_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
+    "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "0",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEPEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "GDN_ATTN_BACKEND_TRITON": "1",
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_NPU_USE_MULTI_STREAM": "1",
-    "ASCEND_USE_FIA": "1",
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "59648",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
@@ -53,18 +51,27 @@ QWEN3_5_397B_128K_PREFIX_OTHER_ARGS = [
     131072,
     "--max-mamba-cache-size",
     320,
-    "--trust-remote-code",
     "--prefill-max-requests",
     10,
+    "--mamba-scheduler-strategy",
+    "extra_buffer",
+    "--trust-remote-code",
     "--max-running-requests",
     64,
     "--mem-fraction-static",
-    0.55,
+    0.6,
     "--cuda-graph-bs",
+    2,
+    4,
+    6,
     8,
+    10,
+    12,
     16,
+    20,
     24,
     32,
+    40,
     48,
     56,
     64,
@@ -91,8 +98,6 @@ QWEN3_5_397B_128K_PREFIX_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
-    "--mamba-scheduler-strategy",
-    "extra_buffer",
 ]
 
 
@@ -105,8 +110,8 @@ class TestNPUQwen3_5_397B_128K_Prefix90(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_128K_PREFIX_OTHER_ARGS
     envs = QWEN3_5_397B_128K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 24
-    num_prompts = 96
+    max_concurrency = 48
+    num_prompts = 48
     aisbench_repeat_rate = 0.9
     input_len = 131072
     output_len = 1024

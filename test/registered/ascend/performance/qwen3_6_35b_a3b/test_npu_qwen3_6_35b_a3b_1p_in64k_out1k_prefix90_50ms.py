@@ -45,7 +45,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    65536,
+    131072,
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--mamba-scheduler-strategy",
@@ -53,18 +53,13 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--max-running-requests",
     32,
     "--max-mamba-cache-size",
-    170,
+    32,
     "--mem-fraction-static",
-    0.7,
+    0.65,
     "--cuda-graph-bs",
-    2,
+    4,
     8,
-    12,
     16,
-    20,
-    24,
-    30,
-    31,
     32,
     "--enable-multimodal",
     "--mm-attention-backend",
@@ -94,7 +89,11 @@ class TestNPUQwen3_6_35BA3B_1P_AIME2026(TestAscendAccuracyTestCaseBase):
     datasets = ["aime26"]
     few_shot_num = 0
     eval_batch_size = 64
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
+    generation_config = {
+        "max_tokens": 65536,
+        "temperature": 0.2,
+        "repetition_penalty": 1.08,
+    }
 
     @classmethod
     def tearDownClass(cls):

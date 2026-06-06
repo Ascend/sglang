@@ -62,7 +62,7 @@ QWEN3_NEXT_80B_A3B_OTHER_ARGS = [
     "--max-prefill-tokens",
     28672,
     "--context-length",
-    26384,
+    81920,
     "--max-total-tokens",
     122304,
     "--dp-size",
@@ -118,7 +118,13 @@ class TestQwen3Next80BA3B_aime25(TestAscendAccuracyTestCaseBase):
     accuracy = 0.695
     datasets = ["aime25"]
     few_shot_num = 0
-    generation_config = {"max_tokens": 25600, "temperature": 1.0}
+    generation_config = {
+        "max_tokens": 65536,
+        "temperature": 0.7,
+        "top_p": 0.8,
+        "top_k": 20,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": True}},
+    }
     max_concurrency = 16
 
     def test_aime26(self):

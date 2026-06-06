@@ -31,7 +31,6 @@ QWEN3_5_397B_128K_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_NPU_USE_MULTI_STREAM": "1",
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "60672",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
@@ -50,32 +49,29 @@ QWEN3_5_397B_128K_OTHER_ARGS = [
     -1,
     "--max-prefill-tokens",
     131072,
-    "--disable-radix-cache",
     "--prefill-max-requests",
     1,
+    "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
     16,
     "--mem-fraction-static",
-    0.65,
-    "--moe-a2a-backend",
-    "deepep",
-    "--deepep-mode",
-    "auto",
+    0.6,
     "--cuda-graph-bs",
+    2,
     4,
     6,
     8,
     12,
+    14,
     16,
-    "--enable-prefill-delayer",
-    "--prefill-delayer-max-delay-passes",
-    3000,
-    "--prefill-delayer-token-usage-low-watermark",
-    0.05,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
+    "--moe-a2a-backend",
+    "deepep",
+    "--deepep-mode",
+    "auto",
     "--mm-attention-backend",
     "ascend_attn",
     "--dtype",
@@ -104,8 +100,8 @@ class TestNPUQwen3_5_397B_128K(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_128K_OTHER_ARGS
     envs = QWEN3_5_397B_128K_ENVS
     dataset_name = "random"
-    max_concurrency = 6
-    num_prompts = 24
+    max_concurrency = 10
+    num_prompts = 10
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1

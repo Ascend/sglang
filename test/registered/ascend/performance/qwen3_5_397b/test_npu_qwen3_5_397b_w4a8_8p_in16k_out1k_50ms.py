@@ -21,17 +21,24 @@ QWEN3_5_397B_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "3000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "6",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
+    "HCCL_BUFFSIZE": "0",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
+    "DEEPEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "GDN_ATTN_BACKEND_TRITON": "1",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "58624",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "ZBAL_ENABLE_GRAPH": "1",
 }
 
-QWEN3_5_397B_3K5_OTHER_ARGS = [
+QWEN3_5_397B_16K_OTHER_ARGS = [
     "--attention-backend",
     "ascend",
     "--device",
@@ -41,36 +48,37 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    20480,
-    "--max-total-tokens",
-    200000,
+    65536,
+    "--prefill-max-requests",
+    4,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    64,
+    144,
     "--mem-fraction-static",
-    0.75,
+    0.8,
+    "--max-total-tokens",
+    635000,
     "--cuda-graph-bs",
-    1,
     2,
     4,
     6,
     8,
-    10,
     12,
     14,
     16,
+    18,
     20,
     24,
+    26,
+    28,
+    30,
     32,
-    48,
-    64,
+    34,
+    36,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
-    "--dp-size",
-    4,
-    "--enable-dp-attention",
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -81,6 +89,10 @@ QWEN3_5_397B_3K5_OTHER_ARGS = [
     "bfloat16",
     "--mamba-ssm-dtype",
     "bfloat16",
+    "--dp-size",
+    4,
+    "--enable-dp-attention",
+    "--enable-dp-lm-head",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -100,11 +112,11 @@ class TestNPUQwen3_5_397B_16K_1k_50ms(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W4A8_MODEL_PATH
-    other_args = QWEN3_5_397B_3K5_OTHER_ARGS
+    other_args = QWEN3_5_397B_16K_OTHER_ARGS
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 64
+    max_concurrency = 144
+    num_prompts = 144
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1

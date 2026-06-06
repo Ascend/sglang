@@ -21,8 +21,8 @@ QWEN3_5_397B_64K_PREFIX_ENVS = {
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     "HCCL_BUFFSIZE": "0",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEPEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "GDN_ATTN_BACKEND_TRITON": "1",
     "STREAMS_PER_DEVICE": "32",
@@ -31,8 +31,7 @@ QWEN3_5_397B_64K_PREFIX_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_NPU_USE_MULTI_STREAM": "1",
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "56000",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "58672",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
@@ -52,14 +51,24 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     65536,
     "--max-mamba-cache-size",
     640,
+    "--mamba-scheduler-strategy",
+    "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
     128,
     "--mem-fraction-static",
-    0.58,
+    0.6,
+    "--max-total-tokens",
+    1310720,
     "--cuda-graph-bs",
+    2,
+    4,
+    6,
     8,
+    10,
+    12,
     16,
+    20,
     24,
     32,
     40,
@@ -79,8 +88,10 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     "bfloat16",
     "--mamba-ssm-dtype",
     "bfloat16",
-    "--max-total-tokens",
-    1310720,
+    "--dp-size",
+    2,
+    "--enable-dp-attention",
+    "--enable-dp-lm-head",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -91,12 +102,6 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
-    "--mamba-scheduler-strategy",
-    "extra_buffer",
-    "--dp-size",
-    2,
-    "--enable-dp-attention",
-    "--enable-dp-lm-head",
 ]
 
 
@@ -109,8 +114,8 @@ class TestNPUQwen3_5_397B_64K_Prefix90(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_5_397B_64K_PREFIX_ENVS
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 256
+    max_concurrency = 128
+    num_prompts = 128
     aisbench_repeat_rate = 0.9
     input_len = 65536
     output_len = 1024
