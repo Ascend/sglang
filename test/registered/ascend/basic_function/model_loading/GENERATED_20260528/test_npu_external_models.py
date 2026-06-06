@@ -2,7 +2,7 @@ import unittest
 
 import sglang as sgl
 from sglang.srt.environ import envs
-from sglang.test.ascend.test_ascend_utils import QWEN3_VL_8B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
@@ -20,7 +20,7 @@ class TestNPUExternalModels(CustomTestCase):
         envs.SGLANG_EXTERNAL_MODEL_PACKAGE.set("sglang.test.external_models")
         envs.SGLANG_EXTERNAL_MM_PROCESSOR_PACKAGE.set("sglang.test.external_models")
         prompt = "Today is a sunny day and I like"
-        model_path = QWEN3_VL_8B_INSTRUCT_WEIGHTS_PATH
+        model_path = QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH
 
         engine = sgl.Engine(
             model_path=model_path,

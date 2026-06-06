@@ -1,5 +1,5 @@
 ﻿name: Single Test (NPU)
-# test round 5: Model loading - external models and prefetch checkpoints (fix mem_fraction to 0.95)
+# test round 6: Model loading - external models and prefetch checkpoints (use 4B model)
 
 on:
   pull_request:
