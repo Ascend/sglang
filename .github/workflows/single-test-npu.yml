@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 8: Sessions test cases - Added tabulate dependency
+# test round 9: Sessions test cases - Relaxed streaming correctness tolerance
 
 on:
   pull_request:
