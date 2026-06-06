@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: 5 NPU speculative decoding tests (EAGLE3/NGRAM/STANDALONE V1+V2)
+# test round 10: 3 NPU speculative decoding tests (EAGLE3 constrained-decoding + EAGLE3 DP-attention x2)
 
 on:
   pull_request:
@@ -38,13 +38,18 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 5 NPU speculative decoding test cases
+          # tabulate is required by sglang.test.send_one (used by
+          # test_npu_eagle_dp_attention.py). NPU CI image does not ship it.
+          pip install --quiet tabulate
+
+          # Test cases - 3 NPU speculative decoding test cases (round 10).
+          # Run constrained_decoding first (the most-mature, golden reference),
+          # then infer_beta_dp_attention, then eagle_dp_attention (most aggressive,
+          # run last to avoid blocking the other two on a potential NPU driver bug).
           test_cases=(
             "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_constrained_decoding_spec_reasoning.py"
-            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_ngram.py"
-            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_ngram_extra.py"
-            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_standalone.py"
-            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_standalone_extra.py"
+            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_infer_beta_dp_attention.py"
+            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_dp_attention.py"
           )
 
           for test_case in "${test_cases[@]}"; do
