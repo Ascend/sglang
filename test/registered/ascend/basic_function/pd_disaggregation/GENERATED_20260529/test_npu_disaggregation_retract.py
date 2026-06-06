@@ -49,12 +49,12 @@ class TestNPUDisaggregationSimulatedRetract(PDDisaggregationServerBase):
             "--disaggregation-bootstrap-port",
             cls.bootstrap_port,
             "--tp",
-            "1",
+            "2",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
             "--mem-fraction-static",
-            "0.85",
+            "0.7",
         ]
         prefill_args += cls.transfer_backend + cls.rdma_devices
         cls.process_prefill = popen_launch_pd_server(
@@ -73,14 +73,14 @@ class TestNPUDisaggregationSimulatedRetract(PDDisaggregationServerBase):
             "--disaggregation-bootstrap-port",
             cls.bootstrap_port,
             "--tp",
-            "1",
+            "2",
             "--base-gpu-id",
             "0",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
             "--mem-fraction-static",
-            "0.85",
+            "0.7",
         ]
         decode_args += cls.transfer_backend + cls.rdma_devices
         cls.process_decode = popen_launch_pd_server(
