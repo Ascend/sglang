@@ -1,6 +1,7 @@
 import unittest
 
 import requests
+import torch
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
@@ -28,6 +29,10 @@ DEFAULT_NGRAM_SERVER_ARGS = [
 ]
 
 
+@unittest.skipIf(
+    not torch.cuda.is_available(),
+    "NGRAM speculative decoding only supports CUDA device (sglang source hardcoded check).",
+)
 class TestNPU_NgramSpeculativeDecodingSam(CustomTestCase):
     """Test NGRAM speculative decoding with external SAM corpus on ascend backend.
 
@@ -52,6 +57,10 @@ class TestNPU_NgramSpeculativeDecodingSam(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not torch.cuda.is_available():
+            raise unittest.SkipTest(
+                "NGRAM speculative decoding requires a CUDA device."
+            )
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -61,7 +70,8 @@ class TestNPU_NgramSpeculativeDecodingSam(CustomTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        kill_process_tree(cls.process.pid)
+        if cls.process is not None:
+            kill_process_tree(cls.process.pid)
 
     def test_output_as_corpus_boosts_accept_length(self):
         prompts = [
