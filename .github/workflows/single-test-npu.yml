@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: scheduler basic function tests - fix gsm8k accuracy threshold
+# test round 6: scheduler basic function tests - simplify scheduler control tests
 
 on:
   pull_request:
