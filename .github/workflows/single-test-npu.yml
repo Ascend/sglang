@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: NPU bench serving functionality test
+# test round 2: NPU bench serving functionality test - fix gsp_group_distribution
 
 on:
   pull_request:
