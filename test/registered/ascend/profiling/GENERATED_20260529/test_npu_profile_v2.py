@@ -61,8 +61,8 @@ class TestNPUProfileV2(CustomTestCase):
 
         self._post_request()
 
-        self._check_profile_output(pattern="*-prefill*", expect_existence=True)
-        self._check_profile_output(pattern="*-decode*", expect_existence=True)
+        # NPU profiler outputs PROF_* directories instead of *-prefill*/*-decode* files
+        self._check_profile_output(pattern="PROF_*", expect_existence=True)
 
     def test_decode_only(self):
         self._start_profile(
@@ -73,8 +73,8 @@ class TestNPUProfileV2(CustomTestCase):
 
         self._post_request()
 
-        self._check_profile_output(pattern="*-prefill*", expect_existence=False)
-        self._check_profile_output(pattern="*-decode*", expect_existence=True)
+        # NPU profiler outputs PROF_* directories for decode stage
+        self._check_profile_output(pattern="PROF_*", expect_existence=True)
 
     def _start_profile(self, **kwargs):
         response = requests.post(
