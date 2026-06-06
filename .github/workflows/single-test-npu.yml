@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: scheduler basic function tests - simplify scheduler control tests
+# test round 7: scheduler basic function tests - fix unused imports
 
 on:
   pull_request:
