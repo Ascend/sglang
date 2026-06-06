@@ -75,7 +75,7 @@ class TestNPUStandaloneSpeculativeDecodingBase(CustomTestCase):
 
         import requests
 
-        from sglang.test.few_shot_gsm8k import run_eval
+        from sglang.test.run_eval import run_eval
 
         requests.get(self.base_url + "/flush_cache", timeout=30)
 
@@ -88,10 +88,11 @@ class TestNPUStandaloneSpeculativeDecodingBase(CustomTestCase):
             num_examples=100,
             num_threads=128,
             num_shots=4,
+            gsm8k_data_path=None,
         )
         metrics = run_eval(args)
 
-        self.assertGreaterEqual(metrics["accuracy"], 0.69)
+        self.assertGreaterEqual(metrics["score"], 0.69)
 
         server_info = requests.get(self.base_url + "/server_info", timeout=10).json()
         avg_spec_accept_length = server_info["internal_states"][0][
