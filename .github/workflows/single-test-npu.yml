@@ -1,5 +1,5 @@
 ﻿name: Single Test (NPU)
-# test round 10: Model loading - prefetch checkpoints only
+# test round 11: Model loading - prefetch checkpoints only (revert to original config)
 
 on:
   pull_request:
