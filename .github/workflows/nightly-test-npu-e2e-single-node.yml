@@ -24,7 +24,7 @@ on:
         required: false
         type: string
         description: image for pods
-        default: "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann8.5.0-a3"
+        default: "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3"
       install_sglang_from_source:
         required: false
         type: boolean
@@ -136,6 +136,7 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
 
+          # Set environment of cann
           log_path="/root/.cache/tests/logs/log/${current_date}/${tc_name}/${HOSTNAME}"
           rm -rf ${log_path}
           mkdir -p ${log_path}
