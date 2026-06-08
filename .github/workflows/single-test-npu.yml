@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: PD disaggregation accuracy test
+# test round 2: PD disaggregation accuracy test - fix ascend backend
 
 on:
   pull_request:
