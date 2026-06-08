@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: PD disaggregation accuracy test - fix BOM and newline
+# test round 5: PD disaggregation accuracy test - add ASCEND_MF_STORE_URL
 
 on:
   pull_request:
