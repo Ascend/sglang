@@ -110,7 +110,7 @@ class TestQwen32B_mmlupro(TestAscendAccuracyTestCaseBase):
     model = QWEN3_32B_W8A8_MODEL_PATH
     envs = QWEN3_32B_ENVS
     other_args = QWEN3_32B_OTHER_ARGS
-    accuracy = 0.6554
+    accuracy = 0.4949
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 64

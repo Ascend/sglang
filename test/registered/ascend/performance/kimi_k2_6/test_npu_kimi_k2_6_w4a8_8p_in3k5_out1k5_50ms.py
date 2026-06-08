@@ -108,7 +108,6 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     output_len = 1500
     random_range_ratio = 1
     warmup_requests = 0
-    disable_ignore_eos = True
     tpot = 50
     output_token_throughput = 3492
 

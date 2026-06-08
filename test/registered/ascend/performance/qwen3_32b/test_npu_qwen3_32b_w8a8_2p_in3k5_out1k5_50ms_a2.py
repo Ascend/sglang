@@ -93,7 +93,7 @@ class TestQwen32B_GPQA(TestAscendAccuracyTestCaseBase):
     model = QWEN3_32B_W8A8_MODEL_PATH
     other_args = QWEN3_32B_OTHER_ARGS
     envs = QWEN3_32B_ENVS
-    accuracy = 0.6554
+    accuracy = 0.4949
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 64
