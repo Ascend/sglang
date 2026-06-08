@@ -5,7 +5,7 @@ from sglang.test.ascend.test_ascend_utils import KIMI_K2_THINKING_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class TestKimiK2Thinking(GSM8KAscendMixin, CustomTestCase):

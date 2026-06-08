@@ -54,7 +54,7 @@ class TestDeepEpAutoDeepseekR1(CustomTestCase):
                 "21",
                 "22",
                 "--mem-fraction-static",
-                "0.78",
+                "0.72",
                 "--max-running-requests",
                 "352",
                 "--disable-radix-cache",
@@ -130,6 +130,7 @@ class TestDeepEpAutoDeepseekR1(CustomTestCase):
             num_threads=300,
             num_shots=5,
             max_tokens=512,
+            api="completion",
         )
         # Execute GSM8K evaluation and get metrics
         metrics = run_eval(args)

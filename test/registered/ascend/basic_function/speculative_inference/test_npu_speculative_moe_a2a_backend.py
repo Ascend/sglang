@@ -15,7 +15,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class TestAscendDistTimeout(CustomTestCase):
@@ -48,8 +48,6 @@ class TestAscendDistTimeout(CustomTestCase):
             "--disable-cuda-graph",
             "--speculative-moe-a2a-backend",
             "ascend_fuseep",
-            "--speculative-algorithm",
-            "NEXTN",
             "--speculative-num-steps",
             1,
             "--speculative-eagle-topk",

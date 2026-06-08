@@ -16,7 +16,7 @@ from sglang.test.test_utils import (
 
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 
-register_npu_ci(est_time=800, suite="nightly-8-npu-a3", nightly=True)
+register_npu_ci(est_time=800, suite="full-8-npu-a3", nightly=True)
 
 
 _INLINE_IMAGE_URL = (
