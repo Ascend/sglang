@@ -105,6 +105,7 @@ class TestNPUQwen3_5_397B_64K(TestAscendPerformanceTestCaseBase):
     model = QWEN3_5_397B_W4A8_MODEL_PATH
     other_args = QWEN3_5_397B_64K_OTHER_ARGS
     envs = QWEN3_5_397B_64K_ENVS
+    warmup_requests = 8
     dataset_name = "random"
     max_concurrency = 28
     num_prompts = 28
