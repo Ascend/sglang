@@ -2,7 +2,6 @@ import unittest
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
     KIMI_K2_6_EAGLE3_MODEL_PATH,
     KIMI_K2_6_W4A8_MODEL_PATH,
@@ -145,12 +144,11 @@ class TestNPUKimiK2_6_W4A8_1P1D_24p_In64k_Out1k5_100ms(
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    dataset_name = "random"
+    dataset_name = "generated-shared-prefix"
     max_concurrency = 16
     num_prompts = 16
-    request_rate = 1
-    aisbench_repeat_rate = 0.9
+    request_rate = float("inf")
+    repeat_rate = 0.9
     input_len = 65536
     output_len = 1536
     random_range_ratio = 1

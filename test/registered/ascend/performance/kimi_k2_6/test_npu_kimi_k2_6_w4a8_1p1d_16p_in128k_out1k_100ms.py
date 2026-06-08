@@ -29,7 +29,6 @@ PREFILL_ENVS = {
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24699",
     "ZBAL_ENABLE_GRAPH": "1",
     "ZBAL_HCCL_OP": "send,recv",
-    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24669",
 }
 
 DECODE_ENVS = {

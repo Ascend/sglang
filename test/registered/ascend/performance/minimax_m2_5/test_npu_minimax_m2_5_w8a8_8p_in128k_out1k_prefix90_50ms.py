@@ -2,7 +2,6 @@ import os
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
     MINIMAX_M2_5_EAGLE3_MODEL_PATH,
     MINIMAX_M2_5_W8A8_MODEL_PATH,
@@ -96,19 +95,19 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In128k_Out1k_Prefix90(
     """Test NPU performance for MiniMax-M2.5-w8a8 8p single node prefix cache in128k out1k"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
     other_args = MINIMAX_M2_5_128K_PREFIX_OTHER_ARGS
     envs = MINIMAX_M2_5_128K_PREFIX_ENVS
-    dataset_name = "random"
+    dataset_name = "generated-shared-prefix"
     max_concurrency = 8
     num_prompts = 32
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
-    aisbench_repeat_rate = 0.9
+    repeat_rate = 0.9
     tpot = 50
     output_token_throughput = 366.35
+    request_rate = float("inf")
 
     def test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix(self):
         """Run NPU performance test for MiniMax-M2.5-w8a8 in128k out1k prefix"""

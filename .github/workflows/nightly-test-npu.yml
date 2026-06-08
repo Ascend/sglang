@@ -97,10 +97,13 @@ jobs:
       matrix:
         test_config:
           # qwen3_6_35b_a3b performance tests
-          - name: qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms_aime26
+          - name: qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms.py
             test_type: 'perf'
+          - name: qwen3_6_35b_a3b_1p_aime26
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/accuracy/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_aime26.py
           - name: qwen3_6_35b_a3b_1p_in64k_out1k_50ms
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_50ms.py
@@ -213,10 +216,6 @@ jobs:
           - name: qwen3_vl_30b_a3b_thinking_1p_mmmu
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b_thinking/test_npu_qwen3_vl_30b_a3b_thinking_1p_mmmu.py
-#          # qwen3_omni_30b_a3b_thinking accuracy tests
-#          - name: qwen3_omni_30b_a3b_thinking_1p_mmmu
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/accuracy/qwen3_omni_30b_a3b_thinking/test_npu_qwen3_omni_30b_a3b_thinking_1p_mmmu.py
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
