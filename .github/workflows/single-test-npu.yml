@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: piecewise CUDA graph VLM + elastic EP + hybrid DP/EP/TP/MTP (lowered mem-fraction-static to 0.75 to fix OOM)
+# test round 4: piecewise CUDA graph VLM + elastic EP + hybrid DP/EP/TP/MTP (revert mem-fraction-static to 0.82)
 
 on:
   pull_request:
