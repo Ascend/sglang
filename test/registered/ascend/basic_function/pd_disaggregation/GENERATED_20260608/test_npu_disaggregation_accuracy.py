@@ -28,6 +28,10 @@ class TestNPUDisaggregationAccuracy(PDDisaggregationServerBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.model = QWEN3_8B_WEIGHTS_PATH
+        # Use ascend transfer backend for NPU
+        cls.transfer_backend = ["--disaggregation-transfer-backend", "ascend"]
+        # No RDMA devices needed for ascend backend
+        cls.rdma_devices = []
         cls.extra_prefill_args = [
             "--attention-backend",
             "ascend",
