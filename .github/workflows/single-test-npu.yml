@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: MLA INT8 DeepSeek V3 test cases - Fix tp-size from 16 to 2
+# test round 4: MLA INT8 DeepSeek V3 test cases - Use 16 NPU runner
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-16
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260605
     steps:
