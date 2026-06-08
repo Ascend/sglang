@@ -99,10 +99,6 @@ class TestQwen32B_GPQA(TestAscendAccuracyTestCaseBase):
     eval_batch_size = 64
     generation_config = {"max_tokens": 40000, "temperature": 1.0}
 
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
     def test_qwen3_32b_qpqa(self):
         """Run NPU accuracy test for Qwen3-32B-W8A8 on qpqa"""
         self.run_accuracy()
@@ -122,10 +118,6 @@ class TestQwen32B(TestAscendPerformanceTestCaseBase):
     random_range_ratio = 1
     tpot = 50
     output_token_throughput = 1600
-
-    @classmethod
-    def setUpClass(cls):
-        pass
 
     def test_qwen3_32b(self):
         self.run_throughput()
