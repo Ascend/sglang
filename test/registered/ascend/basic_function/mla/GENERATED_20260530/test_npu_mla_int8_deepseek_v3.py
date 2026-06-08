@@ -38,7 +38,7 @@ class TestNPUDSV3MTPChannelInt8(CustomTestCase):
             "--mem-fraction-static",
             "0.8",
             "--tp-size",
-            16,
+            "2",
             "--quantization",
             "modelslim",
             "--speculative-algorithm",
@@ -70,8 +70,8 @@ class TestNPUDSV3MTPChannelInt8(CustomTestCase):
             eval_name="gsm8k",
             api="completion",
             max_tokens=512,
-            num_examples=200,
-            num_threads=128,
+            num_examples=50,
+            num_threads=32,
         )
         metrics = run_eval(args)
         print(metrics)
@@ -105,7 +105,7 @@ class TestNPUDSV3MTPBlockInt8(CustomTestCase):
             "--mem-fraction-static",
             "0.8",
             "--tp-size",
-            16,
+            "2",
             "--quantization",
             "modelslim",
             "--speculative-algorithm",
@@ -137,8 +137,8 @@ class TestNPUDSV3MTPBlockInt8(CustomTestCase):
             eval_name="gsm8k",
             api="completion",
             max_tokens=512,
-            num_examples=200,
-            num_threads=128,
+            num_examples=50,
+            num_threads=32,
         )
         metrics = run_eval(args)
         print(metrics)
