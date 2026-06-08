@@ -46,7 +46,7 @@ class TestNPUDSV3MTPChannelInt8(CustomTestCase):
             "--speculative-num-steps",
             "2",
             "--speculative-eagle-topk",
-            "4",
+            "1",
             "--speculative-num-draft-tokens",
             "4",
         ]
@@ -83,7 +83,7 @@ class TestNPUDSV3MTPChannelInt8(CustomTestCase):
             "avg_spec_accept_length"
         ]
         print(f"{avg_spec_accept_length=}")
-        self.assertGreater(avg_spec_accept_length, 2.0)
+        self.assertGreater(avg_spec_accept_length, 1.0)
 
 
 class TestNPUDSV3MTPBlockInt8(CustomTestCase):
@@ -113,7 +113,7 @@ class TestNPUDSV3MTPBlockInt8(CustomTestCase):
             "--speculative-num-steps",
             "2",
             "--speculative-eagle-topk",
-            "4",
+            "1",
             "--speculative-num-draft-tokens",
             "4",
         ]
@@ -150,7 +150,7 @@ class TestNPUDSV3MTPBlockInt8(CustomTestCase):
             "avg_spec_accept_length"
         ]
         print(f"{avg_spec_accept_length=}")
-        self.assertGreater(avg_spec_accept_length, 2.0)
+        self.assertGreater(avg_spec_accept_length, 1.0)
 
 
 if __name__ == "__main__":

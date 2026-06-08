@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: MLA INT8 DeepSeek V3 test cases
+# test round 2: MLA INT8 DeepSeek V3 test cases - Fix speculative_eagle_topk
 
 on:
   pull_request:
