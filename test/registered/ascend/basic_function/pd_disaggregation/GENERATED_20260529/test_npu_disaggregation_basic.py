@@ -19,6 +19,9 @@ register_cuda_ci(est_time=509, stage="base-b", runner_config="2-gpu-large")
 class TestDisaggregationAccuracy(PauseResumeInPlaceMixin, PDDisaggregationServerBase):
     @classmethod
     def setUpClass(cls):
+        # Use Ascend transfer backend instead of mooncake to avoid InfiniBand detection
+        cls.transfer_backend = ["--disaggregation-transfer-backend", "ascend"]
+        cls.rdma_devices = []
         super().setUpClass()
         cls.model = QWEN3_8B_WEIGHTS_PATH
         cls.pause_generate_url = cls.lb_url
