@@ -120,13 +120,13 @@ MODEL_CONFIG_NOCPNOMTP = {
 MODEL_CONFIG_CPNOMTTP = {
     **MODEL_CONFIG_NOCPNOMTP,
     "prefill_args": MODEL_CONFIG_NOCPNOMTP["prefill_args"]
-                    + [
-                        "--enable-nsa-prefill-context-parallel",
-                        "--nsa-prefill-cp-mode",
-                        "in-seq-split",
-                        "--attn-cp-size",
-                        32,
-                    ],
+    + [
+        "--enable-nsa-prefill-context-parallel",
+        "--nsa-prefill-cp-mode",
+        "in-seq-split",
+        "--attn-cp-size",
+        32,
+    ],
 }
 
 
