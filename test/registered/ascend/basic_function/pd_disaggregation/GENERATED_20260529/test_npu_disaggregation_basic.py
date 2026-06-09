@@ -5,29 +5,29 @@ import openai
 import requests
 from transformers import AutoTokenizer
 
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_8B_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_cuda_ci
 from sglang.test.kits.pause_generation_kit import PauseResumeInPlaceMixin
 from sglang.test.server_fixtures.disaggregation_fixture import (
     PDDisaggregationServerBase,
 )
-from sglang.test.ascend.test_ascend_utils import (
-    QWEN3_8B_WEIGHTS_PATH,
-)
+
 register_cuda_ci(est_time=509, stage="base-b", runner_config="2-gpu-large")
 
 
 class TestDisaggregationAccuracy(PauseResumeInPlaceMixin, PDDisaggregationServerBase):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         # Use Ascend transfer backend instead of mooncake to avoid InfiniBand detection
         cls.transfer_backend = ["--disaggregation-transfer-backend", "ascend"]
         cls.rdma_devices = []
-        super().setUpClass()
         cls.model = QWEN3_8B_WEIGHTS_PATH
         cls.pause_generate_url = cls.lb_url
         cls.pause_target_urls = [cls.prefill_url, cls.decode_url]
         cls.launch_all()
-
 
     def test_logprob(self):
         prompt = "The capital of france is "
@@ -48,10 +48,10 @@ class TestDisaggregationAccuracy(PauseResumeInPlaceMixin, PDDisaggregationServer
         output_logprobs = j["meta_info"]["output_token_logprobs"]
 
         assert (
-                len(output_logprobs) == completion_tokens
+            len(output_logprobs) == completion_tokens
         ), f"output_logprobs and completion_tokens should have the same length, but got {len(output_logprobs)} and {completion_tokens}"
         assert (
-                len(input_logprobs) > 0
+            len(input_logprobs) > 0
         ), f"input_logprobs should have at least one token, but got {len(input_logprobs)}"
 
     def test_chat_completion_top_logprobs(self):
