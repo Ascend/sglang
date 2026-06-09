@@ -24,13 +24,9 @@ QWEN3_NEXT_80B_A3B_2P_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "330",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "5",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3000",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "ASCEND_USE_FIA": "1",
     "SGLANG_NPU_USE_MULTI_STREAM": "0",
-    "ENABLE_PROFILING": "0",
     "SGLANG_WARMUP_TIMEOUT": "3600",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
@@ -135,13 +131,13 @@ QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS = [
 
 class TestNPUQwen3Next80BA3B2PIn3k5Out1k5_50ms(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH
     other_args = QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS
     envs = QWEN3_NEXT_80B_A3B_2P_ENVS
     dataset_name = "random"
-    max_concurrency = 220
-    num_prompts = 220
+    max_concurrency = 300
+    num_prompts = 300
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
