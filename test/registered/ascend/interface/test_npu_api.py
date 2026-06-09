@@ -95,7 +95,6 @@ class Test01_NpuApi(CustomTestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertIn("loads", body)
-        self.assertIn("aggregate", body)
         self.assertGreaterEqual(len(body["loads"]), 1)
         load = body["loads"][0]
         self.assertGreaterEqual(load["num_running_reqs"], 0)

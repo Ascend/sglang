@@ -92,7 +92,7 @@ class TestNPUKimiK2_6_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     """Test NPU performance for Kimi-K2.6-w4a8 8p multimodal in1080p+30 out256"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
+    dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
     model = KIMI_K2_6_W4A8_MODEL_PATH
     other_args = KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS
     envs = KIMI_K2_6_IN1080P_30_OUT256_ENVS
@@ -102,7 +102,7 @@ class TestNPUKimiK2_6_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     image_count = 1
     max_concurrency = 20
     num_prompts = 20
-    request_rate = 1
+    request_rate = float("inf")
     input_len = 30
     output_len = 256
     random_range_ratio = 1

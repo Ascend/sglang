@@ -18,20 +18,20 @@ register_npu_ci(
 )
 
 KIMI_K2_6_ENVS = {
-    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "SGLANG_SET_CPU_AFFINITY": "1",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
     "STREAMS_PER_DEVICE": "32",
-    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "48",
-    "HCCL_BUFFSIZE": "1200",
+    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "96",
+    "HCCL_BUFFSIZE": "1200",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_NPU_USE_MLAPO": "1",
     "SGLANG_NPU_USE_MULTI_STREAM": "1",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
 }
 
 KIMI_K2_6_OTHER_ARGS = [
@@ -47,15 +47,15 @@ KIMI_K2_6_OTHER_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.74,
+    0.753,
     "--max-running-requests",
-    112,
+    80,
     "--chunked-prefill-size",
     32768,
     "--context-length",
-    8192,
+    6144,
     "--max-prefill-tokens",
-    16384,
+    65536,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -73,6 +73,7 @@ KIMI_K2_6_OTHER_ARGS = [
     2,
     3,
     4,
+    5,
     "--disable-radix-cache",
     "--model-loader-extra-config",
     '{"enable_multithread_load": true}',
@@ -88,26 +89,29 @@ KIMI_K2_6_OTHER_ARGS = [
     5,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--prefill-delayer-max-delay-passes",
+    200,
+    "--enable-prefill-delayer",
 ]
 
 
 class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     max_attempts = 5
     model = KIMI_K2_6_W4A8_MODEL_PATH
     other_args = KIMI_K2_6_OTHER_ARGS
     envs = KIMI_K2_6_ENVS
     backend = "sglang"
     dataset_name = "random"
-    max_concurrency = 112
-    num_prompts = 112
+    max_concurrency = 64
+    num_prompts = 256
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
     warmup_requests = 0
     tpot = 20
-    output_token_throughput = 1800
+    output_token_throughput = 1995
 
     def test_kimi_k2_6_w4a8(self):
         self.run_throughput()

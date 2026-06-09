@@ -71,7 +71,7 @@ QWEN3_8B_OTHER_ARGS = [
 class TestQwen8B(TestAscendPerformanceTestCaseBase):
     max_attempts = 5
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_8B_W8A8_MODEL_PATH
     other_args = QWEN3_8B_OTHER_ARGS
     envs = QWEN3_8B_ENVS

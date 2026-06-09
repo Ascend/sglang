@@ -89,7 +89,7 @@ OTHER_ARGS = [
 
 class TestQwen30B(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_30B_A3B_W8A8_VLLM_MODEL_PATH
     other_args = OTHER_ARGS
     envs = ENVS

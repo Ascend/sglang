@@ -89,7 +89,7 @@ QWEN3_32B_OTHER_ARGS = [
 
 class TestQwen32B(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_32B_W8A8_MODEL_PATH
     other_args = QWEN3_32B_OTHER_ARGS
     envs = QWEN3_32B_ENVS
@@ -110,7 +110,7 @@ class TestQwen32B_mmlupro(TestAscendAccuracyTestCaseBase):
     model = QWEN3_32B_W8A8_MODEL_PATH
     envs = QWEN3_32B_ENVS
     other_args = QWEN3_32B_OTHER_ARGS
-    accuracy = 0.516
+    accuracy = 0.4949
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 64

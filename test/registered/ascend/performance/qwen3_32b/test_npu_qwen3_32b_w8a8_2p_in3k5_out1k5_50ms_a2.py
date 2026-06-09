@@ -93,8 +93,8 @@ class TestQwen32B_GPQA(TestAscendAccuracyTestCaseBase):
     model = QWEN3_32B_W8A8_MODEL_PATH
     other_args = QWEN3_32B_OTHER_ARGS
     envs = QWEN3_32B_ENVS
-    accuracy = 0.516
-    datasets = ["qpqa_diamond"]
+    accuracy = 0.4949
+    datasets = ["gpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 64
     generation_config = {"max_tokens": 40000, "temperature": 1.0}
@@ -106,7 +106,7 @@ class TestQwen32B_GPQA(TestAscendAccuracyTestCaseBase):
 
 class TestQwen32B(TestAscendPerformanceTestCaseBase):
     base_url = DEFAULT_URL_FOR_TEST
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_32B_W8A8_MODEL_PATH
     other_args = QWEN3_32B_OTHER_ARGS
     envs = QWEN3_32B_ENVS

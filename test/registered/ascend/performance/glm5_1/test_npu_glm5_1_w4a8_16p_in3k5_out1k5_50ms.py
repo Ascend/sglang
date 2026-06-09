@@ -84,7 +84,7 @@ class TestNPUGLM5_1_W4A8_32P_In3k5_Out1k5(TestAscendPerfMultiNodePdMixTestCaseBa
 
     model_config = GLM_5_1_TWO_NODE_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
     max_concurrency = 128
     num_prompts = 512

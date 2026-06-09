@@ -89,7 +89,7 @@ class TestNPUMiniMaxM2_5_W8A8_4P_In32k_Out1k_HighThroughput(
     """Test NPU performance for MiniMax-M2.5-w8a8 4p single node high throughput in32k out1k"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
     other_args = MINIMAX_M2_5_4P_32K_OTHER_ARGS
     envs = MINIMAX_M2_5_4P_32K_ENVS

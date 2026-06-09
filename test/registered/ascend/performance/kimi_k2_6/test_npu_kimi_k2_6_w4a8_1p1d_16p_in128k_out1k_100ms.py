@@ -154,11 +154,11 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In128k_Out1k_100ms(
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
     max_concurrency = 1
     num_prompts = 1
-    request_rate = 1
+    request_rate = float("inf")
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1

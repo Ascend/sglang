@@ -116,7 +116,7 @@ class TestNPUQwen3_5_397B_W4A8_1P_In3k5_Out1k5_High_GPQA(
     other_args = QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS
     envs = QWEN3_5_397B_W4A8_1P_HIGH_ENVS
     accuracy = 0.884
-    datasets = ["gpqa"]
+    datasets = ["gpqa_diamond"]
     few_shot_num = 0
     generation_config = {"max_tokens": 65536, "temperature": 1.0}
     eval_batch_size = 64

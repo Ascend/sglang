@@ -102,12 +102,12 @@ class TestNPUQwen3_5_397B_A17B_3K5_1K5_50ms(TestAscendPerformanceTestCaseBase):
     """Test NPU performance for Qwen3.5-397B-A17B 16p in3k5 out1k5 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W4A8_MODEL_PATH
     other_args = QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS
     envs = QWEN3_5_397B_A17B_ENVS
     dataset_name = "random"
-    warmup_requests = 16
+    warmup_requests = 64
     max_concurrency = 160
     num_prompts = 160
     input_len = 3500
@@ -115,7 +115,9 @@ class TestNPUQwen3_5_397B_A17B_3K5_1K5_50ms(TestAscendPerformanceTestCaseBase):
     random_range_ratio = 1
     tpot = 20
     output_token_throughput = 3449
-    aisbench_request_rate = 60
+    request_rate = float("inf")
+    temperature = 0.6
+    top_p = 0.95
 
     def test_npu_qwen3_5_397b_a17b_3k5_1k5(self):
         """Run NPU performance test for Qwen3.5-397B-A17B in3k5 out1k5"""
