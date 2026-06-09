@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: PD disaggregation basic test - use Ascend backend
+# test round 4: PD disaggregation basic test - fix setUpClass order
 
 on:
   pull_request:
