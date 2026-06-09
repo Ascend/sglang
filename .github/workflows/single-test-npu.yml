@@ -97,6 +97,14 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
+          #  pass
+          - name: test_npu_variable_length_sequences
+            test_case: test/manual/ascend/test_npu_variable_length_sequences.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 3
+            decode_size: 1
+            router_size: 1
 #          - name: test_npu_balance
 #            test_case: test/manual/ascend/test_npu_balance.py
 #            test_type: 'perf'
@@ -104,20 +112,20 @@ jobs:
 #            prefill_size: 3
 #            decode_size: 1
 #            router_size: 1
-          - name: test_npu_bucket_adjust_interval_secs
-            test_case: test/manual/ascend/test_npu_bucket_adjust_interval_secs.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 3
-            decode_size: 1
-            router_size: 1
-          - name: test_hierarchical_cache_hit
-            test_case: test/manual/ascend/test_npu_hierarchical_cache_hit.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 1
-            decode_size: 1
-            router_size: 1
+#          - name: test_npu_bucket_adjust_interval_secs
+#            test_case: test/manual/ascend/test_npu_bucket_adjust_interval_secs.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
+#          - name: test_hierarchical_cache_hit
+#            test_case: test/manual/ascend/test_npu_hierarchical_cache_hit.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 1
+#            decode_size: 1
+#            router_size: 1
 #          - name: test_hierarchical_cache_accuracy
 #            test_case: test/manual/ascend/test_npu_hierarchical_cache_accuracy.py
 #            test_type: 'perf'
@@ -141,14 +149,6 @@ jobs:
 #            router_size: 1
           # error
 
-          #  pass
-#           - name: test_npu_variable_length_sequences
-#             test_case: test/manual/ascend/test_npu_variable_length_sequences.py
-#             test_type: 'perf'
-#             prefill_decode_deployment: 'separation'
-#             prefill_size: 3
-#             decode_size: 1
-#             router_size: 1
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-aarch64-a3-0
