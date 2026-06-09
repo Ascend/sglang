@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: PD disaggregation basic test
+# test round 2: PD disaggregation basic test - fix model path
 
 on:
   pull_request:
