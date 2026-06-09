@@ -49,7 +49,7 @@ def create_lora_adapter_with_lm_head(base_model_path: str, output_dir: str):
         base_model_path,
         torch_dtype=torch.float16,
         device_map="cpu",
-        #local_files_only=True,
+        # local_files_only=True,
     )
 
     assert (
