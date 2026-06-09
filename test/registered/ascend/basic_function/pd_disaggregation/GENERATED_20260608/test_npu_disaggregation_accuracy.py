@@ -134,12 +134,14 @@ class TestNPUDisaggregationAccuracy(PDDisaggregationServerBase):
         output_logprobs = j["meta_info"]["output_token_logprobs"]
 
         self.assertEqual(
-            len(output_logprobs), completion_tokens,
-            f"output_logprobs and completion_tokens should have the same length, but got {len(output_logprobs)} and {completion_tokens}"
+            len(output_logprobs),
+            completion_tokens,
+            f"output_logprobs and completion_tokens should have the same length, but got {len(output_logprobs)} and {completion_tokens}",
         )
         self.assertGreater(
-            len(input_logprobs), 0,
-            f"input_logprobs should have at least one token, but got {len(input_logprobs)}"
+            len(input_logprobs),
+            0,
+            f"input_logprobs should have at least one token, but got {len(input_logprobs)}",
         )
 
     def test_structured_output(self):
@@ -180,9 +182,10 @@ class TestNPUDisaggregationAccuracy(PDDisaggregationServerBase):
         ).model_dump()
 
         self.assertEqual(
-            res["usage"]["completion_tokens"], 1,
+            res["usage"]["completion_tokens"],
+            1,
             "Expected completion_tokens to be 1 when first token is EOS, "
-            f"but got {res['usage']['completion_tokens']}"
+            f"but got {res['usage']['completion_tokens']}",
         )
 
         # First token EOS with ignore_eos
@@ -194,9 +197,10 @@ class TestNPUDisaggregationAccuracy(PDDisaggregationServerBase):
         ).model_dump()
 
         self.assertGreater(
-            res["usage"]["completion_tokens"], 1,
+            res["usage"]["completion_tokens"],
+            1,
             "Expected completion_tokens to be greater than 1 when ignore_eos is True, "
-            f"but got {res['usage']['completion_tokens']}"
+            f"but got {res['usage']['completion_tokens']}",
         )
 
         # First token with specified stop token
@@ -209,9 +213,10 @@ class TestNPUDisaggregationAccuracy(PDDisaggregationServerBase):
         ).model_dump()
 
         self.assertEqual(
-            res["usage"]["completion_tokens"], 1,
+            res["usage"]["completion_tokens"],
+            1,
             "Expected completion_tokens to be 1 when first token is stop token, "
-            f"but got {res['usage']['completion_tokens']}"
+            f"but got {res['usage']['completion_tokens']}",
         )
 
 
