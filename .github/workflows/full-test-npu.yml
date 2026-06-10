@@ -1,4 +1,3 @@
-
 name: Full Test (NPU)
 
 on:
@@ -83,7 +82,7 @@ jobs:
           else
             echo "job_filter=${{ inputs.job_filter }}" >> $GITHUB_OUTPUT
           fi
-          
+
           if [ -z "${{ inputs.image_a2 }}" ]; then
             echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260515" >> $GITHUB_OUTPUT
           else
