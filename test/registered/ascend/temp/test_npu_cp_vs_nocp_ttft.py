@@ -163,7 +163,6 @@ def _run_benchmark(test_case):
     logger.info("All extracted metrics: %s", metrics)
     return metrics
 
-
 # ===== Global shared context (valid within a single Python process) =====
 class BenchmarkContext:
     """
