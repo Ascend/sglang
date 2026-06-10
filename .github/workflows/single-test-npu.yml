@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: PD disaggregation basic test (NPU)
+# test round 2: PD disaggregation basic test (NPU) - fix empty file content
 
 on:
   pull_request:
