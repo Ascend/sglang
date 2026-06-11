@@ -87,6 +87,10 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [
     "unquant",
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "minimax",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 

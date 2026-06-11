@@ -92,6 +92,10 @@ KIMI_K2_6_OTHER_ARGS = [
     "--prefill-delayer-max-delay-passes",
     200,
     "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 

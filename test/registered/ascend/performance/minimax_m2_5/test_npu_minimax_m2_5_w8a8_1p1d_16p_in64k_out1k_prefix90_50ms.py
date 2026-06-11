@@ -101,6 +101,10 @@ PREFILL_ARGS = [
     "--speculative-draft-model-quantization",
     "unquant",
     "--skip-server-warmup",
+    "--reasoning-parser",
+    "minimax",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 DECODE_ARGS = [
@@ -157,6 +161,10 @@ DECODE_ARGS = [
     24,
     32,
     40,
+    "--reasoning-parser",
+    "minimax",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 ROUTER_ARGS = [

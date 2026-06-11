@@ -85,6 +85,10 @@ KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS = [
     5,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 

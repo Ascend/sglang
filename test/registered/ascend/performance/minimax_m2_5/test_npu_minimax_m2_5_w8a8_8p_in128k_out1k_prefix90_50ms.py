@@ -85,6 +85,10 @@ MINIMAX_M2_5_128K_PREFIX_OTHER_ARGS = [
     4,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "minimax",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 

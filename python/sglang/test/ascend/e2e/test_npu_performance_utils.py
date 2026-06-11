@@ -104,7 +104,7 @@ QWEN3_32B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/aleoyang/Qwen3-32B-w8a8-MindIE"
 )
 QWEN3_32B_EAGLE_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/Qwen/Eagle3-Qwen3-32B-zh"
+    "/root/.cache/modelscope/hub/models/Zjcxy-SmartAI/Eagle3-Qwen3-32B-zh"
 )
 QWEN3_235B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-235B-A22B"
 QWEN3_235B_W8A8_MODEL_PATH = (
