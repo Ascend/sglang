@@ -23,7 +23,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="stage-b-test-4-npu-a3", nightly=False)
-register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 
 if "ASCEND_RT_VISIBLE_DEVICES" not in os.environ:
     os.environ["ASCEND_RT_VISIBLE_DEVICES"] = "0,1,2,3"

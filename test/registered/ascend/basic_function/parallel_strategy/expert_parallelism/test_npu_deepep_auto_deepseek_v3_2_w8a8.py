@@ -13,7 +13,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class TestDeepEpDeepseekV32(CustomTestCase):
@@ -62,6 +62,7 @@ class TestDeepEpDeepseekV32(CustomTestCase):
                 "SGLANG_NPU_USE_MLAPO": "0",
                 "SGLANG_NPU_USE_MULTI_STREAM": "1",
                 "TASK_QUEUE_ENABLE": "0",
+                "TRANSFORMERS_VERBOSITY": "error",
                 **os.environ,
             },
         )

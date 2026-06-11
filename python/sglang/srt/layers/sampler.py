@@ -16,9 +16,14 @@ from sglang.srt.layers.utils.logprob import get_token_ids_logprobs, get_top_logp
 from sglang.srt.sampling.sampling_batch_info import SamplingBatchInfo
 from sglang.srt.sampling.sampling_params import TOP_K_ALL
 from sglang.srt.server_args import get_global_server_args
-from sglang.srt.utils.common import crash_on_warnings, get_bool_env_var, is_cuda, is_npu
+from sglang.srt.utils.common import (
+    get_bool_env_var,
+    is_cuda,
+    is_hip,
+    is_musa,
+    is_npu,
+)
 
-_use_fused_sampling = False
 if is_cuda():
     from flashinfer.sampling import (
         min_p_sampling_from_probs,
@@ -29,14 +34,18 @@ if is_cuda():
         top_p_renorm_prob,
     )
 
-    from sglang.srt.layers.fused_sampling import fused_temperature_softmax_inplace
+if is_musa():
+    from sgl_kernel import (
+        min_p_sampling_from_probs,
+        top_k_renorm_prob,
+        top_k_top_p_sampling_from_probs,
+        top_p_renorm_prob,
+    )
 
-    _use_fused_sampling = True
+_use_aiter = get_bool_env_var("SGLANG_USE_AITER") and is_hip()
+if _use_aiter:
+    from aiter import greedy_sample as _aiter_greedy_sample
 
-# Batch size threshold for fused Triton kernel vs PyTorch softmax.
-# Below this threshold, PyTorch's native div+softmax is faster.
-# At and above this threshold, the fused Triton kernel wins.
-_FUSED_SAMPLING_BATCH_THRESHOLD = 128
 if is_npu():
     import torch_npu
 
@@ -51,7 +60,6 @@ _BUILT_IN_SAMPLING_BACKENDS = {"flashinfer", "pytorch", "ascend"}
 class Sampler(nn.Module):
     def __init__(self):
         super().__init__()
-        self.use_nan_detection = get_global_server_args().enable_nan_detection
         self.tp_sync_group = get_tp_group().device_group
         if is_dp_attention_enabled():
             self.tp_sync_group = get_attention_tp_group().device_group
@@ -68,20 +76,9 @@ class Sampler(nn.Module):
     def _preprocess_logits(
         self, logits: torch.Tensor, sampling_info: SamplingBatchInfo
     ) -> torch.Tensor:
-        """Apply custom logit processors and handle NaN detection."""
-        # Apply the custom logit processors if registered in the sampling info
+        """Apply custom logit processors."""
         if sampling_info.has_custom_logit_processor:
             apply_custom_logit_processor(logits, sampling_info)
-
-        # Detect and handle NaN values in logits
-        if self.use_nan_detection and torch.any(torch.isnan(logits)):
-            logger.warning("Detected errors during sampling! NaN in the logits.")
-            logits = torch.where(
-                torch.isnan(logits), torch.full_like(logits, -1e5), logits
-            )
-            if crash_on_warnings():
-                raise ValueError("Detected errors during sampling! NaN in the logits.")
-
         return logits
 
     def forward(
@@ -113,8 +110,13 @@ class Sampler(nn.Module):
         logits = self._preprocess_logits(logits, sampling_info)
 
         if sampling_info.is_all_greedy:
-            # Use torch.argmax if all requests use greedy sampling
-            batch_next_token_ids = torch.argmax(logits, -1)
+            if _use_aiter:
+                batch_next_token_ids = torch.empty(
+                    logits.shape[0], device=logits.device, dtype=torch.int32
+                )
+                _aiter_greedy_sample(batch_next_token_ids, logits)
+            else:
+                batch_next_token_ids = torch.argmax(logits, -1)
             if return_logprob:
                 original_logprobs = logprobs = torch.nn.functional.log_softmax(
                     logits, dim=-1
@@ -162,20 +164,11 @@ class Sampler(nn.Module):
                     logprobs = logprobs_via_logsoftmax_kernel
             else:
                 # Standard path: do softmax and sample from probs.
-                # Use fused Triton kernel for large batches where it excels;
-                # fall back to PyTorch for small batches where launch overhead dominates.
-                if (
-                    _use_fused_sampling
-                    and logits.shape[0] >= _FUSED_SAMPLING_BATCH_THRESHOLD
-                ):
-                    fused_temperature_softmax_inplace(
-                        logits, sampling_info.temperatures
-                    )
-                    probs = logits
-                else:
-                    logits.div_(sampling_info.temperatures)
-                    logits[:] = torch.softmax(logits, dim=-1)
-                    probs = logits
+                logits.div_(sampling_info.temperatures)
+
+                # In-place op to save memory
+                logits[:] = torch.softmax(logits, dim=-1)
+                probs = logits
 
                 batch_next_token_ids = self._sample_from_probs(
                     probs, sampling_info, positions, simple_sampling_case
@@ -241,7 +234,6 @@ class Sampler(nn.Module):
                         sampling_info.top_ks,
                         sampling_info.top_ps,
                         filter_apply_order="joint",
-                        check_nan=self.use_nan_detection,
                     )
             elif backend == "pytorch":
                 # A slower fallback implementation with torch native operations.
