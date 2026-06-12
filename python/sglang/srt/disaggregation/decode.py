@@ -452,10 +452,12 @@ class DecodePreallocQueue:
         else:
             decode_req = self._create_receiver_and_enqueue(req)
 
-            # NOTE: fake transfer does not need to resolve prefill dp rank in the pending queue
+# NOTE: fake transfer does not need to resolve prefill dp rank in the pending queue
             if _is_fake_transfer(req, self.scheduler.server_args):
                 decode_req.kv_receiver.init(0)
                 return
+
+            self.kv_manager.kv_args.origin_input_len = len(req.origin_input_ids)
 
             # Fast path: cache-only lookup, no network calls
             prefill_dp_rank = self._resolve_prefill_dp_rank(req)

@@ -42,6 +42,7 @@ from sglang.srt.disaggregation.utils import (
     prepare_abort,
     setup_state_kv_args,
 )
+from sglang.srt.layers.dp_attention import get_attention_tp_rank, get_attention_tp_size
 from sglang.srt.environ import envs
 from sglang.srt.managers.schedule_batch import (
     FINISH_ABORT,
@@ -49,6 +50,7 @@ from sglang.srt.managers.schedule_batch import (
     Req,
     ScheduleBatch,
 )
+from sglang.srt.managers.utils import recalculate_request_max_len
 from sglang.srt.mem_cache.common import (
     kv_to_page_indices,
     kv_to_page_num,
@@ -56,7 +58,12 @@ from sglang.srt.mem_cache.common import (
     release_kv_cache,
 )
 from sglang.srt.mem_cache.deepseek_v4_memory_pool import DeepSeekV4TokenToKVPool
+from sglang.srt.mem_cache.memory_pool import HybridLinearKVPool, NSATokenToKVPool
+from sglang.srt.mem_cache.swa_memory_pool import SWAKVPool
 from sglang.srt.observability.req_time_stats import set_schedule_time_batch
+from sglang.srt.server_args import get_global_server_args
+from sglang.srt.tracing.trace import trace_event_batch, trace_slice, trace_slice_end
+from sglang.srt.utils import get_split_kv_page_range
 
 if TYPE_CHECKING:
     from torch.distributed import ProcessGroup
@@ -247,8 +254,9 @@ class PrefillBootstrapQueue:
             self.add(req, num_kv_heads)
 
     def _check_if_req_exceed_kv_capacity(self, req: Req) -> bool:
-        if len(req.origin_input_ids) > self.max_total_num_tokens:
-            message = f"Request {req.rid} exceeds the maximum number of tokens: {len(req.origin_input_ids)} > {self.max_total_num_tokens}"
+        max_total_num_tokens = recalculate_request_max_len(self.max_total_num_tokens)
+        if len(req.origin_input_ids) > max_total_num_tokens:
+            message = f"Request {req.rid} exceeds the maximum number of tokens: {len(req.origin_input_ids)} > {max_total_num_tokens}"
             logger.error(message)
             req.time_stats.trace_ctx.abort(abort_info={"reason": message})
             prepare_abort(req, message, status_code=HTTPStatus.BAD_REQUEST)
@@ -330,15 +338,26 @@ class PrefillBootstrapQueue:
             )
             assert req.metadata_buffer_index is not None
 
-            # Cal number of pages to send
+# Cal number of pages to send
             # if decode has a cached prefix, we need to send the delta indices
             # otherwise, send the entire request
             decode_prefix_len = req.disagg_kv_sender.pop_decode_prefix_len()
             req.start_send_idx = decode_prefix_len
             num_kv_indices_to_send = num_kv_indices - decode_prefix_len
-            num_pages = kv_to_page_num(
-                num_kv_indices_to_send, self.token_to_kv_pool.page_size
-            )
+            
+            if get_global_server_args().enable_kv_storage_optimization_mla:
+                tp_size = get_attention_tp_size()
+                tp_rank = get_attention_tp_rank()
+                page_size = self.token_to_kv_pool.page_size
+                total_page_num = (num_kv_indices_to_send + page_size - 1) // page_size
+                start_page, end_page = get_split_kv_page_range(
+                    tp_size, tp_rank, total_page_num
+                )
+                num_pages = end_page - start_page + 1
+            else:
+                num_pages = kv_to_page_num(
+                    num_kv_indices_to_send, self.token_to_kv_pool.page_size
+                )
             req.disagg_kv_sender.init(num_pages, req.metadata_buffer_index)
 
             bootstrapped_reqs.append(req)
@@ -769,6 +788,9 @@ class SchedulerDisaggregationPrefillMixin:
             else min(len(req.fill_ids), len(req.origin_input_ids))
         )
 
+        if get_global_server_args().enable_kv_storage_optimization_mla:
+            end_idx = req.tp_seq_len
+
         if not last_chunk:
             # if not the last chunk and the last page is partial, delay the last partial page to the next send
             end_idx = end_idx - end_idx % page_size
@@ -839,6 +861,12 @@ class SchedulerDisaggregationPrefillMixin:
                     state_indices.append(None)
 
         page_indices = kv_to_page_indices(kv_indices, page_size)
+        if len(page_indices) == 0:
+            req.disagg_kv_sender.send_empty()
+            logger.info(
+                f"Skip sending kv chunk for request {req.rid=} {req.bootstrap_room=} because page_indices is empty"
+            )
+            return
         if not req.disagg_kv_sender.should_send_kv_chunk(len(page_indices), last_chunk):
             return
         req.disagg_kv_sender.send(page_indices, state_indices)

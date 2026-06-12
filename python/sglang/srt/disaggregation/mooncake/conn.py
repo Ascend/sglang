@@ -42,7 +42,12 @@ from sglang.srt.disaggregation.utils import (
 )
 from sglang.srt.distributed.parallel_state import get_mooncake_transfer_engine
 from sglang.srt.environ import envs
-from sglang.srt.server_args import ServerArgs
+from sglang.srt.server_args import ServerArgs, get_global_server_args
+from sglang.srt.utils import (
+    format_tcp_address,
+    get_split_kv_page_range,
+    is_valid_ipv6_address,
+)
 from sglang.srt.utils.network import NetworkAddress
 
 logger = logging.getLogger(__name__)
@@ -1609,6 +1614,9 @@ class MooncakeKVSender(CommonKVSender):
         super().__init__(mgr, bootstrap_addr, bootstrap_room, dest_tp_ranks, pp_rank)
         self.conclude_state = None
         self.init_time = time.time()
+        # inner state
+        self.curr_idx = 0
+        self.has_send_empty = False
 
     def pop_decode_prefix_len(self) -> int:
         return self.kv_mgr.req_to_decode_prefix_len.pop(self.bootstrap_room, 0)
@@ -1657,7 +1665,12 @@ class MooncakeKVSender(CommonKVSender):
             )
         self._record_transfer_indices(kv_indices, state_indices)
 
+    def send_empty(self):
+        self.has_send_empty = True
+
     def poll(self) -> KVPoll:
+        if self.has_send_empty:
+            return KVPoll.Success
         if self.conclude_state is None:
             status = self.kv_mgr.check_status(self.bootstrap_room)
             if status in (KVPoll.Success, KVPoll.Failed):
@@ -1784,6 +1797,9 @@ class MooncakeKVReceiver(CommonKVReceiver):
             self.kv_mgr.update_status(self.bootstrap_room, KVPoll.Failed)
             return
 
+if get_global_server_args().enable_kv_storage_optimization_mla:
+            kv_indices_origin = kv_indices
+
         if (
             self.kv_mgr.enable_staging
             and self.kv_mgr._staging_ctx.allocator is not None
@@ -1793,7 +1809,13 @@ class MooncakeKVReceiver(CommonKVReceiver):
                 self.bootstrap_room, self.bootstrap_infos, self
             )
 
-        for bootstrap_info in self.bootstrap_infos:
+        for idx, bootstrap_info in enumerate(self.bootstrap_infos):
+            # tp_rank in decode notifies the kvCache in prefill to transfer 1/tp for each_tp_rank
+            if self.prefill_kv_split_size > 1:
+                start_page, end_page = get_split_kv_page_range(
+                    self.prefill_kv_split_size, idx, len(kv_indices_origin)
+                )
+                kv_indices = kv_indices_origin[start_page : end_page + 1]
             sock, lock = self._connect_to_bootstrap_server(bootstrap_info)
             is_dummy = bootstrap_info["is_dummy"]
 

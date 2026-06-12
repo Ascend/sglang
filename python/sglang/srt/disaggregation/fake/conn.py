@@ -46,11 +46,14 @@ class FakeKVSender(BaseKVSender):
     ):
         self.kv_mgr = mgr
         self.has_sent = False
-        self.conclude_state: Optional[KVPoll] = None
+self.conclude_state: Optional[KVPoll] = None
+        self.has_send_empty = False
 
     def poll(self) -> KVPoll:
         if self.conclude_state is not None:
             return self.conclude_state
+        if self.has_send_empty:
+            return KVPoll.Success
         if not self.has_sent:
             # Assume handshake completed instantly
             return KVPoll.WaitingForInput
@@ -82,6 +85,9 @@ class FakeKVSender(BaseKVSender):
         logger.debug(
             f"FakeKVSender send with kv_indices: {kv_indices}, state_indices: {state_indices}"
         )
+
+    def send_empty(self):
+        self.has_send_empty = True
 
     def failure_exception(self):
         raise Exception("Fake KVSender Exception")

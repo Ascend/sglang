@@ -36,7 +36,10 @@ from sglang.srt.layers.dp_attention import (
     get_attention_tp_rank,
     get_attention_tp_size,
 )
-from sglang.srt.server_args import ServerArgs
+from sglang.srt.server_args import ServerArgs, get_global_server_args
+from sglang.srt.utils import (
+    format_tcp_address,
+)
 from sglang.srt.utils.network import (
     NetworkAddress,
     get_local_ip_auto,
@@ -750,7 +753,7 @@ class CommonKVReceiver(BaseKVReceiver):
             self.kv_mgr.update_status(self.bootstrap_room, KVPoll.Failed)
             return
 
-        # Read pre-computed rank mapping from prefill_info (computed in try_ensure_parallel_info)
+# Read pre-computed rank mapping from prefill_info (computed in try_ensure_parallel_info)
         self.prefill_info = self.kv_mgr.prefill_info_table[self.bootstrap_addr]
         self.target_tp_rank = self.prefill_info.target_tp_rank
         self.target_tp_ranks = self.prefill_info.target_tp_ranks
@@ -760,12 +763,31 @@ class CommonKVReceiver(BaseKVReceiver):
         self.required_prefill_response_num = (
             self.prefill_info.required_prefill_response_num
         )
+        
+        # Override for KV storage optimization MLA
+        self.prefill_kv_split_size = 1
+        if get_global_server_args().enable_kv_storage_optimization_mla:
+            self.prefill_kv_split_size = self.prefill_info.attn_tp_size
+            self.required_dst_info_num = self.kv_mgr.attn_tp_size
+            self.target_tp_rank = (
+                self.kv_mgr.kv_args.engine_rank % self.kv_mgr.attn_tp_size
+            )
+            self.target_tp_ranks = [rank for rank in range(self.prefill_info.attn_tp_size)]
+            page_size = self.kv_mgr.kv_args.page_size
+            total_page_num = (
+                self.kv_mgr.kv_args.origin_input_len + page_size - 1
+            ) // page_size
+            base_page = total_page_num // self.prefill_kv_split_size
+            extra = total_page_num % self.prefill_kv_split_size
+            self.required_prefill_response_num = (
+                self.prefill_kv_split_size if base_page >= 1 else extra
+            )
 
         self.kv_mgr.required_prefill_response_num_table[self.bootstrap_room] = (
             self.required_prefill_response_num
         )
 
-        if self.kv_mgr.enable_staging:
+if self.kv_mgr.enable_staging:
             self.require_staging = (
                 self.prefill_info.attn_tp_size != 0
                 and self.prefill_info.attn_tp_size != self.kv_mgr.attn_tp_size
@@ -797,10 +819,15 @@ class CommonKVReceiver(BaseKVReceiver):
                         if bootstrap_info is not None:
                             if self.kv_mgr.is_mla_backend:
                                 # For MLA: target_tp_rank is the selected real rank, others are dummy ranks
+                                # For MLA and enable_kv_storage_optimization_mla: all target_tp_size are selected real ranks
                                 bootstrap_info["is_dummy"] = not bool(
                                     target_tp_rank == self.target_tp_rank
                                     or self.target_tp_rank is None
                                 )
+                                if (
+                                    get_global_server_args().enable_kv_storage_optimization_mla
+                                ):
+                                    bootstrap_info["is_dummy"] = False
                             else:
                                 # For non-MLA: all target_tp_ranks are selected real ranks
                                 bootstrap_info["is_dummy"] = False
