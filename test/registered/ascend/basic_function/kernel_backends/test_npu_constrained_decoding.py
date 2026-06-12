@@ -38,8 +38,6 @@ class ServerWithGrammar(CustomTestCase):
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
-            "--base-gpu-id",
-            "8",
         ]
 
         if cls.disable_overlap:
