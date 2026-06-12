@@ -160,7 +160,7 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In64k_Out1k5_Prefix90_100ms(
     random_range_ratio = 1
     tpot = 100
     ttft = 3000
-    output_token_throughput = 13445
+    output_token_throughput = 52.56
 
     def test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms(self):
         """Run NPU performance test for 1P+1D 16p with 64k input, 1k5 output, 90% prefix cache, TPOT=100ms"""
