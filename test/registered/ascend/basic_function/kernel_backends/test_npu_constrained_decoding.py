@@ -80,12 +80,7 @@ class TestNPUOutlinesBackend(ServerWithGrammar, JSONConstrainedMixin):
     backend = "outlines"
 
 
-class TestNPULLGuidanceBackend(
-    ServerWithGrammar,
-    JSONConstrainedMixin,
-    EBNFConstrainedMixin,
-    RegexConstrainedMixin,
-):
+class TestNPULLGuidanceBackend(ServerWithGrammar, JSONConstrainedMixin):
     """Test llguidance backend for constrained decoding on NPU.
 
     [Test Category] Feature

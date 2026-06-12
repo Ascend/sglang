@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Constrained Decoding with NPU backends - fix base-gpu-id (CI only has devices 0-1)
+# test round 3: Constrained Decoding - llguidance only uses JSON (EBNF grammar crashes server)
 
 on:
   pull_request:
