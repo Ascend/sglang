@@ -18,6 +18,8 @@ from sglang.srt.layers.quantization.modelslim.schemes import (
     ModelSlimW4A4Int4MoE,
     ModelSlimW4A4MxFp4,
     ModelSlimW4A4MxFp4MoE,
+    ModelSlimW4A8MxFp,
+    ModelSlimW4A8MxFpMoE,
     ModelSlimW4A8Int8MoE,
     ModelSlimW8A8Int8,
     ModelSlimW8A8Int8MoE,
@@ -96,6 +98,7 @@ class ModelSlimConfig(QuantizationConfig):
         self.packed_modules_mapping = (
             packed_modules_mapping if packed_modules_mapping is not None else {}
         )
+        self.model_quant_type = quant_config.get("model_quant_type")
 
         for name in self.quant_description.keys():
             if "norm.bias" in name:
@@ -183,6 +186,7 @@ class ModelSlimConfig(QuantizationConfig):
             ("W4A4_MXFP4", ModelSlimW4A4MxFp4),
             ("W8A8", ModelSlimW8A8Int8),
             ("W8A8_DYNAMIC", ModelSlimW8A8Int8),
+            ("W4A8_MXFP", ModelSlimW4A8MxFp),
         ]
 
         quant_schemes = [self.quant_description.get(prefix + ".weight", "")]
@@ -207,6 +211,7 @@ class ModelSlimConfig(QuantizationConfig):
             ("W4A4_DYNAMIC", ModelSlimW4A4Int4MoE),
             ("W4A4_MXFP4", ModelSlimW4A4MxFp4MoE),
             ("W4A8_DYNAMIC", ModelSlimW4A8Int8MoE),
+            ("W4A8_MXFP", ModelSlimW4A8MxFpMoE),
             ("W8A8_DYNAMIC", ModelSlimW8A8Int8MoE),
         ]
 
