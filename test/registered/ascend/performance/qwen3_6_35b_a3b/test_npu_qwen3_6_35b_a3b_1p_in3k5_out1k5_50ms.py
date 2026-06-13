@@ -100,6 +100,20 @@ class TestNPUQwen3_6_35BA3B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBa
     def test_npu_qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in3k5 out1k5 50ms"""
         self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
+        self.run_throughput()
 
 
 if __name__ == "__main__":
