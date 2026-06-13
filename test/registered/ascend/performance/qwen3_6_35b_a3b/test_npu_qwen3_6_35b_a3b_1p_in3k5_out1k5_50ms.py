@@ -45,7 +45,7 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--prefill-delayer-queue-min-ratio",
-    "0.1",
+    "0.11",
     "--prefill-max-requests", "12",
     "--max-running-requests",
     122,
