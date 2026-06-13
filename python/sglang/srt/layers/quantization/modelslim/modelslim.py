@@ -173,26 +173,6 @@ class ModelSlimConfig(QuantizationConfig):
             return ModelSlimFusedMoEMethod(self)
         return None
 
-    def _get_scheme_from_parts(self, layer_name: str) -> ModelSlimLinearScheme:
-        quant_type = self.quant_description.get(layer_name + ".weight", "")
-        if quant_type == "W8A8_DYNAMIC" or quant_type == "W8A8":
-            return ModelSlimW8A8Int8(
-                quant_config=self.quant_description, prefix=layer_name
-            )
-        if quant_type == "W4A4_DYNAMIC":
-            return ModelSlimW4A4Int4(
-                quant_config=self.quant_description, prefix=layer_name
-            )
-        if quant_type == "W4A4_MXFP4":
-            return ModelSlimW4A4MxFp4(
-                quant_config=self.quant_description, prefix=layer_name
-            )
-        if quant_type == "W8A8_MXFP8":
-            return ModelSlimW8A8MxFp8(
-                quant_config=self.quant_description, prefix=layer_name
-            )
-        raise NotImplementedError("No modelslim compatible scheme was found.")
-
     def get_linear_scheme(
         self, layer: torch.nn.Module, prefix: Optional[str] = None
     ) -> Optional[ModelSlimLinearScheme]:
@@ -200,22 +180,26 @@ class ModelSlimConfig(QuantizationConfig):
         get_scheme method adjusted for modelslim, taken from
         python/sglang/srt/layers/quantization/compressed_tensors/compressed_tensors.py
         """
-        if prefix is None:
-            logger.warning("Unsupported Linear modelslim scheme in layer: %s", prefix)
-            return None
+        linear_quant_schemes = [
+            ("W4A4_DYNAMIC", ModelSlimW4A4Int4),
+            ("W4A4_MXFP4", ModelSlimW4A4MxFp4),
+            ("W8A8", ModelSlimW8A8Int8),
+            ("W8A8_DYNAMIC", ModelSlimW8A8Int8),
+            ("W8A8_MXFP8", ModelSlimW8A8MxFp8),
+        ]
 
-        try:
-            scheme = self._get_scheme_from_parts(prefix)
-        except NotImplementedError:
-            quant_schemes = [self.quant_description.get(prefix + ".weight", "")]
-            logger.warning(
-                f"Unsupported Linear modelslim scheme: "
-                f"{quant_schemes} in layer: {prefix}"
-            )
-            return None
+        quant_schemes = [self.quant_description.get(prefix + ".weight", "")]
 
-        logger.info_once(f"Using {scheme.__class__.__name__}")
-        return scheme
+        for scheme_name, scheme_class in linear_quant_schemes:
+            if any(s == scheme_name for s in quant_schemes):
+                logger.info_once(f"Using {scheme_class.__name__}")
+                return scheme_class(quant_config=self.quant_description, prefix=prefix)
+
+        logger.warning(
+            f"Unsupported Linear modelslim scheme: "
+            f"{quant_schemes} in layer: {prefix}"
+        )
+        return None
 
     def get_moe_scheme(
         self,
