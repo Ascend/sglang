@@ -389,15 +389,15 @@ class MambaPool:
         need_size = len(indices)
         for i in range(len(self.mamba_cache.conv)):
             t = self.mamba_cache.conv[i]
-            z = torch.zeros(1, dtype=t.dtype, device=t.device).expand(
-                t.shape[0], need_size, *t.shape[2:]
-            )
-            t[:, indices] = z
+            # z = torch.zeros(1, dtype=t.dtype, device=t.device).expand(
+            #     t.shape[0], need_size, *t.shape[2:]
+            # )
+            t[:, indices] = 0
         t = self.mamba_cache.temporal
-        z = torch.zeros(1, dtype=t.dtype, device=t.device).expand(
-            t.shape[0], need_size, *t.shape[2:]
-        )
-        t[:, indices] = z
+        # z = torch.zeros(1, dtype=t.dtype, device=t.device).expand(
+        #     t.shape[0], need_size, *t.shape[2:]
+        # )
+        t[:, indices] = 0
 
     def free(self, free_index: torch.Tensor):
         if free_index.numel() == 0:
