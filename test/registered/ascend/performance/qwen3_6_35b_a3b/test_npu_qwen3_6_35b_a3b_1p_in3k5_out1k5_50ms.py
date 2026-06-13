@@ -45,7 +45,7 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     "--trust-remote-code",
     "--enable-prefill-delayer",
     "--prefill-delayer-max-delay-passes",
-    50,
+    200,
     "--max-running-requests",
     124,
     "--max-mamba-cache-size",
