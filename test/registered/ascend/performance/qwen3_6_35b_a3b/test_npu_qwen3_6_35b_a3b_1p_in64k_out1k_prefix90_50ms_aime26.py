@@ -21,7 +21,7 @@ register_npu_ci(
 QWEN3_6_35B_A3B_64K_PREFIX_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "HCCL_BUFFSIZE": "200",
+    "HCCL_BUFFSIZE": "1",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
@@ -50,11 +50,11 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    40,
+    44,
     "--max-mamba-cache-size",
-    200,
+    220,
     "--mem-fraction-static",
-    0.72,
+    0.75,
     "--cuda-graph-bs",
     1,
     2,
@@ -64,6 +64,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     28,
     35,
     40,
+    44,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -92,8 +93,8 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
     dataset_name = "generated-shared-prefix"
-    max_concurrency = 40
-    num_prompts = 40
+    max_concurrency = 44
+    num_prompts = 176
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
