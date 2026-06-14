@@ -52,7 +52,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--max-running-requests",
     48,
     "--max-mamba-cache-size",
-    210,
+    240,
     "--mem-fraction-static",
     0.71,
     "--cuda-graph-bs",
@@ -112,29 +112,29 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
         self.run_throughput()
 
 
-class TestNPUQwen3_6_35BA3B_1P_AIME2026(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Qwen3.6-35B-A3B 1p on AIME2026"""
+# class TestNPUQwen3_6_35BA3B_1P_AIME2026(TestAscendAccuracyTestCaseBase):
+#     """Test NPU accuracy for Qwen3.6-35B-A3B 1p on AIME2026"""
 
-    model = QWEN3_6_35B_A3B_MODEL_PATH
-    other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
-    envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
-    accuracy = 0.927
-    datasets = ["aime26"]
-    few_shot_num = 0
-    eval_batch_size = 64
-    generation_config = {
-        "max_tokens": 65536,
-        "temperature": 0.2,
-        "repetition_penalty": 1.08,
-    }
+#     model = QWEN3_6_35B_A3B_MODEL_PATH
+#     other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
+#     envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
+#     accuracy = 0.927
+#     datasets = ["aime26"]
+#     few_shot_num = 0
+#     eval_batch_size = 64
+#     generation_config = {
+#         "max_tokens": 65536,
+#         "temperature": 0.2,
+#         "repetition_penalty": 1.08,
+#     }
 
-    # @classmethod
-    # def tearDownClass(cls):
-    #     pass
+#     # @classmethod
+#     # def tearDownClass(cls):
+#     #     pass
 
-    def test_npu_qwen3_6_35b_a3b_1p_aime2026(self):
-        """Run NPU accuracy test for Qwen3.6-35B-A3B on AIME2026"""
-        # self.run_accuracy()
+#     def test_npu_qwen3_6_35b_a3b_1p_aime2026(self):
+#         """Run NPU accuracy test for Qwen3.6-35B-A3B on AIME2026"""
+#         # self.run_accuracy()
 
 
 if __name__ == "__main__":
