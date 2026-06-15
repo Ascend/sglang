@@ -76,10 +76,6 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
-    "--base-gpu-id",
-    "4",
-    "--port",
-    "0809",
 ]
 
 
