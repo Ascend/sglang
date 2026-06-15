@@ -157,7 +157,7 @@ class TestTestScriptedCore(ScriptedTestCase):
 
     @staticmethod
     def _script_chunked_prefill_radix_hit_count(t: ScriptedContext):
-        r = t.start_req(prompt_len=_PROMPT_LEN, max_new_tokens=2)
+        r = t.start_req(prompt_len=_PROMPT_LEN, max_new_tokens=3)
         yield from run_until_finished(r)
         assert r.finished
         _assert_prefill_twice_decode_once(t, prompt_len=_PROMPT_LEN)
@@ -167,8 +167,8 @@ class TestTestScriptedCore(ScriptedTestCase):
 
     @staticmethod
     def _script_nonchunked_prefill_radix_hit_count(t: ScriptedContext):
-        prompt_len = _CHUNK_SIZE - 20
-        r = t.start_req(prompt_len=prompt_len, max_new_tokens=2)
+        prompt_len = 2 * _CHUNK_SIZE - 30
+        r = t.start_req(prompt_len=prompt_len, max_new_tokens=30)
         yield from run_until_finished(r)
         assert r.finished
         _assert_prefill_twice_decode_once(t, prompt_len=prompt_len)
