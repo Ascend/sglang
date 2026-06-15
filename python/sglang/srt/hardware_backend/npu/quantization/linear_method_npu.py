@@ -5,10 +5,14 @@ import torch_npu
 
 from sglang.srt.hardware_backend.npu.utils import npu_format_cast
 from sglang.srt.layers.quantization.base_config import LinearMethodBase
-from sglang.srt.utils import is_npu_before_atlas_a5
+from sglang.srt.utils import is_npu, is_npu_before_atlas_a5
 
 if TYPE_CHECKING:
     from sglang.srt.layers.quantization.base_config import QuantizationConfig
+
+_is_npu = is_npu()
+if _is_npu:
+    import torch_npu
 
 
 _is_npu_before_atlas_a5 = is_npu_before_atlas_a5()
@@ -63,6 +67,53 @@ class _NPULinearMethodBase(LinearMethodBase):
         quant_config: Optional["QuantizationConfig"] = None,
     ):
         self.quant_config = quant_config
+
+
+class NPUW8A8MxFp8LinearMethod(_NPULinearMethodBase):
+
+    def process_weights_after_loading(self, layer: torch.nn.Module):
+        layer.weight.data = layer.weight.data.transpose(-1, -2).contiguous()
+        layer.weight.data = npu_format_cast(layer.weight.data)
+        weight_scale = layer.weight_scale.data.transpose(-1, -2).contiguous()
+        k32, n = weight_scale.shape
+        weight_scale = (
+            weight_scale.view(k32 // 2, 2, n).permute(0, 2, 1).contiguous()
+        )
+        layer.weight_scale.data = weight_scale
+
+    def apply(
+        self,
+        layer: torch.nn.Module,
+        x: torch.Tensor,
+        bias: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        weight = layer.weight
+        weight_scale = layer.weight_scale
+        group_sizes: List[int] = [1, 1, 32]
+
+        orig_shape = x.shape
+        k = orig_shape[-1]
+        x = x.reshape(-1, k).contiguous()
+
+        x_fp8, x_scale = torch.ops.npu.npu_dynamic_mx_quant(
+            x,
+            axis=1,
+            dst_type=torch.float8_e4m3fn,
+            block_size=32,
+            scale_alg=None,
+        )
+
+        out = torch.ops.npu.npu_quant_matmul(
+            x_fp8,
+            weight,
+            scale=weight_scale,
+            pertoken_scale=x_scale,
+            output_dtype=torch.bfloat16,
+            group_sizes=group_sizes,
+            scale_dtype=torch_npu.float8_e8m0fnu,
+            pertoken_scale_dtype=torch_npu.float8_e8m0fnu,
+        )
+        return out.reshape(*orig_shape[:-1], out.shape[-1])
 
 
 class NPUW8A8Int8LinearMethod(_NPULinearMethodBase):

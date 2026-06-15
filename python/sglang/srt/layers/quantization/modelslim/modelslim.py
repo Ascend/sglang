@@ -23,6 +23,8 @@ from sglang.srt.layers.quantization.modelslim.schemes import (
     ModelSlimW4A8Int8MoE,
     ModelSlimW8A8Int8,
     ModelSlimW8A8Int8MoE,
+    ModelSlimW8A8MxFp8,
+    ModelSlimW8A8MxFp8MoE,
 )
 from sglang.srt.layers.quantization.unquant import UnquantizedLinearMethod
 from sglang.srt.utils import apply_module_patch
@@ -180,13 +182,13 @@ class ModelSlimConfig(QuantizationConfig):
         get_scheme method adjusted for modelslim, taken from
         python/sglang/srt/layers/quantization/compressed_tensors/compressed_tensors.py
         """
-
         linear_quant_schemes = [
             ("W4A4_DYNAMIC", ModelSlimW4A4Int4),
             ("W4A4_MXFP4", ModelSlimW4A4MxFp4),
             ("W8A8", ModelSlimW8A8Int8),
             ("W8A8_DYNAMIC", ModelSlimW8A8Int8),
             ("W4A8_MXFP", ModelSlimW4A8MxFp),
+            ("W8A8_MXFP8", ModelSlimW8A8MxFp8),
         ]
 
         quant_schemes = [self.quant_description.get(prefix + ".weight", "")]
@@ -213,6 +215,7 @@ class ModelSlimConfig(QuantizationConfig):
             ("W4A8_DYNAMIC", ModelSlimW4A8Int8MoE),
             ("W4A8_MXFP", ModelSlimW4A8MxFpMoE),
             ("W8A8_DYNAMIC", ModelSlimW8A8Int8MoE),
+            ("W8A8_MXFP8", ModelSlimW8A8MxFp8MoE),
         ]
 
         moe_weight_suffixes = [".0.gate_proj.weight", ".0.w2.weight"]
