@@ -45,7 +45,6 @@ QWEN3_6_35B_A3B_128K_1K_OTHER_ARGS = [
     128000,
     "--disable-radix-cache",
     "--trust-remote-code",
-    # "--enable-prefill-delayer",
     "--max-running-requests",
     3,
     "--max-mamba-cache-size",
