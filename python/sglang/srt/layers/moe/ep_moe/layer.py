@@ -41,6 +41,9 @@ _is_npu = is_npu()
 _is_fp8_fnuz = is_fp8_fnuz()
 _use_aiter = get_bool_env_var("SGLANG_USE_AITER") and _is_hip
 
+if _is_npu:
+    from sglang.srt.hardware_backend.npu.quantization.fused_moe_method_npu import npu_apply_without_routing_weights_fp8
+
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +305,16 @@ class DeepEPMoE(FusedMoE):
                 hidden_states = npu_fused_moe_without_routing_weights_bf16(
                     self, hidden_states, group_list_type, group_list, output_dtype
                 )
+            elif self.use_fp8_w8a8:
+                # (128,128) block-wise FP8 (B-B quantization, not G-B MXFP8) 
+                hidden_states = npu_apply_without_routing_weights_fp8(
+                    self,
+                    hidden_states,
+                    hidden_states_scale,
+                    group_list_type,
+                    group_list,
+                    output_dtype,
+                )
             else:
                 hidden_states = self.quant_method.apply_without_routing_weights(
                     self,
@@ -328,6 +341,16 @@ class DeepEPMoE(FusedMoE):
             if self.w13_weight.dtype == torch.bfloat16:
                 hidden_states = npu_fused_moe_without_routing_weights_bf16(
                     self, hidden_states, group_list_type, group_list, output_dtype
+                )
+            elif self.use_fp8_w8a8:
+                # (128,128) block-wise FP8 (B-B quantization, not G-B MXFP8)
+                hidden_states = npu_apply_without_routing_weights_fp8(
+                    self,
+                    hidden_states,
+                    hidden_states_scale,
+                    group_list_type,
+                    group_list,
+                    output_dtype,
                 )
             else:
                 hidden_states = self.quant_method.apply_without_routing_weights(
