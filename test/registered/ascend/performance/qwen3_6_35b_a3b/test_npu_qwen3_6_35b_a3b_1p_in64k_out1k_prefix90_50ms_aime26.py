@@ -21,15 +21,14 @@ register_npu_ci(
 QWEN3_6_35B_A3B_64K_PREFIX_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "HCCL_BUFFSIZE": "300",
+    "HCCL_BUFFSIZE": "1600",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
-    "GDN_ATTN_BACKEND_TRITON": "1",
 }
 
 QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
@@ -49,19 +48,21 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    40,
+    32,
     "--max-mamba-cache-size",
-    210,
+    170,
     "--mem-fraction-static",
-    0.71,
+    0.7,
     "--cuda-graph-bs",
     2,
     8,
+    12,
     16,
+    20,
     24,
+    30,
+    31,
     32,
-    36,
-    40,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -77,6 +78,11 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+	"--enable-prefill-delayer",
+    "--prefill-delayer-max-delay-passes",
+    15,
+	"--prefill-delayer-token-usage-low-watermark",
+    0.53,
 ]
 
 
@@ -116,8 +122,8 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
     dataset_name = "generated-shared-prefix"
-    max_concurrency = 40
-    num_prompts = 40
+    max_concurrency = 32
+    num_prompts = 128
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
