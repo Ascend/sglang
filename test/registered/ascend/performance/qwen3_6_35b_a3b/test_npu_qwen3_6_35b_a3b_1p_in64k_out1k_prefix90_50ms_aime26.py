@@ -52,7 +52,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--max-mamba-cache-size",
     230,
     "--mem-fraction-static",
-    0.71,
+    0.8,
     "--cuda-graph-bs",
     2,
     8,
