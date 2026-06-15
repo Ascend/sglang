@@ -12,7 +12,7 @@ from sglang.test.test_utils import (
 from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 
-register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="debug-full-16-npu-a3", nightly=True)
 
 
 class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):

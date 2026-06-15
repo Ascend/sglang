@@ -24,7 +24,7 @@ from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_P
     GLM_4_5V_WEIGHTS_PATH, QWEN3_0_6B_WEIGHTS_PATH, QWEN3_32B_WEIGHTS_PATH, \
     QWEN3_8B_WEIGHTS_PATH, QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH, QWEN3_30B_A3B_WEIGHTS_PATH
 
-register_npu_ci(est_time=400, suite="nightly-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="debug-full-8-npu-a3", nightly=True)
 
 
 class TestPPAccuracy(unittest.TestCase):
