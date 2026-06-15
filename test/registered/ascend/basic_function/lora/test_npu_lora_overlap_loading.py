@@ -39,6 +39,10 @@ class TestLoraEnableOverlapLoading(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
+                "--max-loras-per-batch",
+                "2",
+                "--max-loaded-loras",
+                "4",
             ],
         )
 
