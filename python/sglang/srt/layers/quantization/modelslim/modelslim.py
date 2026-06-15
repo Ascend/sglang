@@ -16,6 +16,8 @@ from sglang.srt.layers.quantization.base_config import (
 from sglang.srt.layers.quantization.modelslim.schemes import (
     ModelSlimW4A4Int4,
     ModelSlimW4A4Int4MoE,
+    ModelSlimW4A4MxFp4,
+    ModelSlimW4A4MxFp4MoE,
     ModelSlimW4A8Int8MoE,
     ModelSlimW8A8Int8,
     ModelSlimW8A8Int8MoE,
@@ -178,6 +180,7 @@ class ModelSlimConfig(QuantizationConfig):
 
         linear_quant_schemes = [
             ("W4A4_DYNAMIC", ModelSlimW4A4Int4),
+            ("W4A4_MXFP4", ModelSlimW4A4MxFp4),
             ("W8A8", ModelSlimW8A8Int8),
             ("W8A8_DYNAMIC", ModelSlimW8A8Int8),
         ]
@@ -202,6 +205,7 @@ class ModelSlimConfig(QuantizationConfig):
     ) -> Optional[ModelSlimMoEScheme]:
         moe_quant_schemes = [
             ("W4A4_DYNAMIC", ModelSlimW4A4Int4MoE),
+            ("W4A4_MXFP4", ModelSlimW4A4MxFp4MoE),
             ("W4A8_DYNAMIC", ModelSlimW4A8Int8MoE),
             ("W8A8_DYNAMIC", ModelSlimW8A8Int8MoE),
         ]

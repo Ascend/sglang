@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional
 
 import torch
+import torch_npu
 
 from sglang.srt.hardware_backend.npu.utils import npu_format_cast
 from sglang.srt.layers.quantization.base_config import LinearMethodBase
@@ -187,3 +188,48 @@ class NPU_W4A4DynamicLinearMethod(_NPULinearMethodBase):
             bias=bias,
             output_dtype=original_dtype,
         )
+
+
+class NPUW4A4MxFp4LinearMethod(_NPULinearMethodBase):
+
+    def process_weights_after_loading(self, layer: torch.nn.Module):
+        layer.weight.data = torch_npu.npu_format_cast(layer.weight.data, 29).transpose(
+            0, 1
+        )
+        weight_scale = layer.weight_scale.data
+        weight_scale = weight_scale.reshape(
+            weight_scale.shape[0], weight_scale.shape[1] // 2, 2
+        ).transpose(0, 1)
+        layer.weight_scale.data = weight_scale
+
+    def apply(
+        self,
+        layer: torch.nn.Module,
+        x: torch.Tensor,
+        bias: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        original_shape = x.shape
+        hidden_size = original_shape[-1]
+        x = x.reshape(-1, hidden_size).contiguous()
+
+        x_fp4, x_scale = torch.ops.npu.npu_dynamic_mx_quant(
+            x,
+            dst_type=torch_npu.float4_e2m1fn_x2,
+            round_mode="round",
+        )
+
+        out = torch.ops.npu.npu_quant_matmul(
+            x_fp4,
+            layer.weight,
+            scale=layer.weight_scale,
+            pertoken_scale=x_scale,
+            bias=bias,
+            output_dtype=x.dtype,
+            group_sizes=(1, 1, 32),
+            scale_dtype=torch_npu.float8_e8m0fnu,
+            pertoken_scale_dtype=torch_npu.float8_e8m0fnu,
+            x1_dtype=torch_npu.float4_e2m1fn_x2,
+            x2_dtype=torch_npu.float4_e2m1fn_x2,
+        )
+
+        return out.reshape(*original_shape[:-1], out.shape[-1])
