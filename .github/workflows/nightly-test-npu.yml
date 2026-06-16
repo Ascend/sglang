@@ -4,7 +4,7 @@ on:
     - cron: '0 18 * * *'  # Execute at 2:00 a.m. Beijing Time every day
   pull_request:
     branches:
-#      - main
+      - main
       - testcases
     paths:
       - ".github/workflows/nightly-test-npu.yml"
