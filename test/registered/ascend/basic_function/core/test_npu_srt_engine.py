@@ -33,6 +33,7 @@ class TestSRTEngine(CustomTestCase):
             model_path=model_path,
             random_seed=42,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         out1 = engine.generate(prompt, sampling_params)["text"]
         engine.shutdown()
@@ -41,6 +42,7 @@ class TestSRTEngine(CustomTestCase):
             model_path=model_path,
             random_seed=42,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         out2 = json.loads(runtime.generate(prompt, sampling_params))["text"]
         runtime.shutdown()
@@ -56,6 +58,7 @@ class TestSRTEngine(CustomTestCase):
             is_embedding=True,
             random_seed=42,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         out1 = torch.tensor(engine.encode(prompt)["embedding"])
         engine.shutdown()
@@ -65,6 +68,7 @@ class TestSRTEngine(CustomTestCase):
             is_embedding=True,
             random_seed=42,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         out2 = torch.tensor(json.loads(runtime.encode(prompt))["embedding"])
         runtime.shutdown()
@@ -82,6 +86,7 @@ class TestSRTEngine(CustomTestCase):
             random_seed=42,
             disable_radix_cache=True,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         out1 = engine.generate(prompt, sampling_params)["text"]
 
@@ -111,6 +116,7 @@ class TestSRTEngine(CustomTestCase):
             random_seed=42,
             max_total_tokens=128,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         out1 = engine.generate(prompt, sampling_params)["text"]
         engine.shutdown()
@@ -121,6 +127,7 @@ class TestSRTEngine(CustomTestCase):
             max_total_tokens=128,
             cpu_offload_gb=3,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         out2 = engine.generate(prompt, sampling_params)["text"]
         engine.shutdown()
@@ -136,6 +143,7 @@ class TestSRTEngine(CustomTestCase):
         server_args = ServerArgs(
             model_path=DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
         bench_args = BenchArgs(num_prompts=10)
         result = throughput_test(server_args=server_args, bench_args=bench_args)
@@ -151,6 +159,7 @@ class TestSRTEngine(CustomTestCase):
             random_seed=42,
             disable_radix_cache=True,
             attention_backend="ascend",
+            disable_cuda_graph=True,
         )
 
         # Get sync and async embeddings
