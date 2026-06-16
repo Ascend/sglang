@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: GPT-OSS-120B MXFP4 and MXFP4+Parsers+EAGLE3 variants performance and accuracy test
+# test round 6: GPT-OSS-120B MXFP4 and MXFP4+Parsers+EAGLE3 variants performance and accuracy test
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-8
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260611
     steps:
