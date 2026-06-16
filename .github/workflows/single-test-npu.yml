@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: SRT Engine basic function tests - fix lint
+# test round 3: SRT Engine basic function tests - retrigger CI
 
 on:
   pull_request:
