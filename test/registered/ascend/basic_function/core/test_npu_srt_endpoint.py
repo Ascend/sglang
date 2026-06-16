@@ -501,7 +501,7 @@ class TestSRTEndpoint(CustomTestCase):
         """Test that a very high logit bias forces sampling of a specific token."""
         # Choose a token ID to bias (using 5 as an example)
         target_token_id = (
-            60704  # Paris for meta-llama/Llama-3.2-1B-Instruct, QWEN3_0_6B_WEIGHTS_PATH
+            60704  # Paris for Qwen/Qwen3-0.6B, QWEN3_0_6B_WEIGHTS_PATH
         )
         logit_bias = {str(target_token_id): 100.0}  # Very high positive bias
 
@@ -568,7 +568,7 @@ class TestSRTEndpoint(CustomTestCase):
         """Test that logit_bias applied to one request doesn't affect other requests in batch."""
         # Choose a token ID to bias in first request only
         biased_token_id = (
-            60704  # Paris for meta-llama/Llama-3.2-1B-Instruct, QWEN3_0_6B_WEIGHTS_PATH
+            60704  # Paris for Qwen/Qwen3-0.6B, QWEN3_0_6B_WEIGHTS_PATH
         )
 
         # Prepare batch requests - one with logit_bias and one without
