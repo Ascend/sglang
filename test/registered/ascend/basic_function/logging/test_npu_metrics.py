@@ -34,6 +34,10 @@ class TestNPUMetrics1NPU(TestNPULoggingBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.other_args.extend(["--enable-metrics", "--enable-mfu-metrics"])
+        # Enable the device timer so that forward-pass timing metrics
+        # (forward_execution_seconds_total) are collected. Without this
+        # environment variable the timer is disabled by default and those
+        # counters will remain at zero.
         cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
         cls.launch_server()
 
@@ -91,7 +95,7 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
         TP=2 and DP=2 on NPU.
 
     [Test Category] Functionality
-    [Test Target] --enable-metrics; --enable-mfu-metrics; --tp; --dp; --enable-dp-attention
+    [Test Target] --enable-metrics; --enable-mfu-metrics;
     """
 
     @classmethod
@@ -113,10 +117,6 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
 
     def test_metrics_2npu(self):
         """Test metrics on 2-NPU TP/DP parallel scenario."""
-        if is_in_ci():
-            print("Skip test_metrics_2npu since in 1-NPU CI")
-            return
-
         _generate_metrics(self.base_url)
 
         metrics_response = requests.get(f"{self.base_url}/metrics")
@@ -155,10 +155,20 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
 
 
 def _generate_metrics(base_url: str):
-    """Send requests to generate metrics data."""
+    """Send requests to generate metrics data.
+
+    The workload is intentionally generous so that every counter and
+    histogram we assert on later accumulates a clearly positive value.
+    A lightweight workload risks leaving some metrics at zero because
+    forward-pass time may round to 0.0, asynchronous flushes may be
+    missed, or slow CI runners may not finish processing in time.
+    """
     response = requests.get(f"{base_url}/health_generate")
     assert response.status_code == 200
 
+    # 1) Large batch + long decode: guarantees substantial prefill and decode
+    #    workload so that realtime_tokens_total and
+    #    forward_execution_seconds_total accumulate clearly positive values.
     response = requests.post(
         f"{base_url}/generate",
         json={
@@ -168,13 +178,22 @@ def _generate_metrics(base_url: str):
                 "max_new_tokens": 50,
             },
             "stream": True,
+            # Force the model to generate the full max_new_tokens instead of
+            # stopping early when an EOS token is produced. This guarantees a
+            # predictable decode workload so that decode-phase counters do not
+            # end up at zero because the model finished prematurely.
             "ignore_eos": True,
         },
         stream=True,
     )
+    # Consume the streaming response so the request fully completes on the
+    # server side.  Without draining the iterator the connection stays open
+    # and the request may still be counted as in-flight.
     for _ in response.iter_lines(decode_unicode=False):
         pass
 
+    # 2) Repeated requests with a routing key: populates routing-key histograms
+    #    and cached_tokens_total (the second request may hit the KV cache).
     for i in range(2):
         response = requests.post(
             f"{base_url}/generate",
@@ -299,6 +318,13 @@ def _verify_metrics_common(test_case, metrics_text, metrics, expect_mfu_metrics:
     # These metrics prove the engine actually processed requests (prefill +
     # decode tokens, forward-pass time, tokenizer CPU time) rather than just
     # exporting zero-valued series.
+    #
+    # Why assert > 0 instead of >= 0?
+    #   - The test deliberately sends a large workload (see _generate_metrics)
+    #     so that every counter here is guaranteed to be clearly positive.
+    #   - A value of 0 would mean the corresponding pipeline stage did no
+    #     work, which indicates a bug (e.g. device timer disabled, metrics
+    #     flush lost, or the request never reached the engine).
     metrics_to_check = [
         # Total tokens processed during the prefill (context-encoding) phase.
         ("sglang:realtime_tokens_total", {"mode": "prefill_compute"}),
