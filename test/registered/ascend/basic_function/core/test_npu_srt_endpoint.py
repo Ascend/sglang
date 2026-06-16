@@ -500,9 +500,7 @@ class TestSRTEndpoint(CustomTestCase):
     def test_logit_bias(self):
         """Test that a very high logit bias forces sampling of a specific token."""
         # Choose a token ID to bias (using 5 as an example)
-        target_token_id = (
-            60704  # Paris for Qwen/Qwen3-0.6B, QWEN3_0_6B_WEIGHTS_PATH
-        )
+        target_token_id = 60704  # Paris for Qwen/Qwen3-0.6B, QWEN3_0_6B_WEIGHTS_PATH
         logit_bias = {str(target_token_id): 100.0}  # Very high positive bias
 
         response = requests.post(
@@ -567,9 +565,7 @@ class TestSRTEndpoint(CustomTestCase):
     def test_logit_bias_isolation(self):
         """Test that logit_bias applied to one request doesn't affect other requests in batch."""
         # Choose a token ID to bias in first request only
-        biased_token_id = (
-            60704  # Paris for Qwen/Qwen3-0.6B, QWEN3_0_6B_WEIGHTS_PATH
-        )
+        biased_token_id = 60704  # Paris for Qwen/Qwen3-0.6B, QWEN3_0_6B_WEIGHTS_PATH
 
         # Prepare batch requests - one with logit_bias and one without
         requests_data = [
