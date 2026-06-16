@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: SRT Engine basic function tests
+# test round 2: SRT Engine basic function tests - fix lint
 
 on:
   pull_request:

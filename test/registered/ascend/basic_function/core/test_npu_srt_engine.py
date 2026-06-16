@@ -8,12 +8,14 @@ import sglang as sgl
 from sglang.bench_offline_throughput import BenchArgs, throughput_test
 from sglang.srt.server_args import ServerArgs
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+from sglang.test.ascend.test_ascend_utils import (
+    GTE_QWEN2_1_5B_INSTRUCT_WEIGHTS_PATH,
+    QWEN3_0_6B_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     CustomTestCase,
 )
-from sglang.test.ascend.test_ascend_utils import GTE_QWEN2_1_5B_INSTRUCT_WEIGHTS_PATH
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 
 DEFAULT_SMALL_MODEL_NAME_FOR_TEST = QWEN3_0_6B_WEIGHTS_PATH
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
@@ -27,11 +29,19 @@ class TestSRTEngine(CustomTestCase):
 
         sampling_params = {"temperature": 0, "max_new_tokens": 8}
 
-        engine = sgl.Engine(model_path=model_path, random_seed=42, attention_backend="ascend", )
+        engine = sgl.Engine(
+            model_path=model_path,
+            random_seed=42,
+            attention_backend="ascend",
+        )
         out1 = engine.generate(prompt, sampling_params)["text"]
         engine.shutdown()
 
-        runtime = sgl.Runtime(model_path=model_path, random_seed=42, attention_backend="ascend", )
+        runtime = sgl.Runtime(
+            model_path=model_path,
+            random_seed=42,
+            attention_backend="ascend",
+        )
         out2 = json.loads(runtime.generate(prompt, sampling_params))["text"]
         runtime.shutdown()
 
@@ -41,11 +51,21 @@ class TestSRTEngine(CustomTestCase):
         prompt = "Today is a sunny day and I like"
         model_path = GTE_QWEN2_1_5B_INSTRUCT_WEIGHTS_PATH
 
-        engine = sgl.Engine(model_path=model_path, is_embedding=True, random_seed=42, attention_backend="ascend", )
+        engine = sgl.Engine(
+            model_path=model_path,
+            is_embedding=True,
+            random_seed=42,
+            attention_backend="ascend",
+        )
         out1 = torch.tensor(engine.encode(prompt)["embedding"])
         engine.shutdown()
 
-        runtime = sgl.Runtime(model_path=model_path, is_embedding=True, random_seed=42, attention_backend="ascend", )
+        runtime = sgl.Runtime(
+            model_path=model_path,
+            is_embedding=True,
+            random_seed=42,
+            attention_backend="ascend",
+        )
         out2 = torch.tensor(json.loads(runtime.encode(prompt))["embedding"])
         runtime.shutdown()
 
@@ -58,7 +78,9 @@ class TestSRTEngine(CustomTestCase):
         sampling_params = {"temperature": 0, "max_new_tokens": 8}
 
         engine = sgl.Engine(
-            model_path=model_path, random_seed=42, disable_radix_cache=True,
+            model_path=model_path,
+            random_seed=42,
+            disable_radix_cache=True,
             attention_backend="ascend",
         )
         out1 = engine.generate(prompt, sampling_params)["text"]
