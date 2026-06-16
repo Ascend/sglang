@@ -18,7 +18,6 @@ register_npu_ci(
 )
 
 
-
 class TestGptOss120B(unittest.TestCase):
     """Unified test class for GPT-OSS-120B performance and accuracy.
 

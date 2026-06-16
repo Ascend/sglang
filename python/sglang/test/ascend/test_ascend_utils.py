@@ -86,7 +86,9 @@ GLM_5_1_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/GLM-5.1-w4a8
 GPT_OSS_120B_BF16_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "eigen-ai-labs/gpt-oss-120b-bf16"
 )
-GPT_OSS_120B_EAGLE3_DRAFT_MODEL_PATH = "lmsys/EAGLE3-gpt-oss-120b-bf16"
+GPT_OSS_120B_EAGLE3_DRAFT_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "eigen-ai-labs/EAGLE3-gpt-oss-120b-bf16"
+)
 GPT_OSS_120B_MXFP4_MODEL_PATH = "openai/gpt-oss-120b"
 GRANITE_3_0_3B_A800M_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "ibm-granite/granite-3.0-3b-a800m-instruct"

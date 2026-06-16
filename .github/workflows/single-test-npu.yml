@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: GPT-OSS-120B MXFP4 and MXFP4+Parsers+EAGLE3 variants performance and accuracy test
+# test round 3: GPT-OSS-120B MXFP4 and MXFP4+Parsers+EAGLE3 variants performance and accuracy test
 
 on:
   pull_request:
