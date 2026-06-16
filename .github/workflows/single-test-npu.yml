@@ -1,5 +1,5 @@
-name: Single Test (NPU)
-# test round 1: NPU hidden states test
+﻿name: Single Test (NPU)
+# test round 2: NPU hidden states test - fix accelerate dependency
 
 on:
   pull_request:
