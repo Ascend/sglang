@@ -1,8 +1,8 @@
 import unittest
 
 from sglang.test.ascend.test_ascend_utils import (
+    GPT_OSS_120B_BF16_WEIGHTS_PATH,
     GPT_OSS_120B_EAGLE3_DRAFT_MODEL_PATH,
-    GPT_OSS_120B_MXFP4_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.performance_test_runner import PerformanceTestParams
@@ -33,8 +33,6 @@ class TestGptOss120B(unittest.TestCase):
             "--trust-remote-code",
             "--cuda-graph-max-bs=200",
             "--mem-fraction-static=0.93",
-            "--base-gpu-id",
-            "2",
         ]
         # Lower batch size for EAGLE3 variants to avoid OOM
         base_args_eagle3 = [
@@ -42,8 +40,6 @@ class TestGptOss120B(unittest.TestCase):
             "--trust-remote-code",
             "--cuda-graph-max-bs=100",
             "--mem-fraction-static=0.85",
-            "--base-gpu-id",
-            "2",
         ]
         parser_args = [
             "--reasoning-parser=gpt-oss",
@@ -63,14 +59,14 @@ class TestGptOss120B(unittest.TestCase):
         variants = [
             # Variant 1: MXFP4 baseline
             ModelLaunchSettings(
-                GPT_OSS_120B_MXFP4_MODEL_PATH,
+                GPT_OSS_120B_BF16_WEIGHTS_PATH,
                 tp_size=8,
                 extra_args=base_args,
                 variant="MXFP4",
             ),
             # Variant 2: MXFP4 + Parsers + EAGLE3 (full featured quantized, lower batch size)
             ModelLaunchSettings(
-                GPT_OSS_120B_MXFP4_MODEL_PATH,
+                GPT_OSS_120B_BF16_WEIGHTS_PATH,
                 tp_size=8,
                 extra_args=base_args_eagle3 + parser_args + eagle3_args,
                 env=eagle3_env,
