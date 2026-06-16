@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: SRT Engine basic function tests - add disable_cuda_graph=True to fix hang
+# test round 5: SRT Engine basic function tests - use PR source code instead of image
 
 on:
   pull_request:
@@ -64,12 +64,16 @@ jobs:
           export SGLANG_SET_CPU_AFFINITY=1
           echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
 
-          echo "Use sglang from image"
+          echo "Use sglang from PR source code"
           sglang_pkg_path=/sgl-workspace/sglang/python
           ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
           mkdir -p ${ascend_test_util_path}
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+
+          # Override sglang package with PR source code
+          export PYTHONPATH=${sglang_source_path}/python:${PYTHONPATH}
+          echo "PYTHONPATH set to: ${PYTHONPATH}"
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
