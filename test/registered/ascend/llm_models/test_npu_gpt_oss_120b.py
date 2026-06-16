@@ -1,5 +1,9 @@
 import unittest
 
+from sglang.test.ascend.test_ascend_utils import (
+    GPT_OSS_120B_EAGLE3_DRAFT_MODEL_PATH,
+    GPT_OSS_120B_MXFP4_MODEL_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.performance_test_runner import PerformanceTestParams
 from sglang.test.run_combined_tests import run_combined_tests
@@ -12,9 +16,6 @@ register_npu_ci(
     suite="full-8-npu-a3",
     nightly=True,
 )
-
-from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_EAGLE3_DRAFT_MODEL_PATH
-from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_BF16_WEIGHTS_PATH
 
 
 
