@@ -25,7 +25,8 @@ QWEN3_6_27B_16K_1k_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "130",
+    "ASCEND_USE_FIA": "1",
 }
 
 QWEN3_6_27B_16K_1k_OTHER_ARGS = [
@@ -56,6 +57,7 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     16,
     20,
     24,
+    26,
     28,
     "--enable-multimodal",
     "--quantization",
@@ -81,7 +83,7 @@ class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     """Test NPU performance for Qwen3.6-27B-w8a8 2p in16k out1k 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_6_27B_W8A8_MODEL_PATH
     other_args = QWEN3_6_27B_16K_1k_OTHER_ARGS
     envs = QWEN3_6_27B_16K_1k_ENVS

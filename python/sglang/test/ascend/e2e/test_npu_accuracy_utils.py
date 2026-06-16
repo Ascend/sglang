@@ -19,6 +19,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
 from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    dump_metric,
     popen_launch_server,
 )
 
@@ -211,11 +212,24 @@ def assert_metrics(self, metrics):
         raise Exception("No metrics obtained from benchmark")
 
     if self.accuracy is not None:
+        dump_metric(
+            "accuracy",
+            float(metrics["accuracy"]),
+            labels={"test_case": self.__class__.__name__, "type": "accuracy"},
+        )
+        dump_metric(
+            "accuracy_baseline",
+            float(self.accuracy),
+            labels={"test_case": self.__class__.__name__, "type": "accuracy"},
+        )
         self.assertGreaterEqual(
             float(metrics["accuracy"]),
             self.accuracy * ACCURACY_TOLERANCE,
-            f"Accuracy check failed. Expected >= {self.accuracy}, Got: {metrics['accuracy']}",
+            f"Accuracy check failed. Expected >= {self.accuracy * ACCURACY_TOLERANCE}, Got: {metrics['accuracy']}",
         )
+
+
+MMMU_LOCAL_PATH = "/root/.cache/modelscope/hub/datasets/AI-ModelScope___mmmu"
 
 
 class TestAscendAccuracyTestCaseBase(CustomTestCase):
@@ -266,6 +280,17 @@ class TestAscendAccuracyTestCaseBase(CustomTestCase):
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
 
+    def _get_dataset_args(self):
+        if "mmmu" in self.datasets:
+            base_args = {"mmmu": {"dataset_id": MMMU_LOCAL_PATH}}
+            if self.dataset_args:
+                if isinstance(self.dataset_args, dict):
+                    base_args.update(self.dataset_args)
+                elif isinstance(self.dataset_args, str):
+                    base_args.update(json.loads(self.dataset_args))
+            return base_args
+        return self.dataset_args
+
     def run_accuracy(self):
         parsed_url = urlparse(self.base_url)
         host = parsed_url.hostname
@@ -277,7 +302,7 @@ class TestAscendAccuracyTestCaseBase(CustomTestCase):
                 port=port,
                 model=model_name,
                 datasets=self.datasets,
-                dataset_args=self.dataset_args,
+                dataset_args=self._get_dataset_args(),
                 eval_batch_size=self.eval_batch_size,
                 limit=self.limit,
                 generation_config=self.generation_config,
@@ -353,6 +378,17 @@ class TestAscendAccuracyMultiNodePdMixTestCaseBase(CustomTestCase):
         )
         time.sleep(MAX_SERVER_KEEP_ALIVE_TIME)
 
+    def _get_dataset_args(self):
+        if "mmmu" in self.datasets:
+            base_args = {"mmmu": {"dataset_id": MMMU_LOCAL_PATH}}
+            if self.dataset_args:
+                if isinstance(self.dataset_args, dict):
+                    base_args.update(self.dataset_args)
+                elif isinstance(self.dataset_args, str):
+                    base_args.update(json.loads(self.dataset_args))
+            return base_args
+        return self.dataset_args
+
     @check_role(allowed_roles=["master", "worker"])
     def run_accuracy(self):
         parsed_url = urlparse(self.base_url)
@@ -365,7 +401,7 @@ class TestAscendAccuracyMultiNodePdMixTestCaseBase(CustomTestCase):
                 port=self.port,
                 model=model_name,
                 datasets=self.datasets,
-                dataset_args=self.dataset_args,
+                dataset_args=self._get_dataset_args(),
                 eval_batch_size=self.eval_batch_size,
                 limit=self.limit,
                 generation_config=self.generation_config,
@@ -454,6 +490,17 @@ class TestAscendAccuracyMultiNodePdSepTestCaseBase(CustomTestCase):
                     f"Sglang process exited on node {cls.host} {cls.hostname} with exit code: {exit_code}"
                 )
 
+    def _get_dataset_args(self):
+        if "mmmu" in self.datasets:
+            base_args = {"mmmu": {"dataset_id": MMMU_LOCAL_PATH}}
+            if self.dataset_args:
+                if isinstance(self.dataset_args, dict):
+                    base_args.update(self.dataset_args)
+                elif isinstance(self.dataset_args, str):
+                    base_args.update(json.loads(self.dataset_args))
+            return base_args
+        return self.dataset_args
+
     @check_role(allowed_roles=["router"])
     def run_accuracy(self):
         parsed_url = urlparse(self.base_url)
@@ -466,7 +513,7 @@ class TestAscendAccuracyMultiNodePdSepTestCaseBase(CustomTestCase):
                 port=port,
                 model=model_name,
                 datasets=self.datasets,
-                dataset_args=self.dataset_args,
+                dataset_args=self._get_dataset_args(),
                 eval_batch_size=self.eval_batch_size,
                 limit=self.limit,
                 generation_config=self.generation_config,

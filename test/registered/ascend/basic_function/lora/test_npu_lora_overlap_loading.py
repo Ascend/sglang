@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
-class TestLoraOverlapLoadingDisabled(CustomTestCase):
+class TestLoraEnableOverlapLoading(CustomTestCase):
     """Testcase：Verify LoRA set --enable-lora-overlap-loading parameter, inference request successful.
 
     [Test Category] Parameter
@@ -35,9 +35,14 @@ class TestLoraOverlapLoadingDisabled(CustomTestCase):
                 "--enable-lora",
                 "--lora-path",
                 f"lora_a={LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH}",
+                "--enable-lora-overlap-loading",
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
+                "--max-loras-per-batch",
+                "2",
+                "--max-loaded-loras",
+                "4",
             ],
         )
 
@@ -45,7 +50,7 @@ class TestLoraOverlapLoadingDisabled(CustomTestCase):
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
 
-    def test_lora_without_overlap_loading(self):
+    def test_lora_with_enable_overlap_loading(self):
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
             json={

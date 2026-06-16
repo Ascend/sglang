@@ -86,7 +86,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     """Test NPU performance for Qwen3.6-35B-A3B 1p in1024x1024 30 out1024 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
+    dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
     model = QWEN3_6_35B_A3B_MODEL_PATH
     other_args = QWEN3_6_35B_A3B_1024_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1024_ENVS
@@ -99,7 +99,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     image_resolution = "1024x1024"
     image_count = 1
     tpot = 50
-    aisbench_request_rate = 60
+    request_rate = float("inf")
     output_token_throughput = 2382.2
 
     def test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms(self):

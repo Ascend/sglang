@@ -25,6 +25,8 @@ GLM_5_1_TWO_NODE_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "HCCL_BUFFSIZE": "2500",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
 }
 
 GLM_5_1_TWO_NODE_OTHER_ARGS = [
@@ -84,7 +86,7 @@ class TestNPUGLM5_1_W4A8_32P_In3k5_Out1k5(TestAscendPerfMultiNodePdMixTestCaseBa
 
     model_config = GLM_5_1_TWO_NODE_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
     max_concurrency = 128
     num_prompts = 512
