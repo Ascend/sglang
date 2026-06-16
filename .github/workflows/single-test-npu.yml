@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: SRT Engine basic function tests - retrigger CI
+# test round 4: SRT Engine basic function tests - add disable_cuda_graph=True to fix hang
 
 on:
   pull_request:
