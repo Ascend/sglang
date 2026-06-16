@@ -1,5 +1,5 @@
 ﻿name: Single Test (NPU)
-# test round 2: NPU hidden states test - fix accelerate dependency
+# test round 3: NPU hidden states test - fix atol for NPU precision
 
 on:
   pull_request:
