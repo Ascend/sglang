@@ -31,6 +31,7 @@ class TestNPUMetrics1NPU(TestNPULoggingBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.other_args.extend(["--enable-metrics", "--enable-mfu-metrics"])
+        cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
         cls.launch_server()
 
     def test_metrics_1npu(self):
@@ -62,6 +63,7 @@ class TestNPUMetricsGateDisabled(TestNPULoggingBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.other_args.extend(["--enable-metrics"])
+        cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
         cls.launch_server()
 
     def test_mfu_metrics_gate_disabled(self):
@@ -71,6 +73,8 @@ class TestNPUMetricsGateDisabled(TestNPULoggingBase):
         metrics_response = requests.get(f"{self.base_url}/metrics")
         self.assertEqual(metrics_response.status_code, 200)
         metrics_text = metrics_response.text
+
+        print(f"metrics_text=\n{metrics_text}")
 
         metrics = _parse_prometheus_metrics(metrics_text)
         _verify_metrics_common(self, metrics_text, metrics, expect_mfu_metrics=False)
@@ -101,6 +105,7 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
                 "--enable-dp-attention",
             ]
         )
+        cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
         cls.launch_server()
 
     def test_metrics_2npu(self):

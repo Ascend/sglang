@@ -89,6 +89,7 @@ class TestNPULoggingBase(CustomTestCase):
         cls.err_log_name = cls.err_log_file_obj.name
         cls.err_log_file = cls.err_log_file_obj
         cls.process = None
+        cls.env = None
 
     @classmethod
     def tearDownClass(cls):
@@ -107,6 +108,7 @@ class TestNPULoggingBase(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls.other_args,
             return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
+            env=cls.env,
         )
 
     def inference_once(self, max_tokens=32):
