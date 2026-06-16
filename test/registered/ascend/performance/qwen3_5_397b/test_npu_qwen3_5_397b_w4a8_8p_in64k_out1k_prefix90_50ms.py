@@ -113,7 +113,7 @@ class TestNPUQwen3_5_397B_64K_Prefix90(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_5_397B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_5_397B_64K_PREFIX_ENVS
     dataset_name = "generated-shared-prefix"
-    warmup_requests = 0
+    warmup_requests = 4
     max_concurrency = 112
     num_prompts = 112
     repeat_rate = 0.9
