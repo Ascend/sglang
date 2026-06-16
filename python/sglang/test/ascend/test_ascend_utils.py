@@ -89,7 +89,9 @@ GPT_OSS_120B_BF16_WEIGHTS_PATH = os.path.join(
 GPT_OSS_120B_EAGLE3_DRAFT_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "eigen-ai-labs/EAGLE3-gpt-oss-120b-bf16"
 )
-GPT_OSS_120B_MXFP4_MODEL_PATH = "openai/gpt-oss-120b"
+GPT_OSS_120B_MXFP4_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "openai-mirror/gpt-oss-120b"
+)
 GRANITE_3_0_3B_A800M_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "ibm-granite/granite-3.0-3b-a800m-instruct"
 )
