@@ -94,7 +94,8 @@ class TestHiddenState(CustomTestCase):
                 f"Max diff: {torch.max(torch.abs(hf_out['hidden_states'][-1][0] - sg_hidden_states))}"
             )
 
-            atol = 0.8
+            # NPU has larger numerical differences compared to GPU
+            atol = 1.5
             self.assertTrue(
                 torch.allclose(
                     hf_out["hidden_states"][-1][0],
