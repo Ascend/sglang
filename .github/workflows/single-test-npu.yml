@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: Anthropic tool use test with PYTHONPATH fix for source path
+# test round 4: Anthropic tool use test with SGLANG_TEST_DEVICE=npu
 
 on:
   pull_request:
@@ -62,7 +62,9 @@ jobs:
 
           export SGLANG_TEST_MAX_RETRY=0
           export SGLANG_SET_CPU_AFFINITY=1
+          export SGLANG_TEST_DEVICE=npu
           echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
+          echo "SGLANG_TEST_DEVICE: $SGLANG_TEST_DEVICE"
 
           echo "Use sglang from image"
           sglang_pkg_path=/sgl-workspace/sglang/python
