@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: NPU DP attention test
+# test round 2: NPU DP attention test - update threshold
 
 on:
   pull_request:
