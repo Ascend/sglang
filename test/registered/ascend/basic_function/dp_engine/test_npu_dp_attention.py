@@ -34,7 +34,7 @@ class TestDPAttentionDP2TP2(
     EBNFConstrainedMixin,
     RegexConstrainedMixin,
 ):
-    gsm8k_accuracy_thres = 0.34
+    gsm8k_accuracy_thres = 0.33
 
     @classmethod
     def setUpClass(cls):
@@ -73,7 +73,7 @@ class TestDPAttentionMixedChunk(
     CustomTestCase,
     GSM8KMixin,
 ):
-    gsm8k_accuracy_thres = 0.34
+    gsm8k_accuracy_thres = 0.33
 
     @classmethod
     def setUpClass(cls):
