@@ -968,7 +968,10 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            if self.dataset_name == "generated-shared-prefix" and self.pop_sglang_is_in_ci_for_gsp:
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
                 bench_env = os.environ.copy()
                 bench_env.pop("SGLANG_IS_IN_CI", None)
             else:
@@ -1098,7 +1101,10 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
                 "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            if self.dataset_name == "generated-shared-prefix" and self.pop_sglang_is_in_ci_for_gsp:
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
                 bench_env = os.environ.copy()
                 bench_env.pop("SGLANG_IS_IN_CI", None)
             else:
@@ -1245,7 +1251,10 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            if self.dataset_name == "generated-shared-prefix" and self.pop_sglang_is_in_ci_for_gsp:
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
                 bench_env = os.environ.copy()
                 bench_env.pop("SGLANG_IS_IN_CI", None)
             else:
