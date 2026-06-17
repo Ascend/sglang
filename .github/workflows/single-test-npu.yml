@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: Anthropic tool use test with SGLANG_TEST_DEVICE=npu
+# test round 5: Anthropic tool use test with updated trigger paths
 
 on:
   pull_request:
@@ -7,6 +7,8 @@ on:
       - testcases
     paths:
       - ".github/workflows/single-test-npu.yml"
+      - "test/registered/ascend/interface/test_npu_anthropic_tool_use.py"
+      - "python/sglang/test/ascend/**"
 
 concurrency:
   group: single-test-npu-${{ github.ref }}
