@@ -232,15 +232,10 @@ class TestNPUTracing(TestNPULoggingBase):
         request_spans = [
             s for s in all_spans if s.name == RequestStage.PREFILL_FORWARD.stage_name
         ]
-        # self.assertEqual(
-        #     len(request_spans),
-        #     batch_size,
-        #     f"Expected {batch_size} prefill_forward spans, got {len(request_spans)}",
-        # )
-        self.assertGreaterEqual(
+        self.assertEqual(
             len(request_spans),
-            1,
-            f"Expected at least 1 prefill_forward span, got {len(request_spans)}",
+            batch_size,
+            f"Expected {batch_size} prefill_forward spans, got {len(request_spans)}",
         )
 
     def test_parallel_sample(self):
