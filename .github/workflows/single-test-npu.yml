@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 8: Fix trailing whitespace in CI yaml
+# test round 9: Switch to Llama-3.2-1B with llama3 tool parser
 
 on:
   pull_request:
