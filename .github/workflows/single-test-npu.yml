@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: NPU data parallelism test
+# test round 3: NPU data parallelism test with attention-backend
 
 on:
   pull_request:
