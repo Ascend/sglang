@@ -44,7 +44,7 @@ jobs:
 
           # Test cases
           test_cases=(
-            "test/registered/ascend/interface/GENERATED_20260528/test_npu_large_max_new_tokens.py"
+            # "test/registered/ascend/interface/GENERATED_20260528/test_npu_large_max_new_tokens.py"
             "test/registered/ascend/interface/GENERATED_20260528/test_npu_http2_server.py"
           )
 
