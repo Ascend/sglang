@@ -1,5 +1,5 @@
-﻿name: Single Test (NPU)
-# test round 1: <娴嬭瘯鐢ㄤ緥鎻忚堪>
+name: Single Test (NPU)
+# test round 1: NPU data parallelism test
 
 on:
   pull_request:
@@ -38,7 +38,8 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 浣跨敤鏃舵浛鎹负瀹為檯鐨勬祴璇曠敤渚嬭矾寰?          test_cases=(
+          # Test cases
+          test_cases=(
             "test/registered/ascend/basic_function/dp_engine/test_npu_data_parallelism.py"
           )
 
@@ -96,4 +97,3 @@ jobs:
             mkdir -p ${target_plog_path}
             cp ${plog_path}/* ${target_plog_path}
           fi
-
