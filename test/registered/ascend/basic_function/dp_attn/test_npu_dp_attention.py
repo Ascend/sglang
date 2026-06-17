@@ -57,6 +57,7 @@ class TestDPAttentionDP2TP2(
                 "2",
                 "--attention-backend",
                 "ascend",
+                "--disable-cuda-graph",
             ],
         )
 
@@ -92,6 +93,7 @@ class TestDPAttentionMixedChunk(
                 "256",
                 "--attention-backend",
                 "ascend",
+                "--disable-cuda-graph",
             ],
         )
 
@@ -129,6 +131,7 @@ class TestDPRetract(
                 "256",
                 "--attention-backend",
                 "ascend",
+                "--disable-cuda-graph",
             ],
         )
 
@@ -161,6 +164,7 @@ class TestDPAttentionDP2TP2VLM(CustomTestCase):
                 "2",
                 "--attention-backend",
                 "ascend",
+                "--disable-cuda-graph",
             ],
         )
 

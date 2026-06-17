@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: DP Attention test for NPU
+# test round 2: DP Attention test for NPU - add --disable-cuda-graph
 
 on:
   pull_request:
