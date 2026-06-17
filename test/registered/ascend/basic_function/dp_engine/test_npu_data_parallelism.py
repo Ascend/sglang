@@ -18,7 +18,7 @@ register_npu_ci(est_time=100, suite="full-2-npu-a3", nightly=True)
 
 
 class TestDataParallelism(CustomTestCase, GSM8KMixin):
-    gsm8k_accuracy_thres = 0.37  # Lower threshold for DP mode
+    gsm8k_accuracy_thres = 0.37  # Lowered from 0.7 for DP mode compatibility
 
     @classmethod
     def setUpClass(cls):
