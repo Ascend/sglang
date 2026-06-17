@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: NPU data parallelism test
+# test round 2: NPU data parallelism test
 
 on:
   pull_request:
