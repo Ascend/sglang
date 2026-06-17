@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: DP Attention test for NPU - fix isort imports
+# test round 4: DP Attention test for NPU - fix black formatting
 
 on:
   pull_request:

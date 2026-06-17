@@ -26,6 +26,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
+
 class TestDPAttentionDP2TP2(
     CustomTestCase,
     GSM8KMixin,
@@ -73,7 +74,7 @@ class TestDPAttentionMixedChunk(
     CustomTestCase,
     GSM8KMixin,
 ):
-    gsm8k_accuracy_thres = 0.34
+    gsm8k_accuracy_thres = 0.35
 
     @classmethod
     def setUpClass(cls):
