@@ -12,7 +12,9 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
-import granian
+import granian  # noqa: F401
+
+_HAS_GRANIAN = True
 
 register_npu_ci(est_time=100, suite="full--npu-a3", nightly=True)
 
