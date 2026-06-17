@@ -28,9 +28,12 @@ class TestDataParallelism(CustomTestCase, GSM8KMixin):
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=["--dp", 2,
-                        "--attention-backend",
-                        "ascend",],
+            other_args=[
+                "--dp",
+                2,
+                "--attention-backend",
+                "ascend",
+            ],
         )
 
     @classmethod
