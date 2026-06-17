@@ -24,12 +24,12 @@ on:
         description: 'The a2 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260612'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-910b'
       image_a3:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3-20260612'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
