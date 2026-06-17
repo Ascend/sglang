@@ -5,6 +5,11 @@ import requests
 from sglang.lang.chat_template import get_chat_template_by_model_path
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.test_ascend_utils import (
+    DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH,
+    KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
+    QWEN3_0_6B_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.ebnf_constrained_kit import EBNFConstrainedMixin
 from sglang.test.kits.eval_accuracy_kit import GSM8KMixin
@@ -20,9 +25,6 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
-from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
-from sglang.test.ascend.test_ascend_utils import KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH
 
 class TestDPAttentionDP2TP2(
     CustomTestCase,

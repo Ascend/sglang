@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: DP Attention test for NPU - add --disable-cuda-graph
+# test round 3: DP Attention test for NPU - fix isort imports
 
 on:
   pull_request:
