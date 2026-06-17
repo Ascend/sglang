@@ -8,7 +8,7 @@ import unittest
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -68,7 +68,7 @@ WEATHER_TOOL = {
 class TestAnthropicToolUse(CustomTestCase):
     @classmethod
     def setUpClass(cls):
-        cls.model = QWEN3_0_6B_WEIGHTS_PATH
+        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.api_key = "sk-123456"
         cls.process = popen_launch_server(
@@ -78,7 +78,7 @@ class TestAnthropicToolUse(CustomTestCase):
             api_key=cls.api_key,
             other_args=[
                 "--tool-call-parser",
-                "qwen",
+                "llama3",
                 "--attention-backend",
                 "ascend",
             ],
