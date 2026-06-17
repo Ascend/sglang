@@ -19,7 +19,7 @@ from sglang.test.test_utils import CustomTestCase
 register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 
-class TestNPUMetrics1NPU(TestNPULoggingBase):
+class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     """Test core metrics functionality on single NPU with MFU enabled.
 
     [Description]
@@ -55,7 +55,7 @@ class TestNPUMetrics1NPU(TestNPULoggingBase):
         _verify_metrics_common(self, metrics_text, metrics, expect_mfu_metrics=True)
 
 
-class TestNPUMetricsGateDisabled(TestNPULoggingBase):
+class TestNPUMetricsMFUDisabled(TestNPULoggingBase):
     """Test that MFU metrics are not emitted when the gate is disabled.
 
     [Description]
@@ -73,7 +73,7 @@ class TestNPUMetricsGateDisabled(TestNPULoggingBase):
         cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
         cls.launch_server()
 
-    def test_mfu_metrics_gate_disabled(self):
+    def test_mfu_metrics_mfu_disabled(self):
         """MFU metrics should not be emitted when the gate is disabled."""
         _generate_metrics(self.base_url)
 
@@ -112,12 +112,34 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
                 "--enable-dp-attention",
             ]
         )
-        cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
+        # SGLANG_ENABLE_METRICS_DP_ATTENTION is required for dp_cooperation_*
+        # metrics. Without it, DPCooperationInfo is not created and those
+        # counters will never be emitted.
+        cls.env = {
+            "SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1",
+            "SGLANG_ENABLE_METRICS_DP_ATTENTION": "1",
+        }
         cls.launch_server()
 
     def test_metrics_2npu(self):
         """Test metrics on 2-NPU TP/DP parallel scenario."""
         _generate_metrics(self.base_url)
+
+        # Under DP=2 round-robin scheduling, requests with the same prefix may
+        # be dispatched to different ranks, leaving each rank with a cold cache.
+        # cached_tokens_total is only emitted when cached_tokens > 0, so we send
+        # additional identical requests to increase the chance that at least one
+        # rank sees a cache hit.
+        for i in range(5):
+            response = requests.post(
+                f"{self.base_url}/generate",
+                json={
+                    "text": "Hello, " * 100,
+                    "sampling_params": {"temperature": 0, "max_new_tokens": 5},
+                },
+                headers={"x-smg-routing-key": "test-key"},
+            )
+            assert response.status_code == 200
 
         metrics_response = requests.get(f"{self.base_url}/metrics")
         self.assertEqual(metrics_response.status_code, 200)
