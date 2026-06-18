@@ -20,10 +20,18 @@ from torch import nn
 
 from sglang.srt.configs.lfm2 import Lfm2Config
 from sglang.srt.distributed import get_pp_group, get_tensor_model_parallel_world_size
-from sglang.srt.layers.attention.mamba.causal_conv1d import (
-    causal_conv1d_fn,
-    causal_conv1d_update,
-)
+from sglang.srt.utils import is_npu
+
+if not is_npu():
+    from sglang.srt.layers.attention.mamba.causal_conv1d import (
+        causal_conv1d_fn,
+        causal_conv1d_update,
+    )
+else:
+    from sgl_kernel_npu.mamba.causal_conv1d import (
+        causal_conv1d_fn_npu as causal_conv1d_fn,
+        causal_conv1d_update_npu as causal_conv1d_update,
+    )
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -274,15 +282,31 @@ class Lfm2ShortConv(nn.Module):
         B_gate, C_gate, x = proj.chunk(3, dim=-1)
         Bx = B_gate * x
 
+        # [NPU] SGLang uses [batch, width-1, dim], but NPU ops require [batch, dim, width-1], need transpose
+        is_reversed = conv_state.ndim == 3 and conv_state.shape[1] < conv_state.shape[2]
+
+        if is_reversed:
+            num_queries = len(mamba_indices)
+            active_states = torch.index_select(
+                conv_state, 0, mamba_indices.to(torch.int32)
+            )
+            working_conv_state = active_states.transpose(1, 2).contiguous()
+            working_indices = torch.arange(
+                num_queries, dtype=torch.int32, device=hidden_states.device
+            )
+        else:
+            working_conv_state = conv_state
+            working_indices = mamba_indices.to(torch.int32)
+
         if forward_batch.forward_mode.is_decode():
             # Decode: single token per request, use optimized update kernel
             conv_out = causal_conv1d_update(
                 Bx,
-                conv_state,
+                working_conv_state,
                 self.conv_weight,
                 self.conv_bias,
                 activation=None,
-                conv_state_indices=mamba_indices.to(torch.int32),
+                conv_state_indices=working_indices,
             )
         else:
             # Prefill: multiple tokens, use varlen kernel
@@ -300,13 +324,13 @@ class Lfm2ShortConv(nn.Module):
                         ),
                     ]
                 )
-                cache_indices = mamba_indices.to(torch.int32)
+                cache_indices = working_indices
                 has_initial_state = forward_batch.extend_prefix_lens > 0
             else:
                 query_start_loc = torch.tensor(
                     [0, T], dtype=torch.int32, device=hidden_states.device
                 )
-                cache_indices = mamba_indices[:1].to(torch.int32)
+                cache_indices = working_indices[:1]
                 has_initial_state = forward_batch.extend_prefix_lens[:1] > 0
 
             conv_out = causal_conv1d_fn(
@@ -316,9 +340,15 @@ class Lfm2ShortConv(nn.Module):
                 query_start_loc=query_start_loc,
                 cache_indices=cache_indices,
                 has_initial_state=has_initial_state,
-                conv_states=conv_state,
+                conv_states=working_conv_state,
                 activation=None,
             ).transpose(0, 1)
+
+        if is_reversed:
+            updated_active_states = working_conv_state.transpose(1, 2).contiguous()
+            conv_state.index_copy_(
+                0, mamba_indices.to(torch.int32), updated_active_states
+            )
 
         output, _ = self.out_proj(C_gate * conv_out)
         return output

@@ -1,4 +1,3 @@
-
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -47,7 +46,8 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     # "--enable-prefill-delayer",
     # "--prefill-delayer-queue-min-ratio",
     # "0.11",
-    "--prefill-max-requests", "12",
+    "--prefill-max-requests",
+    12,
     "--max-running-requests",
     122,
     "--max-mamba-cache-size",
