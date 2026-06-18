@@ -19,11 +19,13 @@ import unittest
 import requests
 
 from sglang.srt.observability.req_time_stats import RequestStage
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.otel_collector import LightweightOtlpCollector
-from sglang.test.server_fixtures.disaggregation_fixture import (
-    PDDisaggregationServerBase,
+from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    popen_launch_pd_server,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ logger = logging.getLogger(__name__)
 register_npu_ci(est_time=120, suite="full-2-npu-a3", nightly=True)
 
 
-class TestNPUTracingDisaggregation(PDDisaggregationServerBase):
+class TestNPUTracingDisaggregation(TestDisaggregationBase):
     """Test tracing in PD disaggregation mode on NPU.
 
     [Description]
@@ -47,51 +49,79 @@ class TestNPUTracingDisaggregation(PDDisaggregationServerBase):
     def setUpClass(cls):
         super().setUpClass()
 
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
 
         # Initialize collector first
         cls.collector = LightweightOtlpCollector()
         cls.collector.start()
         time.sleep(0.2)
 
-        # NPU-specific extra args for prefill and decode servers
-        cls.extra_prefill_args = [
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--enable-trace",
-            "--otlp-traces-endpoint",
-            "localhost:4317",
-        ]
-        cls.extra_decode_args = [
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--enable-trace",
-            "--otlp-traces-endpoint",
-            "localhost:4317",
-        ]
-
-        # Speed up OTLP export for faster test execution
-        cls.env = {
-            "SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS": "50",
-            "SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE": "4",
-        }
-
         # Start prefill and decode servers, then launch LB
         cls.start_prefill()
         cls.start_decode()
-        cls.wait_server_ready(
-            cls.prefill_url + "/health", process=cls.process_prefill
-        )
-        cls.wait_server_ready(
-            cls.decode_url + "/health", process=cls.process_decode
-        )
+        cls.wait_server_ready(cls.prefill_url + "/health")
+        cls.wait_server_ready(cls.decode_url + "/health")
         cls.launch_lb()
 
         # Wait for warmup spans to be exported and clear them
         time.sleep(1)
         cls.collector.clear()
+
+    @classmethod
+    def start_prefill(cls):
+        prefill_args = [
+            "--disaggregation-mode",
+            "prefill",
+            "--tp-size",
+            "1",
+            "--attention-backend",
+            "ascend",
+            "--disable-cuda-graph",
+            "--enable-trace",
+            "--otlp-traces-endpoint",
+            "localhost:4317",
+        ]
+        prefill_args += cls.transfer_backend + cls.rdma_devices
+
+        cls.process_prefill = popen_launch_pd_server(
+            cls.model,
+            cls.prefill_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=prefill_args,
+            env={
+                "SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS": "50",
+                "SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE": "4",
+            },
+        )
+
+    @classmethod
+    def start_decode(cls):
+        decode_args = [
+            "--disaggregation-mode",
+            "decode",
+            "--tp-size",
+            "1",
+            "--base-gpu-id",
+            "1",
+            "--attention-backend",
+            "ascend",
+            "--disable-cuda-graph",
+            "--enable-trace",
+            "--otlp-traces-endpoint",
+            "localhost:4317",
+        ]
+        decode_args += cls.transfer_backend + cls.rdma_devices
+
+        cls.process_decode = popen_launch_pd_server(
+            cls.model,
+            cls.decode_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=decode_args,
+            env={
+                "SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS": "50",
+                "SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE": "4",
+            },
+        )
 
     @classmethod
     def tearDownClass(cls):
