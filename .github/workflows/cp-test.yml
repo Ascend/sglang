@@ -94,34 +94,20 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-#          - name: test_npu_cp_dp_no_mtp_functional
-#            test_case: test/registered/ascend/temp/test_npu_cp_dp_no_mtp_functional.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-          - name: test_npu_cp_vs_nocp_ttft
-            test_case: test/registered/ascend/temp/test_npu_cp_vs_nocp_ttft.py
+          - name: test_npu_cp_dp_no_mtp_functional
+            test_case: test/registered/ascend/basic_function/cp/test_npu_cp_dp_no_mtp_functional.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
             prefill_size: 2
             decode_size: 2
             router_size: 1
-#          - name: test_npu_cp_vs_nocp_ttft_bak
-#            test_case: test/registered/ascend/temp/test_npu_cp_vs_nocp_ttft_bak.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#          - name: test_npu_no_cp_no_mtp_functional1
-#            test_case: test/registered/ascend/temp/test_npu_no_cp_no_mtp_functional.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
+          - name: test_npu_cp_vs_nocp_ttft
+            test_case: test/registered/ascend/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-aarch64-a3-0
