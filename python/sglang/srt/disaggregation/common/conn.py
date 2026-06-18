@@ -37,9 +37,6 @@ from sglang.srt.layers.dp_attention import (
     get_attention_tp_size,
 )
 from sglang.srt.server_args import ServerArgs, get_global_server_args
-from sglang.srt.utils import (
-    format_tcp_address,
-)
 from sglang.srt.utils.network import (
     NetworkAddress,
     get_local_ip_auto,
@@ -787,7 +784,7 @@ class CommonKVReceiver(BaseKVReceiver):
             self.required_prefill_response_num
         )
 
-if self.kv_mgr.enable_staging:
+        if self.kv_mgr.enable_staging:
             self.require_staging = (
                 self.prefill_info.attn_tp_size != 0
                 and self.prefill_info.attn_tp_size != self.kv_mgr.attn_tp_size

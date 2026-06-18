@@ -20,10 +20,23 @@ from torch import nn
 
 from sglang.srt.configs.lfm2 import Lfm2Config
 from sglang.srt.distributed import get_pp_group, get_tensor_model_parallel_world_size
-from sglang.srt.layers.attention.mamba.causal_conv1d import (
-    causal_conv1d_fn,
-    causal_conv1d_update,
-)
+from sglang.srt.utils import is_npu as _lfm2_is_npu
+
+_LFM2_IS_NPU = _lfm2_is_npu()
+# LFM2 conv layers share the Mamba cache path. On Ascend, the generic wrapper
+# can fall back to Triton, whose cache layout check does not match the NPU pool.
+if _LFM2_IS_NPU:
+    from sgl_kernel_npu.mamba.causal_conv1d import (
+        causal_conv1d_fn_npu as causal_conv1d_fn,
+    )
+    from sgl_kernel_npu.mamba.causal_conv1d import (
+        causal_conv1d_update_npu as causal_conv1d_update,
+    )
+else:
+    from sglang.srt.layers.attention.mamba.causal_conv1d import (
+        causal_conv1d_fn,
+        causal_conv1d_update,
+    )
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -277,14 +290,28 @@ class Lfm2ShortConv(nn.Module):
 
         if forward_batch.forward_mode.is_decode():
             # Decode: single token per request, use optimized update kernel
-            conv_out = causal_conv1d_update(
-                Bx,
-                conv_state,
-                self.conv_weight,
-                self.conv_bias,
-                activation=None,
-                conv_state_indices=mamba_indices.to(torch.int32),
-            )
+            if _LFM2_IS_NPU:
+                # NPU MambaPool stores cache as (pool, kernel-1, dim), while
+                # the Ascend conv kernel consumes (pool, dim, kernel-1).
+                conv_state_kernel = conv_state.transpose(1, 2).contiguous()
+                conv_out = causal_conv1d_update(
+                    Bx,
+                    conv_state_kernel,
+                    self.conv_weight,
+                    self.conv_bias,
+                    activation=None,
+                    conv_state_indices=mamba_indices.to(torch.int32),
+                )
+                conv_state.copy_(conv_state_kernel.transpose(1, 2))
+            else:
+                conv_out = causal_conv1d_update(
+                    Bx,
+                    conv_state,
+                    self.conv_weight,
+                    self.conv_bias,
+                    activation=None,
+                    conv_state_indices=mamba_indices.to(torch.int32),
+                )
         else:
             # Prefill: multiple tokens, use varlen kernel
             T = hidden_states.shape[0]
@@ -310,16 +337,49 @@ class Lfm2ShortConv(nn.Module):
                 cache_indices = mamba_indices[:1].to(torch.int32)
                 has_initial_state = forward_batch.extend_prefix_lens[:1] > 0
 
-            conv_out = causal_conv1d_fn(
-                Bx_t,
-                self.conv_weight,
-                self.conv_bias,
-                query_start_loc=query_start_loc,
-                cache_indices=cache_indices,
-                has_initial_state=has_initial_state,
-                conv_states=conv_state,
-                activation=None,
-            ).transpose(0, 1)
+            if _LFM2_IS_NPU:
+                # The Ascend varlen conv kernel requires an explicit per-request
+                # initial-state mask instead of the CUDA/Triton None shortcut.
+                extend_prefix_lens = forward_batch.extend_prefix_lens
+                if (
+                    extend_prefix_lens is not None
+                    and extend_prefix_lens.numel() == cache_indices.numel()
+                ):
+                    has_initial_state = (extend_prefix_lens > 0).to(
+                        device=hidden_states.device
+                    )
+                else:
+                    has_initial_state = torch.zeros(
+                        cache_indices.numel(),
+                        dtype=torch.bool,
+                        device=hidden_states.device,
+                    )
+
+                # Convert the NPU pool layout to the kernel layout and copy back
+                # because the kernel updates the cache in place.
+                conv_state_kernel = conv_state.transpose(1, 2).contiguous()
+                conv_out = causal_conv1d_fn(
+                    Bx_t,
+                    self.conv_weight,
+                    self.conv_bias,
+                    query_start_loc=query_start_loc,
+                    cache_indices=cache_indices,
+                    has_initial_state=has_initial_state,
+                    conv_states=conv_state_kernel,
+                    activation=None,
+                ).transpose(0, 1)
+                conv_state.copy_(conv_state_kernel.transpose(1, 2))
+            else:
+                conv_out = causal_conv1d_fn(
+                    Bx_t,
+                    self.conv_weight,
+                    self.conv_bias,
+                    query_start_loc=query_start_loc,
+                    cache_indices=cache_indices,
+                    has_initial_state=None,
+                    conv_states=conv_state,
+                    activation=None,
+                ).transpose(0, 1)
 
         output, _ = self.out_proj(C_gate * conv_out)
         return output

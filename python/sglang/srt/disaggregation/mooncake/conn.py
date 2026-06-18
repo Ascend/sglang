@@ -44,11 +44,9 @@ from sglang.srt.distributed.parallel_state import get_mooncake_transfer_engine
 from sglang.srt.environ import envs
 from sglang.srt.server_args import ServerArgs, get_global_server_args
 from sglang.srt.utils import (
-    format_tcp_address,
     get_split_kv_page_range,
-    is_valid_ipv6_address,
 )
-from sglang.srt.utils.network import NetworkAddress
+from sglang.srt.utils.network import NetworkAddress, is_valid_ipv6_address
 
 logger = logging.getLogger(__name__)
 
@@ -1797,7 +1795,7 @@ class MooncakeKVReceiver(CommonKVReceiver):
             self.kv_mgr.update_status(self.bootstrap_room, KVPoll.Failed)
             return
 
-if get_global_server_args().enable_kv_storage_optimization_mla:
+        if get_global_server_args().enable_kv_storage_optimization_mla:
             kv_indices_origin = kv_indices
 
         if (

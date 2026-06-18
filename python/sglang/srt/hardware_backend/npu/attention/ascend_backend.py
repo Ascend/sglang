@@ -254,6 +254,8 @@ def _cp_allgather_and_save_kv_npu(forward_batch, layer, k, v, cp_size):
 class AscendAttnBackend(AttentionBackend):
 
     def __init__(self, model_runner: ModelRunner, speculative_step_id: int = 0):
+        _arches = model_runner.model_config.hf_config.architectures
+
         super().__init__()
         self.forward_metadata = None
         self.device = model_runner.device
@@ -282,6 +284,13 @@ class AscendAttnBackend(AttentionBackend):
             if (
                 "Gemma2ForSequenceClassification"
                 in model_runner.model_config.hf_config.architectures
+            ):
+                self.use_native_sdpa = True
+            # LFM2 attention shapes hit an Ascend flash-attention accuracy issue;
+            # route them through the existing torch SDPA fallback.
+            if any(
+                a in _arches
+                for a in ("Lfm2ForCausalLM", "Lfm2VlForConditionalGeneration")
             ):
                 self.use_native_sdpa = True
         self.native_attn = AscendTorchNativeAttnBackend()
@@ -2046,7 +2055,13 @@ class AscendAttnBackend(AttentionBackend):
                     )
             # there are some accuracy issues in cross attention scene to use torch_npu._npu_flash_attention_qlens
             # forward_batch.encoder_lens is not None in cross attention scend, we add native attn to solve accuracy issues
-            elif forward_batch.encoder_lens is None and layer.logit_cap == 0:
+            elif (
+                forward_batch.encoder_lens is None
+                and layer.logit_cap == 0
+                # Keep the flash-attn path disabled for architectures that were
+                # explicitly marked to use the SDPA fallback in __init__.
+                and not getattr(self, "use_native_sdpa", False)
+            ):
                 query = q.reshape(-1, layer.tp_q_head_num, layer.qk_head_dim)
                 num_tokens = query.shape[0]
                 if not self.use_alibi:
