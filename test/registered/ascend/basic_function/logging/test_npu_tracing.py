@@ -133,7 +133,7 @@ class TestNPUTracing(TestNPULoggingBase):
         time.sleep(1)
 
     def _test_trace_level(
-            self, prompt, trace_level, expected_spans=None, max_new_tokens=32
+        self, prompt, trace_level, expected_spans=None, max_new_tokens=32
     ):
         """Helper to test a specific trace level.
 
