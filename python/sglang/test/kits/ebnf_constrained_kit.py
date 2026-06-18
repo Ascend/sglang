@@ -198,7 +198,11 @@ class EBNFConstrainedMixin:
         root ::= function_call
         function_call ::= call_config_service
         call_config_service ::= "{" "\\"name\\"" ":" "\\"config_service\\"" ", " "\\"arguments\\"" ":" arguments_config_service "}"
-        arguments_config_service ::= "{" ( "\\"theme\\"" ":" ("\\"light\\"" | "\\"dark\\"") ( "," "\\"language\\"" ":" ("\\"en\\"" | "\\"es\\"" | "\\"fr\\"") )? ( "," "\\"notifications\\"" ":" ("true" | "false") )? | "\\"language\\"" ":" ("\\"en\\"" | "\\"es\\"" | "\\"fr\\"") ( "," "\\"notifications\\"" ":" ("true" | "false") )? | "\\"notifications\\"" ":" ("true" | "false") )? "}"
+        arguments_config_service ::= "{" (
+            "\"theme\"" ":" ("\"light\"" | "\"dark\"")
+            ("," "\"language\"" ":" ("\"en\"" | "\"es\"" | "\"fr\""))?
+            ("," "\"notifications\"" ":" ("true" | "false"))?
+        )? "}"
         """
         # Test patterns that should match - flexible ordering of optional parameters
         allowed_patterns = [
