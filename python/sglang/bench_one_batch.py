@@ -687,83 +687,120 @@ def latency_test_run_once(
     profile_start_step=None,
     profile_steps=None,
 ):
+    """Run a single latency test and return measurement results."""
+
+    # --- 1. Validate and initialize ---
+    if not _validate_batch_size(model_runner, batch_size, input_len, output_len, rank_print):
+        return None
+
+    model_runner.clear()
+    measurement_results = _init_measurement_results(run_name, batch_size, input_len, output_len)
+
+    # --- 2. Prefill phase ---
+    prefill_latency, next_token_ids, batch = _run_prefill_phase(
+        model_runner, reqs, rank_print,
+        profile, profile_stage, profile_activities, profile_record_shapes,
+        profile_filename_prefix, batch_size, input_len, output_len,
+        measurement_results
+    )
+
+    # --- 3. Decode phase ---
+    decode_latencies = _run_decode_phase(
+        model_runner, next_token_ids, batch, output_len, rank_print,
+        profile, profile_stage, profile_activities, profile_record_shapes,
+        profile_filename_prefix, batch_size, input_len, output_len,
+        profile_start_step, profile_steps, log_decode_step,
+        measurement_results
+    )
+
+    # --- 4. Compute totals and cleanup ---
+    tot_latency = prefill_latency + sum(decode_latencies)
+    _record_total_metrics(tot_latency, input_len, output_len, batch_size, rank_print, measurement_results)
+
+    model_runner.cleanup(batch)
+    return measurement_results
+
+
+def _validate_batch_size(model_runner, batch_size, input_len, output_len, rank_print):
+    """Check if batch size is within the model runner's limits."""
     max_batch_size = model_runner.max_batch_size(input_len, output_len)
     if batch_size > max_batch_size:
         rank_print(
             f"skipping ({batch_size}, {input_len}, {output_len}) due to max batch size limit"
         )
-        return
+        return False
+    return True
 
-    model_runner.clear()
 
-    measurement_results = {
+def _init_measurement_results(run_name, batch_size, input_len, output_len):
+    """Initialize the measurement results dictionary."""
+    return {
         "run_name": run_name,
         "batch_size": batch_size,
         "input_len": input_len,
         "output_len": output_len,
     }
 
-    tot_latency = 0
 
-    profiler = None
-    enable_profile_prefill = profile and profile_stage in ["all", "prefill"]
-    trace_filename_prefill = None
-    if enable_profile_prefill:
-        trace_filename_prefill = _create_torch_profiler_filename(
-            profile_filename_prefix, batch_size, input_len, output_len, "prefill"
-        )
-        profiler = start_profile(
-            profile_activities,
-            profile_record_shapes=profile_record_shapes,
-            rank_print=rank_print,
-            trace_filename=trace_filename_prefill,  # pass it in here for the MLX path only
-        )
+def _run_prefill_phase(
+    model_runner, reqs, rank_print,
+    profile, profile_stage, profile_activities, profile_record_shapes,
+    profile_filename_prefix, batch_size, input_len, output_len,
+    measurement_results
+):
+    """Execute the prefill phase with optional profiling."""
+    enable_profile = profile and profile_stage in ["all", "prefill"]
+
+    profiler, trace_filename = _maybe_start_profiler(
+        enable_profile, profile_activities, profile_record_shapes,
+        rank_print, profile_filename_prefix, batch_size, input_len, output_len, "prefill"
+    )
 
     model_runner.synchronize()
     tic = time.perf_counter()
     next_token_ids, _, batch = model_runner.extend(reqs)
     model_runner.synchronize()
-    prefill_latency = time.perf_counter() - tic
+    latency = time.perf_counter() - tic
 
-    if enable_profile_prefill:
-        stop_profile(
-            profiler,
-            profile_activities,
-            rank_print=rank_print,
-            save_trace=True,
-            trace_filename=trace_filename_prefill,
-            stage="prefill",
-        )
-
-    tot_latency += prefill_latency
-    throughput = input_len * batch_size / prefill_latency
-    rank_print(
-        f"Prefill. latency: {prefill_latency:6.5f} s, throughput: {throughput:9.2f} token/s"
+    _maybe_stop_profiler(
+        enable_profile, profiler, profile_activities, rank_print, trace_filename, "prefill"
     )
-    measurement_results["prefill_latency"] = prefill_latency
+
+    throughput = input_len * batch_size / latency
+    rank_print(
+        f"Prefill. latency: {latency:6.5f} s, throughput: {throughput:9.2f} token/s"
+    )
+    measurement_results["prefill_latency"] = latency
     measurement_results["prefill_throughput"] = throughput
 
+    return latency, next_token_ids, batch
+
+
+def _run_decode_phase(
+    model_runner, next_token_ids, batch, output_len, rank_print,
+    profile, profile_stage, profile_activities, profile_record_shapes,
+    profile_filename_prefix, batch_size, input_len, output_len,
+    profile_start_step, profile_steps, log_decode_step,
+    measurement_results
+):
+    """Execute the decode phase with optional profiling and logging."""
     decode_latencies = []
-    # Determine profiling start step and end step
-    profile_start = (
-        profile_start_step if profile_start_step is not None else (output_len // 2)
-    )
+
+    profile_start = profile_start_step if profile_start_step is not None else (output_len // 2)
     profile_end = profile_start + (profile_steps if profile_steps is not None else 1)
-    enable_profile_decode = profile and profile_stage in ["all", "decode"]
-    trace_filename_decode = None
+    enable_profile = profile and profile_stage in ["all", "decode"]
+
     profiler = None
+    trace_filename = None
+
     for i in range(output_len - 1):
         model_runner.synchronize()
+
         # Start profiler at the specified step
-        if enable_profile_decode and i == profile_start:
-            trace_filename_decode = _create_torch_profiler_filename(
-                profile_filename_prefix, batch_size, input_len, output_len, "decode"
-            )
-            profiler = start_profile(
-                profile_activities,
-                profile_record_shapes=profile_record_shapes,
-                rank_print=rank_print,
-                trace_filename=trace_filename_decode,
+        if enable_profile and i == profile_start:
+            profiler, trace_filename = _maybe_start_profiler(
+                True, profile_activities, profile_record_shapes,
+                rank_print, profile_filename_prefix, batch_size, input_len, output_len, "decode"
             )
 
         tic = time.perf_counter()
@@ -772,21 +809,16 @@ def latency_test_run_once(
         latency = time.perf_counter() - tic
 
         # Stop profiler after the specified number of steps
-        if enable_profile_decode and profiler is not None and i >= profile_end - 1:
-            stop_profile(
-                profiler,
-                profile_activities,
-                rank_print=rank_print,
-                save_trace=True,
-                trace_filename=trace_filename_decode,
-                stage="decode",
+        if enable_profile and profiler is not None and i >= profile_end - 1:
+            _maybe_stop_profiler(
+                True, profiler, profile_activities, rank_print, trace_filename, "decode"
             )
             profiler = None
 
-        tot_latency += latency
-        throughput = batch_size / latency
         decode_latencies.append(latency)
+
         if i < 5 or (log_decode_step > 0 and i % log_decode_step == 0):
+            throughput = batch_size / latency
             rank_print(
                 f"Decode {i}. Batch size: {batch_size}, latency: {latency:6.5f} s, throughput: {throughput:9.2f} token/s"
             )
@@ -801,15 +833,52 @@ def latency_test_run_once(
         measurement_results["median_decode_latency"] = med_decode_latency
         measurement_results["median_decode_throughput"] = med_decode_throughput
 
+    return decode_latencies
+
+
+def _maybe_start_profiler(
+    enable, profile_activities, profile_record_shapes, rank_print,
+    profile_filename_prefix, batch_size, input_len, output_len, stage
+):
+    """Start profiler if enabled, returning (profiler, trace_filename)."""
+    if not enable:
+        return None, None
+
+    trace_filename = _create_torch_profiler_filename(
+        profile_filename_prefix, batch_size, input_len, output_len, stage
+    )
+    profiler = start_profile(
+        profile_activities,
+        profile_record_shapes=profile_record_shapes,
+        rank_print=rank_print,
+        trace_filename=trace_filename,
+    )
+    return profiler, trace_filename
+
+
+def _maybe_stop_profiler(enable, profiler, profile_activities, rank_print, trace_filename, stage):
+    """Stop profiler if enabled."""
+    if not enable or profiler is None:
+        return
+
+    stop_profile(
+        profiler,
+        profile_activities,
+        rank_print=rank_print,
+        save_trace=True,
+        trace_filename=trace_filename,
+        stage=stage,
+    )
+
+
+def _record_total_metrics(tot_latency, input_len, output_len, batch_size, rank_print, measurement_results):
+    """Compute and record total latency and overall throughput."""
     throughput = (input_len + output_len) * batch_size / tot_latency
     rank_print(
         f"Total. latency: {tot_latency:6.3f} s, throughput: {throughput:9.2f} token/s"
     )
     measurement_results["total_latency"] = tot_latency
     measurement_results["overall_throughput"] = throughput
-
-    model_runner.cleanup(batch)
-    return measurement_results
 
 
 def latency_test(
