@@ -62,7 +62,6 @@ from sglang.srt.mem_cache.memory_pool import HybridLinearKVPool, NSATokenToKVPoo
 from sglang.srt.mem_cache.swa_memory_pool import SWAKVPool
 from sglang.srt.observability.req_time_stats import set_schedule_time_batch
 from sglang.srt.server_args import get_global_server_args
-from sglang.srt.tracing.trace import trace_event_batch, trace_slice, trace_slice_end
 from sglang.srt.utils import get_split_kv_page_range
 
 if TYPE_CHECKING:

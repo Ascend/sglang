@@ -2401,7 +2401,10 @@ class ServerArgs:
                     sm100_default_attention_backend="triton",
                 )
 
-        elif model_arch in ["Lfm2ForCausalLM"]:
+        elif model_arch in ["Lfm2ForCausalLM", "Lfm2VlForConditionalGeneration"]:
+            # The VL wrapper still uses the LFM2 text decoder with conv/Mamba
+            # layers, so it needs the same radix-cache page-size handling to
+            # force page_size=1 and allocate the extra Mamba cache buffers.
             self._handle_mamba_radix_cache(
                 model_arch=model_arch,
                 support_mamba_cache=True,

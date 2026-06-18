@@ -2597,10 +2597,9 @@ class Scheduler(
             self.enable_overlap,
             self.spec_algorithm,
             chunked_req=self.chunked_req,
-            dllm_staging_reqs=self.dllm_staging_reqs,
             dllm_config=self.dllm_config,
-            split_kv_size=self.attn_tp_size,
-            split_kv_rank=self.attn_tp_rank,
+            split_kv_size=self.ps.attn_tp_size,
+            split_kv_rank=self.ps.attn_tp_rank,
         )
         self.max_prefill_bs = max(self.max_prefill_bs, len(can_run_list))
         if self.enable_hierarchical_cache:
