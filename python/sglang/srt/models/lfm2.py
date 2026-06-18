@@ -283,13 +283,17 @@ class Lfm2ShortConv(nn.Module):
         Bx = B_gate * x
 
         # [NPU] SGLang uses [batch, width-1, dim], but NPU ops require [batch, dim, width-1], need transpose
-        is_reversed = (conv_state.ndim == 3 and conv_state.shape[1] < conv_state.shape[2])
+        is_reversed = conv_state.ndim == 3 and conv_state.shape[1] < conv_state.shape[2]
 
         if is_reversed:
             num_queries = len(mamba_indices)
-            active_states = torch.index_select(conv_state, 0, mamba_indices.to(torch.int32))
+            active_states = torch.index_select(
+                conv_state, 0, mamba_indices.to(torch.int32)
+            )
             working_conv_state = active_states.transpose(1, 2).contiguous()
-            working_indices = torch.arange(num_queries, dtype=torch.int32, device=hidden_states.device)
+            working_indices = torch.arange(
+                num_queries, dtype=torch.int32, device=hidden_states.device
+            )
         else:
             working_conv_state = conv_state
             working_indices = mamba_indices.to(torch.int32)
@@ -342,7 +346,9 @@ class Lfm2ShortConv(nn.Module):
 
         if is_reversed:
             updated_active_states = working_conv_state.transpose(1, 2).contiguous()
-            conv_state.index_copy_(0, mamba_indices.to(torch.int32), updated_active_states)
+            conv_state.index_copy_(
+                0, mamba_indices.to(torch.int32), updated_active_states
+            )
 
         output, _ = self.out_proj(C_gate * conv_out)
         return output

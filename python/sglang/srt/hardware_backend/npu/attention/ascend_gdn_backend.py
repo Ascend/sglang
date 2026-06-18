@@ -34,15 +34,6 @@ class AscendGDNAttnBackend(AscendMambaAttnBackendBase):
 
     def __init__(self, model_runner: ModelRunner):
         super().__init__(model_runner)
-        self.conv_states_shape = torch.Size(
-            (
-                *model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[
-                    :-2
-                ],
-                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-1],
-                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-2],
-            )
-        )
         decode_backend = get_linear_attn_decode_backend()
         prefill_backend = get_linear_attn_prefill_backend()
         self.kernel_dispatcher = GDNKernelDispatcher(decode_backend, prefill_backend)
@@ -77,7 +68,7 @@ class AscendGDNAttnBackend(AscendMambaAttnBackendBase):
         forward_batch: ForwardBatch,
         in_capture: bool = False,
     ):
-        if forward_batch.forward_mode.is_draft_extend(True):
+        if forward_batch.forward_mode.is_draft_extend_v2():
             return
         super().init_forward_metadata_out_graph(forward_batch, in_capture=in_capture)
         self.prepare_gdn_inputs(
@@ -88,7 +79,7 @@ class AscendGDNAttnBackend(AscendMambaAttnBackendBase):
         self.graph_mode = True
 
     def init_forward_metadata(self, forward_batch: ForwardBatch):
-        if forward_batch.forward_mode.is_draft_extend(True):
+        if forward_batch.forward_mode.is_draft_extend_v2():
             return
         super().init_forward_metadata(forward_batch)
         self.prepare_gdn_inputs(

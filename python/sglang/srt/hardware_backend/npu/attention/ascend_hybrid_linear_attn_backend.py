@@ -27,6 +27,15 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
     def __init__(self, model_runner: ModelRunner):
         super().__init__(model_runner)
         self.state_indices_list_gdn = []
+        self.conv_states_shape = torch.Size(
+            (
+                *model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[
+                    :-2
+                ],
+                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-1],
+                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-2],
+            )
+        )
 
     def init_cuda_graph_state(self, max_bs: int, max_num_tokens: int):
         assert (
@@ -157,16 +166,11 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
                 )
         elif forward_mode.is_target_verify():
             ssm_state_indices = torch.arange(
-                len(mamba_indices[: bs - num_padding]) * spec_info.draft_token_num,
+                bs * spec_info.draft_token_num,
                 dtype=torch.int32,
                 device=mamba_indices.device,
             )
-            self.state_indices_list_gdn[bs - 1][
-                : len(mamba_indices[: bs - num_padding]) * spec_info.draft_token_num
-            ].copy_(ssm_state_indices)
-            self.state_indices_list_gdn[bs - 1][
-                len(mamba_indices[: bs - num_padding]) * spec_info.draft_token_num :
-            ] = 0
+            self.state_indices_list_gdn[bs - 1].copy_(ssm_state_indices)
             if num_padding == 0:
                 self.query_start_loc_list[bs - 1].copy_(
                     self.cached_cuda_graph_verify_query_start_loc[: bs + 1]
@@ -209,9 +213,7 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
 
 
 class AscendMamba2AttnBackend(AscendMambaAttnBackendBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.conv_states_shape = [2048, 2]
+    pass
 
 
 class AscendHybridLinearAttnBackend(HybridLinearAttnBackend):
@@ -271,6 +273,28 @@ class AscendHybridLinearAttnBackend(HybridLinearAttnBackend):
         )
 
         draft_token_num = intermediate_state_cache.shape[2]
+        if mamba_track_indices is not None:
+            assert mamba_steps_to_track is not None
+            mamba_track_indices = mamba_track_indices.to(torch.int64)
+            mamba_steps_to_track = mamba_steps_to_track.to(torch.int64)
+
+            move_intermediate_cache(
+                ssm_states,
+                intermediate_state_cache,
+                mamba_track_indices,
+                src_indices_tensor,
+                mamba_steps_to_track,
+            )
+
+            track_mask = mamba_steps_to_track >= 0
+            # Track conv state from the verify-time window before rolling back
+            # the working slot; NPU does not keep per-step conv intermediates.
+            track_indices = mamba_track_indices[track_mask]
+            if track_indices.numel() > 0:
+                conv_states[:, track_indices] = conv_states[
+                    :, dst_indices_tensor[track_mask]
+                ]
+
         if dst_indices_tensor.numel() > 0:
             conv_state_rollback(
                 conv_states,
@@ -278,6 +302,15 @@ class AscendHybridLinearAttnBackend(HybridLinearAttnBackend):
                 last_steps,
                 draft_token_num,
             )
+
+        if mamba_track_indices is not None and mamba_track_indices.numel() > 0:
+            conv_state_rollback(
+                conv_states,
+                mamba_track_indices,
+                mamba_steps_to_track,
+                draft_token_num,
+            )
+
         return
 
     def update_verify_buffers_to_fill_after_draft(
