@@ -1,5 +1,5 @@
-name: Single Test (NPU)
-# test round 1: MiMo V2 basic and flash tests
+﻿name: Single Test (NPU)
+# test round 2: MiMo V2 basic and flash tests
 
 on:
   pull_request:
@@ -38,8 +38,7 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 使用时替换为实际的测试用例路径
-          test_cases=(
+          # Test cases - 浣跨敤鏃舵浛鎹负瀹為檯鐨勬祴璇曠敤渚嬭矾寰?          test_cases=(
             "test/registered/ascend/basic_function/mimo/test_npu_mimo_v2.py"
             "test/registered/ascend/basic_function/mimo/test_npu_mimo_v2_flash.py"
           )
@@ -98,3 +97,4 @@ jobs:
             mkdir -p ${target_plog_path}
             cp ${plog_path}/* ${target_plog_path}
           fi
+
