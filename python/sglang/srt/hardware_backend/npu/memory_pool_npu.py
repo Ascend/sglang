@@ -155,6 +155,8 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
         v_scale: Optional[float] = None,
         layer_id_override: Optional[int] = None,
     ):
+        if cache_k is None or cache_v is None:
+            return
         if layer_id_override is not None:
             layer_id = layer_id_override
         else:
@@ -416,6 +418,8 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         cache_k: torch.Tensor,
         cache_v: torch.Tensor,
     ):
+        if cache_k is None or cache_v is None:
+            return
         layer_id = layer.layer_id
         if cache_k.dtype != self.dtype:
             cache_k = cache_k.to(self.dtype)
