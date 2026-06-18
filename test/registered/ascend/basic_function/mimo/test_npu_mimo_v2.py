@@ -2,11 +2,11 @@ import unittest
 
 from sglang.srt.environ import envs
 from sglang.test.ascend.test_ascend_utils import MIMO_V2_5_WEIGHTS_PATH
-from sglang.test.ci.ci_register import register_cuda_ci
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.eval_accuracy_kit import GSM8KMixin
 from sglang.test.server_fixtures.mmmu_fixture import MMMUServerBase
 
-register_cuda_ci(est_time=400, stage="base-c", runner_config="8-gpu-h200")
+register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 MIMO_V2_OTHER_ARGS = [
     "--tp",
