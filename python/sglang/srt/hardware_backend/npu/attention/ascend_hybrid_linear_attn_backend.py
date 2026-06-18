@@ -27,6 +27,15 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
     def __init__(self, model_runner: ModelRunner):
         super().__init__(model_runner)
         self.state_indices_list_gdn = []
+        self.conv_states_shape = torch.Size(
+            (
+                *model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[
+                    :-2
+                ],
+                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-1],
+                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-2],
+            )
+        )
 
     def init_cuda_graph_state(self, max_bs: int, max_num_tokens: int):
         assert (
@@ -204,9 +213,7 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
 
 
 class AscendMamba2AttnBackend(AscendMambaAttnBackendBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.conv_states_shape = [2048, 2]
+    pass
 
 
 class AscendHybridLinearAttnBackend(HybridLinearAttnBackend):

@@ -34,15 +34,6 @@ class AscendGDNAttnBackend(AscendMambaAttnBackendBase):
 
     def __init__(self, model_runner: ModelRunner):
         super().__init__(model_runner)
-        self.conv_states_shape = torch.Size(
-            (
-                *model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[
-                    :-2
-                ],
-                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-1],
-                model_runner.req_to_token_pool.mamba_pool.mamba_cache.conv[0].shape[-2],
-            )
-        )
         decode_backend = get_linear_attn_decode_backend()
         prefill_backend = get_linear_attn_prefill_backend()
         self.kernel_dispatcher = GDNKernelDispatcher(decode_backend, prefill_backend)
