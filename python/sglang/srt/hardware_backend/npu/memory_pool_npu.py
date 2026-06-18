@@ -178,9 +178,9 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
             v_buffer_layer = self.v_buffer[layer_id - self.start_layer]
 
             # Handle KVWriteLoc object vs tensor
-            if hasattr(loc, 'data'):
+            if hasattr(loc, "data"):
                 loc_tensor = loc.data
-            elif hasattr(loc, 'slot_indices'):
+            elif hasattr(loc, "slot_indices"):
                 loc_tensor = loc.slot_indices
             else:
                 loc_tensor = loc
@@ -197,9 +197,9 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
             )
         else:
             # Handle KVWriteLoc object vs tensor
-            if hasattr(loc, 'data'):
+            if hasattr(loc, "data"):
                 loc_tensor = loc.data
-            elif hasattr(loc, 'slot_indices'):
+            elif hasattr(loc, "slot_indices"):
                 loc_tensor = loc.slot_indices
             else:
                 loc_tensor = loc
