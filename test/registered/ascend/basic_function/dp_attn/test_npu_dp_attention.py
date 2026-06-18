@@ -24,7 +24,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 
 
 class TestDPAttentionDP2TP2(
@@ -51,7 +51,7 @@ class TestDPAttentionDP2TP2(
             other_args=[
                 "--trust-remote-code",
                 "--tp",
-                "2",
+                "4",
                 "--enable-dp-attention",
                 "--dp",
                 "2",
