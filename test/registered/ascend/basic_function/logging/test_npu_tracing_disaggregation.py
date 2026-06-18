@@ -1,5 +1,4 @@
 import os
-import logging
 import time
 import unittest
 
@@ -14,8 +13,6 @@ from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     popen_launch_pd_server,
 )
-
-logger = logging.getLogger(__name__)
 
 # CI registration - PD disaggregation requires 2 NPUs
 register_npu_ci(est_time=120, suite="full-2-npu-a3", nightly=True)

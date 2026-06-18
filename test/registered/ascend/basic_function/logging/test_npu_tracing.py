@@ -1,20 +1,15 @@
-"""Integration tests for tracing on NPU with a lightweight in-process OTLP collector.
-
-This module validates that the --enable-trace flag works correctly on NPU
-by starting a real sglang server and verifying that spans are exported to
-an in-memory OTLP collector.
-"""
-
-import os
 import time
 import unittest
 
 import requests
 
+from sglang import Engine
 from sglang.srt.observability.req_time_stats import RequestStage
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.otel_collector import LightweightOtlpCollector
+from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
@@ -137,7 +132,9 @@ class TestNPUTracing(TestNPULoggingBase):
 
         time.sleep(1)
 
-    def _test_trace_level(self, prompt, trace_level, expected_spans=None, max_new_tokens=32):
+    def _test_trace_level(
+            self, prompt, trace_level, expected_spans=None, max_new_tokens=32
+    ):
         """Helper to test a specific trace level.
 
         Args:
@@ -146,7 +143,9 @@ class TestNPUTracing(TestNPULoggingBase):
             expected_spans: Optional list of expected span names to verify.
             max_new_tokens: Maximum number of tokens to generate.
         """
-        self._send_request_and_wait(prompt, trace_level=trace_level, max_new_tokens=max_new_tokens)
+        self._send_request_and_wait(
+            prompt, trace_level=trace_level, max_new_tokens=max_new_tokens
+        )
 
         if trace_level == 0:
             self.assertEqual(
@@ -276,6 +275,82 @@ class TestNPUTracing(TestNPULoggingBase):
             1,
             f"Expected at least 1 prefill_forward span, got {len(request_spans)}",
         )
+
+
+class TestTraceEngine(CustomTestCase):
+    """Integration tests for tracing with Engine API - each test creates its own engine."""
+
+    def setUp(self):
+        self.collector = None
+
+    def tearDown(self):
+        if self.collector:
+            self.collector.stop()
+            self.collector = None
+
+    def _start_collector(self):
+        """Start the lightweight OTLP collector."""
+        self.collector = LightweightOtlpCollector()
+        self.collector.start()
+        time.sleep(0.2)
+
+    def test_trace_engine_enable(self):
+        """Test tracing with Engine API."""
+        self._start_collector()
+
+        prompt = "Today is a sunny day and I like"
+        model_path = QWEN3_0_6B_WEIGHTS_PATH
+        sampling_params = {"temperature": 0, "max_new_tokens": 8}
+
+        engine = Engine(
+            model_path=model_path,
+            random_seed=42,
+            enable_trace=True,
+            otlp_traces_endpoint="localhost:4317",
+        )
+
+        try:
+            engine.generate(prompt, sampling_params)
+            time.sleep(0.5)
+
+            self.assertGreater(
+                self.collector.count_spans(),
+                0,
+                "No spans collected from Engine.generate",
+            )
+            self.assertTrue(
+                self.collector.has_any_span([RequestStage.PREFILL_FORWARD.stage_name]),
+                f"Expected prefill_forward span, got {self.collector.get_span_names()}",
+            )
+        finally:
+            engine.shutdown()
+
+    def test_trace_engine_encode(self):
+        """Test tracing with Engine encode API."""
+        self._start_collector()
+
+        prompt = "Today is a sunny day and I like"
+        model_path = QWEN3_0_6B_WEIGHTS_PATH
+
+        engine = Engine(
+            model_path=model_path,
+            random_seed=42,
+            enable_trace=True,
+            otlp_traces_endpoint="localhost:4317",
+            is_embedding=True,
+        )
+
+        try:
+            engine.encode(prompt)
+            time.sleep(0.5)
+
+            self.assertGreater(
+                self.collector.count_spans(),
+                0,
+                "No spans collected from Engine.encode",
+            )
+        finally:
+            engine.shutdown()
 
 
 if __name__ == "__main__":
