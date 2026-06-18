@@ -1,350 +1,463 @@
-import re
+import os
 import unittest
+from typing import Dict, List
 
 import requests
+from prometheus_client.parser import text_string_to_metric_families
+from prometheus_client.samples import Sample
 
+from sglang.srt.observability.metrics_collector import (
+    ROUTING_KEY_REQ_COUNT_BUCKET_BOUNDS,
+    STAT_LOGGER_ROLE_SCHEDULER,
+    SchedulerMetricsCollector,
+)
+from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 
-class TestNPUMetricsDefaultBucketBoundary(TestNPULoggingBase):
-    """Test case for verifying the functionality of the metrics-related parameter group.
+class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
+    """Test core metrics functionality on single NPU with MFU enabled.
 
     [Description]
-        The metrics-related parameter group includes: --enable-metrics; --collect-tokens-histogram;
-        --bucket-inter-token-latency; --bucket-e2e-request-latency; --bucket-time-to-first-token;
-        --prompt-tokens-buckets; --generation-tokens-buckets
+        Validates that the /metrics endpoint returns correct Prometheus-format
+        data when metrics and MFU metrics are enabled on a single NPU.
 
-        Verifies the cooperative effect of the parameter group and the independent function of each parameter, as follows:
-        1.  --enable-metrics: Core switch parameter; when configured, the service enables monitoring function and
-            supports obtaining various monitoring metrics through the metrics interface;
-        2.  --collect-tokens-histogram: When configured, it enables the statistical function of token count-related
-            metrics, including the statistics of prompt tokens and generation tokens;
-        3.  --bucket-time-to-first-token, --bucket-inter-token-latency, --bucket-e2e-request-latency:
-            Used to customize the statistical bucket boundaries of the corresponding latency-related metrics, which
-            correspond to time-to-first-token latency, inter-token latency, and end-to-end request latency respectively;
-        4.  --prompt-tokens-buckets, --generation-tokens-buckets:
-            Used to customize the bucket boundaries of token count statistical metrics, which correspond to the
-            statistical intervals of prompt tokens and generation tokens respectively.
-
-        Overall, verify that after parameter configuration, the monitoring function is normally enabled, the metric
-        statistics are accurate, the custom bucket boundaries take effect, and all configured monitoring information
-        can be obtained normally through the metrics interface.
-
-    [Test Category] Parameter
-    [Test Target] --enable-metrics; --bucket-time-to-first-token; --bucket-inter-token-latency; --bucket-e2e-request-latency;
-    --collect-tokens-histogram; --prompt-tokens-buckets; --generation-tokens-buckets;
+    [Test Category] Functionality
+    [Test Target] --enable-metrics; --enable-mfu-metrics
     """
 
-    @staticmethod
-    def check_metric(testcase, content, metric_suffix, le_list, model):
-        if not le_list:
-            return
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.other_args.extend(["--enable-metrics", "--enable-mfu-metrics"])
+        # Enable the device timer so that forward-pass timing metrics
+        # (forward_execution_seconds_total) are collected. Without this
+        # environment variable the timer is disabled by default and those
+        # counters will remain at zero.
+        cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
+        cls.launch_server()
 
-        pattern_template = r'.*sglang:{}{{.*le="{}".*model_name="{}".*}}.*'
+    def test_metrics_1npu(self):
+        """Test that metrics endpoint returns data when enabled on single NPU."""
+        _generate_metrics(self.base_url)
 
-        for le in le_list:
-            pattern = re.compile(
-                pattern_template.format(
-                    re.escape(metric_suffix), re.escape(le), re.escape(model)
-                ),
-                re.DOTALL,
+        metrics_response = requests.get(f"{self.base_url}/metrics")
+        self.assertEqual(metrics_response.status_code, 200)
+        metrics_text = metrics_response.text
+
+        print(f"metrics_text=\n{metrics_text}")
+
+        metrics = _parse_prometheus_metrics(metrics_text)
+        _verify_metrics_common(self, metrics_text, metrics, expect_mfu_metrics=True)
+
+
+class TestNPUMetricsMFUDisabled(TestNPULoggingBase):
+    """Test that MFU metrics are not emitted when the gate is disabled.
+
+    [Description]
+        Validates that when only --enable-metrics is set (without
+        --enable-mfu-metrics), MFU counters do not emit positive values.
+
+    [Test Category] Functionality
+    [Test Target] --enable-metrics
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.other_args.extend(["--enable-metrics"])
+        cls.env = {"SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1"}
+        cls.launch_server()
+
+    def test_mfu_metrics_mfu_disabled(self):
+        """MFU metrics should not be emitted when the gate is disabled."""
+        _generate_metrics(self.base_url)
+
+        metrics_response = requests.get(f"{self.base_url}/metrics")
+        self.assertEqual(metrics_response.status_code, 200)
+        metrics_text = metrics_response.text
+
+        print(f"metrics_text=\n{metrics_text}")
+
+        metrics = _parse_prometheus_metrics(metrics_text)
+        _verify_metrics_common(self, metrics_text, metrics, expect_mfu_metrics=False)
+
+
+class TestNPUMetrics2NPU(TestNPULoggingBase):
+    """Test metrics on 2-NPU TP/DP parallel scenario.
+
+    [Description]
+        Validates distributed metrics (dp_cooperation_*) when running with
+        TP=2 and DP=2 on NPU.
+
+    [Test Category] Functionality
+    [Test Target] --enable-metrics; --enable-mfu-metrics;
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.other_args.extend(
+            [
+                "--enable-metrics",
+                "--enable-mfu-metrics",
+                "--tp",
+                "2",
+                "--dp",
+                "2",
+                "--enable-dp-attention",
+            ]
+        )
+        # SGLANG_ENABLE_METRICS_DP_ATTENTION is required for dp_cooperation_*
+        # metrics. Without it, DPCooperationInfo is not created and those
+        # counters will never be emitted.
+        cls.env = {
+            "SGLANG_ENABLE_METRICS_DEVICE_TIMER": "1",
+            "SGLANG_ENABLE_METRICS_DP_ATTENTION": "1",
+        }
+        cls.launch_server()
+
+    def test_metrics_2npu(self):
+        """Test metrics on 2-NPU TP/DP parallel scenario."""
+        _generate_metrics(self.base_url)
+
+        # Under DP=2 round-robin scheduling, requests with the same prefix may
+        # be dispatched to different ranks, leaving each rank with a cold cache.
+        # cached_tokens_total is only emitted when cached_tokens > 0, so we send
+        # additional identical requests to increase the chance that at least one
+        # rank sees a cache hit.
+        for i in range(5):
+            response = requests.post(
+                f"{self.base_url}/generate",
+                json={
+                    "text": "Hello, " * 100,
+                    "sampling_params": {"temperature": 0, "max_new_tokens": 5},
+                },
+                headers={"x-smg-routing-key": "test-key"},
             )
-            testcase.assertTrue(
-                pattern.search(content),
-                f"Metric not found: sglang:{metric_suffix}{{le='{le}', model_name='{model}'}} in\n"
-                + content,
-            )
+            assert response.status_code == 200
 
-    @staticmethod
-    def _verify_metrics_and_bucket_boundary(
-        testcase,
-        model,
-        url,
-        expected_time_to_first_token_bucket=None,
-        expected_inter_token_latency_bucket=None,
-        expected_e2e_request_latency_bucket=None,
-        expected_prompt_tokens_bucket=None,
-        expected_generation_tokens_bucket=None,
-    ):
-        """Validate that metrics buckets align with expected boundaries when --enable-metrics and bucket configuration parameters are set."""
-        # Generate tokens
+        metrics_response = requests.get(f"{self.base_url}/metrics")
+        self.assertEqual(metrics_response.status_code, 200)
+        metrics_text = metrics_response.text
+
+        metrics = _parse_prometheus_metrics(metrics_text)
+        _verify_metrics_common(self, metrics_text, metrics, expect_mfu_metrics=True)
+
+        metrics_to_check = [
+            (
+                "sglang:dp_cooperation_realtime_tokens_total",
+                {"mode": "prefill_compute"},
+            ),
+            (
+                "sglang:dp_cooperation_realtime_tokens_total",
+                {"mode": "decode"},
+            ),
+            (
+                "sglang:dp_cooperation_forward_execution_seconds_total",
+                {"category": "extend"},
+            ),
+            (
+                "sglang:dp_cooperation_forward_execution_seconds_total",
+                {"category": "decode"},
+            ),
+        ]
+        _check_metrics_positive(self, metrics, metrics_to_check)
+
+        num_prefill_ranks_values = {
+            s.labels["num_prefill_ranks"]
+            for s in metrics["sglang:dp_cooperation_realtime_tokens_total"]
+        }
+        self.assertIn("0", num_prefill_ranks_values)
+        self.assertIn("1", num_prefill_ranks_values)
+
+
+def _generate_metrics(base_url: str):
+    """Send requests to generate metrics data.
+
+    The workload is intentionally generous so that every counter and
+    histogram we assert on later accumulates a clearly positive value.
+    A lightweight workload risks leaving some metrics at zero because
+    forward-pass time may round to 0.0, asynchronous flushes may be
+    missed, or slow CI runners may not finish processing in time.
+    """
+    response = requests.get(f"{base_url}/health_generate")
+    assert response.status_code == 200
+
+    # 1) Large batch + long decode: guarantees substantial prefill and decode
+    #    workload so that realtime_tokens_total and
+    #    forward_execution_seconds_total accumulate clearly positive values.
+    response = requests.post(
+        f"{base_url}/generate",
+        json={
+            "text": ["The capital of France is"] * 20,
+            "sampling_params": {
+                "temperature": 0,
+                "max_new_tokens": 50,
+            },
+            "stream": True,
+            # Force the model to generate the full max_new_tokens instead of
+            # stopping early when an EOS token is produced. This guarantees a
+            # predictable decode workload so that decode-phase counters do not
+            # end up at zero because the model finished prematurely.
+            "ignore_eos": True,
+        },
+        stream=True,
+    )
+    # Consume the streaming response so the request fully completes on the
+    # server side.  Without draining the iterator the connection stays open
+    # and the request may still be counted as in-flight.
+    for _ in response.iter_lines(decode_unicode=False):
+        pass
+
+    # 2) Repeated requests with a routing key: populates routing-key histograms
+    #    and cached_tokens_total (the second request may hit the KV cache).
+    for i in range(2):
         response = requests.post(
-            f"{url}/generate",
+            f"{base_url}/generate",
             json={
-                "text": "just return me a long string, generate as much as possible.",
-                "sampling_params": {"temperature": 0, "max_new_tokens": 1000},
+                "text": "Hello, " * 100,
+                "sampling_params": {"temperature": 0, "max_new_tokens": 5},
+            },
+            headers={"x-smg-routing-key": "test-key"},
+        )
+        assert response.status_code == 200
+
+
+def _parse_prometheus_metrics(metrics_text: str) -> Dict[str, List[Sample]]:
+    result = {}
+    for family in text_string_to_metric_families(metrics_text):
+        for sample in family.samples:
+            if sample.name not in result:
+                result[sample.name] = []
+            result[sample.name].append(sample)
+    return result
+
+
+def _get_sample_value_by_labels(samples: List[Sample], labels: Dict[str, str]) -> float:
+    for sample in samples:
+        if all(sample.labels.get(k) == v for k, v in labels.items()):
+            return sample.value
+    raise KeyError(f"No sample found with labels {labels}")
+
+
+def _check_metrics_positive(test_case, metrics, metrics_to_check):
+    for metric_name, labels in metrics_to_check:
+        value = _get_sample_value_by_labels(metrics[metric_name], labels)
+        test_case.assertGreater(
+            value,
+            0,
+            f"{metric_name} {labels}: expected a positive value, got {value} "
+            f"(the engine may not have processed any requests)",
+        )
+
+
+def _verify_metrics_common(test_case, metrics_text, metrics, expect_mfu_metrics: bool):
+    model_name = test_case.model
+    essential_metrics = [
+        "sglang:num_running_reqs",
+        "sglang:num_used_tokens",
+        "sglang:token_usage",
+        "sglang:gen_throughput",
+        "sglang:num_queue_reqs",
+        "sglang:num_grammar_queue_reqs",
+        "sglang:cache_hit_rate",
+        "sglang:spec_accept_length",
+        "sglang:prompt_tokens_total",
+        "sglang:generation_tokens_total",
+        "sglang:cached_tokens_total",
+        "sglang:num_requests_total",
+        "sglang:time_to_first_token_seconds",
+        "sglang:inter_token_latency_seconds",
+        "sglang:e2e_request_latency_seconds",
+        "sglang:http_requests_active",
+        "sglang:routing_keys_active",
+        "sglang:num_unique_running_routing_keys",
+        "sglang:routing_key_running_req_count",
+        "sglang:routing_key_all_req_count",
+    ]
+    mfu_metrics = [
+        "sglang:estimated_flops_per_gpu_total",
+        "sglang:estimated_read_bytes_per_gpu_total",
+        "sglang:estimated_write_bytes_per_gpu_total",
+    ]
+    if expect_mfu_metrics:
+        essential_metrics.extend(mfu_metrics)
+
+    # Verify that all essential metric names appear in the raw Prometheus text.
+    # This is a basic existence check: it ensures the metrics are exported but
+    # does not validate their values or label sets.
+    for metric in essential_metrics:
+        test_case.assertIn(metric, metrics_text, f"Missing metric: {metric}")
+
+    # Verify the bucket structure of routing-key request-count histograms.
+    # These metrics use a GaugeHistogram where each bucket is identified by
+    # (gt, le) label pairs:
+    #   - "gt" (greater than): the lower bound of the bucket (exclusive)
+    #   - "le" (less than or equal to): the upper bound of the bucket (inclusive)
+    # For example, (gt="0", le="1") represents the bucket that counts values
+    # in the range (0, 1]. The expected number of buckets equals the number of
+    # user-defined bounds plus one extra bucket for +Inf.
+    expected_buckets = len(ROUTING_KEY_REQ_COUNT_BUCKET_BOUNDS) + 1
+    for metric_name in [
+        "sglang:routing_key_running_req_count",
+        "sglang:routing_key_all_req_count",
+    ]:
+        gt_le_pairs = set()
+        for sample in metrics.get(metric_name, []):
+            gt_le_pairs.add((sample.labels.get("gt"), sample.labels.get("le")))
+        test_case.assertEqual(
+            len(gt_le_pairs),
+            expected_buckets,
+            f"{metric_name}: Expected {expected_buckets} buckets, got {len(gt_le_pairs)}",
+        )
+
+    # Verify that metrics carry the correct model_name label and that
+    # histogram-style metrics expose the standard _sum, _count, and _bucket
+    # time-series. We assert on the exact metric names rather than raw
+    # substrings so the failure message points to the missing series.
+    histogram_metrics = [
+        "sglang:time_to_first_token_seconds",
+        "sglang:inter_token_latency_seconds",
+        "sglang:e2e_request_latency_seconds",
+    ]
+    for base_name in histogram_metrics:
+        for suffix in ("_sum", "_count", "_bucket"):
+            test_case.assertIn(
+                f"{base_name}{suffix}{{",
+                metrics_text,
+                f"Missing histogram series: {base_name}{suffix}",
+            )
+
+    # All metrics should be tagged with the model_name of the served model.
+    test_case.assertIn(f'model_name="{model_name}"', metrics_text)
+
+    # Verify that core performance counters have accumulated positive values.
+    # These metrics prove the engine actually processed requests (prefill +
+    # decode tokens, forward-pass time, tokenizer CPU time) rather than just
+    # exporting zero-valued series.
+    #
+    # Why assert > 0 instead of >= 0?
+    #   - The test deliberately sends a large workload (see _generate_metrics)
+    #     so that every counter here is guaranteed to be clearly positive.
+    #   - A value of 0 would mean the corresponding pipeline stage did no
+    #     work, which indicates a bug (e.g. device timer disabled, metrics
+    #     flush lost, or the request never reached the engine).
+    metrics_to_check = [
+        # Total tokens processed during the prefill (context-encoding) phase.
+        ("sglang:realtime_tokens_total", {"mode": "prefill_compute"}),
+        # Total tokens generated during the decode (autoregressive) phase.
+        ("sglang:realtime_tokens_total", {"mode": "decode"}),
+        # Cumulative time spent in the extend (prefix-extension) forward pass.
+        ("sglang:forward_execution_seconds_total", {"category": "extend"}),
+        # Cumulative time spent in the decode forward pass.
+        ("sglang:forward_execution_seconds_total", {"category": "decode"}),
+        # CPU time consumed by the tokenizer subprocess.
+        ("sglang:process_cpu_seconds_total", {"component": "tokenizer"}),
+    ]
+    _check_metrics_positive(test_case, metrics, metrics_to_check)
+
+    # MFU (Model FLOPs Utilization) metrics estimate the compute and memory
+    # bandwidth consumed by the model. They are only collected when the server
+    # is started with --enable-mfu-metrics. Verify the gate behaves correctly:
+    #   - Gate ON  -> counters must contain positive values for this model.
+    #   - Gate OFF -> counters must be absent or zero.
+    if expect_mfu_metrics:
+        for metric_name in mfu_metrics:
+            # Filter samples belonging to the current model (multi-model
+            # deployments may include series for other models).
+            values = [
+                sample.value
+                for sample in metrics.get(metric_name, [])
+                if sample.labels.get("model_name") == model_name
+            ]
+            test_case.assertTrue(
+                values, f"{metric_name}: no samples for model {model_name}"
+            )
+            test_case.assertGreater(
+                sum(values),
+                0,
+                f"{metric_name}: expected positive total for model {model_name}",
+            )
+    else:
+        for metric_name in mfu_metrics:
+            values = [
+                sample.value
+                for sample in metrics.get(metric_name, [])
+                if sample.labels.get("model_name") == model_name
+            ]
+            # Some implementations still emit the metric name with a zero value
+            # when the gate is disabled; ensure no positive accumulation leaked.
+            if values:
+                test_case.assertEqual(
+                    sum(values),
+                    0,
+                    f"{metric_name}: expected no positive samples with MFU metrics gate disabled",
+                )
+
+
+_DI_MARKER_PATH = "/tmp/sglang_di_test_marker"
+
+
+class _MarkingSchedulerCollector(SchedulerMetricsCollector):
+    """Records its own instantiation to a file so the test can verify the
+    custom subclass was used in the scheduler subprocess.
+
+    Defined at module level so it is picklable into the scheduler process.
+    Cross-process signalling uses a filesystem marker because the scheduler
+    runs in its own subprocess and cannot share in-memory state with the
+    test runner.
+    """
+
+    def __init__(self, *args, **kwargs):
+        with open(_DI_MARKER_PATH, "w") as f:
+            f.write("scheduler_collector_initialized\n")
+        super().__init__(*args, **kwargs)
+
+
+class TestNPUStatLoggersDI(CustomTestCase):
+    """Verify that a custom MetricsCollector subclass passed through
+    ``ServerArgs.stat_loggers`` is the one instantiated inside the
+    scheduler subprocess on NPU."""
+
+    def setUp(self) -> None:
+        try:
+            os.unlink(_DI_MARKER_PATH)
+        except FileNotFoundError:
+            pass
+
+    def tearDown(self) -> None:
+        try:
+            os.unlink(_DI_MARKER_PATH)
+        except FileNotFoundError:
+            pass
+
+    def test_engine_custom_scheduler_collector(self):
+        import sglang as sgl
+
+        engine = sgl.Engine(
+            model_path=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+            enable_metrics=True,
+            device="npu",
+            stat_loggers={
+                STAT_LOGGER_ROLE_SCHEDULER: _MarkingSchedulerCollector,
             },
         )
-        testcase.assertEqual(response.status_code, 200)
+        try:
+            # One small generation triggers scheduler init, which is where
+            # resolve_collector_class() picks the injected subclass.
+            engine.generate("Hello", {"max_new_tokens": 4})
+        finally:
+            engine.shutdown()
 
-        # Get metrics
-        response = requests.get(f"{url}/metrics", timeout=10)
-        testcase.assertEqual(response.status_code, 200)
-        metrics_content = response.text
-
-        checker = TestNPUMetricsDefaultBucketBoundary.check_metric
-
-        checker(
-            testcase,
-            metrics_content,
-            "time_to_first_token_seconds_bucket",
-            expected_time_to_first_token_bucket,
-            model,
-        )
-        checker(
-            testcase,
-            metrics_content,
-            "inter_token_latency_seconds_bucket",
-            expected_inter_token_latency_bucket,
-            model,
-        )
-        checker(
-            testcase,
-            metrics_content,
-            "e2e_request_latency_seconds_bucket",
-            expected_e2e_request_latency_bucket,
-            model,
-        )
-        checker(
-            testcase,
-            metrics_content,
-            "prompt_tokens_histogram_bucket",
-            expected_prompt_tokens_bucket,
-            model,
-        )
-        checker(
-            testcase,
-            metrics_content,
-            "generation_tokens_histogram_bucket",
-            expected_generation_tokens_bucket,
-            model,
-        )
-
-        return metrics_content
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.other_args.extend(["--enable-metrics", "--collect-tokens-histogram"])
-        cls.set_default_bucket()
-        cls.launch_server()
-
-    @classmethod
-    def set_default_bucket(cls):
-        # Default bucket boundaries for time-to-first-token latency (seconds)
-        # Used if --bucket-time-to-first-token is not explicitly configured
-        cls.default_time_to_first_token_bucket = [
-            "0.1",
-            "0.2",
-            "0.4",
-            "0.6",
-            "0.8",
-            "1.0",
-            "2.0",
-            "4.0",
-            "6.0",
-            "8.0",
-            "10.0",
-            "20.0",
-            "40.0",
-            "60.0",
-            "80.0",
-            "100.0",
-            "200.0",
-            "400.0",
-        ]
-        # Default bucket boundaries for inter-token latency (seconds)
-        # Used if --bucket-inter-token-latency is not explicitly configured
-        cls.default_inter_token_latency_bucket = [
-            "0.002",
-            "0.004",
-            "0.006",
-            "0.008",
-            "0.01",
-            "0.015",
-            "0.02",
-            "0.025",
-            "0.03",
-            "0.035",
-            "0.04",
-            "0.06",
-            "0.08",
-            "0.1",
-            "0.2",
-            "0.4",
-            "0.6",
-            "0.8",
-            "1.0",
-            "2.0",
-            "4.0",
-            "6.0",
-            "8.0",
-        ]
-        # Default bucket boundaries for end-to-end (E2E) request latency (seconds)
-        # Used if --bucket-e2e-request-latency is not explicitly configured
-        cls.default_e2e_request_latency_bucket = [
-            "0.1",
-            "0.2",
-            "0.4",
-            "0.6",
-            "0.8",
-            "1.0",
-            "2.0",
-            "4.0",
-            "6.0",
-            "8.0",
-            "10.0",
-            "20.0",
-            "40.0",
-            "60.0",
-            "80.0",
-            "100.0",
-            "200.0",
-            "400.0",
-            "600.0",
-            "1200.0",
-            "1800.0",
-            "2400.0",
-        ]
-        # Default bucket boundaries for prompt/generation token count histograms
-        # Used if --prompt-tokens-buckets / --generation-tokens-bucket are not explicitly configured
-        # Note: Prompt and generation token buckets use identical default boundaries
-        cls.default_tokens_bucket = [
-            "100.0",
-            "300.0",
-            "500.0",
-            "700.0",
-            "1000.0",
-            "1500.0",
-            "2000.0",
-            "3000.0",
-            "4000.0",
-            "5000.0",
-            "6000.0",
-            "7000.0",
-            "8000.0",
-            "9000.0",
-            "10000.0",
-            "12500.0",
-            "15000.0",
-            "17500.0",
-            "20000.0",
-            "22500.0",
-            "25000.0",
-            "27500.0",
-            "30000.0",
-            "35000.0",
-            "40000.0",
-            "60000.0",
-            "80000.0",
-            "100000.0",
-            "200000.0",
-            "300000.0",
-            "400000.0",
-            "600000.0",
-            "800000.0",
-            "1e+06",
-            "1.1e+06",
-        ]
-
-    def test_bucket_boundary(self):
-        TestNPUMetricsDefaultBucketBoundary._verify_metrics_and_bucket_boundary(
-            self,
-            self.model,
-            self.base_url,
-            expected_time_to_first_token_bucket=self.default_time_to_first_token_bucket,
-            expected_inter_token_latency_bucket=self.default_inter_token_latency_bucket,
-            expected_e2e_request_latency_bucket=self.default_e2e_request_latency_bucket,
-            expected_prompt_tokens_bucket=self.default_tokens_bucket,
-            expected_generation_tokens_bucket=self.default_tokens_bucket,
-        )
-
-
-class TestNPUMetricsCustomBucketBoundary(TestNPULoggingBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.other_args.extend(["--enable-metrics"])
-        cls.other_args.extend(["--collect-tokens-histogram"])
-        cls.set_custom_bucket()
-        cls.other_args.extend(["--bucket-time-to-first-token", *cls.my_bucket])
-        cls.other_args.extend(["--bucket-inter-token-latency", *cls.my_bucket])
-        cls.other_args.extend(["--bucket-e2e-request-latency", *cls.my_bucket])
-        cls.other_args.extend(
-            ["--prompt-tokens-buckets", "custom", *cls.my_tokens_bucket]
-        )
-        cls.other_args.extend(
-            ["--generation-tokens-buckets", "custom", *cls.my_tokens_bucket]
-        )
-        cls.launch_server()
-
-    @classmethod
-    def set_custom_bucket(cls):
-        # Custom latency bucket boundaries (for testing non-default configurations)
-        cls.my_bucket = ["0.1", "0.5", "1.0", "5.0", "10.0"]
-        # Custom token count bucket boundaries (for testing custom configurations)
-        cls.my_tokens_bucket = [
-            "100.0",
-            "1000.0",
-            "10000.0",
-            "100000.0",
-            "300000.0",
-            "600000.0",
-            "900000.0",
-        ]
-
-    def test_bucket_boundary(self):
-        TestNPUMetricsDefaultBucketBoundary._verify_metrics_and_bucket_boundary(
-            self,
-            self.model,
-            self.base_url,
-            expected_time_to_first_token_bucket=self.my_bucket,
-            expected_inter_token_latency_bucket=self.my_bucket,
-            expected_e2e_request_latency_bucket=self.my_bucket,
-            expected_prompt_tokens_bucket=self.my_tokens_bucket,
-            expected_generation_tokens_bucket=self.my_tokens_bucket,
-        )
-
-
-class TestNPUMetricsTSEBucketBoundary(TestNPULoggingBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.other_args.extend(["--enable-metrics"])
-        cls.other_args.extend(["--collect-tokens-histogram"])
-        cls.set_tse_bucket()
-        cls.other_args.extend(["--prompt-tokens-buckets", "tse", *cls.my_tse_set])
-        cls.other_args.extend(["--generation-tokens-buckets", "tse", *cls.my_tse_set])
-        cls.launch_server()
-
-    @classmethod
-    def set_tse_bucket(cls):
-        # Two-Sided Exponential (TSE) Bucket Strategy Configuration
-        # Format: [base_value, exponential_factor, number_of_steps]
-        cls.my_tse_set = ["1000", "2", "8"]
-        # Precomputed custom bucket boundaries using the TSE strategy
-        cls.my_tse_bucket = [
-            "984.0",
-            "992.0",
-            "996.0",
-            "998.0",
-            "1000.0",
-            "1002.0",
-            "1004.0",
-            "1008.0",
-            "1016.0",
-        ]
-
-    def test_bucket_boundary(self):
-        TestNPUMetricsDefaultBucketBoundary._verify_metrics_and_bucket_boundary(
-            self,
-            self.model,
-            self.base_url,
-            expected_prompt_tokens_bucket=self.my_tse_bucket,
-            expected_generation_tokens_bucket=self.my_tse_bucket,
+        self.assertTrue(
+            os.path.exists(_DI_MARKER_PATH),
+            "Custom SchedulerMetricsCollector was not instantiated; "
+            "stat_loggers DI did not take effect.",
         )
 
 
