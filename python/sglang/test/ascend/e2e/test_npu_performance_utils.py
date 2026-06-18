@@ -24,12 +24,13 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     launch_pd_separation_node,
     launch_router,
     query_configmap,
-    wait_server_ready,
     wait_for_prefill_decode_exit,
+    wait_server_ready,
 )
 from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    dump_metric,
     popen_launch_server,
 )
 
@@ -108,7 +109,7 @@ QWEN3_32B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/aleoyang/Qwen3-32B-w8a8-MindIE"
 )
 QWEN3_32B_EAGLE_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/Qwen/Eagle3-Qwen3-32B-zh"
+    "/root/.cache/modelscope/hub/models/Zjcxy-SmartAI/Eagle3-Qwen3-32B-zh"
 )
 QWEN3_235B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-235B-A22B"
 QWEN3_235B_W8A8_MODEL_PATH = (
@@ -339,6 +340,10 @@ def run_bench_serving(
     warmup_requests=None,
     seed=None,
     output_file=None,
+    repeat_rate=None,
+    temperature=None,
+    top_p=None,
+    env=None,
 ):
     metrics_path = os.getenv("METRICS_DATA_FILE")
     result_file = (
@@ -350,53 +355,112 @@ def run_bench_serving(
 
     write_pkg_info_to_file(result_file)
 
-    cmd_args = [
-        PYTHON_FOR_TEST_TOOL,
-        "-m",
-        "sglang.bench_serving",
-        "--host",
-        host,
-        "--port",
-        str(port),
-        "--model",
-        model_path,
-        "--backend",
-        backend,
-    ]
+    if dataset_name == "generated-shared-prefix":
+        cmd_args = [
+            PYTHON_FOR_TEST_TOOL,
+            "-m",
+            "sglang.bench_serving",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--model",
+            model_path,
+            "--backend",
+            backend,
+            "--dataset-name",
+            dataset_name,
+            "--gsp-num-groups",
+            "1",
+            "--gsp-prompts-per-group",
+            str(num_prompts),
+            "--gsp-system-prompt-len",
+            (
+                str(int((repeat_rate if repeat_rate is not None else 0.9) * input_len))
+                if input_len
+                else "0"
+            ),
+            "--gsp-question-len",
+            (
+                str(
+                    int(
+                        (1 - (repeat_rate if repeat_rate is not None else 0.9))
+                        * input_len
+                    )
+                )
+                if input_len
+                else "0"
+            ),
+            "--gsp-output-len",
+            str(output_len) if output_len else "0",
+        ]
+        if max_concurrency:
+            cmd_args.extend(["--max-concurrency", str(max_concurrency)])
+        if num_prompts:
+            cmd_args.extend(["--num-prompts", str(num_prompts)])
+        if request_rate:
+            cmd_args.extend(["--request-rate", str(request_rate)])
+        if temperature is not None:
+            cmd_args.extend(["--temperature", str(temperature)])
+        if top_p is not None:
+            cmd_args.extend(["--top-p", str(top_p)])
+    else:
+        cmd_args = [
+            PYTHON_FOR_TEST_TOOL,
+            "-m",
+            "sglang.bench_serving",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--model",
+            model_path,
+            "--backend",
+            backend,
+        ]
 
-    if dataset_name:
-        cmd_args.extend(["--dataset-name", str(dataset_name)])
-    if dataset_path:
-        cmd_args.extend(["--dataset-path", str(dataset_path)])
-    if request_rate:
-        cmd_args.extend(["--request-rate", str(request_rate)])
-    if max_concurrency:
-        cmd_args.extend(["--max-concurrency", str(max_concurrency)])
-    if num_prompts:
-        cmd_args.extend(["--num-prompts", str(num_prompts)])
-    if input_len:
-        cmd_args.extend(["--random-input-len", str(input_len)])
-    if output_len:
-        cmd_args.extend(["--random-output-len", str(output_len)])
-    if random_range_ratio:
-        cmd_args.extend(["--random-range-ratio", str(random_range_ratio)])
-    if image_resolution:
-        cmd_args.extend(["--image-resolution", str(image_resolution)])
-    if image_count:
-        cmd_args.extend(["--image-count", str(image_count)])
-    if warmup_requests:
-        cmd_args.extend(["--warmup-requests", str(warmup_requests)])
-    if seed:
-        cmd_args.extend(["--seed", str(seed)])
-    if output_file:
-        cmd_args.extend(["--output-file", str(output_file)])
+        if dataset_name:
+            cmd_args.extend(["--dataset-name", str(dataset_name)])
+        if dataset_path:
+            cmd_args.extend(["--dataset-path", str(dataset_path)])
+        if request_rate:
+            cmd_args.extend(["--request-rate", str(request_rate)])
+        if max_concurrency:
+            cmd_args.extend(["--max-concurrency", str(max_concurrency)])
+        if num_prompts:
+            cmd_args.extend(["--num-prompts", str(num_prompts)])
+        if input_len:
+            cmd_args.extend(["--random-input-len", str(input_len)])
+        if output_len:
+            cmd_args.extend(["--random-output-len", str(output_len)])
+        if random_range_ratio:
+            cmd_args.extend(["--random-range-ratio", str(random_range_ratio)])
+        if image_resolution:
+            cmd_args.extend(["--image-resolution", str(image_resolution)])
+        if image_count:
+            cmd_args.extend(["--image-count", str(image_count)])
+        if warmup_requests:
+            cmd_args.extend(["--warmup-requests", str(warmup_requests)])
+        if seed:
+            cmd_args.extend(["--seed", str(seed)])
+        if output_file:
+            cmd_args.extend(["--output-file", str(output_file)])
+        if temperature is not None:
+            cmd_args.extend(["--temperature", str(temperature)])
+        if top_p is not None:
+            cmd_args.extend(["--top-p", str(top_p)])
     logger.info(f"Command: {' '.join(cmd_args)}")
 
     # Run benchmark command and capture output
     metrics = {"mean_ttft": None, "mean_tpot": None, "total_tps": None}
 
     process = subprocess.Popen(
-        cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+        cmd_args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env=env,
     )
     try:
         # Read output line by line
@@ -450,9 +514,8 @@ def run_aisbench(
     num_prompts,
     image_resolution=None,
     random_range_ratio=1,
-    prefix_hit_rate=None,
-    aisbench_request_rate=None,
-    aisbench_repeat_rate=None,
+    request_rate=None,
+    repeat_rate=None,
     dp=None,
     generation_kwargs=None,
 ):
@@ -532,12 +595,10 @@ def run_aisbench(
     cmd += f"--num-prompts {str(num_prompts)} "
     cmd += f"--output-path {result_path}"
 
-    if prefix_hit_rate is not None:
-        cmd += f" --prefix-hit-rate {prefix_hit_rate}"
-    if aisbench_request_rate is not None:
-        cmd += f" --request_rate {aisbench_request_rate}"
-    if aisbench_repeat_rate is not None:
-        cmd += f" --repeat_rate {aisbench_repeat_rate}"
+    if request_rate is not None:
+        cmd += f" --request_rate {request_rate}"
+    if repeat_rate is not None:
+        cmd += f" --repeat_rate {repeat_rate}"
     if dp is not None:
         cmd += f" --dp {dp}"
     if generation_kwargs:
@@ -728,6 +789,52 @@ def assert_metrics(self, metrics):
     if not metrics:
         raise Exception("No metrics obtained from benchmark")
 
+    tc_name = self.__class__.__name__
+    if self.tpot and metrics.get("mean_tpot"):
+        dump_metric(
+            "tpot",
+            float(metrics["mean_tpot"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "tpot_baseline",
+            float(self.tpot),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.output_token_throughput and metrics.get("total_tps"):
+        dump_metric(
+            "throughput",
+            float(metrics["total_tps"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "throughput_baseline",
+            float(self.output_token_throughput),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.ttft and metrics.get("mean_ttft"):
+        dump_metric(
+            "ttft",
+            float(metrics["mean_ttft"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "ttft_baseline",
+            float(self.ttft),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.mean_e2e_latency and metrics.get("mean_e2e_latency"):
+        dump_metric(
+            "e2e_latency",
+            float(metrics["mean_e2e_latency"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "e2e_latency_baseline",
+            float(self.mean_e2e_latency),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+
     if self.tpot:
         if self.tpot < TPOT_THRESHOLD:
             self.assertLessEqual(
@@ -762,13 +869,13 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
     backend = "sglang"
     dataset_name = "random"
     dataset_path = SHAREGPT_DATASET_TEST_FILE
-    aisbench_dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
-    aisbench_dataset_path = None  # auto generate dataset if none
+    dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
     other_args = None
     timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
     envs = None
     max_attempts = 2
     request_rate = None
+    repeat_rate = None
     max_concurrency = None
     num_prompts = None
     input_len = None
@@ -778,16 +885,16 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
     image_count = None
     warmup_requests = None
     seed = None
+    temperature = None
+    top_p = None
     ttft = None
     tpot = None
     mean_e2e_latency = None
     output_token_throughput = None
 
-    prefix_hit_rate = None
-    aisbench_request_rate = None
-    aisbench_repeat_rate = None
     dp = None
     generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
 
     @classmethod
     def setUpClass(cls):
@@ -828,17 +935,16 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 host=host,
                 port=port,
                 model_path=self.model,
-                dataset_type=self.aisbench_dataset_type,
-                dataset_path=self.aisbench_dataset_path,
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
                 input_len=self.input_len,
                 output_len=self.output_len,
                 max_concurrency=self.max_concurrency,
                 num_prompts=self.num_prompts,
                 image_resolution=self.image_resolution,
                 random_range_ratio=self.random_range_ratio,
-                prefix_hit_rate=self.prefix_hit_rate,
-                aisbench_request_rate=self.aisbench_request_rate,
-                aisbench_repeat_rate=self.aisbench_repeat_rate,
+                request_rate=self.request_rate,
+                repeat_rate=self.repeat_rate,
                 dp=self.dp,
                 generation_kwargs=self.generation_kwargs,
             )
@@ -853,6 +959,7 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 "dataset_name": self.dataset_name,
                 "dataset_path": self.dataset_path,
                 "request_rate": self.request_rate,
+                "repeat_rate": self.repeat_rate,
                 "max_concurrency": self.max_concurrency,
                 "num_prompts": self.num_prompts,
                 "input_len": self.input_len,
@@ -862,9 +969,19 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 "image_count": self.image_count,
                 "warmup_requests": self.warmup_requests,
                 "seed": self.seed,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            metrics = run_bench_serving(**bench_params)
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
             assert_metrics(self, metrics)
 
 
@@ -874,10 +991,10 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
     backend = "sglang"
     dataset_name = "random"
     dataset_path = SHAREGPT_DATASET_TEST_FILE
-    aisbench_dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
-    aisbench_dataset_path = None  # auto generate dataset if none
+    dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
     max_attempts = 2
     request_rate = None
+    repeat_rate = None
     max_concurrency = None
     num_prompts = None
     input_len = None
@@ -887,16 +1004,16 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
     image_count = None
     warmup_requests = None
     seed = None
+    temperature = None
+    top_p = None
     ttft = None
     tpot = None
     mean_e2e_latency = None
     output_token_throughput = None
 
-    prefix_hit_rate = None
-    aisbench_request_rate = None
-    aisbench_repeat_rate = None
     dp = None
     generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
 
     @classmethod
     def setUpClass(cls):
@@ -951,17 +1068,16 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
                 host=self.host,
                 port=str(self.port),
                 model_path=self.model_config.get("model_path"),
-                dataset_type=self.aisbench_dataset_type,
-                dataset_path=self.aisbench_dataset_path,
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
                 input_len=self.input_len,
                 output_len=self.output_len,
                 max_concurrency=self.max_concurrency,
                 num_prompts=self.num_prompts,
                 image_resolution=self.image_resolution,
                 random_range_ratio=self.random_range_ratio,
-                prefix_hit_rate=self.prefix_hit_rate,
-                aisbench_request_rate=self.aisbench_request_rate,
-                aisbench_repeat_rate=self.aisbench_repeat_rate,
+                request_rate=self.request_rate,
+                repeat_rate=self.repeat_rate,
                 dp=self.dp,
                 generation_kwargs=self.generation_kwargs,
             )
@@ -976,6 +1092,7 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
                 "dataset_name": self.dataset_name,
                 "dataset_path": self.dataset_path,
                 "request_rate": self.request_rate,
+                "repeat_rate": self.repeat_rate,
                 "max_concurrency": self.max_concurrency,
                 "num_prompts": self.num_prompts,
                 "input_len": self.input_len,
@@ -985,9 +1102,19 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
                 "image_count": self.image_count,
                 "warmup_requests": self.warmup_requests,
                 "seed": self.seed,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            metrics = run_bench_serving(**bench_params)
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
             assert_metrics(self, metrics)
 
 
@@ -997,10 +1124,10 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
     backend = "sglang"
     dataset_name = "random"
     dataset_path = SHAREGPT_DATASET_TEST_FILE
-    aisbench_dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
-    aisbench_dataset_path = None  # auto generate dataset if none
+    dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
     max_attempts = 2
     request_rate = None
+    repeat_rate = None
     max_concurrency = None
     num_prompts = None
     input_len = None
@@ -1010,16 +1137,16 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
     image_count = None
     warmup_requests = None
     seed = None
+    temperature = None
+    top_p = None
     ttft = None
     tpot = None
     mean_e2e_latency = None
     output_token_throughput = None
 
-    prefix_hit_rate = None
-    aisbench_request_rate = None
-    aisbench_repeat_rate = None
     dp = None
     generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
 
     @classmethod
     def setUpClass(cls):
@@ -1054,7 +1181,6 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                     logger.warning("Process did NOT exit in time")
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
-
         logger.info("tearDownClass finished")
 
     @classmethod
@@ -1084,14 +1210,14 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
 
         # Loop to check if the process is still running
         while True:
+            configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+            if configmap and configmap.data:
+                executing_class = configmap.data.get(ACTIVE_TEST_CLASS)
+                if executing_class and executing_class != cls.__name__:
+                    logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+                    logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
+                    return
             if cls.process.poll() is None:
-                configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
-                if configmap and configmap.data:
-                    executing_class = configmap.data.get(ACTIVE_TEST_CLASS)
-                    if executing_class and executing_class != cls.__name__:
-                        logger.info(f"Retrieved ConfigMap data: {configmap.data}")
-                        logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
-                        return
                 # Process is still running
                 time.sleep(30)
             else:
@@ -1109,17 +1235,16 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 host=self.host,
                 port=str(self.port),
                 model_path=self.model_config.get("model_path"),
-                dataset_type=self.aisbench_dataset_type,
-                dataset_path=self.aisbench_dataset_path,
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
                 input_len=self.input_len,
                 output_len=self.output_len,
                 max_concurrency=self.max_concurrency,
                 num_prompts=self.num_prompts,
                 image_resolution=self.image_resolution,
                 random_range_ratio=self.random_range_ratio,
-                prefix_hit_rate=self.prefix_hit_rate,
-                aisbench_request_rate=self.aisbench_request_rate,
-                aisbench_repeat_rate=self.aisbench_repeat_rate,
+                request_rate=self.request_rate,
+                repeat_rate=self.repeat_rate,
                 dp=self.dp,
                 generation_kwargs=self.generation_kwargs,
             )
@@ -1134,6 +1259,7 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 "dataset_name": self.dataset_name,
                 "dataset_path": self.dataset_path,
                 "request_rate": self.request_rate,
+                "repeat_rate": self.repeat_rate,
                 "max_concurrency": self.max_concurrency,
                 "num_prompts": self.num_prompts,
                 "input_len": self.input_len,
@@ -1143,7 +1269,17 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 "image_count": self.image_count,
                 "warmup_requests": self.warmup_requests,
                 "seed": self.seed,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            metrics = run_bench_serving(**bench_params)
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
             assert_metrics(self, metrics)
