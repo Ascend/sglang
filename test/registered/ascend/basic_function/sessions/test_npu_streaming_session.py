@@ -1,6 +1,6 @@
 import unittest
 
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.streaming_session_kit import (
     AbortLeakReproKitMixin,
@@ -22,7 +22,7 @@ class TestNPUStreamingSession(unittest.TestCase, StreamingSessionKitMixin):
     [Test Target] StreamingSession, KV cache inheritance, abort recovery
     """
 
-    model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+    model = QWEN3_0_6B_WEIGHTS_PATH
     extra_args = [
         "--attention-backend",
         "ascend",
@@ -66,7 +66,7 @@ class TestNPUStreamingSessionAbortLeakRepro(unittest.TestCase, AbortLeakReproKit
     [Test Target] StreamingSession abort recovery, memory leak prevention
     """
 
-    model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+    model = QWEN3_0_6B_WEIGHTS_PATH
     extra_args = [
         "--attention-backend",
         "ascend",
