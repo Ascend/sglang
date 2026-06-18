@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: DP Attention test for NPU - lower gsm8k accuracy threshold
+# test round 6: DP Attention test for NPU - remove --disable-cuda-graph
 
 on:
   pull_request:
