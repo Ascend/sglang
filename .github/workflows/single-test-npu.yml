@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: DP Attention test for NPU - remove --disable-cuda-graph
+# test round 7: DP Attention test for NPU - use 4 NPU runner for QWEN3_32B
 
 on:
   pull_request:
