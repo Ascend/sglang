@@ -177,18 +177,34 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
             k_buffer_layer = self.k_buffer[layer_id - self.start_layer]
             v_buffer_layer = self.v_buffer[layer_id - self.start_layer]
 
+            # Handle KVWriteLoc object vs tensor
+            if hasattr(loc, 'data'):
+                loc_tensor = loc.data
+            elif hasattr(loc, 'slot_indices'):
+                loc_tensor = loc.slot_indices
+            else:
+                loc_tensor = loc
+
             torch_npu.npu_scatter_nd_update_(
                 k_buffer_layer,
-                loc.view(-1, 1),
+                loc_tensor.view(-1, 1),
                 cache_k.view(-1, 1, self.head_num, self.head_dim),
             )
             torch_npu.npu_scatter_nd_update_(
                 v_buffer_layer,
-                loc.view(-1, 1),
+                loc_tensor.view(-1, 1),
                 cache_v.view(-1, 1, self.head_num, self.head_dim),
             )
         else:
-            loc = loc.to(torch.int32)
+            # Handle KVWriteLoc object vs tensor
+            if hasattr(loc, 'data'):
+                loc_tensor = loc.data
+            elif hasattr(loc, 'slot_indices'):
+                loc_tensor = loc.slot_indices
+            else:
+                loc_tensor = loc
+
+            loc_tensor = loc_tensor.to(torch.int32)
             torch_npu._npu_reshape_and_cache(
                 key=cache_k,
                 value=cache_v,
@@ -198,7 +214,7 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
                 value_cache=self.v_buffer[layer_id - self.start_layer].view(
                     -1, self.page_size, self.head_num, self.head_dim
                 ),
-                slot_indices=loc,
+                slot_indices=loc_tensor,
             )
 
     def _chunk_copy_npu_to_cpu(self, buf_of_layers, indices):
