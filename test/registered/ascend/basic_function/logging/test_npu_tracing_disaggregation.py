@@ -51,6 +51,8 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
 
         cls.model = QWEN3_0_6B_WEIGHTS_PATH
 
+        os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
+
         # Initialize collector first
         cls.collector = LightweightOtlpCollector()
         cls.collector.start()
@@ -74,14 +76,17 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             "prefill",
             "--tp-size",
             "1",
+            "--disaggregation-transfer-backend",
+            "ascend",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
+            "--dist-init-addr",
+            "127.0.0.1:10100",
             "--enable-trace",
             "--otlp-traces-endpoint",
             "localhost:4317",
         ]
-        prefill_args += ["--disaggregation-transfer-backend", "ascend"] + cls.rdma_devices
 
         cls.process_prefill = popen_launch_pd_server(
             cls.model,
@@ -105,10 +110,14 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             "1",
             "--attention-backend",
             "ascend",
+            "--disaggregation-transfer-backend",
+            "ascend",
             "--disable-cuda-graph",
             "--enable-trace",
             "--otlp-traces-endpoint",
             "localhost:4317",
+            "--dist-init-addr",
+            "127.0.0.1:10000",
         ]
         decode_args += ["--disaggregation-transfer-backend", "ascend"] + cls.rdma_devices
 
