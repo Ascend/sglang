@@ -1,17 +1,4 @@
-"""Test tracing in PD disaggregation mode on NPU.
-
-This module validates that tracing works correctly in PD disaggregation mode
-on NPU by starting prefill and decode servers and verifying that spans are
-exported to an in-memory OTLP collector.
-"""
-
 import os
-
-# Configure OTLP exporter for faster test execution
-# Must be set before importing sglang trace module
-os.environ.setdefault("SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS", "50")
-os.environ.setdefault("SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE", "4")
-
 import logging
 import time
 import unittest
@@ -42,7 +29,7 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
         disaggregation mode, including disaggregation-specific transfer spans.
 
     [Test Category] Functionality
-    [Test Target] --enable-trace; --otlp-traces-endpoint; PD disaggregation
+    [Test Target] --enable-trace; --otlp-traces-endpoint
     """
 
     @classmethod
@@ -52,6 +39,8 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
         cls.model = QWEN3_0_6B_WEIGHTS_PATH
 
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
+        os.environ["SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS"] = "50"
+        os.environ["SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE"] = "4"
 
         # Initialize collector first
         cls.collector = LightweightOtlpCollector()
@@ -93,10 +82,6 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             cls.prefill_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=prefill_args,
-            env={
-                "SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS": "50",
-                "SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE": "4",
-            },
         )
 
     @classmethod
@@ -119,7 +104,6 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             "--dist-init-addr",
             "127.0.0.1:10000",
         ]
-        decode_args += ["--disaggregation-transfer-backend", "ascend"] + cls.rdma_devices
 
         cls.process_decode = popen_launch_pd_server(
             cls.model,
