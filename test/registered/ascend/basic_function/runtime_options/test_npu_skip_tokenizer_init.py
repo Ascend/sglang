@@ -29,7 +29,7 @@ class TestSkipTokenizerInit(CustomTestCase):
     and EOS Token termination trigger function all work properly.
 
     [Test Category] Parameter
-    [Test Target] --skip-tokenizer-init; --stream-output
+    [Test Target] --skip-tokenizer-init; --incremental-streaming-output
     """
 
     model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
@@ -44,7 +44,7 @@ class TestSkipTokenizerInit(CustomTestCase):
             other_args=(
                 [
                     "--skip-tokenizer-init",
-                    "--stream-output",
+                    "--incremental-streaming-output",
                     "--attention-backend",
                     "ascend",
                     "--disable-cuda-graph",

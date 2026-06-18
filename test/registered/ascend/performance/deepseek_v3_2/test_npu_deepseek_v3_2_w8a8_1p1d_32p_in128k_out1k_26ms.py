@@ -138,7 +138,7 @@ MODEL_CONFIG = {
 
 class TestDeepSeekV32(TestAscendPerfMultiNodePdSepTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model_config = MODEL_CONFIG
     dataset_name = "random"
     max_concurrency = 8

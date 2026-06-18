@@ -22,16 +22,14 @@ MINIMAX_M2_5_LOW_LATENCY_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "HCCL_OP_EXPANSION_MODE": "AIV",
     "TASK_QUEUE_ENABLE": "1",
-    "HCCL_BUFFSIZE": "1500",
+    "HCCL_BUFFSIZE": "2048",
     "ASCEND_USE_FIA": "1",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_NPU_USE_MULTI_STREAM": "1",
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "224000",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "204800",
     "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
 }
@@ -39,26 +37,34 @@ MINIMAX_M2_5_LOW_LATENCY_ENVS = {
 MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "--tp-size",
     16,
+    "--enable-dp-attention",
     "--dp-size",
     16,
-    "--enable-dp-attention",
     "--mem-fraction-static",
-    0.75,
+    0.53,
     "--max-running-requests",
-    256,
+    96,
     "--disable-radix-cache",
+    "--reasoning-parser",
+    "minimax-append-think",
+    "--tool-call-parser",
+    "minimax-m2",
+    "--prefill-delayer-max-delay-passes",
+    500,
+    "--enable-prefill-delayer",
+    "--prefill-max-requests",
+    3,
     "--chunked-prefill-size",
     -1,
-    "--max-prefill-tokens",
+    "--max-prefill-token",
     8192,
     "--cuda-graph-bs",
+    1,
     2,
+    3,
     4,
-    8,
-    16,
-    32,
-    64,
-    128,
+    5,
+    6,
     "--moe-a2a-backend",
     "ascend_fuseep",
     "--deepep-mode",
@@ -79,11 +85,6 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "unquant",
     "--dtype",
     "bfloat16",
-    "--tokenizer-worker-num",
-    2,
-    "--prefill-delayer-max-delay-passes",
-    10,
-    "--enable-prefill-delayer",
 ]
 
 
@@ -93,18 +94,18 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_LowLatency(
     """Test NPU performance for MiniMax-M2.5-w8a8 8p single node low latency in3k5 out1k5"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
     other_args = MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS
     envs = MINIMAX_M2_5_LOW_LATENCY_ENVS
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 256
+    max_concurrency = 112
+    num_prompts = 448
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
     tpot = 20
-    output_token_throughput = 3369.59
+    output_token_throughput = 3114.37
 
     def test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_low_latency(self):
         """Run NPU performance test for MiniMax-M2.5-w8a8 low latency"""

@@ -147,7 +147,7 @@ MODEL_CONFIG = {
 
 class TestDeepSeekR1W8A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model_config = MODEL_CONFIG
     dataset_name = "random"
     request_rate = 16
