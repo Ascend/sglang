@@ -1,8 +1,6 @@
 """
 Test the OpenAI-compatible /v1/audio/transcriptions endpoint with Whisper.
 
-Usage:
-    python3 test_serving_transcription.py -v
 """
 
 import io
@@ -11,7 +9,7 @@ import unittest
 from typing import List, Optional
 
 import requests
-
+from sglang.test.ascend.test_ascend_utils import WHISPER_LARGE_V3_WEIGHTS_PATH
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -23,7 +21,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
 
-WHISPER_MODEL = "openai/whisper-large-v3"
+
 AUDIO_URL = "https://raw.githubusercontent.com/sgl-project/sgl-test-files/refs/heads/main/audios/Trump_WEF_2018_10s.mp3"
 
 
@@ -39,7 +37,7 @@ class TestServingTranscription(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = WHISPER_MODEL
+        cls.model = WHISPER_LARGE_V3_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.process = popen_launch_server(
             cls.model,
