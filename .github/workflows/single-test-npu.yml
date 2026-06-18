@@ -1,4 +1,4 @@
-﻿name: Single Test (NPU)
+name: Single Test (NPU)
 # test round 2: MiMo V2 basic and flash tests
 
 on:
@@ -97,4 +97,3 @@ jobs:
             mkdir -p ${target_plog_path}
             cp ${plog_path}/* ${target_plog_path}
           fi
-
