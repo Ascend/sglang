@@ -81,7 +81,7 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             "--otlp-traces-endpoint",
             "localhost:4317",
         ]
-        prefill_args += cls.transfer_backend + cls.rdma_devices
+        prefill_args += ["--disaggregation-transfer-backend", "ascend"] + cls.rdma_devices
 
         cls.process_prefill = popen_launch_pd_server(
             cls.model,
@@ -110,7 +110,7 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             "--otlp-traces-endpoint",
             "localhost:4317",
         ]
-        decode_args += cls.transfer_backend + cls.rdma_devices
+        decode_args += ["--disaggregation-transfer-backend", "ascend"] + cls.rdma_devices
 
         cls.process_decode = popen_launch_pd_server(
             cls.model,
