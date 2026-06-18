@@ -375,6 +375,7 @@ CONFIG_YAML_PATH = (
 MIMO_V2_5_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "XiaomiMiMo/MiMo-V2.5")
 MIMO_V2_FLASH_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "XiaomiMiMo/MiMo-V2-Flash")
 
+
 class ModelTestConfig(NamedTuple):
     """
     Configuration for model testing.
