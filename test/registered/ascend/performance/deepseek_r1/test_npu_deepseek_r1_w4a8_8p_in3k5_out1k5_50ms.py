@@ -79,6 +79,10 @@ MODEL_OTHER_ARGS = [
     4,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "deepseek-r1",
+    "--tool-call-parser",
+    "deepseekv3",
 ]
 
 

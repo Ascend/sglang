@@ -81,6 +81,10 @@ MINIMAX_M2_5_W8A8_8P_IN128K_OUT1K_PREFIX90_20MS_OTHER_ARGS = [
     4,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "minimax",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 

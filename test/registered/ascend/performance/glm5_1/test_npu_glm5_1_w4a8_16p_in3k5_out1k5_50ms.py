@@ -72,6 +72,10 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_TWO_NODE_MODEL_CONFIG = {
