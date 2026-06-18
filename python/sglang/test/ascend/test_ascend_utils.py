@@ -83,6 +83,9 @@ EXAONE_3_5_7_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 GEMMA_3_4B_IT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "google/gemma-3-4b-it")
 GLM_4_9B_CHAT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/glm-4-9b-chat")
 GLM_5_1_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/GLM-5.1-w4a8")
+WHISPER_LARGE_V3_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "openai-mirror/whisper-large-v3"
+)
 GPT_OSS_120B_BF16_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "eigen-ai-labs/gpt-oss-120b-bf16"
 )
