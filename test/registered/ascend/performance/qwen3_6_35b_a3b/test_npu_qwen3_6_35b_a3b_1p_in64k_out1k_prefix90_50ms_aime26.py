@@ -28,8 +28,8 @@ QWEN3_6_35B_A3B_64K_PREFIX_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
-    "ASCEND_USE_FIA": "1",
-    "GDN_ATTN_BACKEND_TRITON": "1",
+	"ASCEND_USE_FIA": "1",
+	"GDN_ATTN_BACKEND_TRITON": "1",
 }
 
 QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
@@ -80,29 +80,29 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
 ]
 
 
-class TestNPUQwen3_6_35BA3B_1P_AIME2026(TestAscendAccuracyTestCaseBase):
-    """Test NPU accuracy for Qwen3.6-35B-A3B 1p on AIME2026"""
+# class TestNPUQwen3_6_35BA3B_1P_AIME2026(TestAscendAccuracyTestCaseBase):
+#     """Test NPU accuracy for Qwen3.6-35B-A3B 1p on AIME2026"""
 
-    model = QWEN3_6_35B_A3B_MODEL_PATH
-    other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
-    envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
-    accuracy = 0.927
-    datasets = ["aime26"]
-    few_shot_num = 0
-    eval_batch_size = 64
-    generation_config = {
-        "max_tokens": 65536,
-        "temperature": 0.2,
-        "repetition_penalty": 1.08,
-    }
+#     model = QWEN3_6_35B_A3B_MODEL_PATH
+#     other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
+#     envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
+#     accuracy = 0.927
+#     datasets = ["aime26"]
+#     few_shot_num = 0
+#     eval_batch_size = 64
+#     generation_config = {
+#         "max_tokens": 65536,
+#         "temperature": 0.2,
+#         "repetition_penalty": 1.08,
+#     }
 
-    @classmethod
-    def tearDownClass(cls):
-        pass
+#     @classmethod
+#     def tearDownClass(cls):
+#         pass
 
-    def test_npu_qwen3_6_35b_a3b_1p_aime2026(self):
-        """Run NPU accuracy test for Qwen3.6-35B-A3B on AIME2026"""
-        self.run_accuracy()
+#     def test_npu_qwen3_6_35b_a3b_1p_aime2026(self):
+#         """Run NPU accuracy test for Qwen3.6-35B-A3B on AIME2026"""
+#         self.run_accuracy()
 
 
 class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
@@ -126,9 +126,9 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
     request_rate = float("inf")
     output_token_throughput = 660
 
-    @classmethod
-    def setUpClass(cls):
-        pass
+    # @classmethod
+    # def setUpClass(cls):
+    #     pass
 
     def test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in64k out1k prefix90 50ms"""

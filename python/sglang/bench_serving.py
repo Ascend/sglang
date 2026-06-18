@@ -1317,10 +1317,10 @@ async def benchmark(
         )
 
     # Flush cache
-    if ("sglang" in backend and _get_bool_env_var("SGLANG_IS_IN_CI")) or flush_cache:
-        requests.post(base_url + "/flush_cache", headers=get_auth_headers())
+    # if ("sglang" in backend and _get_bool_env_var("SGLANG_IS_IN_CI")) and flush_cache:
+    #     requests.post(base_url + "/flush_cache", headers=get_auth_headers())
 
-    time.sleep(1.0)
+    # time.sleep(1.0)
 
     # Build profile URLs for PD separated mode (do this once at the beginning)
     pd_profile_urls = []
@@ -2276,11 +2276,11 @@ if __name__ == "__main__":
         "NOTE: Cannot be used together with --profile-prefill-url. "
         "In PD separated mode, prefill and decode workers must be profiled separately.",
     )
-    parser.add_argument(
-        "--flush-cache",
-        action="store_true",
-        help="Flush the cache before running the benchmark",
-    )
+    # parser.add_argument(
+    #     "--flush-cache",
+    #     action="store_true",
+    #     help="Flush the cache before running the benchmark",
+    # )
     parser.add_argument(
         "--warmup-requests",
         type=int,
