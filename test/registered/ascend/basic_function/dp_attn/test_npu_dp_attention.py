@@ -8,7 +8,7 @@ from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH,
     KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
-    QWEN3_0_6B_WEIGHTS_PATH,
+    QWEN3_32B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.ebnf_constrained_kit import EBNFConstrainedMixin
@@ -34,11 +34,11 @@ class TestDPAttentionDP2TP2(
     EBNFConstrainedMixin,
     RegexConstrainedMixin,
 ):
-    gsm8k_accuracy_thres = 0.4
+    gsm8k_accuracy_thres = 0.6
 
     @classmethod
     def setUpClass(cls):
-        cls.model = QWEN3_0_6B_WEIGHTS_PATH
+        cls.model = QWEN3_32B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls._env_override = envs.SGLANG_DISABLE_CONSECUTIVE_PREFILL_OVERLAP.override(
             True
