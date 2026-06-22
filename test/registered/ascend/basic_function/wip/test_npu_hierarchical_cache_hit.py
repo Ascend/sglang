@@ -224,8 +224,8 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBa
             )
 
             self.assertLess(
-                metrics2['TTFT'],
-                metrics1['TTFT'],
+                metrics2["TTFT"],
+                metrics1["TTFT"],
                 msg="TTFT should be reduced after cache hit",
             )
         finally:
