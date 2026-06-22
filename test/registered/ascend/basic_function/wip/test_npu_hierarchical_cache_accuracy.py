@@ -8,6 +8,14 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import retry
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
 )
+from sglang.test.ci.ci_register import register_npu_ci
+
+register_npu_ci(
+    est_time=3600,
+    suite="",
+    nightly=True,
+    disabled="multi nodes testcase",
+)
 
 MODEL_CONFIG_CACHE_ENABLED = {
     "model_path": DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,

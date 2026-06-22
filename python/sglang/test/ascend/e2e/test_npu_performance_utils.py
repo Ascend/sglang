@@ -22,19 +22,11 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     launch_router,
     wait_server_ready,
 )
-from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     dump_metric,
     popen_launch_server,
-)
-
-register_npu_ci(
-    est_time=3600,
-    suite="",
-    nightly=True,
-    disabled="multi nodes testcase",
 )
 
 logging.basicConfig(
