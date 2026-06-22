@@ -20,7 +20,7 @@ ARG TRITON_URL_ARM64="https://gitcode.com/Ascend/triton-ascend/releases/download
 ARG TRITON_URL_AMD64="https://gitcode.com/Ascend/triton-ascend/releases/download/v3.2.1/triton_ascend-3.2.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.05.01.post3
+ARG SGLANG_KERNEL_NPU_TAG=2026.06.15.post2
 
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
