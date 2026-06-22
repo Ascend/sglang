@@ -163,12 +163,12 @@ MODEL_CONFIG_FUSION_DISABLED = {
     "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1", "TRANSFORMERS_VERBOSITY": "error"},
     "prefill_args": BASE_PREFILL_ARGS,
     "decode_args": BASE_DECODE_ARGS
-                   + [
-                       "--moe-a2a-backend",
-                       "deepep",
-                       "--deepep-mode",
-                       "low_latency",
-                   ],
+    + [
+        "--moe-a2a-backend",
+        "deepep",
+        "--deepep-mode",
+        "low_latency",
+    ],
     "router_args": ["--mini-lb"],
 }
 
@@ -179,10 +179,10 @@ MODEL_CONFIG_FUSION_ENABLED = {
     "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
     "prefill_args": BASE_PREFILL_ARGS,
     "decode_args": BASE_DECODE_ARGS
-                   + [
-                       "--moe-a2a-backend",
-                       "ascend_fuseep",
-                   ],
+    + [
+        "--moe-a2a-backend",
+        "ascend_fuseep",
+    ],
     "router_args": ["--mini-lb"],
 }
 
@@ -314,8 +314,8 @@ class TestQwen235bFusionOperator(TestAscendMultiNodePdSepTestCaseBase):
             per_layer_reduction_ms,
             self.expected_per_layer_reduction_ms,
             msg=f"Per-layer latency reduction {per_layer_reduction_ms}ms is less than expected {self.expected_per_layer_reduction_ms}ms. "
-                f"TPOT (disabled avg): {tpot_disabled_avg}ms, TPOT (enabled avg): {tpot_enabled_avg}ms, "
-                f"Total reduction: {total_latency_reduction_ms}ms, Layers: {self.model_layers}",
+            f"TPOT (disabled avg): {tpot_disabled_avg}ms, TPOT (enabled avg): {tpot_enabled_avg}ms, "
+            f"Total reduction: {total_latency_reduction_ms}ms, Layers: {self.model_layers}",
         )
 
 

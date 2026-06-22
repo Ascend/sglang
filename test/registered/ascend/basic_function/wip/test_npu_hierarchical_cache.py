@@ -244,13 +244,13 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBa
 
             @check_role(allowed_roles=["router"])
             def run_gsm8k_test(
-                    self,
-                    expect_accuracy,
-                    num_shots=8,
-                    data_path=None,
-                    num_questions=200,
-                    max_new_tokens=512,
-                    parallel=128,
+                self,
+                expect_accuracy,
+                num_shots=8,
+                data_path=None,
+                num_questions=200,
+                max_new_tokens=512,
+                parallel=128,
             ):
                 args = SimpleNamespace(
                     num_shots=num_shots,
