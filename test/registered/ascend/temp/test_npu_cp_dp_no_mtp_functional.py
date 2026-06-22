@@ -127,7 +127,7 @@ class TestDeepSeekV32W8A8CpDpNoMtpFunctional(TestAscendPerfMultiNodePdSepTestCas
 
     [Test Category] Functional
     [Test Target] Inference Correctness (CP + DP, No MTP)
-    --enable-nsa-prefill-context-parallel; --nsa-prefill-cp-mode
+    --enable-nsa-prefill-context-parallel; --nsa-prefill-cp-modes
     """
 
     model_config = MODEL_CONFIG
