@@ -103,8 +103,6 @@ MODEL_CONFIG = {
         "--disaggregation-transfer-backend",
         "ascend",
         "--disable-cuda-graph",
-        # "--max-dispatch-tokens",
-        # 1024,
     ],
     "decode_args": [
         "--disaggregation-mode",

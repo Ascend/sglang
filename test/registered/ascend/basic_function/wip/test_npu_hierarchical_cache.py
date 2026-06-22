@@ -2,6 +2,7 @@ import unittest
 
 import requests
 from transformers import AutoTokenizer
+from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
@@ -17,6 +18,7 @@ from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.few_shot_gsm8k import run_eval as run_eval_gsm8k
 
 register_npu_ci(
     est_time=3600,
@@ -219,8 +221,8 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBa
                 host=self.host,
                 port=str(self.port),
                 model_path=self.model_config.get("model_path"),
-                dataset_type=self.aisbench_dataset_type,
-                dataset_path=self.aisbench_dataset_path,
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
                 input_len=self.input_len,
                 output_len=self.output_len,
                 max_concurrency=self.max_concurrency,
@@ -236,6 +238,36 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBa
                 metrics1["TTFT"],
                 msg="TTFT should be reduced after cache hit",
             )
+
+            accuracy = 0.95
+            self.run_gsm8k_test(self.accuracy, num_shots=5)
+
+            @check_role(allowed_roles=["router"])
+            def run_gsm8k_test(
+                    self,
+                    expect_accuracy,
+                    num_shots=8,
+                    data_path=None,
+                    num_questions=200,
+                    max_new_tokens=512,
+                    parallel=128,
+            ):
+                args = SimpleNamespace(
+                    num_shots=num_shots,
+                    data_path=data_path,
+                    num_questions=num_questions,
+                    max_new_tokens=max_new_tokens,
+                    parallel=parallel,
+                    host=f"http://{self.host}",
+                    port=self.port,
+                )
+                metrics = run_eval_gsm8k(args)
+                self.assertGreaterEqual(
+                    metrics["accuracy"],
+                    expect_accuracy,
+                    f'Accuracy is {str(metrics["accuracy"])}, is lower than {expect_accuracy}',
+                )
+
         finally:
             if self.process:
                 kill_process_tree(self.process.pid)

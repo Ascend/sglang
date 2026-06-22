@@ -163,12 +163,12 @@ MODEL_CONFIG_FUSION_DISABLED = {
     "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1", "TRANSFORMERS_VERBOSITY": "error"},
     "prefill_args": BASE_PREFILL_ARGS,
     "decode_args": BASE_DECODE_ARGS
-    + [
-        "--moe-a2a-backend",
-        "deepep",
-        "--deepep-mode",
-        "low_latency",
-    ],
+                   + [
+                       "--moe-a2a-backend",
+                       "deepep",
+                       "--deepep-mode",
+                       "low_latency",
+                   ],
     "router_args": ["--mini-lb"],
 }
 
@@ -179,57 +179,33 @@ MODEL_CONFIG_FUSION_ENABLED = {
     "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
     "prefill_args": BASE_PREFILL_ARGS,
     "decode_args": BASE_DECODE_ARGS
-    + [
-        "--moe-a2a-backend",
-        "ascend_fuseep",
-    ],
+                   + [
+                       "--moe-a2a-backend",
+                       "ascend_fuseep",
+                   ],
     "router_args": ["--mini-lb"],
 }
 
 
 class TestQwen235bFusionOperator(TestAscendMultiNodePdSepTestCaseBase):
-    # model = None
-    # benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    # backend = "sglang"
-    # dataset_name = "random"
     dataset_path = SHAREGPT_DATASET_TEST_FILE
-    # aisbench_dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
     aisbench_dataset_path = None  # auto generate dataset if none
     other_args = None
     timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
     envs = None
-    # max_attempts = 2
     request_rate = None
-    # max_concurrency = None
-    # num_prompts = None
-    # input_len = None
-    # output_len = None
-    # random_range_ratio = 1
     image_resolution = None
     image_count = None
     warmup_requests = None
     seed = None
     ttft = None
-    # tpot = None
     mean_e2e_latency = None
     output_token_throughput = None
-
     prefix_hit_rate = None
     aisbench_request_rate = None
     aisbench_repeat_rate = None
     dp = None
     generation_kwargs = None
-
-    @classmethod
-    def setUpClass(cls):
-        cls.degradation_tolerance = 0
-        cls.model = QWEN3_235B_W8A8_MODEL_PATH
-        super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     max_attempts = 3
@@ -241,16 +217,19 @@ class TestQwen235bFusionOperator(TestAscendMultiNodePdSepTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
-
     tpot = 100
-
-    # # Configurable parameters for test
-    # num_test_runs = 3  # Number of runs to average for each configuration
     model_layers = 94  # Number of layers in QWEN3 235B model
     expected_per_layer_reduction_ms = 0.05  # 50 microseconds = 0.05 milliseconds
 
-    # # Initialize model_config to avoid None reference issues
-    # model_config = MODEL_CONFIG_FUSION_DISABLED
+    @classmethod
+    def setUpClass(cls):
+        cls.degradation_tolerance = 0
+        cls.model = QWEN3_235B_W8A8_MODEL_PATH
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
 
     @check_role(allowed_roles=["router"])
     def run_throughput(self):
@@ -268,9 +247,6 @@ class TestQwen235bFusionOperator(TestAscendMultiNodePdSepTestCaseBase):
             num_prompts=self.num_prompts,
             image_resolution=self.image_resolution,
             random_range_ratio=self.random_range_ratio,
-            prefix_hit_rate=self.prefix_hit_rate,
-            aisbench_request_rate=self.aisbench_request_rate,
-            aisbench_repeat_rate=self.aisbench_repeat_rate,
             dp=self.dp,
             generation_kwargs=self.generation_kwargs,
         )
@@ -338,8 +314,8 @@ class TestQwen235bFusionOperator(TestAscendMultiNodePdSepTestCaseBase):
             per_layer_reduction_ms,
             self.expected_per_layer_reduction_ms,
             msg=f"Per-layer latency reduction {per_layer_reduction_ms}ms is less than expected {self.expected_per_layer_reduction_ms}ms. "
-            f"TPOT (disabled avg): {tpot_disabled_avg}ms, TPOT (enabled avg): {tpot_enabled_avg}ms, "
-            f"Total reduction: {total_latency_reduction_ms}ms, Layers: {self.model_layers}",
+                f"TPOT (disabled avg): {tpot_disabled_avg}ms, TPOT (enabled avg): {tpot_enabled_avg}ms, "
+                f"Total reduction: {total_latency_reduction_ms}ms, Layers: {self.model_layers}",
         )
 
 
