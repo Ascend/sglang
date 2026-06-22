@@ -9,7 +9,6 @@ Tests:
   - EAGLE3 speculative decoding
 """
 
-import os
 import unittest
 
 from sglang.test.ascend.test_ascend_utils import (
