@@ -272,7 +272,7 @@ class TestNPUSessionLatency(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
-                "--cuda-graph-backend-prefill=disabled",
+                "--disable-piecewise-cuda-graph",
                 "--page-size",
                 "4",
             ],
