@@ -1,14 +1,20 @@
 import os
+import re
+import subprocess
+import threading
 import time
 import unittest
-from time import sleep
 
 import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    SERVER_INITIALIZATION_DELAY,
+    SERVICE_PORT,
     TestAscendMultiNodePdSepTestCaseBase,
     check_role,
+    launch_router,
+    wait_server_ready,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     DEEPSEEK_R1_W8A8_MODEL_PATH,
@@ -261,14 +267,54 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
         print(f"期望结果: {'启动成功' if should_succeed else '启动失败'}")
         print("=" * 60)
 
-    def kill_process_if_alive(self):
-        try:
-            kill_process_tree(self.process.pid)
-            self.stop_sglang_thread()
-            sleep(30)
-        except Exception:
-            # 忽略清理异常，可能进程已提前退出
-            pass
+    def _find_router_pid_by_port(self):
+        result = subprocess.run(
+            ["ss", "-tlnp"],
+            capture_output=True, text=True, timeout=10,
+        )
+        for line in result.stdout.split("\n"):
+            if f":{SERVICE_PORT}" in line:
+                match = re.search(r"pid=(\d+)", line)
+                if match:
+                    return int(match.group(1))
+        return None
+
+    def _start_router_server(self):
+        cls = self.__class__
+        cls.sglang_thread = threading.Thread(
+            target=launch_router, args=(cls.model_config,)
+        )
+        cls.sglang_thread.daemon = True
+        cls.sglang_thread.start()
+
+        health_check_url = f"{cls.base_url}/health"
+        wait_server_ready(health_check_url)
+
+        time.sleep(SERVER_INITIALIZATION_DELAY)
+
+        cls._router_pid = self._find_router_pid_by_port()
+        if cls._router_pid is None:
+            raise RuntimeError(
+                f"Failed to find router process PID on port {SERVICE_PORT}"
+            )
+
+    def _stop_router_server(self):
+        cls = self.__class__
+        router_pid = getattr(cls, "_router_pid", None)
+        if router_pid is not None:
+            try:
+                kill_process_tree(router_pid)
+            except Exception:
+                pass
+            cls._router_pid = None
+
+        if cls.sglang_thread is not None:
+            if cls.sglang_thread.is_alive():
+                cls.stop_event.set()
+                cls.sglang_thread.join(timeout=5)
+            cls.sglang_thread = None
+
+        time.sleep(5)
 
     @check_role(allowed_roles=["router"])
     def validate_bucket_adjust_interval_secs(self, test_case):
@@ -280,14 +326,13 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
         self.__class__.model_config = create_model_config_with_param(value)
 
         try:
-            self.start_router_server()
-            # 检查router是否成功拉起
+            self._start_router_server()
             is_running = self.is_router_server_running(timeout=60)
             self.assert_result(value, is_running, should_succeed)
         finally:
-            self.stop_sglang_thread()
-            time.sleep(5)
+            self._stop_router_server()
 
+    @check_role(allowed_roles=["router"])
     def test_bucket_adjust_interval_secs_validation(self):
         """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
         print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")

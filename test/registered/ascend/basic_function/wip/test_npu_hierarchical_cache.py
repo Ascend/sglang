@@ -1,8 +1,8 @@
 import unittest
+from types import SimpleNamespace
 
 import requests
 from transformers import AutoTokenizer
-from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
