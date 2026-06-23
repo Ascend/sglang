@@ -469,8 +469,8 @@ class TestNPUSessionControl(CustomTestCase):
         rid_per_branch = [response["meta_info"]["id"]] * len(chunks_per_step[0])
         outputs_from_session.append(response["text"])
 
-        # send the prompts in branches
         for chunks_for_branches in chunks_per_step:
+            is_first_step = chunks_for_branches == chunks_per_step[0]
             for j, chunk in enumerate(chunks_for_branches):
                 response = requests.post(
                     self.base_url + "/generate",
@@ -480,7 +480,7 @@ class TestNPUSessionControl(CustomTestCase):
                             "id": session_id,
                             "rid": rid_per_branch[j],
                             "offset": -1,
-                            "replace": False,
+                            "replace": False if is_first_step else True,
                         },
                         "sampling_params": {
                             "temperature": 0,
