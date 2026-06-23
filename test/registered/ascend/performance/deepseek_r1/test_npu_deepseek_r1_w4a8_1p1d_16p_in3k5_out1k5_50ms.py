@@ -87,6 +87,10 @@ MODEL_CONFIG = {
         "--disable-shared-experts-fusion",
         "--dtype",
         "bfloat16",
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "decode_args": [
         "--nnodes",
@@ -143,6 +147,10 @@ MODEL_CONFIG = {
         4,
         "--load-balance-method",
         ROUND_ROBIN,
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "router_args": [],
 }

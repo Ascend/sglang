@@ -59,21 +59,6 @@ QWEN3_5_397B_128K_PREFIX_OTHER_ARGS = [
     64,
     "--mem-fraction-static",
     0.6,
-    "--cuda-graph-bs",
-    2,
-    4,
-    6,
-    8,
-    10,
-    12,
-    16,
-    20,
-    24,
-    32,
-    40,
-    48,
-    56,
-    64,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -97,6 +82,10 @@ QWEN3_5_397B_128K_PREFIX_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -120,6 +109,7 @@ class TestNPUQwen3_5_397B_128K_Prefix90(TestAscendPerformanceTestCaseBase):
     temperature = 0.6
     top_p = 0.95
     output_token_throughput = 385.9
+    pop_sglang_is_in_ci_for_gsp = True
 
     def test_npu_qwen3_5_397b_8p_in128k_out1k_prefix90_50ms(self):
         """Run NPU performance test for Qwen3.5-397B-w4a8 8p in128k out1k prefix90"""

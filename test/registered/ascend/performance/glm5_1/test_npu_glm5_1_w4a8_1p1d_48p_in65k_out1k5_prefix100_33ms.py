@@ -88,6 +88,10 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--disable-cuda-graph",
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
@@ -150,6 +154,10 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "bfloat16",
     "--load-balance-method",
     "round_robin",
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {

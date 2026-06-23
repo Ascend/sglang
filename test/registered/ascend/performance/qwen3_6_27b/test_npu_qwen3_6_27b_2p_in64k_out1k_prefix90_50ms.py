@@ -76,13 +76,17 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
-class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_50ms(
+class TestNPUQwen3_6_27B_1P_In64k_Out1k_Prefix90_50ms(
     TestAscendPerformanceTestCaseBase
 ):
-    """Test NPU performance for Qwen3.6-27B 2p in64k out1k prefix90 50ms"""
+    """Test NPU performance for Qwen3.6-27B 1p in64k out1k prefix90 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_6_27B_MODEL_PATH

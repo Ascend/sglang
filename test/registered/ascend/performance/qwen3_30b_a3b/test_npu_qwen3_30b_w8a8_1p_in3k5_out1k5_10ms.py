@@ -84,6 +84,10 @@ OTHER_ARGS = [
     162,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 
