@@ -868,6 +868,7 @@ class ModelRunnerKVCacheMixin:
         estimated = max(min(estimated, 4096), 2048)
 
         max_num_reqs = self.server_args.max_running_requests
+        print(f"token_capacity: {token_capacity}")
         if max_num_reqs is not None:
             max_num_reqs = min(max_num_reqs // self.dp_size, estimated)
         else:
@@ -875,10 +876,11 @@ class ModelRunnerKVCacheMixin:
 
         if self.mambaish_config is not None:
             ratio = self._calculate_mamba_ratio()
+            print(f"max_mamba_cache_size: {self.server_args.max_mamba_cache_size}, ratio: {ratio}")
             max_num_reqs = min(
                 max_num_reqs, self.server_args.max_mamba_cache_size // ratio
             )
-
+            print(f"max_num_reqs: {max_num_reqs}")
             if max_num_reqs <= 0:
                 raise RuntimeError(
                     f"Hybrid (mamba/linear-attention) state cache is too small to serve "
