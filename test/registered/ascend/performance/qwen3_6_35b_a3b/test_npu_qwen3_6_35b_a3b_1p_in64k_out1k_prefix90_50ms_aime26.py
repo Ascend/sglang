@@ -121,7 +121,7 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
     envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
     dataset_name = "generated-shared-prefix"
     max_concurrency = 40
-    num_prompts = 40
+    num_prompts = 160
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
