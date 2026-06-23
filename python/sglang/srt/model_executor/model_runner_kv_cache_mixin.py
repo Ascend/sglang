@@ -75,9 +75,14 @@ class ModelRunnerKVCacheMixin:
         parts = ", ".join(f"{k}={v}" for k, v in kwargs.items())
         logger.info(f"[MemProfile][rank={rank}][TP{tp_rank}] {stage}: {parts}")
 
+    def _mem_profile_summary_ref(self: ModelRunner) -> dict:
+        if not hasattr(self, "_mem_profile_summary"):
+            self._mem_profile_summary = {}
+        return self._mem_profile_summary
+
     def _profile_available_bytes(self: ModelRunner, pre_model_load_memory: int) -> int:
         if self._mem_profile_enabled():
-            self._mem_profile_summary = {}
+            self._mem_profile_summary_ref().clear()
 
         post_model_load_memory = get_available_gpu_memory(
             self.device,
@@ -102,10 +107,10 @@ class ModelRunnerKVCacheMixin:
             is_draft_worker=self.is_draft_worker,
         )
         if self._mem_profile_enabled():
-            self._mem_profile_summary["pre_model_load_gb"] = pre_model_load_memory
-            self._mem_profile_summary["post_model_load_gb"] = post_model_load_memory
-            self._mem_profile_summary["pre_non_static_reserve_gb"] = pre_non_static_gb
-            self._mem_profile_summary["rest_before_mamba_gb"] = rest_memory
+            self._mem_profile_summary_ref()["pre_model_load_gb"] = pre_model_load_memory
+            self._mem_profile_summary_ref()["post_model_load_gb"] = post_model_load_memory
+            self._mem_profile_summary_ref()["pre_non_static_reserve_gb"] = pre_non_static_gb
+            self._mem_profile_summary_ref()["rest_before_mamba_gb"] = rest_memory
 
         if self.mambaish_config is not None:
             rest_memory = self.handle_max_mamba_cache(rest_memory)
@@ -116,7 +121,7 @@ class ModelRunnerKVCacheMixin:
             local_free_gb=f"{self._local_free_gb():.4f}",
         )
         if self._mem_profile_enabled():
-            self._mem_profile_summary["rest_for_kv_gb"] = rest_memory
+            self._mem_profile_summary_ref()["rest_for_kv_gb"] = rest_memory
 
         available_bytes = int(rest_memory * (1 << 30))
         self._mem_profile_log(
@@ -125,7 +130,7 @@ class ModelRunnerKVCacheMixin:
             available_gb=f"{available_bytes / (1 << 30):.4f}",
         )
         if self._mem_profile_enabled():
-            self._mem_profile_summary["kv_budget_bytes"] = available_bytes
+            self._mem_profile_summary_ref()["kv_budget_bytes"] = available_bytes
 
         return available_bytes
 
@@ -191,9 +196,9 @@ class ModelRunnerKVCacheMixin:
                     rest_after_gb=f"{total_rest_memory:.4f}",
                 )
                 if self._mem_profile_enabled():
-                    self._mem_profile_summary["mamba_intermediate_gb"] = intermediate_gb
-                    self._mem_profile_summary["mamba_capped_reqs"] = capped_reqs
-                    self._mem_profile_summary["mamba_ratio"] = ratio
+                    self._mem_profile_summary_ref()["mamba_intermediate_gb"] = intermediate_gb
+                    self._mem_profile_summary_ref()["mamba_capped_reqs"] = capped_reqs
+                    self._mem_profile_summary_ref()["mamba_ratio"] = ratio
         elif (
             server_args.disable_radix_cache
             and server_args.max_running_requests is not None
@@ -220,7 +225,7 @@ class ModelRunnerKVCacheMixin:
                     rest_after_gb=f"{total_rest_memory:.4f}",
                 )
                 if self._mem_profile_enabled():
-                    self._mem_profile_summary["mamba_intermediate_gb"] = intermediate_gb
+                    self._mem_profile_summary_ref()["mamba_intermediate_gb"] = intermediate_gb
         else:
             # Use ratio-based calculation to auto-fit available memory
             assert config.mamba2_cache_params.mamba_cache_per_req > 0
@@ -265,9 +270,9 @@ class ModelRunnerKVCacheMixin:
                     rest_after_gb=f"{total_rest_memory:.4f}",
                 )
                 if self._mem_profile_enabled():
-                    self._mem_profile_summary["mamba_intermediate_gb"] = intermediate_gb
-                    self._mem_profile_summary["mamba_capped_reqs"] = capped_reqs
-                    self._mem_profile_summary["mamba_ratio"] = ratio
+                    self._mem_profile_summary_ref()["mamba_intermediate_gb"] = intermediate_gb
+                    self._mem_profile_summary_ref()["mamba_capped_reqs"] = capped_reqs
+                    self._mem_profile_summary_ref()["mamba_ratio"] = ratio
             else:
                 server_args.max_mamba_cache_size = int(mamba_budget_bytes // per_req)
                 self._mem_profile_log(
@@ -307,8 +312,8 @@ class ModelRunnerKVCacheMixin:
             local_free_gb=f"{self._local_free_gb():.4f}",
         )
         if self._mem_profile_enabled():
-            self._mem_profile_summary["mamba_main_state_gb"] = mamba_state_memory
-            self._mem_profile_summary["max_mamba_cache_size"] = (
+            self._mem_profile_summary_ref()["mamba_main_state_gb"] = mamba_state_memory
+            self._mem_profile_summary_ref()["max_mamba_cache_size"] = (
                 server_args.max_mamba_cache_size
             )
         return rest_out_gb
@@ -1113,10 +1118,10 @@ class ModelRunnerKVCacheMixin:
             local_free_gb=f"{self._local_free_gb():.4f}",
         )
         if self._mem_profile_enabled():
-            self._mem_profile_summary["cell_size_bytes"] = cell_size
-            self._mem_profile_summary["max_total_num_tokens"] = final_max_tokens
-            self._mem_profile_summary["kv_pool_gb"] = final_kv_bytes / (1 << 30)
-            self._mem_profile_summary["max_running_requests"] = (
+            self._mem_profile_summary_ref()["cell_size_bytes"] = cell_size
+            self._mem_profile_summary_ref()["max_total_num_tokens"] = final_max_tokens
+            self._mem_profile_summary_ref()["kv_pool_gb"] = final_kv_bytes / (1 << 30)
+            self._mem_profile_summary_ref()["max_running_requests"] = (
                 config.max_running_requests
             )
 
@@ -1146,13 +1151,23 @@ class ModelRunnerKVCacheMixin:
             max_total_num_tokens=self.max_total_num_tokens,
         )
         if self._mem_profile_enabled():
-            self._mem_profile_summary["avail_after_kv_pool_gb"] = avail_after_pool
+            self._mem_profile_summary_ref()["avail_after_kv_pool_gb"] = avail_after_pool
 
     def log_memory_layout_final(self: ModelRunner) -> None:
         """Print end-to-start memory layout after graph capture (debug only)."""
         if not self._mem_profile_enabled():
             return
-        summary = getattr(self, "_mem_profile_summary", {})
+        if self.is_draft_worker:
+            summary = self._mem_profile_summary_ref()
+            self._mem_profile_log(
+                "draft_worker_layout",
+                avail_after_kv_pool_gb=f"{summary.get('avail_after_kv_pool_gb', '?')}",
+                max_total_num_tokens=summary.get(
+                    "max_total_num_tokens", getattr(self, "max_total_num_tokens", "?")
+                ),
+            )
+            return
+        summary = self._mem_profile_summary_ref()
 
         def _gb(key: str, default: float | None = None) -> str:
             val = summary.get(key, default)

@@ -41,6 +41,8 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     -1,
     "--max-prefill-tokens",
     45500,
+    "--max-total-tokens",
+    659840,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--prefill-max-requests",
