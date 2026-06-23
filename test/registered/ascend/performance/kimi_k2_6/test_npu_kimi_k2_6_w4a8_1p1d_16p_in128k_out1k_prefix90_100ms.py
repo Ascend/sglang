@@ -110,7 +110,7 @@ DECODE_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.73,
+    0.82,
     "--max-running-requests",
     2,
     "--enable-dp-attention",

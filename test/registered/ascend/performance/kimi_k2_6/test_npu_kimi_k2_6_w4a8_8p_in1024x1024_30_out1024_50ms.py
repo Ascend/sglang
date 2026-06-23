@@ -46,7 +46,7 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.76,
+    0.872,
     "--max-running-requests",
     176,
     "--chunked-prefill-size",

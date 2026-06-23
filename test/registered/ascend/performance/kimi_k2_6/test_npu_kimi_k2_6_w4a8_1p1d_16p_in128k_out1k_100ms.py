@@ -70,7 +70,7 @@ PREFILL_ARGS = [
     "--disable-radix-cache",
     "--disable-cuda-graph",
     "--mem-fraction-static",
-    0.78,
+    0.82,
     "--max-running-requests",
     1,
     "--moe-a2a-backend",
