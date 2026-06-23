@@ -1,13 +1,13 @@
 import re
 import tempfile
 import unittest
+from pathlib import Path
 
 import requests
-from pathlib import Path
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    MINIMAX_M2_5_W8A8_MODEL_PATH,
+    MIMO_V2_FLASH_MODEL_PATH,
     TestAscendPerfMultiNodePdSepTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -151,7 +151,7 @@ ROUTER_ARGS = [
 ROUTER_ENVS = {}
 
 MODEL_CONFIG = {
-    "model_path": MINIMAX_M2_5_W8A8_MODEL_PATH,
+    "model_path": MIMO_V2_FLASH_MODEL_PATH,
     "prefill_args": PREFILL_ARGS,
     "decode_args": DECODE_ARGS,
     "prefill_envs": PREFILL_ENVS,
@@ -163,6 +163,7 @@ MODEL_CONFIG = {
 
 class TestMimoV2acceptrate(TestAscendPerfMultiNodePdSepTestCaseBase):
     """Start the service and send a request to test the accept rate"""
+
     model_config = MODEL_CONFIG
 
     def test_request(self):
@@ -185,8 +186,10 @@ class TestMimoV2acceptrate(TestAscendPerfMultiNodePdSepTestCaseBase):
         self.assertTrue(len(matches) > 0)
         current_accept_rate = float(matches[-1])
         self.assertGreater(current_accept_rate, accept_rate)
+
     def test_request_clear(self):
         _temp_dir_obj.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main()

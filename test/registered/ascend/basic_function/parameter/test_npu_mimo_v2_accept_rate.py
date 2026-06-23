@@ -4,7 +4,7 @@ import re
 
 import requests
 
-from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import MIMO_V2_FLASH_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -45,7 +45,7 @@ class TestMimoV2AcceptRate(CustomTestCase):
         env["SGLANG_ENABLE_OVERLAP_PLAN_STREAM"] = "1"
         env["DEEPNORMAL_MODE_USE_INT8_QUANT"] = "1"
         env["SGLANG_DEEPEP_BF16_DISPATCH"] = "0"
-        cls.model = QWEN3_30B_A3B_WEIGHTS_PATH
+        cls.model = MIMO_V2_FLASH_MODEL_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         other_args = [
             "--attention-backend",
@@ -95,7 +95,7 @@ class TestMimoV2AcceptRate(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             env=env,
             other_args=other_args,
-            return_stdout_stderr=(cls.out_log_file, cls.err_log_file)
+            return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
         )
 
     def test_request(self):
@@ -126,6 +126,7 @@ class TestMimoV2AcceptRate(CustomTestCase):
         cls.err_log_file.close()
         os.remove("./cache_out_log.txt")
         os.remove("./cache_err_log.txt")
+
 
 if __name__ == "__main__":
     unittest.main()

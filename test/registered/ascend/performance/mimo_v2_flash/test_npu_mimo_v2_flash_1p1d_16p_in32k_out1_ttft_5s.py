@@ -175,7 +175,7 @@ class TestNPUMimo_v2_flash_1P1D_16p_In32k_Out1_TTFT_5s(
     max_concurrency = 64
     num_prompts = 128
     request_rate = 0.4
-    input_len =32000
+    input_len = 32000
     output_len = 1
     random_range_ratio = 1
     ttft = 5000
