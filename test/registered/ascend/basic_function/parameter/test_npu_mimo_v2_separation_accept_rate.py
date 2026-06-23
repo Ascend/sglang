@@ -5,13 +5,12 @@ from pathlib import Path
 
 import requests
 
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, check_role
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
     TestAscendPerfMultiNodePdSepTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import DEFAULT_URL_FOR_TEST
 
 register_npu_ci(
     est_time=3600,
@@ -166,9 +165,10 @@ class TestMimoV2acceptrate(TestAscendPerfMultiNodePdSepTestCaseBase):
 
     model_config = MODEL_CONFIG
 
+    @check_role(allowed_roles=["router"])
     def test_request(self):
         response = requests.post(
-            f"{DEFAULT_URL_FOR_TEST}/generate",
+            f"{self.base_url}/generate",
             json={
                 "text": "James decides to run 3 sprints 3 times a week. He runs 60 meters each sprint. How many total meters does he run a week?",
                 "sampling_params": {

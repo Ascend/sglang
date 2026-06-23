@@ -1,6 +1,6 @@
 import os
-import unittest
 import re
+import unittest
 
 import requests
 
