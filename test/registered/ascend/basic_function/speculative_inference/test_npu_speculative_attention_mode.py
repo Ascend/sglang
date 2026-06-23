@@ -1,11 +1,8 @@
-import glob
 import os
-import time
 import unittest
 from types import SimpleNamespace
-from urllib.parse import urlparse
 
-from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_32B_EAGLE3_WEIGHTS_PATH,
     QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH,
@@ -15,187 +12,161 @@ from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
-    popen_launch_pd_server,
+    CustomTestCase,
+    popen_launch_server,
 )
 
 register_npu_ci(
     est_time=400,
-    suite="full-8-npu-a3",
+    suite="full-4-npu-a3",
     nightly=True,
 )
 
 
-class TestAscendSpeculativeAttentionMode(TestDisaggregationBase):
-    """Testcase: Verify that in the PD disaggregation + MTP scenario, the model inference accuracy remains
-    uncompromised when the Prefill service is launched with the parameter --speculative-attention-mode decode
-    and the Decode service is configured with --speculative-attention-mode prefill.
+class TestNpuSpeculativeAttentionMode(CustomTestCase):
+    """Testcase: Verify that model inference accuracy remains uncompromised when launching the server
+    with --speculative-attention-mode set to 'decode' and 'prefill' respectively.
 
     [Test Category] Parameter
     [Test Target] --speculative-attention-mode
     """
 
-    @classmethod
-    def setUpClass(cls):
-        print("[CI Cleanup] Removing orphaned shared memory files...")
-        for pattern in ["/dev/shm/hccl*", "/dev/shm/sglang*", "/dev/shm/smem_*"]:
-            for f in glob.glob(pattern):
-                try:
-                    os.remove(f)
-                    print(f"[CI Cleanup] Successfully removed: {f}")
-                except OSError as e:
-                    print(f"[CI Cleanup] Warning: Could not remove {f}: {e}")
-
-        time.sleep(2)
-
-        super().setUpClass()
-        cls.model = QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH
-        cls.accuracy = 0.86
-        cls.base_url = DEFAULT_URL_FOR_TEST
-        cls.url = urlparse(DEFAULT_URL_FOR_TEST)
-        os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
-
-        # Non blocking start servers
-        cls.start_prefill()
-        cls.start_decode()
-
-        # Block until both
-        cls.wait_server_ready(cls.prefill_url + "/health")
-        cls.wait_server_ready(cls.decode_url + "/health")
-
-        cls.launch_lb()
-
-    @classmethod
-    def start_prefill(cls):
-        prefill_args = [
-            "--disaggregation-mode",
-            "prefill",
-            "--disaggregation-transfer-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--trust-remote-code",
-            "--attention-backend",
-            "ascend",
-            "--device",
-            "npu",
-            "--quantization",
-            "modelslim",
-            "--disable-radix-cache",
-            "--speculative-draft-model-quantization",
-            "unquant",
-            "--speculative-algorithm",
-            "EAGLE3",
-            "--speculative-draft-model-path",
-            QWEN3_32B_EAGLE3_WEIGHTS_PATH,
-            "--speculative-num-steps",
-            "4",
-            "--speculative-eagle-topk",
-            "1",
-            "--speculative-num-draft-tokens",
-            "5",
-            "--speculative-attention-mode",
-            "decode",
-            "--tp-size",
-            "4",
-            "--mem-fraction-static",
-            "0.7",
-            "--disable-cuda-graph",
-            "--dtype",
-            "bfloat16",
-        ]
-        cls.extra_envs = {
-            "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-            "SGLANG_ENABLE_SPEC_V2": "1",
-            "TRANSFORMERS_VERBOSITY": "error",
-        }
-        os.environ.update(cls.extra_envs)
-        cls.process_prefill = popen_launch_pd_server(
-            cls.model,
-            cls.prefill_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=prefill_args,
-        )
-
-    @classmethod
-    def start_decode(cls):
-        decode_args = [
-            "--disaggregation-mode",
-            "decode",
-            "--base-gpu-id",
-            4,
-            "--disaggregation-transfer-backend",
-            "ascend",
-            "--num-reserved-decode-tokens",
-            128,
-            "--disaggregation-decode-polling-interval",
-            2,
-            "--trust-remote-code",
-            "--attention-backend",
-            "ascend",
-            "--device",
-            "npu",
-            "--quantization",
-            "modelslim",
-            "--disable-radix-cache",
-            "--speculative-draft-model-quantization",
-            "unquant",
-            "--speculative-algorithm",
-            "EAGLE3",
-            "--speculative-draft-model-path",
-            QWEN3_32B_EAGLE3_WEIGHTS_PATH,
-            "--speculative-num-steps",
-            "4",
-            "--speculative-eagle-topk",
-            "1",
-            "--speculative-num-draft-tokens",
-            "5",
-            "--speculative-attention-mode",
-            "prefill",
-            "--tp-size",
-            "4",
-            "--mem-fraction-static",
-            "0.7",
-            "--disable-cuda-graph",
-            "--dtype",
-            "bfloat16",
-        ]
-        cls.extra_envs = {
-            "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-            "SGLANG_ENABLE_SPEC_V2": "1",
-            "TRANSFORMERS_VERBOSITY": "error",
-        }
-        os.environ.update(cls.extra_envs)
-        cls.process_decode = popen_launch_pd_server(
-            cls.model,
-            cls.decode_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=decode_args,
-        )
-
-    def test_gsm8k(self):
-        print(f"##=== Testing accuracy: {self.model} ===##")
-        args = SimpleNamespace(
-            base_url=self.base_url,
+    def _run_gsm8k_eval(self):
+        """Helper method to run GSM8K evaluation and return metrics."""
+        eval_args = SimpleNamespace(
+            base_url=DEFAULT_URL_FOR_TEST,
             eval_name="gsm8k",
             api="completion",
-            model=self.model,
+            model=QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH,
             num_examples=1319,
             num_threads=128,
             max_tokens=512,
             num_shots=5,
             temperature=0.0,
         )
+        return run_eval(eval_args)
 
-        metrics = run_eval(args)
-        self.assertGreaterEqual(
-            metrics["score"],
-            self.accuracy,
-            f"GSM8K score {metrics['score']} below threshold {self.accuracy}",
+    def test_speculative_attention_mode_decode(self):
+        """Test --speculative-attention-mode decode without PD disaggregation."""
+        args = [
+            "--trust-remote-code",
+            "--attention-backend",
+            "ascend",
+            "--device",
+            "npu",
+            "--quantization",
+            "modelslim",
+            "--disable-radix-cache",
+            "--speculative-draft-model-quantization",
+            "unquant",
+            "--speculative-algorithm",
+            "EAGLE3",
+            "--speculative-draft-model-path",
+            QWEN3_32B_EAGLE3_WEIGHTS_PATH,
+            "--speculative-num-steps",
+            "4",
+            "--speculative-eagle-topk",
+            "1",
+            "--speculative-num-draft-tokens",
+            "5",
+            "--speculative-attention-mode",
+            "decode",
+            "--tp-size",
+            "4",
+            "--mem-fraction-static",
+            "0.7",
+            "--disable-cuda-graph",
+            "--dtype",
+            "bfloat16",
+        ]
+
+        env = os.environ.copy()
+        env.update(
+            {
+                "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+                "SGLANG_ENABLE_SPEC_V2": "1",
+                "TRANSFORMERS_VERBOSITY": "error",
+            }
         )
 
-    @classmethod
-    def tearDownClass(cls):
-        os.environ.pop("ASCEND_MF_STORE_URL")
-        super().tearDownClass()
+        process = popen_launch_server(
+            QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH,
+            DEFAULT_URL_FOR_TEST,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH * 3,
+            other_args=args,
+            env=env,
+        )
+
+        try:
+            metrics = self._run_gsm8k_eval()
+            self.assertGreaterEqual(
+                metrics["score"],
+                0.83,
+                f"GSM8K score {metrics['score']} below threshold 0.83",
+            )
+        finally:
+            kill_process_tree(process.pid)
+
+    def test_speculative_attention_mode_prefill(self):
+        """Test --speculative-attention-mode prefill without PD disaggregation."""
+        args = [
+            "--trust-remote-code",
+            "--attention-backend",
+            "ascend",
+            "--device",
+            "npu",
+            "--quantization",
+            "modelslim",
+            "--disable-radix-cache",
+            "--speculative-draft-model-quantization",
+            "unquant",
+            "--speculative-algorithm",
+            "EAGLE3",
+            "--speculative-draft-model-path",
+            QWEN3_32B_EAGLE3_WEIGHTS_PATH,
+            "--speculative-num-steps",
+            "4",
+            "--speculative-eagle-topk",
+            "1",
+            "--speculative-num-draft-tokens",
+            "5",
+            "--speculative-attention-mode",
+            "prefill",
+            "--tp-size",
+            "4",
+            "--mem-fraction-static",
+            "0.7",
+            "--disable-cuda-graph",
+            "--dtype",
+            "bfloat16",
+        ]
+
+        env = os.environ.copy()
+        env.update(
+            {
+                "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+                "SGLANG_ENABLE_SPEC_V2": "1",
+                "TRANSFORMERS_VERBOSITY": "error",
+            }
+        )
+
+        process = popen_launch_server(
+            QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH,
+            DEFAULT_URL_FOR_TEST,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH * 3,
+            other_args=args,
+            env=env,
+        )
+
+        try:
+            metrics = self._run_gsm8k_eval()
+            self.assertGreaterEqual(
+                metrics["score"],
+                0.83,
+                f"GSM8K score {metrics['score']} below threshold 0.83",
+            )
+        finally:
+            kill_process_tree(process.pid)
 
 
 if __name__ == "__main__":

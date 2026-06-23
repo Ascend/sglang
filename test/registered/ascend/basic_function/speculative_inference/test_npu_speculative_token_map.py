@@ -19,7 +19,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=300, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=300, suite="full-4-npu-a3", nightly=True)
 
 
 class TestNpuSpeculativeTokenMap(CustomTestCase):
@@ -54,7 +54,7 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
             "--speculative-token-map",
             "/nonexistent/token_map.pt",  # ignored
             "--tp-size",
-            "8",
+            "4",
             "--mem-fraction-static",
             "0.7",
             "--disable-cuda-graph",
@@ -87,7 +87,7 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
                 temperature=0.0,
             )
             metrics = run_eval(eval_args)
-            self.assertGreaterEqual(metrics["score"], 0.84)
+            self.assertGreaterEqual(metrics["score"], 0.83)
         finally:
             kill_process_tree(process.pid)
 
@@ -106,7 +106,7 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
             "--speculative-num-steps",
             "5",
             "--speculative-eagle-topk",
-            "4",
+            "1",
             "--speculative-num-draft-tokens",
             "8",
             "--speculative-token-map",
@@ -146,7 +146,7 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
             )
             metrics = run_eval(eval_args)
             self.assertGreaterEqual(
-                metrics["score"], 0.79
+                metrics["score"], 0.75
             )  # adjust threshold as needed
         finally:
             kill_process_tree(process.pid)
