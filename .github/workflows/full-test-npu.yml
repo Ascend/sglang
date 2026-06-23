@@ -31,7 +31,7 @@ on:
         default: ''
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
-        required: false
+        required: true
         type: string
         default: ''
       test_scope:
