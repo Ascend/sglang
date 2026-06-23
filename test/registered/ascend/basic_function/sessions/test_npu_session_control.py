@@ -455,8 +455,8 @@ class TestNPUSessionControl(CustomTestCase):
                 "session_params": {
                     "id": session_id,
                     "rid": None,
-                    "offset": 0,
-                    "replace": False,
+                    "offset": -1,
+                    "replace": True,
                 },
                 "sampling_params": {
                     "temperature": 0,
@@ -479,8 +479,8 @@ class TestNPUSessionControl(CustomTestCase):
                         "session_params": {
                             "id": session_id,
                             "rid": rid_per_branch[j],
-                            "offset": 0,
-                            "replace": False,
+                            "offset": -1,
+                            "replace": True,
                         },
                         "sampling_params": {
                             "temperature": 0,
