@@ -77,6 +77,10 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -125,6 +129,7 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
     tpot = 50
     request_rate = float("inf")
     output_token_throughput = 660
+    pop_sglang_is_in_ci_for_gsp = True
 
     @classmethod
     def setUpClass(cls):

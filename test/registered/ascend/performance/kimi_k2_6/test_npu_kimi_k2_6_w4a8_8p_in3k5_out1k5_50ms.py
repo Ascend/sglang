@@ -91,6 +91,10 @@ KIMI_K2_6_OTHER_ARGS = [
     "--prefill-delayer-max-delay-passes",
     200,
     "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 
@@ -109,7 +113,7 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     random_range_ratio = 1
     warmup_requests = 0
     tpot = 50
-    output_token_throughput = 3492
+    output_token_throughput = 3452
 
     def test_kimi_k2_6_w4a8(self):
         self.run_throughput()

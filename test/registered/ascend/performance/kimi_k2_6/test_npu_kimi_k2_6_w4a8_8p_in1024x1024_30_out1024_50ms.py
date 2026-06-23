@@ -91,6 +91,10 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--prefill-delayer-max-delay-passes",
     200,
     "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 

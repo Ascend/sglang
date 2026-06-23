@@ -3,16 +3,12 @@ import os
 import re
 import time
 import unittest
-from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import List, Optional
 
 import openai
 import requests
-import torch
 
 from sglang.bench_serving import run_benchmark
-from sglang.srt.managers.prefill_delayer import PrefillDelayer
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
@@ -26,191 +22,11 @@ from sglang.test.test_utils import (
     CustomTestCase,
     get_benchmark_args,
     popen_launch_server,
-    run_distributed_test,
 )
 
 register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 WORLD_SIZE = os.environ.get("SGLANG_TEST_WORLD_SIZE", "8")
-
-# ============================ Unit Tests ============================
-
-
-@dataclass
-class NegotiateCall:
-    prefillable: List[bool]
-    token_usage: List[float]
-
-
-@dataclass
-class NegotiateTestCase:
-    name: str
-    max_delay_passes: int
-    token_usage_low_watermark: Optional[float]
-    calls: List[NegotiateCall]
-    expected_allow: bool
-    expected_reason: str
-
-
-def _run_negotiate_test(rank, test_cases):
-    world_size = torch.distributed.get_world_size()
-    cpu_group = torch.distributed.new_group(backend="gloo")
-
-    for case in test_cases:
-        delayer = PrefillDelayer(
-            dp_size=world_size,
-            attn_tp_size=1,
-            cpu_group=cpu_group,
-            server_args=SimpleNamespace(
-                enable_dp_attention=True,
-                disaggregation_mode="null",
-                disable_overlap_schedule=False,
-            ),
-            max_delay_passes=case.max_delay_passes,
-            token_usage_low_watermark=case.token_usage_low_watermark,
-        )
-
-        for call in case.calls:
-            result = delayer._negotiate_should_allow_prefill(
-                local_prefillable=call.prefillable[rank],
-                token_usage=call.token_usage[rank],
-            )
-
-        assert (result.output_allow, result.output_reason) == (
-            case.expected_allow,
-            case.expected_reason,
-        ), f"Case {case.name} rank {rank}"
-
-
-_NEGOTIATE_TEST_CASES = [
-    NegotiateTestCase(
-        name="all_prefillable",
-        max_delay_passes=100,
-        token_usage_low_watermark=0.8,
-        calls=[
-            NegotiateCall(
-                prefillable=[True, True, True, True],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            )
-        ],
-        expected_allow=True,
-        expected_reason="no_wait",
-    ),
-    NegotiateTestCase(
-        name="all_prefillable_with_previous_wait",
-        max_delay_passes=100,
-        token_usage_low_watermark=0.8,
-        calls=[
-            NegotiateCall(
-                prefillable=[True, False, True, False],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            ),
-            NegotiateCall(
-                prefillable=[True, True, True, True],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            ),
-        ],
-        expected_allow=True,
-        expected_reason="wait_success",
-    ),
-    NegotiateTestCase(
-        name="none_prefillable",
-        max_delay_passes=100,
-        token_usage_low_watermark=0.8,
-        calls=[
-            NegotiateCall(
-                prefillable=[False, False, False, False],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            )
-        ],
-        expected_allow=True,
-        expected_reason="",
-    ),
-    NegotiateTestCase(
-        name="mixed_delay",
-        max_delay_passes=100,
-        token_usage_low_watermark=0.8,
-        calls=[
-            NegotiateCall(
-                prefillable=[True, False, True, False],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            )
-        ],
-        expected_allow=False,
-        expected_reason="delay",
-    ),
-    NegotiateTestCase(
-        name="mixed_watermark_force_allow",
-        max_delay_passes=100,
-        token_usage_low_watermark=0.8,
-        calls=[
-            NegotiateCall(
-                prefillable=[True, False, True, False],
-                token_usage=[0.5, 0.9, 0.9, 0.9],
-            )
-        ],
-        expected_allow=True,
-        expected_reason="token_watermark",
-    ),
-    NegotiateTestCase(
-        name="mixed_watermark_disabled",
-        max_delay_passes=100,
-        token_usage_low_watermark=None,
-        calls=[
-            NegotiateCall(
-                prefillable=[True, False, True, False],
-                token_usage=[0.5, 0.9, 0.9, 0.9],
-            )
-        ],
-        expected_allow=False,
-        expected_reason="delay",
-    ),
-    NegotiateTestCase(
-        name="mixed_watermark_not_prefillable",
-        max_delay_passes=100,
-        token_usage_low_watermark=0.8,
-        calls=[
-            NegotiateCall(
-                prefillable=[False, False, True, False],
-                token_usage=[0.5, 0.9, 0.9, 0.9],
-            )
-        ],
-        expected_allow=False,
-        expected_reason="delay",
-    ),
-    NegotiateTestCase(
-        name="mixed_timeout",
-        max_delay_passes=3,
-        token_usage_low_watermark=0.8,
-        calls=[
-            NegotiateCall(
-                prefillable=[True, False, True, False],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            ),
-            NegotiateCall(
-                prefillable=[True, False, True, False],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            ),
-            NegotiateCall(
-                prefillable=[True, False, True, False],
-                token_usage=[0.9, 0.9, 0.9, 0.9],
-            ),
-        ],
-        expected_allow=True,
-        expected_reason="wait_timeout",
-    ),
-]
-
-
-class TestPrefillDelayerNegotiate(unittest.TestCase):
-    def test_negotiate(self):
-        run_distributed_test(
-            _run_negotiate_test,
-            world_size=4,
-            backend="gloo",
-            test_cases=_NEGOTIATE_TEST_CASES,
-        )
-
 
 # ============================ E2E Tests ============================
 

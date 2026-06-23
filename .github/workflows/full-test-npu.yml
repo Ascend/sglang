@@ -35,13 +35,15 @@ on:
         type: string
         default: ''
       test_scope:
-        description: 'Test scope: all / func / poc'
+        description: 'Test scope: all / func / poc / no_nightly / poc_no_nightly'
         required: true
         type: choice
         options:
           - all
           - func
           - poc
+          - no_nightly
+          - poc_no_nightly
         default: 'poc'
 
 concurrency:
@@ -317,7 +319,7 @@ jobs:
   debug-full-8-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-8
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -380,7 +382,7 @@ jobs:
   debug-full-16-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-16
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:

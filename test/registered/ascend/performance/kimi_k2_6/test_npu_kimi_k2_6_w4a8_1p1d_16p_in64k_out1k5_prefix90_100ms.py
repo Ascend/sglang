@@ -85,6 +85,10 @@ PREFILL_ARGS = [
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 DECODE_ARGS = [
@@ -129,6 +133,11 @@ DECODE_ARGS = [
     4,
     6,
     8,
+    12,
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
@@ -169,6 +178,7 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In64k_Out1k5_Prefix90_100ms(
     input_len = 64000
     output_len = 1500
     random_range_ratio = 1
+    ttft = 3000
     tpot = 100
     output_token_throughput = 52.56
 
