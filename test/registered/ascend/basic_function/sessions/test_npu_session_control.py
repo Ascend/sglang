@@ -480,7 +480,7 @@ class TestNPUSessionControl(CustomTestCase):
                             "id": session_id,
                             "rid": rid_per_branch[j],
                             "offset": -1,
-                            "replace": True,
+                            "replace": False,
                         },
                         "sampling_params": {
                             "temperature": 0,
