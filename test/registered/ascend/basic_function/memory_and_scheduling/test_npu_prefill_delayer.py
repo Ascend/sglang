@@ -3,9 +3,8 @@ import os
 import re
 import time
 import unittest
-
 from types import SimpleNamespace
-from typing import  Optional
+from typing import Optional
 
 import openai
 import requests
