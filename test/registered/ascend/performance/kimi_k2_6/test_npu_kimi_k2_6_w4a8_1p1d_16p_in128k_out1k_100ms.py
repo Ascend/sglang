@@ -88,6 +88,10 @@ PREFILL_ARGS = [
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 DECODE_ARGS = [
@@ -145,6 +149,10 @@ DECODE_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 MODEL_CONFIG = {

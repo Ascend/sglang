@@ -85,6 +85,10 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "unquant",
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "minimax-append-think",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 

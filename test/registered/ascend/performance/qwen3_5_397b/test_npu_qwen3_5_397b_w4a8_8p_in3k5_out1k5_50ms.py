@@ -102,6 +102,10 @@ QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 

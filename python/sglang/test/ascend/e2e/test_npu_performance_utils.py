@@ -338,6 +338,7 @@ def run_bench_serving(
     repeat_rate=None,
     temperature=None,
     top_p=None,
+    env=None,
 ):
     metrics_path = os.getenv("METRICS_DATA_FILE")
     result_file = (
@@ -449,7 +450,12 @@ def run_bench_serving(
     metrics = {"mean_ttft": None, "mean_tpot": None, "total_tps": None}
 
     process = subprocess.Popen(
-        cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+        cmd_args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env=env,
     )
     try:
         # Read output line by line
@@ -883,6 +889,7 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
 
     dp = None
     generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
 
     @classmethod
     def setUpClass(cls):
@@ -961,7 +968,15 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            metrics = run_bench_serving(**bench_params)
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
             assert_metrics(self, metrics)
 
 
@@ -993,6 +1008,7 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
 
     dp = None
     generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
 
     @classmethod
     def setUpClass(cls):
@@ -1085,7 +1101,15 @@ class TestAscendPerfMultiNodePdMixTestCaseBase(CustomTestCase):
                 "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            metrics = run_bench_serving(**bench_params)
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
             assert_metrics(self, metrics)
 
 
@@ -1117,6 +1141,7 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
 
     dp = None
     generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
 
     @classmethod
     def setUpClass(cls):
@@ -1226,5 +1251,13 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 "top_p": self.top_p,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
-            metrics = run_bench_serving(**bench_params)
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
             assert_metrics(self, metrics)
