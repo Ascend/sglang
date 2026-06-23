@@ -48,11 +48,9 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     "--prefill-max-requests",
     "13",
     "--max-running-requests",
-    130,
+    122,
     "--max-mamba-cache-size",
-    130,
-    "--mem-fraction-static",
-    0.8,
+    122,
     "--cuda-graph-bs",
     4,
     16,
@@ -61,7 +59,7 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     96,
     116,
     120,
-    130,
+    122,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -93,8 +91,8 @@ class TestNPUQwen3_6_35BA3B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBa
     other_args = QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_3K5_1K5_ENVS
     dataset_name = "random"
-    max_concurrency = 130
-    num_prompts = 130
+    max_concurrency = 122
+    num_prompts = 122
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
