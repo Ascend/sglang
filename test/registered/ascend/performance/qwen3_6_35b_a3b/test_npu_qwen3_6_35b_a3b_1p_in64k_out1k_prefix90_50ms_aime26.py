@@ -49,9 +49,9 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--mamba-scheduler-strategy",
     "extra_buffer",
     "--max-running-requests",
-    40,
+    42,
     "--max-mamba-cache-size",
-    200,
+    210,
     "--mem-fraction-static",
     0.71,
     "--cuda-graph-bs",
@@ -61,7 +61,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     24,
     32,
     36,
-    40,
+    42,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -120,8 +120,8 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
     other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
     dataset_name = "generated-shared-prefix"
-    max_concurrency = 40
-    num_prompts = 40
+    max_concurrency = 42
+    num_prompts = 42
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
