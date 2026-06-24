@@ -22,12 +22,7 @@ PREFILL_ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "HCCL_BUFFSIZE": "8",
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
-    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24699",
-    "ZBAL_ENABLE_GRAPH": "1",
+    "HCCL_BUFFSIZE": "1800",
 }
 
 DECODE_ENVS = {
@@ -133,7 +128,6 @@ DECODE_ARGS = [
     4,
     6,
     8,
-    12,
     "--reasoning-parser",
     "kimi_k2",
     "--tool-call-parser",
