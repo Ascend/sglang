@@ -88,7 +88,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
 
 # class TestNPUQwen3_6_35BA3B_1P_AIME2026(TestAscendAccuracyTestCaseBase):
 #     """Test NPU accuracy for Qwen3.6-35B-A3B 1p on AIME2026"""
-
+#
 #     model = QWEN3_6_35B_A3B_MODEL_PATH
 #     other_args = QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS
 #     envs = QWEN3_6_35B_A3B_64K_PREFIX_ENVS
