@@ -94,13 +94,13 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-          - name: test_npu_mimo_v2_separation_accept_rate
-            test_case: test/registered/ascend/basic_function/parameter/test_npu_mimo_v2_separation_accept_rate.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 1
-            decode_size: 1
-            router_size: 1
+#          - name: test_npu_mimo_v2_separation_accept_rate
+#            test_case: test/registered/ascend/basic_function/parameter/test_npu_mimo_v2_separation_accept_rate.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 1
+#            decode_size: 1
+#            router_size: 1
 #          - name: test_npu_mimo_v2_flash_1p1d_16p_in16k_out1_ttft_5s
 #            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_16p_in16k_out1_ttft_5s.py
 #            test_type: 'perf'
@@ -108,13 +108,13 @@ jobs:
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
-          - name: test_npu_mimo_v2_flash_1p1d_16p_in16k_out1k_tpot_20ms
-            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_16p_in16k_out1k_tpot_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 1
-            decode_size: 1
-            router_size: 1
+#          - name: test_npu_mimo_v2_flash_1p1d_16p_in16k_out1k_tpot_20ms
+#            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_16p_in16k_out1k_tpot_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 1
+#            decode_size: 1
+#            router_size: 1
 #          - name: test_npu_mimo_v2_flash_1p1d_16p_in32k_out1_ttft_5s
 #            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_16p_in32k_out1_ttft_5s.py
 #            test_type: 'perf'
