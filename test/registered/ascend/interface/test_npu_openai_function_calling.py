@@ -173,6 +173,7 @@ class TestOpenAIServerFunctionCalling(CustomTestCase):
         tool_call = response.choices[0].message.tool_calls[0]
         function_name = tool_call.function.name
         assert function_name == "add", "Function name should be 'add'"
+        function_arguments = tool_call.function.arguments
         function_arguments = json.loads(tool_call.function.arguments)
         assert function_arguments in [
             {"a": 3, "b": 5},
