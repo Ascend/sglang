@@ -37,7 +37,7 @@ jobs:
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
-
+          pip install --quiet tabulate
           # Test cases
           test_cases=(
             #"test/registered/ascend/basic_function/mimo/test_npu_mimo_v2.py"
