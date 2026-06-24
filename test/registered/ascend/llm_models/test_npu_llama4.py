@@ -31,7 +31,9 @@ class TestLlama4(unittest.TestCase):
             "--trust-remote-code",
             "--chat-template=llama-4",
             "--mem-fraction-static=0.8",
-            "--context-length=1000000",
+            "--context-length=8192",
+            "--disable-cuda-graph",
+            "--disable-radix-cache",
         ]
 
         variants = [
