@@ -45,6 +45,8 @@ QWEN3_6_35B_A3B_128K_1K_OTHER_ARGS = [
     128000,
     "--max-total-tokens",
     520960,
+    "--mem-fraction-static",
+    0.9,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
