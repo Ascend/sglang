@@ -2,11 +2,9 @@ import unittest
 
 from sglang.test.accuracy_test_runner import AccuracyTestParams
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.performance_test_runner import PerformanceTestParams
 from sglang.test.run_combined_tests import run_combined_tests
 from sglang.test.test_utils import ModelLaunchSettings
 
-# Runs on both H200 and B200 via nightly-8-gpu-common suite
 register_npu_ci(est_time=1800, suite="full-8-npu-a3", nightly=True)
 
 from sglang.test.ascend.test_ascend_utils import (
@@ -15,17 +13,14 @@ from sglang.test.ascend.test_ascend_utils import (
 
 
 class TestLlama4(unittest.TestCase):
-    """Unified test class for Llama-4-Scout performance and accuracy.
+    """Testcase: Verify that the inference accuracy of the meta-llama/Llama-4-Scout-17B-16E-Instruct model on the GSM8K dataset is no less than 0.9.
 
-    Llama4 has local attention mechanism with hybrid sliding window attention.
-    Single variant with TP=8 configuration.
-    Runs BOTH:
-    - Performance test (using NightlyBenchmarkRunner)
-    - Accuracy test (using run_eval with gsm8k)
+    [Test Category] Model
+    [Test Target] meta-llama/Llama-4-Scout-17B-16E-Instruct
     """
 
     def test_llama4(self):
-        """Run performance and accuracy for Llama-4-Scout."""
+        """Run accuracy test for Llama-4-Scout."""
         base_args = [
             "--tp=8",
             "--trust-remote-code",
@@ -49,9 +44,6 @@ class TestLlama4(unittest.TestCase):
             models=variants,
             test_name="Llama-4-Scout",
             accuracy_params=AccuracyTestParams(dataset="gsm8k", baseline_accuracy=0.9),
-            performance_params=PerformanceTestParams(
-                profile_dir="performance_profiles_llama4",
-            ),
         )
 
 
