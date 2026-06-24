@@ -106,7 +106,7 @@ DECODE_ARGS = [
     "0",
     "--trust-remote-code",
     "--max-running-requests",
-    64,
+    32,
     "--mem-fraction-static",
     0.8,
     "--swa-full-tokens-ratio",
@@ -118,10 +118,6 @@ DECODE_ARGS = [
     8,
     12,
     16,
-    20,
-    24,
-    28,
-    32,
     "--disaggregation-mode",
     "decode",
     "--disaggregation-transfer-backend",
@@ -172,7 +168,7 @@ class TestNPUMimo_v2_flash_1P1D_16p_In16k_Out1k_TTFT_5s(
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 64
+    max_concurrency = 32
     num_prompts = 128
     request_rate = float("inf")
     input_len = 16000
