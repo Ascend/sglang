@@ -17,6 +17,7 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
+
 MODEL_CONFIG = {
     "model_path": DEEPSEEK_R1_W8A8_MODEL_PATH,
     "prefill_envs": {
