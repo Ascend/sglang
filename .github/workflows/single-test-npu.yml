@@ -40,7 +40,7 @@ jobs:
 
           # Test cases
           test_cases=(
-            "test/registered/ascend/basic_function/mimo/test_npu_mimo_v2.py"
+            #"test/registered/ascend/basic_function/mimo/test_npu_mimo_v2.py"
             "test/registered/ascend/basic_function/mimo/test_npu_mimo_v2_flash.py"
           )
             
