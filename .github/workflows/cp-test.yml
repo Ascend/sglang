@@ -153,10 +153,10 @@ jobs:
       max-parallel: 3
       matrix:
         test_config:
-#          - name: test_npu_mimo_v2_accept_rate
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/basic_function/parameter/test_npu_mimo_v2_accept_rate.py
-#            test_type: 'function'
+          - name: test_npu_mimo_v2_accept_rate
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/basic_function/parameter/test_npu_mimo_v2_accept_rate.py
+            test_type: 'function'
 #          - name: test_npu_llava_onevision_qwen2_7b_ov
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/ascend/vlm_models/test_npu_llava_onevision_qwen2_7b_ov.py
