@@ -47,6 +47,8 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     65536,
     "--max-total-tokens",
     470784,
+	"--mem-fraction-static",
+    0.9,
     "--trust-remote-code",
     "--mamba-scheduler-strategy",
     "extra_buffer",
