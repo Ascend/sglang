@@ -3,6 +3,7 @@ import unittest
 # Monkey-patch the default server launch timeout before importing test modules.
 # Llama-4-Scout 17B with TP=8 requires more than the default 600s to load.
 import sglang.test.test_utils as _test_utils
+
 _test_utils.DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 1800
 
 from sglang.test.accuracy_test_runner import AccuracyTestParams
