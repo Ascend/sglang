@@ -63,7 +63,7 @@ OTHER_ARGS = [
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
-    "auto"
+    "auto",
     "--enable-dp-attention",
     "--dp-size",
     "16",
