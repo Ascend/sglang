@@ -42,3 +42,4 @@ class TestMatchedStop(CustomTestCase, MatchedStopMixin):
 
 if __name__ == "__main__":
     unittest.main()
+
