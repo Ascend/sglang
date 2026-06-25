@@ -114,7 +114,9 @@ def _chat_completion(base_url, model, content, max_tokens=64, temperature=0):
         "max_tokens": max_tokens,
     }
     resp = requests.post(f"{base_url}/v1/chat/completions", json=payload, timeout=300)
-    assert resp.status_code == 200, f"Request failed {resp.status_code}: {resp.text[:300]}"
+    assert (
+        resp.status_code == 200
+    ), f"Request failed {resp.status_code}: {resp.text[:300]}"
     return resp.json()["choices"][0]["message"]["content"]
 
 
@@ -565,9 +567,7 @@ class TestNpuEPDDisaggregationQwen35(CustomTestCase):
             {"type": "image_url", "image_url": {"url": _INLINE_IMAGE_URL}},
             {"type": "text", "text": "Describe this image in a sentence."},
         ]
-        text = _chat_completion(
-            self.language_url, self.model, content, max_tokens=256
-        )
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=256)
         print(f"[Qwen3.5 EPD] Image response: {text}")
         self.assertGreater(len(text), 0)
 
@@ -580,9 +580,7 @@ class TestNpuEPDDisaggregationQwen35(CustomTestCase):
             {"type": "text", "text": "Describe the video."},
             {"type": "video_url", "video_url": {"url": video_url}},
         ]
-        text = _chat_completion(
-            self.language_url, self.model, content, max_tokens=512
-        )
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=512)
         print(f"[Qwen3.5 EPD] Video response: {text}")
         self.assertGreater(len(text), 0)
 
