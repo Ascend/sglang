@@ -2,10 +2,11 @@ import unittest
 
 from sglang.test.accuracy_test_runner import AccuracyTestParams
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.performance_test_runner import PerformanceTestParams
 from sglang.test.run_combined_tests import run_combined_tests
 from sglang.test.test_utils import ModelLaunchSettings
 
-register_npu_ci(est_time=1800, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="full-8-npu-a3", nightly=True)
 
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_4_SCOUT_17B_16E_INSTRUCT_WEIGHTS_PATH,
@@ -20,7 +21,7 @@ class TestLlama4(unittest.TestCase):
     """
 
     def test_llama4(self):
-        """Run accuracy test for Llama-4-Scout."""
+        """Run performance and accuracy test for Llama-4-Scout."""
         base_args = [
             "--tp=8",
             "--trust-remote-code",
@@ -37,6 +38,7 @@ class TestLlama4(unittest.TestCase):
                 tp_size=8,
                 extra_args=base_args,
                 variant="TP8",
+                launch_timeout=1800,
             ),
         ]
 
@@ -44,6 +46,9 @@ class TestLlama4(unittest.TestCase):
             models=variants,
             test_name="Llama-4-Scout",
             accuracy_params=AccuracyTestParams(dataset="gsm8k", baseline_accuracy=0.9),
+            performance_params=PerformanceTestParams(
+                profile_dir="performance_profiles_llama4",
+            ),
         )
 
 
