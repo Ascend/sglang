@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: Matched stop test - chat completions only
+# test round 6: Matched stop test - fix trailing newline
 
 on:
   pull_request:
