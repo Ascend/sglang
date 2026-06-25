@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: Matched stop test - Qwen3 chat format prompt
+# test round 5: Matched stop test - chat completions only
 
 on:
   pull_request:
