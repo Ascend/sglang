@@ -15,6 +15,12 @@ NPU Adaptations
     * TestEPDDisaggregationGrpcEncoderMMMU   (needs --grpc-mode)
     * TestEPDDisaggregationGrpcEncoderOnly   (needs --grpc-mode)
     * TestEPDDisaggregationMooncake          (needs mooncake RDMA)
+- Removed ``--disaggregation-mode prefill/decode`` (PD disaggregation):
+  Qwen3-VL-30B-A3B-Instruct uses Qwen3.5 GDN attention which is not
+  supported on NPU when PD disaggregation triggers the GDN forward path.
+  The existing NPU EPD test (test_npu_disaggregated_vlm.py) also avoids
+  PD disaggregation for the same reason.  Tests use encoder + language
+  only (no PD split, no load balancer), matching the proven NPU pattern.
 - Model paths changed to NPU-available weights (ModelScope cache).
 - Added NPU args: --attention-backend ascend, --disable-cuda-graph,
   --mem-fraction-static 0.8.
@@ -30,14 +36,10 @@ NPU Adaptations
 - Removed @unittest.skipIf(is_in_ci()) decorators so tests run in NPU CI.
 - TP size changed from 1 (GPU) to 2 (NPU) because the 30B model requires
   tensor parallelism across multiple NPU cards.
-- _wait_server_ready checks process exit to avoid infinite polling when
-  a server crashes during startup.
 """
 
 import base64
-import io
 import os
-import subprocess
 import threading
 import time
 import unittest
@@ -57,7 +59,6 @@ from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
-    popen_with_error_check,
 )
 
 os.environ["SGLANG_MM_SKIP_COMPUTE_HASH"] = "True"
@@ -92,50 +93,6 @@ def _file_to_data_url(path, mime="image/png"):
         return f"data:{mime};base64,{base64.b64encode(f.read()).decode()}"
 
 
-def _wait_server_ready(url, process=None, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
-    """Poll a health endpoint until 200 or timeout.
-
-    If *process* is provided, also check whether the process has exited
-    prematurely (poll() returns non-None) to avoid infinite polling on a
-    crashed server.
-    """
-    start = time.time()
-    while True:
-        # Check if the server process has already exited
-        if process is not None:
-            rc = process.poll()
-            if rc is not None:
-                # Try to read any captured output for diagnosis
-                stderr_snippet = ""
-                stdout_snippet = ""
-                if hasattr(process, "stderr") and process.stderr:
-                    try:
-                        process.stderr.seek(0)
-                        stderr_snippet = process.stderr.read()[-2000:]
-                    except Exception:
-                        pass
-                if hasattr(process, "stdout") and process.stdout:
-                    try:
-                        process.stdout.seek(0)
-                        stdout_snippet = process.stdout.read()[-2000:]
-                    except Exception:
-                        pass
-                raise RuntimeError(
-                    f"Server {url} process exited with code {rc} before "
-                    f"becoming ready.\nSTDOUT: {stdout_snippet}\n"
-                    f"STDERR: {stderr_snippet}"
-                )
-        try:
-            if requests.get(url, timeout=5).status_code == 200:
-                print(f"Server {url} is ready")
-                return
-        except Exception:
-            pass
-        if time.time() - start > timeout:
-            raise RuntimeError(f"Server {url} not ready within {timeout}s")
-        time.sleep(2)
-
-
 def _chat_completion(base_url, model, content, max_tokens=64, temperature=0):
     """Send a multimodal chat completion request and return the text."""
     payload = {
@@ -151,69 +108,20 @@ def _chat_completion(base_url, model, content, max_tokens=64, temperature=0):
     return resp.json()["choices"][0]["message"]["content"]
 
 
-def _launch_server_with_capture(model, url, other_args, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
-    """Launch a server with stdout/stderr capture for debugging.
-
-    Returns (process, stdout_buf, stderr_buf).
-    """
-    stdout_buf = io.StringIO()
-    stderr_buf = io.StringIO()
-    proc = popen_launch_server(
-        model,
-        url,
-        timeout=timeout,
-        other_args=other_args,
-        return_stdout_stderr=(stdout_buf, stderr_buf),
-    )
-    # Attach buffers to process for _wait_server_ready to read on exit
-    proc._capture_stdout = stdout_buf
-    proc._capture_stderr = stderr_buf
-    return proc, stdout_buf, stderr_buf
-
-
-def _wait_server_ready_captured(url, proc, stdout_buf, stderr_buf, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
-    """Like _wait_server_ready but reads from captured buffers on exit."""
-    start = time.time()
-    while True:
-        rc = proc.poll()
-        if rc is not None:
-            stdout_buf.seek(0)
-            stderr_buf.seek(0)
-            raise RuntimeError(
-                f"Server {url} process exited with code {rc} before ready.\n"
-                f"STDOUT: {stdout_buf.read()[-3000:]}\n"
-                f"STDERR: {stderr_buf.read()[-3000:]}"
-            )
-        try:
-            if requests.get(url, timeout=5).status_code == 200:
-                print(f"Server {url} is ready")
-                return
-        except Exception:
-            pass
-        if time.time() - start > timeout:
-            stdout_buf.seek(0)
-            stderr_buf.seek(0)
-            raise RuntimeError(
-                f"Server {url} not ready within {timeout}s\n"
-                f"STDOUT: {stdout_buf.read()[-3000:]}\n"
-                f"STDERR: {stderr_buf.read()[-3000:]}"
-            )
-        time.sleep(2)
-
-
 # ---------------------------------------------------------------------------
-# Base class — EPD with encode + prefill + decode + load balancer
+# Base class — EPD with encoder + language (no PD split, no LB)
 # ---------------------------------------------------------------------------
 
 
 class NpuEPDBase(CustomTestCase):
-    """Base class that boots servers for full EPD + PD disaggregation.
+    """Base class that boots encoder + language servers for EPD.
 
-    Server layout (TP=2 per server):
-      encode  — encoder-only  (NPUs 0-1)
-      prefill — language-only, disaggregation-mode=prefill (NPUs 2-3)
-      decode  — disaggregation-mode=decode (NPUs 4-5)
-      lb      — sglang_router load balancer (no NPU)
+    Server layout (TP=2 per server, 4 NPUs total):
+      encode   — encoder-only  (NPUs 0-1)
+      language — language-only (NPUs 2-3)
+
+    No PD disaggregation (no prefill/decode split, no load balancer) to
+    avoid triggering the unsupported GDN attention path on NPU.
 
     Subclasses override ``model`` and optionally ``encoder_transfer_backend``.
     """
@@ -227,29 +135,13 @@ class NpuEPDBase(CustomTestCase):
         parsed = urlparse(DEFAULT_URL_FOR_TEST)
         cls.base_host = parsed.hostname
         bp = int(parsed.port)
-        cls.lb_port = str(bp)
         cls.encode_port = str(bp + 300)
-        cls.prefill_port = str(bp + 100)
-        cls.decode_port = str(bp + 200)
-        cls.bootstrap_port = str(bp + 500)
+        cls.language_port = str(bp + 100)
         cls.encode_url = f"http://{cls.base_host}:{cls.encode_port}"
-        cls.prefill_url = f"http://{cls.base_host}:{cls.prefill_port}"
-        cls.decode_url = f"http://{cls.base_host}:{cls.decode_port}"
-        cls.lb_url = f"http://{cls.base_host}:{cls.lb_port}"
+        cls.language_url = f"http://{cls.base_host}:{cls.language_port}"
         cls.process_encode = None
-        cls.process_prefill = None
-        cls.process_decode = None
-        cls.process_lb = None
+        cls.process_language = None
         cls.api_key = "sk-123456"
-        # Buffers for captured output
-        cls._encode_stdout = io.StringIO()
-        cls._encode_stderr = io.StringIO()
-        cls._prefill_stdout = io.StringIO()
-        cls._prefill_stderr = io.StringIO()
-        cls._decode_stdout = io.StringIO()
-        cls._decode_stderr = io.StringIO()
-
-    # -- server arg builders ------------------------------------------------
 
     @classmethod
     def _encode_args(cls):
@@ -266,41 +158,20 @@ class NpuEPDBase(CustomTestCase):
         ] + NPU_COMMON_ARGS
 
     @classmethod
-    def _prefill_args(cls):
+    def _language_args(cls):
         return [
             "--language-only",
             "--encoder-urls",
             cls.encode_url,
             "--encoder-transfer-backend",
             cls.encoder_transfer_backend,
-            "--disaggregation-mode",
-            "prefill",
-            "--disaggregation-bootstrap-port",
-            cls.bootstrap_port,
             "--tp-size",
             cls.tp_size,
             "--base-gpu-id",
             str(int(cls.tp_size)),
             "--port",
-            cls.prefill_port,
+            cls.language_port,
         ] + NPU_COMMON_ARGS
-
-    @classmethod
-    def _decode_args(cls):
-        return [
-            "--disaggregation-mode",
-            "decode",
-            "--disaggregation-bootstrap-port",
-            cls.bootstrap_port,
-            "--tp-size",
-            cls.tp_size,
-            "--base-gpu-id",
-            str(int(cls.tp_size) * 2),
-            "--port",
-            cls.decode_port,
-        ] + NPU_COMMON_ARGS
-
-    # -- server launchers (with output capture) -----------------------------
 
     @classmethod
     def start_encode(cls):
@@ -310,77 +181,30 @@ class NpuEPDBase(CustomTestCase):
             cls.encode_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._encode_args(),
-            return_stdout_stderr=(cls._encode_stdout, cls._encode_stderr),
         )
 
     @classmethod
-    def start_prefill(cls):
-        print(f"[EPD] Starting prefill on {cls.prefill_url} (NPUs 2-3)")
-        cls.process_prefill = popen_launch_server(
+    def start_language(cls):
+        print(f"[EPD] Starting language on {cls.language_url} (NPUs 2-3)")
+        cls.process_language = popen_launch_server(
             cls.model,
-            cls.prefill_url,
+            cls.language_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=cls._prefill_args(),
-            return_stdout_stderr=(cls._prefill_stdout, cls._prefill_stderr),
+            other_args=cls._language_args(),
         )
 
     @classmethod
-    def start_decode(cls):
-        print(f"[EPD] Starting decode on {cls.decode_url} (NPUs 4-5)")
-        cls.process_decode = popen_launch_server(
-            cls.model,
-            cls.decode_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=cls._decode_args(),
-            return_stdout_stderr=(cls._decode_stdout, cls._decode_stderr),
-        )
+    def start_servers(cls):
+        """Start encode + language servers.
 
-    @classmethod
-    def launch_lb(cls):
-        cmd = [
-            "python3",
-            "-m",
-            "sglang_router.launch_router",
-            "--pd-disaggregation",
-            "--mini-lb",
-            "--prefill",
-            cls.prefill_url,
-            "--decode",
-            cls.decode_url,
-            "--host",
-            cls.base_host,
-            "--port",
-            cls.lb_port,
-        ]
-        print("Starting load balancer:", " ".join(cmd))
-        cls.process_lb = popen_with_error_check(cmd)
-        _wait_server_ready(cls.lb_url + "/health", process=cls.process_lb)
-
-    @classmethod
-    def start_all_servers(cls):
-        """Start encode, then prefill+decode in parallel, then lb.
-
-        popen_launch_server already waits for health internally, so no
-        extra _wait_server_ready is needed here.  If a server fails to
-        start, popen_launch_server raises an exception with the error.
+        popen_launch_server waits for health internally.
         """
         cls.start_encode()
-        t_prefill = threading.Thread(target=cls.start_prefill)
-        t_decode = threading.Thread(target=cls.start_decode)
-        t_prefill.start()
-        t_decode.start()
-        t_prefill.join()
-        t_decode.join()
-        cls.launch_lb()
+        cls.start_language()
 
     @classmethod
     def tearDownClass(cls):
-        for p in [
-            cls.process_lb,
-            cls.process_decode,
-            cls.process_prefill,
-            cls.process_encode,
-        ]:
+        for p in [cls.process_language, cls.process_encode]:
             if p:
                 try:
                     kill_process_tree(p.pid)
@@ -404,36 +228,33 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
       - encoder_transfer_backend = zmq_to_scheduler (no mooncake).
       - Audio tests are skipped (no audio fixture in NPU CI cache).
       - Cache-hit tests are removed (require --enable-mm-global-cache).
-      - Uses Qwen3-VL-30B (Omni model may not be in CI cache; this still
-        validates the same EPD pipeline for multimodal requests).
+      - No PD disaggregation (GDN not supported on NPU).
 
     [Test Category] EPD
     [Test Target] --encoder-only; --language-only; --encoder-urls;
-                   --encoder-transfer-backend zmq_to_scheduler;
-                   --disaggregation-mode prefill/decode; multimodal
+                   --encoder-transfer-backend zmq_to_scheduler; multimodal
     """
 
     model = QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH
-    server_type = "server"  # NPU: standard HTTP server mode (no gRPC)
+    server_type = "server"
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         print(
             f"Setting up NPU EPD Omni: model={cls.model}, "
-            f"encode={cls.encode_port}, prefill={cls.prefill_port}, "
-            f"decode={cls.decode_port}, server_type={cls.server_type}, "
-            f"backend={cls.encoder_transfer_backend}"
+            f"encode={cls.encode_port}, language={cls.language_port}, "
+            f"server_type={cls.server_type}, backend={cls.encoder_transfer_backend}"
         )
-        cls.start_all_servers()
+        cls.start_servers()
 
     def test_image(self):
-        """Single-image request through the full EPD pipeline."""
+        """Single-image request through the EPD pipeline."""
         content = [
             {"type": "image_url", "image_url": {"url": _INLINE_IMAGE_URL}},
             {"type": "text", "text": "Describe this image in a sentence."},
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=128)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=128)
         print(f"[Omni EPD] Image response: {text}")
         self.assertGreater(len(text), 0)
 
@@ -446,12 +267,12 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
             {"type": "image_url", "image_url": {"url": image_url}},
             {"type": "text", "text": "What do you see in this image?"},
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=128)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=128)
         print(f"[Omni EPD] Local image response: {text}")
         self.assertGreater(len(text), 0)
 
     def test_video(self):
-        """Video request through the full EPD pipeline."""
+        """Video request through the EPD pipeline."""
         if not os.path.exists(VIDEO_JOBS_PATH):
             self.skipTest(f"Video file not found: {VIDEO_JOBS_PATH}")
         video_url = _file_to_data_url(VIDEO_JOBS_PATH, mime="video/mp4")
@@ -459,7 +280,7 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
             {"type": "text", "text": "Describe the video."},
             {"type": "video_url", "video_url": {"url": video_url}},
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=512)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=512)
         print(f"[Omni EPD] Video response: {text}")
         self.assertGreater(len(text), 0)
 
@@ -478,7 +299,7 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
                 "2. Describe what happens in the video.",
             },
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=512)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=512)
         print(f"[Omni EPD] Mixed image+video response: {text}")
         self.assertGreater(len(text), 0)
 
@@ -497,7 +318,7 @@ class TestNpuEPDDisaggregationOneEncoder(NpuEPDBase):
 
     [Test Category] EPD
     [Test Target] --encoder-only; --language-only; --encoder-urls;
-                   --disaggregation-mode prefill/decode; single encoder
+                   single encoder
     """
 
     model = QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH
@@ -507,30 +328,24 @@ class TestNpuEPDDisaggregationOneEncoder(NpuEPDBase):
         super().setUpClass()
         print(
             f"Setting up NPU EPD (one encoder): "
-            f"encode={cls.encode_port}, prefill={cls.prefill_port}, "
-            f"decode={cls.decode_port}"
+            f"encode={cls.encode_port}, language={cls.language_port}"
         )
-        cls.start_all_servers()
+        cls.start_servers()
 
     def test_encode_health(self):
         """Encoder-only server /health returns 200."""
         r = requests.get(f"{self.encode_url}/health", timeout=10)
         self.assertEqual(r.status_code, 200)
 
-    def test_prefill_health(self):
-        """Prefill server /health returns 200."""
-        r = requests.get(f"{self.prefill_url}/health", timeout=10)
-        self.assertEqual(r.status_code, 200)
-
-    def test_decode_health(self):
-        """Decode server /health returns 200."""
-        r = requests.get(f"{self.decode_url}/health", timeout=10)
+    def test_language_health(self):
+        """Language-only server /health returns 200."""
+        r = requests.get(f"{self.language_url}/health", timeout=10)
         self.assertEqual(r.status_code, 200)
 
     def test_text_generation(self):
-        """Text-only request through the LB (prefill+decode)."""
+        """Text-only request to the language server."""
         resp = requests.post(
-            f"{self.lb_url}/generate",
+            f"{self.language_url}/generate",
             json={
                 "text": "The capital of France is",
                 "sampling_params": {"temperature": 0, "max_new_tokens": 16},
@@ -541,12 +356,12 @@ class TestNpuEPDDisaggregationOneEncoder(NpuEPDBase):
         self.assertIn("Paris", resp.json().get("text", ""))
 
     def test_image_processing(self):
-        """Single-image request through the full EPD pipeline via LB."""
+        """Single-image request through the EPD pipeline."""
         content = [
             {"type": "image_url", "image_url": {"url": _INLINE_IMAGE_URL}},
             {"type": "text", "text": "Describe the image briefly."},
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=64)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=64)
         print(f"[OneEncoder EPD] Image response: {text}")
         self.assertGreater(len(text), 0)
 
@@ -557,13 +372,13 @@ class TestNpuEPDDisaggregationOneEncoder(NpuEPDBase):
             {"type": "image_url", "image_url": {"url": _INLINE_IMAGE_URL}},
             {"type": "text", "text": "Describe these two images briefly."},
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=64)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=64)
         print(f"[OneEncoder EPD] Multi-image response: {text}")
         self.assertGreater(len(text), 0)
 
 
 # ---------------------------------------------------------------------------
-# 3. Qwen3.5 EPD — encoder + language-only (no PD split, no LB)
+# 3. Qwen3.5 EPD — encoder + language-only (mirrors GPU Qwen35 test)
 # ---------------------------------------------------------------------------
 
 
@@ -586,15 +401,11 @@ class TestNpuEPDDisaggregationQwen35(NpuEPDBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.language_url = cls.prefill_url
         print(
             f"Setting up NPU Qwen3.5 EPD: model={cls.model}, "
-            f"encode={cls.encode_port}, language={cls.prefill_port}"
+            f"encode={cls.encode_port}, language={cls.language_port}"
         )
-        # Only start encode + prefill (language), no decode, no LB.
-        # popen_launch_server waits for health internally.
-        cls.start_encode()
-        cls.start_prefill()
+        cls.start_servers()
 
     def test_image(self):
         """Single-image request to the language server."""
@@ -621,7 +432,7 @@ class TestNpuEPDDisaggregationQwen35(NpuEPDBase):
 
 
 # ---------------------------------------------------------------------------
-# 4. Multi-encoder EPD — two encode servers + prefill + decode + LB
+# 4. Multi-encoder EPD — two encode servers + language
 # ---------------------------------------------------------------------------
 
 
@@ -632,16 +443,14 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
     servers on different GPUs and registers both URLs with the prefill
     server.  MMMU eval is replaced with direct image tests on NPU.
 
-    Server layout (TP=2, 8 NPUs total):
+    Server layout (TP=2, 6 NPUs total):
       encode1 — NPUs 0-1
       encode2 — NPUs 2-3
-      prefill — NPUs 4-5
-      decode  — NPUs 6-7
-      lb      — no NPU
+      language — NPUs 4-5
 
     [Test Category] EPD
     [Test Target] --encoder-only; --language-only; multiple --encoder-urls;
-                   --disaggregation-mode prefill/decode; load balancing
+                   load balancing
     """
 
     model = QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH
@@ -649,15 +458,13 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.encode_port2 = str(int(cls.lb_port) + 301)
+        cls.encode_port2 = str(int(cls.encode_port) + 1)
         cls.encode_url2 = f"http://{cls.base_host}:{cls.encode_port2}"
         cls.process_encode2 = None
-        cls._encode2_stdout = io.StringIO()
-        cls._encode2_stderr = io.StringIO()
         print(
             f"Setting up NPU EPD (multi-encoder): "
             f"encode1={cls.encode_port}, encode2={cls.encode_port2}, "
-            f"prefill={cls.prefill_port}, decode={cls.decode_port}"
+            f"language={cls.language_port}"
         )
         # Start two encoders in parallel
         t1 = threading.Thread(target=cls._start_encode2)
@@ -666,15 +473,26 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
         t2.start()
         t1.join()
         t2.join()
-        # Start prefill + decode in parallel
-        tp = threading.Thread(target=cls.start_prefill)
-        td = threading.Thread(target=cls.start_decode)
-        tp.start()
-        td.start()
-        tp.join()
-        td.join()
-        # popen_launch_server waits for health internally.
-        cls.launch_lb()
+        # Start language server (with both encoder URLs)
+        cls.start_language()
+
+    @classmethod
+    def _language_args(cls):
+        """Override to include both encoder URLs."""
+        return [
+            "--language-only",
+            "--encoder-urls",
+            cls.encode_url,
+            cls.encode_url2,
+            "--encoder-transfer-backend",
+            cls.encoder_transfer_backend,
+            "--tp-size",
+            cls.tp_size,
+            "--base-gpu-id",
+            str(int(cls.tp_size) * 2),
+            "--port",
+            cls.language_port,
+        ] + NPU_COMMON_ARGS
 
     @classmethod
     def _start_encode2(cls):
@@ -695,70 +513,11 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
             cls.encode_url2,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
-            return_stdout_stderr=(cls._encode2_stdout, cls._encode2_stderr),
-        )
-
-    @classmethod
-    def start_prefill(cls):
-        args = [
-            "--language-only",
-            "--encoder-urls",
-            cls.encode_url,
-            cls.encode_url2,
-            "--encoder-transfer-backend",
-            cls.encoder_transfer_backend,
-            "--disaggregation-mode",
-            "prefill",
-            "--disaggregation-bootstrap-port",
-            cls.bootstrap_port,
-            "--tp-size",
-            cls.tp_size,
-            "--base-gpu-id",
-            str(int(cls.tp_size) * 2),
-            "--port",
-            cls.prefill_port,
-        ] + NPU_COMMON_ARGS
-        print(f"[EPD] Starting prefill on {cls.prefill_url} (NPUs 4-5)")
-        cls.process_prefill = popen_launch_server(
-            cls.model,
-            cls.prefill_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=args,
-            return_stdout_stderr=(cls._prefill_stdout, cls._prefill_stderr),
-        )
-
-    @classmethod
-    def start_decode(cls):
-        args = [
-            "--disaggregation-mode",
-            "decode",
-            "--disaggregation-bootstrap-port",
-            cls.bootstrap_port,
-            "--tp-size",
-            cls.tp_size,
-            "--base-gpu-id",
-            str(int(cls.tp_size) * 3),
-            "--port",
-            cls.decode_port,
-        ] + NPU_COMMON_ARGS
-        print(f"[EPD] Starting decode on {cls.decode_url} (NPUs 6-7)")
-        cls.process_decode = popen_launch_server(
-            cls.model,
-            cls.decode_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=args,
-            return_stdout_stderr=(cls._decode_stdout, cls._decode_stderr),
         )
 
     @classmethod
     def tearDownClass(cls):
-        for p in [
-            cls.process_lb,
-            cls.process_decode,
-            cls.process_prefill,
-            cls.process_encode2,
-            cls.process_encode,
-        ]:
+        for p in [cls.process_language, cls.process_encode2, cls.process_encode]:
             if p:
                 try:
                     kill_process_tree(p.pid)
@@ -777,12 +536,12 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
         self.assertEqual(r.status_code, 200)
 
     def test_image_processing(self):
-        """Single-image request via LB with multiple encoders available."""
+        """Single-image request with multiple encoders available."""
         content = [
             {"type": "image_url", "image_url": {"url": _INLINE_IMAGE_URL}},
             {"type": "text", "text": "Describe the image briefly."},
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=64)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=64)
         print(f"[MultiEncoders EPD] Image response: {text}")
         self.assertGreater(len(text), 0)
 
@@ -793,7 +552,7 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
             {"type": "image_url", "image_url": {"url": _INLINE_IMAGE_URL}},
             {"type": "text", "text": "Describe these two images briefly."},
         ]
-        text = _chat_completion(self.lb_url, self.model, content, max_tokens=64)
+        text = _chat_completion(self.language_url, self.model, content, max_tokens=64)
         print(f"[MultiEncoders EPD] Multi-image response: {text}")
         self.assertGreater(len(text), 0)
 
