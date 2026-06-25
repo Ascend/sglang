@@ -40,8 +40,7 @@ jobs:
           pip install --quiet tabulate
           # Test cases
           test_cases=(
-            #"test/registered/ascend/basic_function/mimo/test_npu_mimo_v2.py"
-            "test/registered/ascend/basic_function/mimo/test_npu_mimo_v2_flash.py"
+            "test/registered/ascend/interface/test_npu_serving_transcription.py"
           )
             
 
