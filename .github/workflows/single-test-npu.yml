@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: Matched stop test - fix trailing newline
+# test round 7: Matched stop test - fix trailing newline properly
 
 on:
   pull_request:
