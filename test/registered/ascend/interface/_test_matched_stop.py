@@ -29,6 +29,22 @@ class TestMatchedStop(CustomTestCase, MatchedStopMixin):
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
 
+    def test_finish_stop_eos(self):
+        # Qwen3 EOS token ID is 151645
+        eos_token_ids = [151645]
+        self._run_completions_generation(
+            prompt="What is 2 + 2?",
+            max_tokens=1000,
+            finish_reason="stop",
+            matched_stop=eos_token_ids,
+        )
+        self._run_chat_completions_generation(
+            prompt="What is 2 + 2?",
+            max_tokens=1000,
+            finish_reason="stop",
+            matched_stop=eos_token_ids,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
