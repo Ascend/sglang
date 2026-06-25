@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: Matched stop test
+# test round 2: Matched stop test
 
 on:
   pull_request:
