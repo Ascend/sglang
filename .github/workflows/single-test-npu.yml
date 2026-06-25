@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: mimo
+# test round 4: matched stop test
 
 on:
   pull_request:
@@ -40,9 +40,9 @@ jobs:
           pip install --quiet tabulate
           # Test cases
           test_cases=(
-            test/registered/ascend/basic_function/mimo/test_npu_serving_transcription.py
+            "test/registered/ascend/interface/_test_matched_stop.py"
           )
-            
+
 
           for test_case in "${test_cases[@]}"; do
             if [ ! -f "${sglang_source_path}/${test_case}" ]; then

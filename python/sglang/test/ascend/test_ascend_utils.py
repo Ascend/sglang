@@ -89,9 +89,7 @@ GPT_OSS_120B_BF16_WEIGHTS_PATH = os.path.join(
 GRANITE_3_0_3B_A800M_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "ibm-granite/granite-3.0-3b-a800m-instruct"
 )
-WHISPER_LARGE_V3_WEIGHTS_PATH = os.path.join(
-    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-1.7B"
-)
+WHISPER_LARGE_V3_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-1.7B")
 GRANITE_3_1_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "ibm-granite/granite-3.1-8b-instruct"
 )
