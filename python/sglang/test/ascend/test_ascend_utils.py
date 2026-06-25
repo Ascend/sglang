@@ -413,7 +413,9 @@ QWQ_32B_W8A8_WEIGHTS_FOR_TEST = ModelTestConfig(
 
 # Default configuration for testing
 DEFAULT_WEIGHTS_FOR_TEST = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_FOR_TEST
-
+WHISPER_LARGE_V3_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "openai-mirror/whisper-large-v3"
+)
 
 def run_command(cmd, shell=True):
     """Execute system command and return stdout
