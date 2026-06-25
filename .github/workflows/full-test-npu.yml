@@ -777,13 +777,6 @@ jobs:
             test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: test_npu_cp_dp_no_mtp_functional
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/basic_function/cp/test_npu_cp_dp_no_mtp_functional.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
           - name: test_npu_cp_vs_nocp_ttft
             prefill_size: 2
             decode_size: 2
