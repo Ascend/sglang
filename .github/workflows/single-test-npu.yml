@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: Request length validation test - remove unsupported token_ids_logprob tests (LLAMA model)
+# test round 7: Request length validation test - restore token_ids_logprob tests
 
 on:
   pull_request:
