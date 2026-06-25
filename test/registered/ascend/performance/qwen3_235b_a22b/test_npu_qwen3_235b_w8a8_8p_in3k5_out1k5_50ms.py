@@ -94,6 +94,10 @@ QWEN3_235B_OTHER_ARGS = [
     "24",
     "26",
     "27",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen25",
 ]
 
 

@@ -79,6 +79,10 @@ QWEN3_6_27B_3K5_1K5_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -112,7 +116,13 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_gpqa(TestAscendAccuracyTestCaseBase):
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     eval_batch_size = 8
-    generation_config = {"max_tokens": 81920, "temperature": 1.0}
+    generation_config = {
+        "max_tokens": 81920,
+        "temperature": 1.0,
+        "extra_body": {
+            "chat_template_kwargs": {"enable_thinking": True},
+        },
+    }
 
     def test_accuracy(self):
         self.run_accuracy()

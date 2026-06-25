@@ -88,6 +88,10 @@ MINIMAX_M2_5_4P_32K_OTHER_ARGS = [
     "--trust-remote-code",
     "--tokenizer-worker-num",
     4,
+    "--reasoning-parser",
+    "minimax-append-think",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 

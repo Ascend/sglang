@@ -22,12 +22,7 @@ PREFILL_ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "HCCL_BUFFSIZE": "8",
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
-    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24699",
-    "ZBAL_ENABLE_GRAPH": "1",
+    "HCCL_BUFFSIZE": "1800",
 }
 
 DECODE_ENVS = {
@@ -85,6 +80,10 @@ PREFILL_ARGS = [
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 DECODE_ARGS = [
@@ -129,6 +128,10 @@ DECODE_ARGS = [
     4,
     6,
     8,
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
@@ -169,6 +172,7 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In64k_Out1k5_Prefix90_100ms(
     input_len = 64000
     output_len = 1500
     random_range_ratio = 1
+    ttft = 3000
     tpot = 100
     output_token_throughput = 52.56
 
