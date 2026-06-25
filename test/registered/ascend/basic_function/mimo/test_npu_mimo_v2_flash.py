@@ -32,7 +32,7 @@ class TestMiMoV2Flash(GSM8KMixin, SpecDecodingMixin, DefaultServerBase):
         "--page-size",
         "64",
         "--mem-fraction-static",
-        "0.3",
+        "0.2",
         "--speculative-algorithm",
         "EAGLE",
         "--speculative-num-steps",
