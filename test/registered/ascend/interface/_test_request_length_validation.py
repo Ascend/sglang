@@ -4,7 +4,7 @@ import openai
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -24,7 +24,7 @@ class TestRequestLengthValidation(CustomTestCase):
 
         # Start server with auto truncate disabled
         cls.process = popen_launch_server(
-            LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+            QWEN3_0_6B_WEIGHTS_PATH,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             api_key=cls.api_key,
@@ -42,7 +42,7 @@ class TestRequestLengthValidation(CustomTestCase):
 
         with self.assertRaises(openai.BadRequestError) as cm:
             client.chat.completions.create(
-                model=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+                model=QWEN3_0_6B_WEIGHTS_PATH,
                 messages=[
                     {"role": "user", "content": long_text},
                 ],
@@ -58,7 +58,7 @@ class TestRequestLengthValidation(CustomTestCase):
 
         with self.assertRaises(openai.BadRequestError) as cm:
             client.chat.completions.create(
-                model=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+                model=QWEN3_0_6B_WEIGHTS_PATH,
                 messages=[
                     {"role": "user", "content": long_text},
                 ],
@@ -74,7 +74,7 @@ class TestRequestLengthValidation(CustomTestCase):
 
         with self.assertRaises(openai.BadRequestError) as cm:
             client.chat.completions.create(
-                model=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+                model=QWEN3_0_6B_WEIGHTS_PATH,
                 messages=[
                     {"role": "user", "content": long_text},
                 ],
@@ -91,7 +91,7 @@ class TestRequestLengthValidation(CustomTestCase):
 
         with self.assertRaises(openai.BadRequestError) as cm:
             client.chat.completions.create(
-                model=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+                model=QWEN3_0_6B_WEIGHTS_PATH,
                 messages=[
                     {"role": "user", "content": long_text},
                 ],
