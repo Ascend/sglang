@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: Request length validation test - fix black formatting
+# test round 4: Request length validation test - switch to LLAMA_3_2_1B and restore token_ids_logprob tests
 
 on:
   pull_request:
