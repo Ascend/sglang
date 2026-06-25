@@ -80,6 +80,7 @@ def run_performance_test(
             variant=model.variant or "",
             extra_bench_args=extra_bench_args,
             env=model.env,
+            timeout=model.launch_timeout,
         )
 
         if success and results:
