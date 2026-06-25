@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: Llama-4-Scout accuracy + performance with 1800s timeout
+# test round 7: Llama-4-Scout with launch_timeout fix
 
 on:
   pull_request:
