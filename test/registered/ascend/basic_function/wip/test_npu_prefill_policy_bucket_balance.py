@@ -22,11 +22,6 @@ register_npu_ci(
     disabled="multi nodes testcase",
 )
 
-# ConfigMap相关配置
-CONFIGMAP_NAME = os.environ.get("KUBE_CONFIG_MAP")
-NAMESPACE = os.environ.get("NAMESPACE")
-PROMETHEUS_PORT = 29000
-
 MODEL_CONFIG = {
     "model_path": DEEPSEEK_R1_W8A8_MODEL_PATH,
     "prefill_envs": {
@@ -159,10 +154,6 @@ MODEL_CONFIG = {
         32,
         "--bucket-adjust-interval-secs",
         5,
-        "--prometheus-host",
-        "0.0.0.0",
-        "--prometheus-port",
-        PROMETHEUS_PORT,
     ],
 }
 
@@ -182,13 +173,9 @@ class TestNPUBalance(TestAscendPerfMultiNodePdSepTestCaseBase):
 
     def get_router_metrics(self):
         """获取Router节点的metrics（使用prometheus端口29000）"""
-        router_host = os.environ.get("POD_IP", "127.0.0.1")
-        router_prometheus_port = PROMETHEUS_PORT
-        print(f"Querying router metrics from: {router_host}:{router_prometheus_port}")
-
         try:
             response = requests.get(
-                f"http://{router_host}:{router_prometheus_port}/metrics", timeout=30
+                f"{self.base_url}/metrics", timeout=30
             )
             if response.status_code == 200:
                 print(
