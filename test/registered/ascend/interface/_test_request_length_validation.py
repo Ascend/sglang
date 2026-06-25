@@ -159,6 +159,8 @@ class TestRequestLengthValidation(CustomTestCase):
         self.assertIn("out-of-vocabulary", response.text)
 
     def test_token_ids_logprob_valid(self):
+        # Verify that a valid token_ids_logprob request with in-vocabulary
+        # token IDs is accepted and returns 200.
         headers = {"Authorization": f"Bearer {self.api_key}"}
         response = requests.post(
             f"{self.base_url}/generate",
