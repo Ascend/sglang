@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Matched stop test
+# test round 3: Matched stop test - fix Qwen3 EOS token
 
 on:
   pull_request:
