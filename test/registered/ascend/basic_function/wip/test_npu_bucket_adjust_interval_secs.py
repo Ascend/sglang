@@ -224,7 +224,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
     def setUpClass(cls):
         cls.degradation_tolerance = 0
         cls.model = DEEPSEEK_R1_W8A8_MODEL_PATH
-        cls.config = MODEL_CONFIG_BASE.copy()
+        cls.config = copy.deepcopy(MODEL_CONFIG_BASE)
         super().setUpClass()
         cls.start_pd_server()
 
