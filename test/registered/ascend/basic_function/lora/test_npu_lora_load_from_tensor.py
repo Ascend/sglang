@@ -37,6 +37,7 @@ class TestNPULoRALoadFromTensor(CustomTestCase):
             lora_target_modules=["all"],
             mem_fraction_static=0.6,
             log_level="error",
+            disable_cuda_graph=True,
         )
 
         # Load LoRA from local path

@@ -27,6 +27,8 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_ENVS = {
     "HCCL_BUFFSIZE": "1500",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
 }
 
 KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
@@ -44,9 +46,9 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.77,
+    0.872,
     "--max-running-requests",
-    256,
+    176,
     "--chunked-prefill-size",
     32768,
     "--context-length",
@@ -58,35 +60,41 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--enable-dp-attention",
+    "--dp-size",
+    16,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
     "auto",
-    "--enable-dp-attention",
-    "--dp-size",
-    16,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
     8,
     9,
     10,
-    12,
-    16,
+    11,
     "--disable-radix-cache",
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
     KIMI_K2_6_EAGLE3_MODEL_PATH,
     "--speculative-num-steps",
-    4,
+    2,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    5,
+    3,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--prefill-delayer-max-delay-passes",
+    200,
+    "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 
@@ -96,7 +104,7 @@ class TestNPUKimiK2_6_W4A8_8P_IN1024x1024_30_OUT1024_50MS(
     """Test NPU performance for Kimi-K2.6-w4a8 8p multimodal in1024x1024+30 out1024"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
+    dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
     model = KIMI_K2_6_W4A8_MODEL_PATH
     other_args = KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS
     envs = KIMI_K2_6_IN1024x1024_30_OUT1024_ENVS
@@ -104,14 +112,15 @@ class TestNPUKimiK2_6_W4A8_8P_IN1024x1024_30_OUT1024_50MS(
     dataset_name = "image"
     image_resolution = "1024x1024"
     image_count = 1
-    max_concurrency = 256
-    num_prompts = 256
-    request_rate = 1
+    max_concurrency = 160
+    num_prompts = 640
+    request_rate = float("inf")
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
+    warmup_requests = 16
     tpot = 50
-    output_token_throughput = 3300
+    output_token_throughput = 2635.24
 
     def test_npu_kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms(self):
         """Run NPU performance test for Kimi-K2.6-w4a8 multimodal in1024x1024+30 out1024"""

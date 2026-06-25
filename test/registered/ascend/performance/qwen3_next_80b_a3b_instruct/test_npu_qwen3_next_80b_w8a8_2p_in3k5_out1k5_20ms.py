@@ -84,12 +84,16 @@ QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS = [
     "bfloat16",
     "--speculative-draft-model-path",
     QWEN3_NEXT_80B_A3B_MODEL_PATH,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 
 class TestNPUQwen3Next80BA3B2PIn3k5Out1k5_20ms(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH
     other_args = QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS
     envs = QWEN3_NEXT_80B_A3B_2P_ENVS

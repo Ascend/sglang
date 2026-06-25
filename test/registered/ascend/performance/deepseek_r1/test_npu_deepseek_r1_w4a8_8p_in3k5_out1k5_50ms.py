@@ -79,13 +79,16 @@ MODEL_OTHER_ARGS = [
     4,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "deepseek-r1",
+    "--tool-call-parser",
+    "deepseekv3",
 ]
 
 
 class TestNPUDeepSeekR1W4A8(TestAscendPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    # aisbench_dataset_path = "/data/c30044170/dataset/GSM8K-in3584-bs7168.jsonl"
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = DEEPSEEK_R1_W4A8_PER_CHANNEL_MODEL_PATH
     other_args = MODEL_OTHER_ARGS
     envs = MODEL_ENVS

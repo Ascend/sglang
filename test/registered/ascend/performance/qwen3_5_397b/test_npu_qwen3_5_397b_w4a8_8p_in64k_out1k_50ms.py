@@ -23,7 +23,7 @@ QWEN3_5_397B_64K_ENVS = {
     "HCCL_BUFFSIZE": "0",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
-    "DEEPEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "GDN_ATTN_BACKEND_TRITON": "1",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_OP_EXPANSION_MODE": "AIV",
@@ -94,6 +94,10 @@ QWEN3_5_397B_64K_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -101,10 +105,11 @@ class TestNPUQwen3_5_397B_64K(TestAscendPerformanceTestCaseBase):
     """Test NPU performance for Qwen3.5-397B-w4a8 8p in64k out1k"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_5_397B_W4A8_MODEL_PATH
     other_args = QWEN3_5_397B_64K_OTHER_ARGS
     envs = QWEN3_5_397B_64K_ENVS
+    warmup_requests = 8
     dataset_name = "random"
     max_concurrency = 28
     num_prompts = 28
@@ -112,7 +117,9 @@ class TestNPUQwen3_5_397B_64K(TestAscendPerformanceTestCaseBase):
     output_len = 1024
     random_range_ratio = 1
     tpot = 50
-    aisbench_request_rate = 10
+    request_rate = float("inf")
+    temperature = 0.6
+    top_p = 0.95
     output_token_throughput = 247.9
 
     def test_npu_qwen3_5_397b_8p_in64k_out1k_50ms(self):

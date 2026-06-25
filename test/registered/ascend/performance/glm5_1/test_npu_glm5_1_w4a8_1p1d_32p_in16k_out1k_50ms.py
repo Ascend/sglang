@@ -22,8 +22,8 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "HCCL_BUFFSIZE": "1200",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
+    # "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
+    # "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "TASK_QUEUE_ENABLE": "2",
@@ -93,16 +93,20 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--enable-dp-lm-head",
     "--moe-dense-tp",
     1,
-    "--speculative-draft-model-quantization",
-    "unquant",
-    "--speculative-algorithm",
-    "NEXTN",
-    "--speculative-num-steps",
-    1,
-    "--speculative-eagle-topk",
-    1,
-    "--speculative-num-draft-tokens",
-    2,
+    # "--speculative-draft-model-quantization",
+    # "unquant",
+    # "--speculative-algorithm",
+    # "NEXTN",
+    # "--speculative-num-steps",
+    # 1,
+    # "--speculative-eagle-topk",
+    # 1,
+    # "--speculative-num-draft-tokens",
+    # 2,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
@@ -161,6 +165,10 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {
@@ -179,7 +187,7 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
 
     model_config = GLM_5_1_PD_SEP_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
     max_concurrency = 128
     num_prompts = 512

@@ -6,7 +6,7 @@ on:
       runner:
         required: false
         type: string
-        default: linux-aarch64-a3-0
+        default: linux-amd64-cpu-8
       test_type:
         required: false
         type: string
@@ -202,6 +202,14 @@ jobs:
 
           echo "Run command: ${CMD}"
           eval "${CMD}"
+
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics-${{ inputs.test_config_name }}
+          path: /tmp/metrics.json
+          retention-days: 7
 
       - name: Post process
         if: always()

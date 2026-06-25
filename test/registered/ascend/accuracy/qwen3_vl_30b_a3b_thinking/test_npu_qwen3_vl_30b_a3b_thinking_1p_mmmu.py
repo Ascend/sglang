@@ -39,8 +39,6 @@ OTHER_ARGS = [
     "ascend",
     "--device",
     "npu",
-    "--quantization",
-    "modelslim",
     "--max-running-requests",
     162,
     "--disable-radix-cache",
@@ -83,6 +81,10 @@ OTHER_ARGS = [
     162,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "qwen3-thinking",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 

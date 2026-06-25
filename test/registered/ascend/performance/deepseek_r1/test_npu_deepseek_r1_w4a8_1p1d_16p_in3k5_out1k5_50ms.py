@@ -87,6 +87,10 @@ MODEL_CONFIG = {
         "--disable-shared-experts-fusion",
         "--dtype",
         "bfloat16",
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "decode_args": [
         "--nnodes",
@@ -143,6 +147,10 @@ MODEL_CONFIG = {
         4,
         "--load-balance-method",
         ROUND_ROBIN,
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "router_args": [],
 }
@@ -150,7 +158,7 @@ MODEL_CONFIG = {
 
 class TestDeepSeekR1W4A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model_config = MODEL_CONFIG
     dataset_name = "random"
     request_rate = 24

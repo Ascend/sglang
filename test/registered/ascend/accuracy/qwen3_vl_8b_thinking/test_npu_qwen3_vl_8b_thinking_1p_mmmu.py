@@ -35,8 +35,6 @@ OTHER_ARGS = [
     "ascend",
     "--device",
     "npu",
-    "--quantization",
-    "modelslim",
     "--max-running-requests",
     16,
     "--max-prefill-tokens",
@@ -67,6 +65,10 @@ OTHER_ARGS = [
     # 1,
     # "--speculative-num-draft-tokens",
     # 5,
+    "--reasoning-parser",
+    "qwen3-thinking",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 

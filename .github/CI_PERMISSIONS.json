@@ -195,6 +195,13 @@
         "cooldown_interval_minutes": 0,
         "reason": "custom override"
     },
+    "JinyanYi": {
+        "can_tag_run_ci_label": true,
+        "can_rerun_failed_ci": true,
+        "can_rerun_stage": true,
+        "cooldown_interval_minutes": 0,
+        "reason": "custom override"
+    },
     "Johnsonms": {
         "can_tag_run_ci_label": true,
         "can_rerun_failed_ci": true,
@@ -229,6 +236,13 @@
         "can_rerun_stage": true,
         "cooldown_interval_minutes": 0,
         "reason": "top contributor"
+    },
+    "McZyWu": {
+        "can_tag_run_ci_label": true,
+        "can_rerun_failed_ci": true,
+        "can_rerun_stage": true,
+        "cooldown_interval_minutes": 0,
+        "reason": "custom override"
     },
     "MingxuZh": {
         "can_tag_run_ci_label": true,

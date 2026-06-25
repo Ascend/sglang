@@ -7,7 +7,7 @@ import openai
 
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -30,7 +30,7 @@ class TestLargeMaxNewTokens(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = QWEN3_8B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.api_key = "sk-123456"
 
@@ -44,7 +44,7 @@ class TestLargeMaxNewTokens(CustomTestCase):
             api_key=cls.api_key,
             other_args=[
                 "--max-total-token",
-                "1536",
+                "1792",
                 "--context-len",
                 "8192",
                 "--decode-log-interval",
@@ -57,7 +57,7 @@ class TestLargeMaxNewTokens(CustomTestCase):
             return_stdout_stderr=(cls.stdout, cls.stderr),
         )
         cls.base_url += "/v1"
-        cls.tokenizer = get_tokenizer(LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH)
+        cls.tokenizer = get_tokenizer(QWEN3_8B_WEIGHTS_PATH)
 
     @classmethod
     def tearDownClass(cls):
@@ -75,7 +75,7 @@ class TestLargeMaxNewTokens(CustomTestCase):
                 {"role": "system", "content": "You are a helpful AI assistant"},
                 {
                     "role": "user",
-                    "content": "Please repeat the word 'hello' for 100 times.",
+                    "content": "Please repeat the word 'hello' for 10000 times.",
                 },
             ],
             temperature=0,

@@ -20,7 +20,7 @@ class TestStreamInterval(CustomTestCase):
     """Testcase: Verify --stream-interval controls the stream output chunk size correctly.
 
     [Test Category] Parameter
-    [Test Target] --stream-interval, --stream-output
+    [Test Target] --stream-interval, --incremental-streaming-output
     """
 
     model = QWEN3_0_6B_WEIGHTS_PATH
@@ -41,7 +41,7 @@ class TestStreamInterval(CustomTestCase):
         other_args = [
             "--attention-backend",
             "ascend",
-            "--stream-output",
+            "--incremental-streaming-output",
             "--stream-interval",
             str(interval),
         ]
