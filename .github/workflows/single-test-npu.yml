@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 7: Matched stop test - fix trailing newline properly
+# test round 8: Matched stop test - revert to Llama model
 
 on:
   pull_request:
