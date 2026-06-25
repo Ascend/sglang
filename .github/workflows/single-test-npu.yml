@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 7: Request length validation test - restore token_ids_logprob tests
+# test round 8: Request length validation test - switch back to QWEN3_0_6B model
 
 on:
   pull_request:
