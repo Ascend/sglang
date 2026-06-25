@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Request length validation test - remove unsupported token_ids_logprob tests
+# test round 3: Request length validation test - fix black formatting
 
 on:
   pull_request:
