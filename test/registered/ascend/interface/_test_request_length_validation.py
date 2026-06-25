@@ -140,6 +140,10 @@ class TestRequestLengthValidation(CustomTestCase):
             self.assertIn("flat list of integers", response.text)
 
     def test_token_ids_logprob_batch_with_one_oov(self):
+        # Verify that batch requests are rejected when any single item
+        # contains an out-of-vocabulary token ID in token_ids_logprob.
+        # The first request uses valid id [0], the second uses OOV id [2_000_000_000].
+        # The server should return 400 for the entire batch.
         headers = {"Authorization": f"Bearer {self.api_key}"}
         response = requests.post(
             f"{self.base_url}/generate",
