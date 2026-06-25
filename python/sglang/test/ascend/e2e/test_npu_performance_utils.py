@@ -15,11 +15,16 @@ from sglang.test.ascend.e2e.gen_dataset_fixed_len import (
     save_jsonl,
 )
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    ACTIVE_TEST_CLASS,
+    CONFIGMAP_NAME,
+    NAMESPACE,
     SERVICE_PORT,
     check_role,
     launch_pd_mix_node,
     launch_pd_separation_node,
     launch_router,
+    query_configmap,
+    wait_for_prefill_decode_exit,
     wait_server_ready,
 )
 from sglang.test.test_utils import (
@@ -1163,15 +1168,25 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        logger.info("Start exec tearDownClass")
         if cls.process:
             try:
                 kill_process_tree(cls.process.pid)
+                for _ in range(60):
+                    if cls.process.poll() is not None:
+                        logger.info("Process fully exited")
+                        break
+                    time.sleep(1)
+                else:
+                    logger.warning("Process did NOT exit in time")
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
+        logger.info("tearDownClass finished")
 
     @classmethod
     @check_role(allowed_roles=["router"])
     def start_router_server(cls):
+        wait_for_prefill_decode_exit(key=ACTIVE_TEST_CLASS, value=cls.__name__)
         logger.info(f"Starting router in thread...")
         sglang_thread = threading.Thread(target=launch_router, args=(cls.model_config,))
         sglang_thread.daemon = True
@@ -1195,6 +1210,13 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
 
         # Loop to check if the process is still running
         while True:
+            configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+            if configmap and configmap.data:
+                executing_class = configmap.data.get(ACTIVE_TEST_CLASS)
+                if executing_class and executing_class != cls.__name__:
+                    logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+                    logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
+                    return
             if cls.process.poll() is None:
                 # Process is still running
                 time.sleep(30)
