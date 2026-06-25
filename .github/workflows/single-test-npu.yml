@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: Request length validation test
+# test round 2: Request length validation test - remove unsupported token_ids_logprob tests
 
 on:
   pull_request:
