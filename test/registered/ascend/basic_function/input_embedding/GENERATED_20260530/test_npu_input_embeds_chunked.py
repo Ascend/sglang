@@ -1,16 +1,16 @@
-"""Regression tests for input_embeds shape-mismatch bugs on NPU.
+"""Regression tests for input_embeds shape-mismatch bugs.
 
 Covers two bugs with the same crash signature
 (RuntimeError: shape mismatch in set_kv_buffer) but opposite polarity:
 
-- Chunked prefill truncation (#20376): PrefillAdder truncates fill_ids and
+- Chunked prefill truncation (#20376): PrefillAdder shrinks fill_len and
   extend_input_len on chunk overflow but not input_embeds, so the full array
   flows through while out_cache_loc is sized for the truncated length.
   Polarity: cache_k > loc.
 
-- Retraction with output_ids (#14110): after retraction, fill_ids includes
-  accumulated output_ids but input_embeds only covers origin_input_ids.
-  Polarity: cache_k < loc.
+- Retraction with output_ids (#14110): after retraction, get_fill_ids()
+  includes accumulated output_ids but input_embeds only covers
+  origin_input_ids. Polarity: cache_k < loc.
 """
 
 import unittest
@@ -21,7 +21,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -30,11 +30,12 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=100, suite="nightly-1-npu-a3", nightly=True)
 
 CHUNKED_PREFILL_SIZE = 256
 
-_MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+# Shared reference model — loaded once per process, not per test class.
+_MODEL = QWEN3_0_6B_WEIGHTS_PATH
 _tokenizer = None
 _ref_model = None
 
@@ -69,16 +70,20 @@ def _generate(base_url, input_embeds, max_new_tokens, ignore_eos=False, timeout=
     return resp
 
 
-class TestNPUInputEmbedsChunkedAndRetract(CustomTestCase):
-    """Test input_embeds chunked prefill and retraction on NPU.
+class TestInputEmbedsChunkedAndRetract(CustomTestCase):
+    """Single server launch covering both bugs.
 
-    [Test Category] Input Embedding
-    [Test Target] Chunked prefill truncation and retraction with output_ids
+    Both tests require --disable-radix-cache (for input_embeds). The chunked
+    prefill test needs a small --chunked-prefill-size. The retraction test
+    uses SGLANG_TEST_RETRACT to deterministically force retraction every few
+    scheduler iterations regardless of KV pressure.
     """
 
     @classmethod
     def setUpClass(cls):
         cls.base_url = DEFAULT_URL_FOR_TEST
+        # SGLANG_TEST_RETRACT forces retraction periodically; this is
+        # deterministic and doesn't require guessing KV budgets.
         with envs.SGLANG_TEST_RETRACT.override(True):
             cls.process = popen_launch_server(
                 _MODEL,
@@ -92,7 +97,6 @@ class TestNPUInputEmbedsChunkedAndRetract(CustomTestCase):
                     "4",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
                 ],
             )
 
@@ -111,6 +115,8 @@ class TestNPUInputEmbedsChunkedAndRetract(CustomTestCase):
         without any concurrent-timing dependency. Pre-fix this crashes in
         set_kv_buffer on both chunks.
         """
+        # ~80 tokens each repetition; 6 repetitions exceeds CHUNKED_PREFILL_SIZE
+        # comfortably. Token count is model-dependent so assert it.
         text = "The quick brown fox jumps over the lazy dog. " * 40
         embeds = _embeds_for(text)
         self.assertGreater(
@@ -139,6 +145,7 @@ class TestNPUInputEmbedsChunkedAndRetract(CustomTestCase):
         embeds = _embeds_for(text)
         seq_len = len(embeds)
 
+        # Enough batched requests to overflow the chunk budget.
         n = max(4, CHUNKED_PREFILL_SIZE // seq_len + 2)
         self.assertGreater(n * seq_len, CHUNKED_PREFILL_SIZE)
 
@@ -156,12 +163,14 @@ class TestNPUInputEmbedsChunkedAndRetract(CustomTestCase):
         SGLANG_TEST_RETRACT forces retraction every few scheduler iterations.
         Combined with ignore_eos and a reasonable max_new_tokens, at least one
         request is retracted mid-decode with non-empty output_ids, then
-        re-prefilled. Pre-#14110 this crashes (cache_k < loc) because fill_ids
-        includes output_ids but input_embeds does not.
+        re-prefilled. Pre-#14110 this crashes (cache_k < loc) because the
+        filled token sequence includes output_ids but input_embeds does not.
         """
         text = "The quick brown fox jumps over the lazy dog. " * 4
         embeds = _embeds_for(text)
 
+        # Batch of requests with enough decode steps that SGLANG_TEST_RETRACT
+        # (interval=3 by default) fires mid-decode.
         n = 4
         resp = _generate(
             self.base_url,
