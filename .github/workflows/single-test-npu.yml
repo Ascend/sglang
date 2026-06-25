@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 9: Llama-4-Scout with monkey-patched 1800s timeout
+# test round 10: Llama-4-Scout with isort fix + monkey-patched 1800s timeout
 
 on:
   pull_request:
