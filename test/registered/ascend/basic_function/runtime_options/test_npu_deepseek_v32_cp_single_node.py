@@ -10,11 +10,10 @@ from sglang.test.test_utils import (
     popen_launch_server,
     write_github_step_summary,
 )
-# from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
 from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=400, suite="debug-full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class TestDeepseekV32CPInSeqSplit(CustomTestCase):

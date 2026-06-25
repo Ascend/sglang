@@ -97,6 +97,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
+            base_url=None,
             host=f"http://{self.base_host}",
             port=int(self.lb_port),
         )
@@ -191,6 +192,7 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
+            base_url=None,
             host=f"http://{self.base_host}",
             port=int(self.lb_port),
         )
@@ -290,6 +292,7 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
+            base_url=None,
             host=f"http://{self.base_host}",
             port=int(self.lb_port),
         )

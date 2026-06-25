@@ -11,7 +11,7 @@ from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.vlm_utils import TestVLMModels
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.ascend.run_eval import run_eval as run_eval_few_shot_gsm8k
-from sglang.test.run_eval import run_eval
+from sglang.test.ascend.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -174,7 +174,7 @@ class TestQwenVLPPAccuracy(TestVLMModels):
     ]
     @classmethod
     def setUpClass(cls):
-        cls.base_url = "http://127.0.0.1:23333"
+        cls.base_url = DEFAULT_URL_FOR_TEST
         cls.api_key = "sk-123456"
         os.environ["OPENAI_API_KEY"] = cls.api_key
         os.environ["OPENAI_API_BASE"] = f"{cls.base_url}/v1"
@@ -500,7 +500,6 @@ class TestFixedBugs(unittest.TestCase):
         )
 
 
-@unittest.skipIf(True, "issue  #343")
 class TestGLM41VPPAccuracy(unittest.TestCase):
     """Test Case: Verify the accuracy of GLM multimodal model under PP parallelism
 
