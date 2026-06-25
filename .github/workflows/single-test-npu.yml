@@ -41,7 +41,8 @@ jobs:
           # Test cases
           test_cases=(
             #"test/registered/ascend/llm_models/test_npu_llama4.py"
-            "test/registered/ascend/llm_models/test_npu_serving_transcription.py"
+            #"test/registered/ascend/llm_models/test_npu_serving_transcription.py"
+            test/registered/ascend/llm_models/test_npu_input_embeds_chunked (1).py
           )
 
           for test_case in "${test_cases[@]}"; do
