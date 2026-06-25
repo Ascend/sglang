@@ -10,8 +10,7 @@ from sglang.srt.server_args import ServerArgs
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.vlm_utils import TestVLMModels
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.ascend.run_eval import run_eval as run_eval_few_shot_gsm8k
-from sglang.test.ascend.run_eval import run_eval
+from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -69,7 +68,7 @@ class TestPPAccuracy(unittest.TestCase):
             host="http://127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
-        metrics = run_eval_few_shot_gsm8k(args)
+        metrics = run_eval(args)
         print(f"{metrics=}")
 
         self.assertGreater(metrics["accuracy"], 0.74)
@@ -195,7 +194,7 @@ class TestQwenVLPPAccuracy(TestVLMModels):
             host="http://127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
-        metrics = run_eval_few_shot_gsm8k(args)
+        metrics = run_eval(args)
         print(f"{metrics=}")
 
         self.assertGreater(metrics["accuracy"], 0.65)
@@ -249,7 +248,7 @@ class TestQwenPPAccuracy(unittest.TestCase):
                 host="http://127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
-            metrics = run_eval_few_shot_gsm8k(args)
+            metrics = run_eval(args)
             time.sleep(5)
             return metrics
         finally:
@@ -311,7 +310,7 @@ class TestQwenPPTieWeightsAccuracy(unittest.TestCase):
                 host="http://127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
-            metrics = run_eval_few_shot_gsm8k(args)
+            metrics = run_eval(args)
             time.sleep(5)
             return metrics
         finally:
@@ -375,7 +374,7 @@ class TestQwenMoePPAccuracy(unittest.TestCase):
                 host="http://127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
-            metrics = run_eval_few_shot_gsm8k(args)
+            metrics = run_eval(args)
             time.sleep(5)
             return metrics
         finally:
@@ -439,7 +438,7 @@ class TestQwen35PPAccuracy(unittest.TestCase):
                 host="http://127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
-            metrics = run_eval_few_shot_gsm8k(args)
+            metrics = run_eval(args)
             time.sleep(5)
             return metrics
         finally:
