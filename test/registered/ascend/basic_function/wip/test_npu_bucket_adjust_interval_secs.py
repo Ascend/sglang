@@ -1,3 +1,4 @@
+import copy
 import os
 import re
 import subprocess
@@ -180,8 +181,7 @@ MODEL_CONFIG_BASE = {
 
 def create_model_config_with_param(bucket_interval):
     """创建带有指定 bucket-adjust-interval-secs 参数的配置"""
-    config = MODEL_CONFIG_BASE.copy()
-    config["router_args"] = MODEL_CONFIG_BASE["router_args"].copy()
+    config = copy.deepcopy(MODEL_CONFIG_BASE)
     config["router_args"].extend(
         [
             "--bucket-adjust-interval-secs",
