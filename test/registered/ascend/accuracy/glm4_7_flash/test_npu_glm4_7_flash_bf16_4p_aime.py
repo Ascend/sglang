@@ -8,13 +8,13 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="full-8-npu-a3",
+    suite="full-4-npu-a3",
     nightly=True,
     disabled="accuracy testcase",
 )
 register_npu_ci(
     est_time=3600,
-    suite="stage-b-test-8-npu-a3",
+    suite="stage-b-test-4-npu-a3",
     nightly=True,
     disabled="accuracy testcase",
 )
@@ -36,16 +36,15 @@ OTHER_ARGS = [
     "glm47",
     "--reasoning-parser",
     "glm45",
-    "--disable-cuda-graph",
     "--disable-radix-cache",
     "--mem-fraction-static",
     0.8,
     "--device",
     "npu",
     "--tp-size",
-    8,
+    4,
     "--ep-size",
-    8,
+    4,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",

@@ -63,6 +63,7 @@ class TestNPUQWEN3_VL_30B_aime25(TestAscendAccuracyTestCaseBase):
     generation_config = {
         "max_tokens": 40000,
         "temperature": 0.0,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
 
     def test_aime25(self):

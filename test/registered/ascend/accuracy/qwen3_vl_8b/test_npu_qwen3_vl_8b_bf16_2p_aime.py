@@ -77,6 +77,7 @@ class TestNPUQwen3_VL_8B_aime(TestAscendAccuracyTestCaseBase):
         "top_k": 40,
         "repetition_penalty": 1.0,
         "presence_penalty": 2.0,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
 
     def test_aime25(self):

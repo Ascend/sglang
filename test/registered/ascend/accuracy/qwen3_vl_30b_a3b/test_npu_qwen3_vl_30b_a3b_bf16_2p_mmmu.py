@@ -62,6 +62,7 @@ class TestNPUQwen3_5_95B_mmmu(TestAscendAccuracyTestCaseBase):
     generation_config = {
         "max_tokens": 40000,
         "temperature": 0.0,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
     eval_batch_size = 64
 

@@ -60,7 +60,8 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_gpqa(TestAscendAccuracyTestCase
     eval_batch_size = 64
     generation_config = {
         "max_tokens": 40000,
-        "temperature": 1.0,
+        "temperature": 0.0,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
 
     def test_gpqa(self):
