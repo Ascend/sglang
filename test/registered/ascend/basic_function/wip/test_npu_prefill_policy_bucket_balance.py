@@ -14,6 +14,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     TestAscendPerfMultiNodePdSepTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
+from test.ascend.e2e.test_npu_multi_node_utils import check_role
 
 register_npu_ci(
     est_time=3600,
@@ -276,7 +277,7 @@ class TestNPUBalance(TestAscendPerfMultiNodePdSepTestCaseBase):
 
         try:
             assert (
-                max_deviation_abs <= tolerance_abs
+                    max_deviation_abs <= tolerance_abs
             ), f"P节点负载不均衡，最大绝对偏差{max_deviation_abs:.1f}请求超过容忍阈值{tolerance_abs}请求"
             print(
                 f"  - ✓ 断言通过：P节点负载均衡（最大绝对偏差{max_deviation_abs:.1f}请求 ≤ 容忍阈值{tolerance_abs}请求）"
@@ -291,6 +292,7 @@ class TestNPUBalance(TestAscendPerfMultiNodePdSepTestCaseBase):
                     )
             raise
 
+    @check_role(allowed_roles=["router"])
     def test_throughput_with_prefill_stats(self):
         router_metrics_before = self.get_router_metrics()
         print(f"{router_metrics_before=}")

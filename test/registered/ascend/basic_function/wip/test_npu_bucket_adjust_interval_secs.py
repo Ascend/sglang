@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import re
 import subprocess
@@ -30,9 +31,12 @@ register_npu_ci(
     disabled="multi nodes testcase",
 )
 
-# ConfigMap相关配置
-CONFIGMAP_NAME = os.environ.get("KUBE_CONFIG_MAP")
-NAMESPACE = os.environ.get("NAMESPACE")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger(__name__)
 
 # ====================== Base Configuration ======================
 MODEL_CONFIG_BASE = {
@@ -51,9 +55,6 @@ MODEL_CONFIG_BASE = {
         "ENABLE_MOE_NZ": "1",
         "PROFILING_MODE": "dynamic",
         "HCCL_OP_EXPANSION_MODE": "AIV",
-        # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
-        # "HCCL_SOCKET_IFNAME": NIC_NAME,
-        # "GLOO_SOCKET_IFNAME": NIC_NAME,
         "TRANSFORMERS_VERBOSITY": "error",
     },
     "decode_envs": {
@@ -71,15 +72,9 @@ MODEL_CONFIG_BASE = {
         "HCCL_OP_EXPANSION_MODE": "AIV",
         "TASK_QUEUE_ENABLE": "0",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-        # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
-        # "HCCL_SOCKET_IFNAME": NIC_NAME,
-        # "GLOO_SOCKET_IFNAME": NIC_NAME,
         "TRANSFORMERS_VERBOSITY": "error",
     },
     "router_envs": {
-        # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
-        # "HCCL_SOCKET_IFNAME": NIC_NAME,
-        # "GLOO_SOCKET_IFNAME": NIC_NAME,
         "TRANSFORMERS_VERBOSITY": "error",
     },
     "prefill_args": [
@@ -222,10 +217,20 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
 
     @classmethod
     def setUpClass(cls):
-        cls.degradation_tolerance = 0
-        cls.model = DEEPSEEK_R1_W8A8_MODEL_PATH
         cls.config = copy.deepcopy(MODEL_CONFIG_BASE)
-        super().setUpClass()
+        cls.process = None
+        cls.local_ip = "127.0.0.1"
+        cls.host = os.getenv("POD_IP")
+        cls.port = SERVICE_PORT
+        cls.base_url = f"http://{cls.host}:{cls.port}"
+        cls.hostname = os.getenv("HOSTNAME")
+        cls.role = (
+            "router"
+            if "router" in cls.hostname
+            else "prefill" if "prefill" in cls.hostname else "decode"
+        )
+        logger.info(f"Init {cls.host} {cls.role=}!")
+
         cls.start_pd_server()
 
     @classmethod
