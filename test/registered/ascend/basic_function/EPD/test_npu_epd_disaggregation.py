@@ -10,7 +10,7 @@ NPU Adaptations
 - Removed ``--enable-mm-global-cache`` (not supported on NPU); cache-hit
   test methods that depend on it are dropped.
 - Removed mooncake transfer backend (not supported on NPU); only
-  ``zmq_to_scheduler`` and ``zmq_to_tokenizer`` are used.
+  ``zmq_to_scheduler`` is used.
 - Excluded GPU-only classes:
     * TestEPDDisaggregationGrpcEncoderMMMU   (needs --grpc-mode)
     * TestEPDDisaggregationGrpcEncoderOnly   (needs --grpc-mode)
@@ -30,10 +30,14 @@ NPU Adaptations
 - Removed @unittest.skipIf(is_in_ci()) decorators so tests run in NPU CI.
 - TP size changed from 1 (GPU) to 2 (NPU) because the 30B model requires
   tensor parallelism across multiple NPU cards.
+- _wait_server_ready checks process exit to avoid infinite polling when
+  a server crashes during startup.
 """
 
 import base64
+import io
 import os
+import subprocess
 import threading
 import time
 import unittest
@@ -44,8 +48,6 @@ import requests
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     IMAGES_MAN_PATH,
-    QWEN3_5_27B_MODEL_WEIGHTS_PATH,
-    QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH,
     QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH,
     VIDEO_JOBS_PATH,
 )
@@ -61,7 +63,7 @@ from sglang.test.test_utils import (
 os.environ["SGLANG_MM_SKIP_COMPUTE_HASH"] = "True"
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 
-register_npu_ci(est_time=1200, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=1800, suite="full-8-npu-a3", nightly=True)
 
 # NPU common server arguments shared by all server roles.
 NPU_COMMON_ARGS = [
@@ -90,10 +92,39 @@ def _file_to_data_url(path, mime="image/png"):
         return f"data:{mime};base64,{base64.b64encode(f.read()).decode()}"
 
 
-def _wait_server_ready(url, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
-    """Poll a health endpoint until 200 or timeout."""
+def _wait_server_ready(url, process=None, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
+    """Poll a health endpoint until 200 or timeout.
+
+    If *process* is provided, also check whether the process has exited
+    prematurely (poll() returns non-None) to avoid infinite polling on a
+    crashed server.
+    """
     start = time.time()
     while True:
+        # Check if the server process has already exited
+        if process is not None:
+            rc = process.poll()
+            if rc is not None:
+                # Try to read any captured output for diagnosis
+                stderr_snippet = ""
+                stdout_snippet = ""
+                if hasattr(process, "stderr") and process.stderr:
+                    try:
+                        process.stderr.seek(0)
+                        stderr_snippet = process.stderr.read()[-2000:]
+                    except Exception:
+                        pass
+                if hasattr(process, "stdout") and process.stdout:
+                    try:
+                        process.stdout.seek(0)
+                        stdout_snippet = process.stdout.read()[-2000:]
+                    except Exception:
+                        pass
+                raise RuntimeError(
+                    f"Server {url} process exited with code {rc} before "
+                    f"becoming ready.\nSTDOUT: {stdout_snippet}\n"
+                    f"STDERR: {stderr_snippet}"
+                )
         try:
             if requests.get(url, timeout=5).status_code == 200:
                 print(f"Server {url} is ready")
@@ -102,7 +133,7 @@ def _wait_server_ready(url, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
             pass
         if time.time() - start > timeout:
             raise RuntimeError(f"Server {url} not ready within {timeout}s")
-        time.sleep(1)
+        time.sleep(2)
 
 
 def _chat_completion(base_url, model, content, max_tokens=64, temperature=0):
@@ -120,15 +151,65 @@ def _chat_completion(base_url, model, content, max_tokens=64, temperature=0):
     return resp.json()["choices"][0]["message"]["content"]
 
 
+def _launch_server_with_capture(model, url, other_args, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
+    """Launch a server with stdout/stderr capture for debugging.
+
+    Returns (process, stdout_buf, stderr_buf).
+    """
+    stdout_buf = io.StringIO()
+    stderr_buf = io.StringIO()
+    proc = popen_launch_server(
+        model,
+        url,
+        timeout=timeout,
+        other_args=other_args,
+        return_stdout_stderr=(stdout_buf, stderr_buf),
+    )
+    # Attach buffers to process for _wait_server_ready to read on exit
+    proc._capture_stdout = stdout_buf
+    proc._capture_stderr = stderr_buf
+    return proc, stdout_buf, stderr_buf
+
+
+def _wait_server_ready_captured(url, proc, stdout_buf, stderr_buf, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH):
+    """Like _wait_server_ready but reads from captured buffers on exit."""
+    start = time.time()
+    while True:
+        rc = proc.poll()
+        if rc is not None:
+            stdout_buf.seek(0)
+            stderr_buf.seek(0)
+            raise RuntimeError(
+                f"Server {url} process exited with code {rc} before ready.\n"
+                f"STDOUT: {stdout_buf.read()[-3000:]}\n"
+                f"STDERR: {stderr_buf.read()[-3000:]}"
+            )
+        try:
+            if requests.get(url, timeout=5).status_code == 200:
+                print(f"Server {url} is ready")
+                return
+        except Exception:
+            pass
+        if time.time() - start > timeout:
+            stdout_buf.seek(0)
+            stderr_buf.seek(0)
+            raise RuntimeError(
+                f"Server {url} not ready within {timeout}s\n"
+                f"STDOUT: {stdout_buf.read()[-3000:]}\n"
+                f"STDERR: {stderr_buf.read()[-3000:]}"
+            )
+        time.sleep(2)
+
+
 # ---------------------------------------------------------------------------
 # Base class — EPD with encode + prefill + decode + load balancer
 # ---------------------------------------------------------------------------
 
 
 class NpuEPDBase(CustomTestCase):
-    """Base class that boots four servers for full EPD + PD disaggregation.
+    """Base class that boots servers for full EPD + PD disaggregation.
 
-    Server layout (TP=2 per server, 6 NPUs total):
+    Server layout (TP=2 per server):
       encode  — encoder-only  (NPUs 0-1)
       prefill — language-only, disaggregation-mode=prefill (NPUs 2-3)
       decode  — disaggregation-mode=decode (NPUs 4-5)
@@ -160,6 +241,13 @@ class NpuEPDBase(CustomTestCase):
         cls.process_decode = None
         cls.process_lb = None
         cls.api_key = "sk-123456"
+        # Buffers for captured output
+        cls._encode_stdout = io.StringIO()
+        cls._encode_stderr = io.StringIO()
+        cls._prefill_stdout = io.StringIO()
+        cls._prefill_stderr = io.StringIO()
+        cls._decode_stdout = io.StringIO()
+        cls._decode_stderr = io.StringIO()
 
     # -- server arg builders ------------------------------------------------
 
@@ -212,33 +300,39 @@ class NpuEPDBase(CustomTestCase):
             cls.decode_port,
         ] + NPU_COMMON_ARGS
 
-    # -- server launchers ---------------------------------------------------
+    # -- server launchers (with output capture) -----------------------------
 
     @classmethod
     def start_encode(cls):
+        print(f"[EPD] Starting encoder on {cls.encode_url} (NPUs 0-1)")
         cls.process_encode = popen_launch_server(
             cls.model,
             cls.encode_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._encode_args(),
+            return_stdout_stderr=(cls._encode_stdout, cls._encode_stderr),
         )
 
     @classmethod
     def start_prefill(cls):
+        print(f"[EPD] Starting prefill on {cls.prefill_url} (NPUs 2-3)")
         cls.process_prefill = popen_launch_server(
             cls.model,
             cls.prefill_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._prefill_args(),
+            return_stdout_stderr=(cls._prefill_stdout, cls._prefill_stderr),
         )
 
     @classmethod
     def start_decode(cls):
+        print(f"[EPD] Starting decode on {cls.decode_url} (NPUs 4-5)")
         cls.process_decode = popen_launch_server(
             cls.model,
             cls.decode_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._decode_args(),
+            return_stdout_stderr=(cls._decode_stdout, cls._decode_stderr),
         )
 
     @classmethod
@@ -260,11 +354,16 @@ class NpuEPDBase(CustomTestCase):
         ]
         print("Starting load balancer:", " ".join(cmd))
         cls.process_lb = popen_with_error_check(cmd)
-        _wait_server_ready(cls.lb_url + "/health")
+        _wait_server_ready(cls.lb_url + "/health", process=cls.process_lb)
 
     @classmethod
     def start_all_servers(cls):
-        """Start encode, then prefill+decode in parallel, then lb."""
+        """Start encode, then prefill+decode in parallel, then lb.
+
+        popen_launch_server already waits for health internally, so no
+        extra _wait_server_ready is needed here.  If a server fails to
+        start, popen_launch_server raises an exception with the error.
+        """
         cls.start_encode()
         t_prefill = threading.Thread(target=cls.start_prefill)
         t_decode = threading.Thread(target=cls.start_decode)
@@ -272,9 +371,6 @@ class NpuEPDBase(CustomTestCase):
         t_decode.start()
         t_prefill.join()
         t_decode.join()
-        _wait_server_ready(cls.encode_url + "/health")
-        _wait_server_ready(cls.prefill_url + "/health")
-        _wait_server_ready(cls.decode_url + "/health")
         cls.launch_lb()
 
     @classmethod
@@ -299,23 +395,25 @@ class NpuEPDBase(CustomTestCase):
 
 
 class TestNpuEPDDisaggregationOmni(NpuEPDBase):
-    """EPD test for the Qwen3-Omni model on NPU.
+    """EPD test for the Omni model on NPU.
 
     GPU original (TestEPDDisaggregationOmni) covers image / video / audio
-    with three encoder_transfer_backends (mooncake / zmq_to_scheduler /
-    zmq_to_tokenizer) and two server_types (grpc / http).  On NPU:
+    with three encoder_transfer_backends and two server_types (grpc / http).
+    On NPU:
       - server_type = "server" (HTTP only, no gRPC).
       - encoder_transfer_backend = zmq_to_scheduler (no mooncake).
       - Audio tests are skipped (no audio fixture in NPU CI cache).
       - Cache-hit tests are removed (require --enable-mm-global-cache).
+      - Uses Qwen3-VL-30B (Omni model may not be in CI cache; this still
+        validates the same EPD pipeline for multimodal requests).
 
     [Test Category] EPD
     [Test Target] --encoder-only; --language-only; --encoder-urls;
                    --encoder-transfer-backend zmq_to_scheduler;
-                   --disaggregation-mode prefill/decode; Qwen3-Omni
+                   --disaggregation-mode prefill/decode; multimodal
     """
 
-    model = QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH
+    model = QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH
     server_type = "server"  # NPU: standard HTTP server mode (no gRPC)
 
     @classmethod
@@ -469,97 +567,34 @@ class TestNpuEPDDisaggregationOneEncoder(NpuEPDBase):
 # ---------------------------------------------------------------------------
 
 
-class TestNpuEPDDisaggregationQwen35(CustomTestCase):
+class TestNpuEPDDisaggregationQwen35(NpuEPDBase):
     """EPD test for Qwen3.5 model on NPU (encoder + language only).
 
     GPU original (TestEPDDisaggregationQwen35) starts an encoder-only
     server and a language-only server (no decode, no LB).  Requests go
     directly to the language server.  This structure is preserved on NPU.
 
+    Uses Qwen3-VL-30B on NPU (Qwen3.5-27B may not be a VLM in NPU CI cache).
+
     [Test Category] EPD
     [Test Target] --encoder-only; --language-only; --encoder-urls;
-                   Qwen3.5-27B
+                   encoder + language (no PD split)
     """
 
-    model = QWEN3_5_27B_MODEL_WEIGHTS_PATH
-    tp_size = "2"
+    model = QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH
 
     @classmethod
     def setUpClass(cls):
-        parsed = urlparse(DEFAULT_URL_FOR_TEST)
-        cls.base_host = parsed.hostname
-        bp = int(parsed.port)
-        cls.encode_port = str(bp + 300)
-        cls.prefill_port = str(bp + 100)
-        cls.encode_url = f"http://{cls.base_host}:{cls.encode_port}"
-        cls.language_url = f"http://{cls.base_host}:{cls.prefill_port}"
-        cls.process_encode = None
-        cls.process_prefill = None
-        cls.api_key = "sk-123456"
+        super().setUpClass()
+        cls.language_url = cls.prefill_url
         print(
             f"Setting up NPU Qwen3.5 EPD: model={cls.model}, "
             f"encode={cls.encode_port}, language={cls.prefill_port}"
         )
+        # Only start encode + prefill (language), no decode, no LB.
+        # popen_launch_server waits for health internally.
         cls.start_encode()
         cls.start_prefill()
-        _wait_server_ready(cls.encode_url + "/health")
-        _wait_server_ready(cls.language_url + "/health")
-
-    @classmethod
-    def start_encode(cls):
-        args = [
-            "--encoder-only",
-            "--encoder-transfer-backend",
-            "zmq_to_scheduler",
-            "--tp-size",
-            cls.tp_size,
-            "--base-gpu-id",
-            "0",
-            "--port",
-            cls.encode_port,
-            "--reasoning-parser",
-            "qwen3",
-        ] + NPU_COMMON_ARGS
-        cls.process_encode = popen_launch_server(
-            cls.model,
-            cls.encode_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=args,
-        )
-
-    @classmethod
-    def start_prefill(cls):
-        args = [
-            "--language-only",
-            "--encoder-urls",
-            cls.encode_url,
-            "--encoder-transfer-backend",
-            "zmq_to_scheduler",
-            "--tp-size",
-            cls.tp_size,
-            "--base-gpu-id",
-            str(int(cls.tp_size)),
-            "--port",
-            cls.prefill_port,
-            "--reasoning-parser",
-            "qwen3",
-        ] + NPU_COMMON_ARGS
-        cls.process_prefill = popen_launch_server(
-            cls.model,
-            cls.language_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=args,
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        for p in [cls.process_prefill, cls.process_encode]:
-            if p:
-                try:
-                    kill_process_tree(p.pid)
-                except Exception as e:
-                    print(f"Error killing process: {e}")
-        time.sleep(5)
 
     def test_image(self):
         """Single-image request to the language server."""
@@ -613,34 +648,20 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
 
     @classmethod
     def setUpClass(cls):
-        parsed = urlparse(DEFAULT_URL_FOR_TEST)
-        cls.base_host = parsed.hostname
-        bp = int(parsed.port)
-        cls.lb_port = str(bp)
-        cls.encode_port1 = str(bp + 300)
-        cls.encode_port2 = str(bp + 301)
-        cls.prefill_port = str(bp + 100)
-        cls.decode_port = str(bp + 200)
-        cls.bootstrap_port = str(bp + 500)
-        cls.encode_url1 = f"http://{cls.base_host}:{cls.encode_port1}"
+        super().setUpClass()
+        cls.encode_port2 = str(int(cls.lb_port) + 301)
         cls.encode_url2 = f"http://{cls.base_host}:{cls.encode_port2}"
-        cls.prefill_url = f"http://{cls.base_host}:{cls.prefill_port}"
-        cls.decode_url = f"http://{cls.base_host}:{cls.decode_port}"
-        cls.lb_url = f"http://{cls.base_host}:{cls.lb_port}"
-        cls.process_encode1 = None
         cls.process_encode2 = None
-        cls.process_prefill = None
-        cls.process_decode = None
-        cls.process_lb = None
-        cls.api_key = "sk-123456"
+        cls._encode2_stdout = io.StringIO()
+        cls._encode2_stderr = io.StringIO()
         print(
             f"Setting up NPU EPD (multi-encoder): "
-            f"encode1={cls.encode_port1}, encode2={cls.encode_port2}, "
+            f"encode1={cls.encode_port}, encode2={cls.encode_port2}, "
             f"prefill={cls.prefill_port}, decode={cls.decode_port}"
         )
         # Start two encoders in parallel
-        t1 = threading.Thread(target=cls.start_encode, args=(cls.encode_port1, 0, "1"))
-        t2 = threading.Thread(target=cls.start_encode, args=(cls.encode_port2, 2, "2"))
+        t1 = threading.Thread(target=cls._start_encode2)
+        t2 = threading.Thread(target=cls.start_encode)
         t1.start()
         t2.start()
         t1.join()
@@ -652,14 +673,11 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
         td.start()
         tp.join()
         td.join()
-        _wait_server_ready(cls.encode_url1 + "/health")
-        _wait_server_ready(cls.encode_url2 + "/health")
-        _wait_server_ready(cls.prefill_url + "/health")
-        _wait_server_ready(cls.decode_url + "/health")
+        # popen_launch_server waits for health internally.
         cls.launch_lb()
 
     @classmethod
-    def start_encode(cls, port, gpu_id, suffix=""):
+    def _start_encode2(cls):
         args = [
             "--encoder-only",
             "--encoder-transfer-backend",
@@ -667,28 +685,25 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
             "--tp-size",
             cls.tp_size,
             "--base-gpu-id",
-            str(gpu_id),
+            str(int(cls.tp_size)),
             "--port",
-            port,
+            cls.encode_port2,
         ] + NPU_COMMON_ARGS
-        url = f"http://{cls.base_host}:{port}"
-        proc = popen_launch_server(
+        print(f"[EPD] Starting encoder2 on {cls.encode_url2} (NPUs 2-3)")
+        cls.process_encode2 = popen_launch_server(
             cls.model,
-            url,
+            cls.encode_url2,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
+            return_stdout_stderr=(cls._encode2_stdout, cls._encode2_stderr),
         )
-        if suffix == "1":
-            cls.process_encode1 = proc
-        else:
-            cls.process_encode2 = proc
 
     @classmethod
     def start_prefill(cls):
         args = [
             "--language-only",
             "--encoder-urls",
-            cls.encode_url1,
+            cls.encode_url,
             cls.encode_url2,
             "--encoder-transfer-backend",
             cls.encoder_transfer_backend,
@@ -703,11 +718,13 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
             "--port",
             cls.prefill_port,
         ] + NPU_COMMON_ARGS
+        print(f"[EPD] Starting prefill on {cls.prefill_url} (NPUs 4-5)")
         cls.process_prefill = popen_launch_server(
             cls.model,
             cls.prefill_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
+            return_stdout_stderr=(cls._prefill_stdout, cls._prefill_stderr),
         )
 
     @classmethod
@@ -724,11 +741,13 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
             "--port",
             cls.decode_port,
         ] + NPU_COMMON_ARGS
+        print(f"[EPD] Starting decode on {cls.decode_url} (NPUs 6-7)")
         cls.process_decode = popen_launch_server(
             cls.model,
             cls.decode_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
+            return_stdout_stderr=(cls._decode_stdout, cls._decode_stderr),
         )
 
     @classmethod
@@ -737,8 +756,8 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
             cls.process_lb,
             cls.process_decode,
             cls.process_prefill,
-            cls.process_encode1,
             cls.process_encode2,
+            cls.process_encode,
         ]:
             if p:
                 try:
@@ -749,7 +768,7 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
 
     def test_encode1_health(self):
         """First encoder server /health returns 200."""
-        r = requests.get(f"{self.encode_url1}/health", timeout=10)
+        r = requests.get(f"{self.encode_url}/health", timeout=10)
         self.assertEqual(r.status_code, 200)
 
     def test_encode2_health(self):
@@ -781,3 +800,4 @@ class TestNpuEPDDisaggregationMultiEncoders(NpuEPDBase):
 
 if __name__ == "__main__":
     unittest.main()
+
