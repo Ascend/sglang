@@ -148,10 +148,16 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
         metrics = _parse_prometheus_metrics(metrics_text)
         _verify_metrics_common(self, metrics_text, metrics, expect_mfu_metrics=True)
 
-        # In the GPU scenario test case (test/registered/observer/test_stetrics. py), the 2-card scenario contains assertions about the following monitoring metrics
-        # ("sglang:dp_cooperation_forward_execution_seconds_total", {"category": "extend"},),
-        # ("sglang:dp_cooperation_forward_execution_seconds_total", {"category": "decode"},),
-        # However, these two indicators were not found during execution on the GPU, and it is uncertain whether it is a problem or if monitoring of these indicators is currently not supported
+        # In the GPU scenario test case
+        # (test/registered/observability/test_metrics.py), the 2-card scenario
+        # contains assertions about the following monitoring metrics:
+        #   ("sglang:dp_cooperation_forward_execution_seconds_total",
+        #    {"category": "extend"}),
+        #   ("sglang:dp_cooperation_forward_execution_seconds_total",
+        #    {"category": "decode"}),
+        # However, these two indicators were not found during execution on the
+        # GPU, and it is uncertain whether it is a problem or if monitoring of
+        # these indicators is currently not supported.
         metrics_to_check = [
             (
                 "sglang:dp_cooperation_realtime_tokens_total",
