@@ -188,8 +188,10 @@ class TestMimoV2acceptrate(TestAscendPerfMultiNodePdSepTestCaseBase):
         current_accept_rate = float(matches[-1])
         self.assertGreater(current_accept_rate, accept_rate)
 
-    # def test_request_clear(self):
-    #     _temp_dir_obj.cleanup()
+    # @classmethod
+    # def tearDownClass(cls):
+    #     super().tearDownClass()
+        # _temp_dir_obj.cleanup()
 
 
 if __name__ == "__main__":
