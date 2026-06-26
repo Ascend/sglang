@@ -13,7 +13,8 @@ from sglang.srt.observability.metrics_collector import (
     STAT_LOGGER_ROLE_SCHEDULER,
     SchedulerMetricsCollector,
 )
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH as _MODEL_NAME
+#from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH as _MODEL_NAME
+_MODEL_NAME="/home/weights/Qwen3-0.6B"
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
@@ -617,6 +618,7 @@ class TestStatLoggersDI(CustomTestCase):
         engine = sgl.Engine(
             model_path=_MODEL_NAME,
             enable_metrics=True,
+            device="npu",
             stat_loggers={
                 STAT_LOGGER_ROLE_SCHEDULER: _MarkingSchedulerCollector,
             },
@@ -683,6 +685,7 @@ class TestStatLoggersDIRecording(CustomTestCase):
         engine = sgl.Engine(
             model_path=_MODEL_NAME,
             enable_metrics=True,
+            device="npu",
             stat_loggers={
                 STAT_LOGGER_ROLE_SCHEDULER: _RecordingSchedulerCollector,
             },
