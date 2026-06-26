@@ -105,12 +105,19 @@ jobs:
             decode_size: 1
             router_size: 1
           - name: bucket_adjust_interval_secs
-            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs.py
+            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs_debug.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
             prefill_size: 3
             decode_size: 1
             router_size: 1
+#          - name: bucket_adjust_interval_secs
+#            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
 #          - name: fusion_operator
 #            test_case: test/registered/ascend/basic_function/wip/test_npu_fusion_operator.py
 #            test_type: 'perf'
