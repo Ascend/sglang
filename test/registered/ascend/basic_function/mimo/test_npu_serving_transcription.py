@@ -35,7 +35,7 @@ def download_audio_bytes(url=AUDIO_URL):
             response = requests.get(url, timeout=60)
             response.raise_for_status()
             return response.content
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             if attempt < 2:
                 time.sleep(5)
             else:

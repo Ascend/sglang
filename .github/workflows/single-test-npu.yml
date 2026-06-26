@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 11: serving transcription - fix black lint (move imports)
+# test round 12: serving transcription - fix ConnectTimeout retry
 
 on:
   pull_request:
