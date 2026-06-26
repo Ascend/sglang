@@ -20,8 +20,8 @@ register_npu_ci(
 
 accept_rate = 0.25
 _temp_dir_obj = tempfile.TemporaryDirectory()
-temp_dir = _temp_dir_obj.name
-
+# temp_dir = _temp_dir_obj.name
+temp_dir = "/data/y30061092"
 PREFILL_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
@@ -188,8 +188,8 @@ class TestMimoV2acceptrate(TestAscendPerfMultiNodePdSepTestCaseBase):
         current_accept_rate = float(matches[-1])
         self.assertGreater(current_accept_rate, accept_rate)
 
-    def test_request_clear(self):
-        _temp_dir_obj.cleanup()
+    # def test_request_clear(self):
+    #     _temp_dir_obj.cleanup()
 
 
 if __name__ == "__main__":
