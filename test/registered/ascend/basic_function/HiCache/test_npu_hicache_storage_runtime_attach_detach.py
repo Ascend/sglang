@@ -151,12 +151,8 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
 
             # No admin header.
             self.assertEqual(self._get_backend(base_url_a).status_code, 400)
-            self.assertEqual(
-                self._attach_backend(base_url_a, "file").status_code, 400
-            )
-            self.assertEqual(
-                self._detach_backend(base_url_a).status_code, 400
-            )
+            self.assertEqual(self._attach_backend(base_url_a, "file").status_code, 400)
+            self.assertEqual(self._detach_backend(base_url_a).status_code, 400)
 
             # Even with a Bearer header, endpoints must remain disabled
             # because the server itself was started without --admin-api-key.
@@ -190,9 +186,7 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
 
             # 1) Without Authorization header -> 401 for every verb.
             self.assertEqual(self._get_backend(base_url_b).status_code, 401)
-            self.assertEqual(
-                self._attach_backend(base_url_b, "file").status_code, 401
-            )
+            self.assertEqual(self._attach_backend(base_url_b, "file").status_code, 401)
             self.assertEqual(self._detach_backend(base_url_b).status_code, 401)
 
             admin = self._admin_headers()

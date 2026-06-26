@@ -250,9 +250,7 @@ class HiCacheStorageBaseMixin:
         #    backend, so the vast majority of the 768 prefix tokens are cached.
         response2 = self.send_request(base_prompt, max_tokens=150)
         cached_tokens = self.get_cached_tokens(response2)
-        logging.warning(
-            "second request cached_tokens=%d (expect > 700)", cached_tokens
-        )
+        logging.warning("second request cached_tokens=%d (expect > 700)", cached_tokens)
         self.assertGreater(
             cached_tokens,
             700,
@@ -260,9 +258,7 @@ class HiCacheStorageBaseMixin:
         )
 
 
-class TestHiCacheStoragePageFirstDirectIO(
-    HiCacheStorageBaseMixin, CustomTestCase
-):
+class TestHiCacheStoragePageFirstDirectIO(HiCacheStorageBaseMixin, CustomTestCase):
     """Variant: page_first_direct mem-layout + direct IO backend (single NPU).
 
     This is the only variant that runs in CI; the other three variants below
@@ -279,10 +275,10 @@ class TestHiCacheStoragePageFirstDirectIO(
         ]
 
 
-@unittest.skipIf(_is_in_ci(), "Skipped in CI: page_first is remapped to page_first_direct on NPU")
-class TestHiCacheStoragePageFirstLayout(
-    HiCacheStorageBaseMixin, CustomTestCase
-):
+@unittest.skipIf(
+    _is_in_ci(), "Skipped in CI: page_first is remapped to page_first_direct on NPU"
+)
+class TestHiCacheStoragePageFirstLayout(HiCacheStorageBaseMixin, CustomTestCase):
     """Variant: page_first mem-layout.
 
     Skipped in CI because NPU does not support `page_first` and internally
@@ -301,7 +297,10 @@ class TestHiCacheStoragePageFirstLayout(
         ]
 
 
-@unittest.skipIf(_is_in_ci(), "Skipped in CI: MLA + file backend covered by test_npu_hicache_mla.py smoke")
+@unittest.skipIf(
+    _is_in_ci(),
+    "Skipped in CI: MLA + file backend covered by test_npu_hicache_mla.py smoke",
+)
 class TestHiCacheStorageMLA(HiCacheStorageBaseMixin, CustomTestCase):
     """Variant: MLA model + file backend (tp=2).
 
@@ -373,9 +372,7 @@ class TestHiCacheStorageAccuracy(HiCacheStorageBaseMixin, CustomTestCase):
         score_before = self._run_gsm8k()
         self.flush_cache()
         score_after = self._run_gsm8k()
-        logging.warning(
-            "gsm8k score before=%.4f after=%.4f", score_before, score_after
-        )
+        logging.warning("gsm8k score before=%.4f after=%.4f", score_before, score_after)
         self.assertGreaterEqual(score_before, self.accuracy_threshold)
         self.assertGreaterEqual(score_after, self.accuracy_threshold)
         self.assertLess(
