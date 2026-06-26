@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: matched stop test
+# test round 7: serving transcription test
 
 on:
   pull_request:
@@ -40,7 +40,7 @@ jobs:
           pip install --quiet tabulate
           # Test cases
           test_cases=(
-            "test/registered/ascend/interface/_test_matched_stop.py"
+            "test/registered/ascend/basic_function/mimo/test_npu_serving_transcription.py"
           )
 
 
