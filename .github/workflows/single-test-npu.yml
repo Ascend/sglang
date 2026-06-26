@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Anthropic server interface test
+# test round 3: Anthropic server interface test
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-8
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260611
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
