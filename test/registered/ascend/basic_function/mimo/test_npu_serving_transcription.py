@@ -5,6 +5,8 @@ Test the OpenAI-compatible /v1/audio/transcriptions endpoint with Whisper.
 
 import io
 import json
+import re
+import time
 import unittest
 from typing import List, Optional
 
@@ -28,7 +30,6 @@ AUDIO_URL = "https://raw.githubusercontent.com/sgl-project/sgl-test-files/refs/h
 
 def download_audio_bytes(url=AUDIO_URL):
     """Download audio file and return raw bytes with retry."""
-    import time
     for attempt in range(3):
         try:
             response = requests.get(url, timeout=60)
@@ -188,7 +189,6 @@ class TestServingTranscription(CustomTestCase):
 
     def test_auto_detect_matches_explicit_english(self):
         """Auto-detected (language=None) text should match explicit language=en."""
-        import re
         auto = self._transcribe(language=None).get("text", "")
         explicit = self._transcribe(language="en").get("text", "")
         # Normalize: lowercase + strip punctuation for comparison
@@ -238,7 +238,6 @@ class TestServingTranscription(CustomTestCase):
         fused path only needs to hide the forced prefix — which this PR
         does. Asserts both the prefix-leak guard and text equivalence.
         """
-        import re
         deltas = self._transcribe_stream(language=None)
         self.assertTrue(len(deltas) > 0, "Expected at least one streamed delta")
         for d in deltas:

@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 10: serving transcription - retry download + normalize punctuation
+# test round 11: serving transcription - fix black lint (move imports)
 
 on:
   pull_request:
