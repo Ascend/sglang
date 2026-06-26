@@ -137,7 +137,6 @@ DECODE_ARGS = [
     "--log-requests-level",
     3,
     "--log-requests-target",
-    "stdout",
     temp_dir,
 ]
 
@@ -177,6 +176,8 @@ class TestMimoV2acceptrate(TestAscendPerfMultiNodePdSepTestCaseBase):
                 },
             },
         )
+        print("==="*50)
+        print(f"*********temp_dir = {temp_dir}")
         self.assertEqual(response.status_code, 200)
         log_files = list(Path(temp_dir).glob("*.log"))
         self.assertGreater(len(log_files), 0)
