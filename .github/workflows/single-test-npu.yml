@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 9: serving transcription test - fix assertions v2
+# test round 10: serving transcription - retry download + normalize punctuation
 
 on:
   pull_request:

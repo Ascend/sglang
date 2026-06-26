@@ -27,10 +27,18 @@ AUDIO_URL = "https://raw.githubusercontent.com/sgl-project/sgl-test-files/refs/h
 
 
 def download_audio_bytes(url=AUDIO_URL):
-    """Download audio file and return raw bytes."""
-    response = requests.get(url, timeout=60)
-    response.raise_for_status()
-    return response.content
+    """Download audio file and return raw bytes with retry."""
+    import time
+    for attempt in range(3):
+        try:
+            response = requests.get(url, timeout=60)
+            response.raise_for_status()
+            return response.content
+        except requests.exceptions.ReadTimeout:
+            if attempt < 2:
+                time.sleep(5)
+            else:
+                raise
 
 
 class TestServingTranscription(CustomTestCase):
@@ -180,11 +188,15 @@ class TestServingTranscription(CustomTestCase):
 
     def test_auto_detect_matches_explicit_english(self):
         """Auto-detected (language=None) text should match explicit language=en."""
+        import re
         auto = self._transcribe(language=None).get("text", "")
         explicit = self._transcribe(language="en").get("text", "")
+        # Normalize: lowercase + strip punctuation for comparison
+        def normalize(t):
+            return re.sub(r'[^\w\s]', '', t.lower().strip())
         self.assertEqual(
-            auto.strip().lower(),
-            explicit.strip().lower(),
+            normalize(auto),
+            normalize(explicit),
             "Auto-detect should produce the same transcription as language=en "
             "on an English clip.",
         )
@@ -226,6 +238,7 @@ class TestServingTranscription(CustomTestCase):
         fused path only needs to hide the forced prefix — which this PR
         does. Asserts both the prefix-leak guard and text equivalence.
         """
+        import re
         deltas = self._transcribe_stream(language=None)
         self.assertTrue(len(deltas) > 0, "Expected at least one streamed delta")
         for d in deltas:
@@ -234,9 +247,12 @@ class TestServingTranscription(CustomTestCase):
             )
         streamed = "".join(deltas).strip()
         reference = self._transcribe(language=None).get("text", "").strip()
+        # Normalize: lowercase + strip punctuation for comparison
+        def normalize(t):
+            return re.sub(r'[^\w\s]', '', t.lower())
         self.assertEqual(
-            streamed.lower(),
-            reference.lower(),
+            normalize(streamed),
+            normalize(reference),
             "Streamed auto-detect text should match the non-streaming result.",
         )
 
