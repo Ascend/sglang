@@ -1,4 +1,5 @@
 import os
+import time
 import unittest
 
 import requests
@@ -148,16 +149,16 @@ class TestKimiK25W4A8(CustomTestCase):
 
     def test_1(self):
         logger.info("S3、记录HCCL初始化完成后、模型加载前，通信域内存占用")
-        res1 = run_command("cat ./out_log.txt | grep 'Init torch distributed ends'")
+        res1 = run_command("cat ./err_log.txt | grep 'Init torch distributed ends'")
         logger.info(res1)
         logger.info("S4、记录模型加载后，模型权重内存占用")
-        res2 = run_command("cat ./out_log.txt | grep 'Load weight end'")
+        res2 = run_command("cat ./err_log.txt | grep 'Load weight end'")
         logger.info(res2)
         logger.info("S5、记录KV cache分配后，KV cache内存占用")
-        res3 = run_command("cat ./out_log.txt | grep 'KV Cache is allocated'")
+        res3 = run_command("cat ./err_log.txt | grep 'KV Cache is allocated'")
         logger.info(res3)
         logger.info("S6、记录NPU graph buffer分配后，NPU graph buffer内存占用")
-        res4 = run_command("cat ./out_log.txt | grep 'Capture npu graph end'")
+        res4 = run_command("cat ./err_log.txt | grep 'Capture npu graph end'")
         logger.info(res4)
         logger.info("S7、服务启动成功后执行npu-smi info")
         raw_result = run_command(cmd)
@@ -165,7 +166,7 @@ class TestKimiK25W4A8(CustomTestCase):
 
     def test_2(self):
         logger.info("S9、curl一条请求，完成后记录每张卡的HBM内存占用和总内存")
-        requests.post(
+        response = requests.post(
             f"{self.base_url}/generate",
             json={
                 "text": "The capital of France is",
@@ -175,16 +176,25 @@ class TestKimiK25W4A8(CustomTestCase):
                 },
             },
         )
+        self.assertEqual(response.status_code, 200)
         raw_result = run_command(cmd)
         logger.info(raw_result)
 
     def test_3(self):
-        if hasattr(self, "process") and self.process:
+        if self.process:
             try:
                 kill_process_tree(self.process.pid)
+                for _ in range(60):
+                    if self.process.poll() is not None:
+                        logger.info("Process fully exited")
+                        break
+                    time.sleep(1)
+                else:
+                    logger.warning("Process did NOT exit in time")
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
         logger.info("S9、停止服务，等待服务完全停止后，记录每张卡的HBM内存占用和总内")
+        time.sleep(30)
         raw_result = run_command(cmd)
         logger.info(raw_result)
 
