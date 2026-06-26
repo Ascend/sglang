@@ -55,7 +55,7 @@ OTHER_ARGS = [
     "0.85",
     "--max-running-requests",
     32,
-    "context-length",
+    "--context-length",
     8188,
     "--disable-radix-cache",
     "--chunked-prefill-size",
