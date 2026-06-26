@@ -97,20 +97,27 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-          - name: bucket_adjust_interval_secs_concurrency
-            test_case: test/registered/ascend/basic_function/parallel_strategy/test_npu_bucket_adjust_interval_secs_concurrency.py
+          - name: bucket_adjust_interval_secs_1
+            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs_debug_1.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
             prefill_size: 3
             decode_size: 1
             router_size: 1
-          - name: bucket_adjust_interval_secs
-            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs_debug.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-            prefill_size: 3
-            decode_size: 1
-            router_size: 1
+#          - name: bucket_adjust_interval_secs_concurrency
+#            test_case: test/registered/ascend/basic_function/parallel_strategy/test_npu_bucket_adjust_interval_secs_debug_1.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
+#          - name: bucket_adjust_interval_secs
+#            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs_debug.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
 #          - name: bucket_adjust_interval_secs
 #            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs.py
 #            test_type: 'perf'
