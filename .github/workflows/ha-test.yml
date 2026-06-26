@@ -142,6 +142,14 @@ jobs:
 #            runner: linux-aarch64-a3-4
 #            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_2p_mmmu.py
 #            test_type: 'function'
+          - name: test_npu_qwen3_5_9b_bf16_1p_mmmu.py
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/accuracy/qwen3_5_9b/test_npu_qwen3_5_9b_bf16_1p_mmmu.py
+            test_type: 'function'
+          - name: test_npu_qwen3_5_27b_bf16_1p_mmmu.py
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/accuracy/qwen3_5_27b/test_npu_qwen3_5_27b_bf16_1p_mmmu.py
+            test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
