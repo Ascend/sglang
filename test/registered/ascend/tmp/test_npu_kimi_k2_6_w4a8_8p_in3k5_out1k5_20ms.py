@@ -1,5 +1,4 @@
 import os
-import re
 import unittest
 
 import requests
@@ -24,7 +23,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(
     est_time=1800,
-    suite="full-16-npu-a3",
+    suite="",
     nightly=True,
     disabled="Currently it is executed by the npu performance workflow.",
 )
@@ -109,27 +108,6 @@ KIMI_K2_6_OTHER_ARGS = [
     "--tool-call-parser",
     "kimi_k2",
 ]
-
-
-def get_hbm_usage_list_16(raw_result: str) -> list:
-    """
-    返回长度为 16 的列表，索引 0~15 对应 chip 0~15 的 HBM 占用(MB)
-    """
-    pattern = re.compile(r"\d+\s+/\s*\d+\s+\d+\s+/\s*\d+\s+(\d+)\s+/\s*(\d+)$")
-    hbm_list = []
-
-    for line in raw_result.splitlines():
-        match = pattern.search(line)
-        if match:
-            hbm_used = int(match.group(1))
-            hbm_list.append(hbm_used)
-
-            # 防御性校验：防止异常输出
-            if len(hbm_list) == 16:
-                break
-
-    return hbm_list
-
 
 cmd = "npu-smi info"
 

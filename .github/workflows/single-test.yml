@@ -5,7 +5,7 @@ on:
     branches:
       - testcases
     paths:
-      - ".github/workflows/ha-test.yml"
+      - ".github/workflows/single-test.yml"
   workflow_dispatch:
     inputs:
       ref:
