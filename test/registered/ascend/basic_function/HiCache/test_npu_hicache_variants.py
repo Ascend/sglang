@@ -39,7 +39,9 @@ NPU adaptation notes (see report for the full rationale):
     --speculative-num-steps 4 --speculative-eagle-topk 1
     --speculative-num-draft-tokens 5` and the
     `SGLANG_ENABLE_OVERLAP_PLAN_STREAM=1` / `SGLANG_ENABLE_SPEC_V2=1`
-    env vars.
+    env vars. Note: `--disable-radix-cache` (used by the spec-only NPU
+    test) is intentionally dropped here because HiCache's device tier
+    IS the radix cache; the two flags are mutually exclusive.
   * HiCache args: `--enable-hierarchical-cache --hicache-ratio 1.2`
     (GPU used `--hicache-ratio 1.2 --mem-fraction-static 0.7`; the
     `--page-size 128 / --attention-backend ascend / --disable-cuda-graph`
@@ -101,7 +103,6 @@ class TestHiCacheEagle(CustomTestCase):
                 "ascend",
                 "--device",
                 "npu",
-                "--disable-radix-cache",
                 "--speculative-draft-model-quantization",
                 "unquant",
                 "--speculative-algorithm",
