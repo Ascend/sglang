@@ -11,7 +11,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     TestAscendPerfMultiNodePdSepTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from test.ascend.e2e.test_npu_multi_node_utils import check_role, LOCAL_TIMEOUT
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import check_role, LOCAL_TIMEOUT
 
 register_npu_ci(
     est_time=3600, suite="", nightly=True, disabled="multi modes test cases"
