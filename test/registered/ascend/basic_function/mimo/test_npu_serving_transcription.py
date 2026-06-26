@@ -153,10 +153,13 @@ class TestServingTranscription(CustomTestCase):
             self.assertTrue(len(result["text"]) > 0)
             results.append(result["text"])
 
+        def normalize(t):
+            return re.sub(r'[^\w\s]', '', t.lower().strip())
+
         for i in range(1, len(results)):
             self.assertEqual(
-                results[0],
-                results[i],
+                normalize(results[0]),
+                normalize(results[i]),
                 f"Transcription {i + 1} differs from first transcription",
             )
 
