@@ -33,7 +33,7 @@ class TestAnthropicServer(CustomTestCase):
             other_args=[
                 "--attention-backend",
                 "ascend",
-            ]
+            ],
         )
         cls.messages_url = cls.base_url + "/v1/messages"
 
