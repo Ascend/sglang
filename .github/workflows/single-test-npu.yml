@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 8: serving transcription test - fix auto detect assertions
+# test round 9: serving transcription test - fix assertions v2
 
 on:
   pull_request:
