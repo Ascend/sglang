@@ -1,8 +1,11 @@
+import copy
 import time
 import unittest
+import threading
 
 import requests
 
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -12,6 +15,14 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import check_role, LOCAL_TIMEOUT
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    SERVICE_PORT,
+    check_role,
+    launch_pd_mix_node,
+    launch_pd_separation_node,
+    launch_router,
+    wait_server_ready,
+)
 
 register_npu_ci(
     est_time=3600, suite="", nightly=True, disabled="multi modes test cases"
@@ -180,6 +191,17 @@ def check_server_ready(url, timeout=LOCAL_TIMEOUT):
             return False
         time.sleep(check_interval)
 
+def create_model_config_with_param(bucket_interval):
+    """创建带有指定 bucket-adjust-interval-secs 参数的配置"""
+    config = copy.deepcopy(MODEL_CONFIG)
+    config["router_args"].extend(
+        [
+            "--bucket-adjust-interval-secs",
+            bucket_interval,
+        ]
+    )
+    return config
+
 
 class TestNPUBucketAdjustIntervalSecsConcurrency(
     TestAscendPerfMultiNodePdSepTestCaseBase
@@ -202,11 +224,51 @@ class TestNPUBucketAdjustIntervalSecsConcurrency(
     output_len = 20
     random_range_ratio = 1
 
+    def _stop_router_server(self):
+        cls = self.__class__
+        router_pid = getattr(cls, "_router_pid", None)
+        if router_pid is not None:
+            try:
+                kill_process_tree(router_pid)
+            except Exception:
+                pass
+            cls._router_pid = None
+
+        if cls.sglang_thread is not None:
+            if cls.sglang_thread.is_alive():
+                cls.stop_event.set()
+                cls.sglang_thread.join(timeout=5)
+            cls.sglang_thread = None
+
+        time.sleep(5)
+
+    @classmethod
+    @check_role(allowed_roles=["router"])
+    def _start_router_server(cls):
+        sglang_thread = threading.Thread(target=launch_router, args=(cls.model_config,))
+        sglang_thread.daemon = True
+        sglang_thread.start()
+
+
     @check_role(allowed_roles=["router"])
     def test_throughput(self):
         health_check_url = f"{self.base_url}/health"
         if_ready = check_server_ready(health_check_url)
         print(f"{if_ready=}")
+
+        self._stop_router_server()
+
+        if_ready = check_server_ready(health_check_url)
+        print(f"{if_ready=}")
+
+        self.__class__.model_config = create_model_config_with_param("0")
+
+        try:
+            self._start_router_server()
+            is_running = check_server_ready(health_check_url)
+            print(f"{is_running=}")
+        finally:
+            self._stop_router_server()
 
 
 if __name__ == "__main__":
