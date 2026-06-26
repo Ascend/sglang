@@ -144,40 +144,40 @@ jobs:
       router_size: ${{ matrix.test_config.router_size }}
       transformers_version: ''
 
-#  single-node-tests:
-#    name: single-node-poc
-#    needs: [ set-image-config, multi-node-tests ]
-#    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
-#    strategy:
-#      fail-fast: false
-#      max-parallel: 3
-#      matrix:
-#        test_config:
-#          - name: test_npu_mimo_v2_accept_rate
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/basic_function/parameter/test_npu_mimo_v2_accept_rate.py
+  single-node-tests:
+    name: single-node-poc
+    needs: [ set-image-config, multi-node-tests ]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        test_config:
+          - name: test_npu_mimo_v2_accept_rate
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/basic_function/parameter/test_npu_mimo_v2_accept_rate.py
+            test_type: 'function'
+#          - name: test_npu_llava_onevision_qwen2_7b_ov
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/vlm_models/test_npu_llava_onevision_qwen2_7b_ov.py
 #            test_type: 'function'
-##          - name: test_npu_llava_onevision_qwen2_7b_ov
-##            runner: linux-aarch64-a3-2
-##            test_case: test/registered/ascend/vlm_models/test_npu_llava_onevision_qwen2_7b_ov.py
-##            test_type: 'function'
-##          - name: test_npu_constrained_json_whitespace_pattern
-##            runner: linux-aarch64-a3-2
-##            test_case: test/registered/ascend/basic_function/runtime_options/test_npu_constrained_json_whitespace_pattern.py
-##            test_type: 'function'
-##          - name: test_npu_pd_disaggregation_ha_mixed_worker_failover
-##            runner: linux-aarch64-a3-16
-##            test_case: test/registered/ascend/temp/test_npu_pd_disaggregation_ha_mixed_worker_failover.py
-##            test_type: 'function'
-#    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
-#    with:
-#      runner: ${{ matrix.test_config.runner }}
-#      test_type: ${{ matrix.test_config.test_type }}
-#      test_config_name: ${{ matrix.test_config.name }}
-#      test_case: ${{ matrix.test_config.test_case }}
-#      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
-#      install_sglang_from_source: false
-#      transformers_version: ''
+#          - name: test_npu_constrained_json_whitespace_pattern
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/basic_function/runtime_options/test_npu_constrained_json_whitespace_pattern.py
+#            test_type: 'function'
+#          - name: test_npu_pd_disaggregation_ha_mixed_worker_failover
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/ascend/temp/test_npu_pd_disaggregation_ha_mixed_worker_failover.py
+#            test_type: 'function'
+    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
+    with:
+      runner: ${{ matrix.test_config.runner }}
+      test_type: ${{ matrix.test_config.test_type }}
+      test_config_name: ${{ matrix.test_config.name }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      install_sglang_from_source: false
+      transformers_version: ''
 
   check-all-jobs:
     needs:
