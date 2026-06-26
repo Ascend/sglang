@@ -1,0 +1,184 @@
+name: Multi Nodes Test (NPU)
+
+on:
+  pull_request:
+    branches:
+      - testcases
+    paths-ignore:
+      - "**.md"
+      - "**.txt"
+      - "docs/**"
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (branch, tag, or SHA) to test. If not provided, uses the default branch.'
+        required: false
+        type: string
+        default: ''
+      job_filter:
+        description: 'Select which job to run (leave empty or "all" to run all jobs)'
+        required: false
+        type: string
+        default: 'all'
+      image_a3:
+        description: 'The a3 running docker image of the test task.'
+        required: false
+        type: string
+        default: ''
+      skip_install_flag:
+        description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
+        required: false
+        type: string
+        default: ''
+      test_scope:
+        description: 'Test scope: all / single / multi'
+        required: true
+        type: choice
+        options:
+          - all
+          - single
+          - multi
+        default: 'single'
+
+concurrency:
+  group: single-test-npu-${{ inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
+
+jobs:
+  set-image-config:
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.set-vars.outputs.ref }}
+      job_filter: ${{ steps.set-vars.outputs.job_filter }}
+      image_a3: ${{ steps.set-vars.outputs.image_a3 }}
+      skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
+      test_scope: ${{ steps.set-vars.outputs.test_scope }}
+    steps:
+      - name: Set image config
+        id: set-vars
+        run: |
+          if [ -z "${{ inputs.ref }}" ]; then
+            echo "ref=" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ inputs.ref }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -z "${{ inputs.job_filter }}" ]; then
+            echo "job_filter=all" >> $GITHUB_OUTPUT
+          else
+            echo "job_filter=${{ inputs.job_filter }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -z "${{ inputs.image_a3 }}" ]; then
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11" >> $GITHUB_OUTPUT
+          else
+            echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -z "${{ inputs.skip_install_flag }}" ]; then
+            echo "skip_install_flag=false" >> $GITHUB_OUTPUT
+          else
+            echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -z "${{ inputs.test_scope }}" ]; then
+            echo "test_scope=multi" >> $GITHUB_OUTPUT
+          else
+            echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
+          fi
+
+  multi-node-tests:
+    name: multi-node-poc
+    needs: [ set-image-config ]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'multi') }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_config:
+          - name: bucket_adjust_interval_secs_1
+            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs_debug_1.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 3
+            decode_size: 1
+            router_size: 1
+          - name: test_npu_hierarchical_cache
+            test_case: test/registered/ascend/basic_function/wip/test_npu_hierarchical_cache.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 3
+            decode_size: 1
+            router_size: 1
+#          - name: bucket_adjust_interval_secs_concurrency
+#            test_case: test/registered/ascend/basic_function/parallel_strategy/test_npu_bucket_adjust_interval_secs_debug_1.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
+#          - name: bucket_adjust_interval_secs
+#            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs_debug.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
+#          - name: bucket_adjust_interval_secs
+#            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
+#          - name: fusion_operator
+#            test_case: test/registered/ascend/basic_function/wip/test_npu_fusion_operator.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 1
+#            decode_size: 2
+#            router_size: 1
+#          - name: prefill_policy_bucket_balance
+#            test_case: test/registered/ascend/basic_function/wip/test_npu_prefill_policy_bucket_balance.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
+
+
+    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
+    with:
+      runner: linux-amd64-cpu-8
+      #runner: linux-aarch64-a3-0
+      test_type: ${{ matrix.test_config.test_type }}
+      test_config_name: ${{ matrix.test_config.name }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
+      install_sglang_from_source: true
+      prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
+      node_size: ${{ matrix.test_config.node_size || 1 }}
+      prefill_size: ${{ matrix.test_config.prefill_size }}
+      decode_size: ${{ matrix.test_config.decode_size }}
+      router_size: ${{ matrix.test_config.router_size }}
+      transformers_version: ''
+
+  check-all-jobs:
+    needs:
+      - set-image-config
+      - multi-node-tests
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Check job status
+        run: |
+          FAILED=0
+          echo "=== Check non-skipped jobs ==="
+          ${{ contains(needs.*.result, 'failure') }} && FAILED=1
+          ${{ contains(needs.*.result, 'cancelled') }} && FAILED=1
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ Some jobs failed or cancelled"
+            exit 1
+          fi
+          echo "✅ All selected scope jobs passed"

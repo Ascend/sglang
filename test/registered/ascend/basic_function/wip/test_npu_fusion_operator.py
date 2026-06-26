@@ -1,3 +1,4 @@
+import copy
 import unittest
 
 import numpy as np
@@ -161,8 +162,8 @@ MODEL_CONFIG_FUSION_DISABLED = {
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": BASE_DECODE_ENVS,
     "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1", "TRANSFORMERS_VERBOSITY": "error"},
-    "prefill_args": BASE_PREFILL_ARGS,
-    "decode_args": BASE_DECODE_ARGS
+    "prefill_args": copy.deepcopy(BASE_PREFILL_ARGS),
+    "decode_args": copy.deepcopy(BASE_DECODE_ARGS)
     + [
         "--moe-a2a-backend",
         "deepep",
@@ -177,8 +178,8 @@ MODEL_CONFIG_FUSION_ENABLED = {
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": BASE_DECODE_ENVS,
     "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
-    "prefill_args": BASE_PREFILL_ARGS,
-    "decode_args": BASE_DECODE_ARGS
+    "prefill_args": copy.deepcopy(BASE_PREFILL_ARGS),
+    "decode_args": copy.deepcopy(BASE_DECODE_ARGS)
     + [
         "--moe-a2a-backend",
         "ascend_fuseep",

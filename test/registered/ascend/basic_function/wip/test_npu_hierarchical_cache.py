@@ -1,3 +1,4 @@
+import copy
 import unittest
 from types import SimpleNamespace
 
@@ -190,7 +191,7 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBa
         )
 
     def test_hierarchical_cache_hit_and_ttft_reduce(self):
-        self.__class__.model_config = MODEL_CONFIG_DISABLE_HIERARCHICAL_CACHE
+        self.__class__.model_config = copy.deepcopy(MODEL_CONFIG_DISABLE_HIERARCHICAL_CACHE)
         try:
             self.start_pd_server()
             self.start_router_server()
@@ -226,7 +227,7 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBa
             if self.process:
                 kill_process_tree(self.process.pid)
 
-        self.__class__.model_config = MODEL_CONFIG_ENABLE_HIERARCHICAL_CACHE
+        self.__class__.model_config = copy.deepcopy(MODEL_CONFIG_ENABLE_HIERARCHICAL_CACHE)
         try:
             self.start_pd_server()
             self.start_router_server()
