@@ -94,17 +94,9 @@ jobs:
       max-parallel: 3
       matrix:
         test_config:
-          - name: test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/tmp/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py
-            test_type: 'function'
-          - name: test_npu_minimax_m2_7_w8a8_8p
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/tmp/test_npu_minimax_m2_7_w8a8_8p.py
-            test_type: 'function'
-          - name: test_npu_deepseek_v4_flash_w8a8_mtp
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/tmp/test_npu_deepseek_v4_flash_w8a8_mtp.py
+          - name: test_npu_qwen3_6_27b_w8a8_1p
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/tmp/test_npu_qwen3_6_27b_w8a8_1p.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
