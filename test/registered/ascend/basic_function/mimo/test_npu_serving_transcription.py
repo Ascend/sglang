@@ -35,7 +35,11 @@ def download_audio_bytes(url=AUDIO_URL):
             response = requests.get(url, timeout=60)
             response.raise_for_status()
             return response.content
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (
+            requests.exceptions.ReadTimeout,
+            requests.exceptions.ConnectTimeout,
+            requests.exceptions.ConnectionError,
+        ):
             if attempt < 2:
                 time.sleep(5)
             else:
@@ -154,7 +158,7 @@ class TestServingTranscription(CustomTestCase):
             results.append(result["text"])
 
         def normalize(t):
-            return re.sub(r'[^\w\s]', '', t.lower().strip())
+            return re.sub(r"[^\w\s]", "", t.lower().strip())
 
         for i in range(1, len(results)):
             self.assertEqual(
@@ -194,9 +198,11 @@ class TestServingTranscription(CustomTestCase):
         """Auto-detected (language=None) text should match explicit language=en."""
         auto = self._transcribe(language=None).get("text", "")
         explicit = self._transcribe(language="en").get("text", "")
+
         # Normalize: lowercase + strip punctuation for comparison
         def normalize(t):
-            return re.sub(r'[^\w\s]', '', t.lower().strip())
+            return re.sub(r"[^\w\s]", "", t.lower().strip())
+
         self.assertEqual(
             normalize(auto),
             normalize(explicit),
@@ -249,9 +255,11 @@ class TestServingTranscription(CustomTestCase):
             )
         streamed = "".join(deltas).strip()
         reference = self._transcribe(language=None).get("text", "").strip()
+
         # Normalize: lowercase + strip punctuation for comparison
         def normalize(t):
-            return re.sub(r'[^\w\s]', '', t.lower())
+            return re.sub(r"[^\w\s]", "", t.lower())
+
         self.assertEqual(
             normalize(streamed),
             normalize(reference),

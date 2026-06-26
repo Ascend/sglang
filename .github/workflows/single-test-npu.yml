@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 13: serving transcription - normalize sequential comparison
+# test round 14: serving transcription - black format + catch ConnectionError
 
 on:
   pull_request:
