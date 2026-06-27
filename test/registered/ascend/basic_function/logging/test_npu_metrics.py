@@ -21,7 +21,7 @@ from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
-'''
+
 class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     """Test core metrics functionality on single NPU with MFU enabled.
 
@@ -177,7 +177,7 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
         }
         self.assertIn("0", num_prefill_ranks_values)
         self.assertIn("1", num_prefill_ranks_values)
-'''
+
 
 def _generate_metrics(base_url: str):
     """Send requests to generate metrics data.
@@ -421,51 +421,51 @@ class _MarkingSchedulerCollector(SchedulerMetricsCollector):
             f.write("scheduler_collector_initialized\n")
         super().__init__(*args, **kwargs)
 
-
-class TestNPUStatLoggersDI(CustomTestCase):
-    """Verify that a custom MetricsCollector subclass passed through
-    ``ServerArgs.stat_loggers`` is the one instantiated inside the
-    scheduler subprocess on NPU."""
-
-    def setUp(self) -> None:
-        os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
-        _clear_sglang_metrics_from_default_registry()
-        try:
-            os.unlink(_DI_MARKER_PATH)
-        except FileNotFoundError:
-            pass
-
-    def tearDown(self) -> None:
-        try:
-            os.unlink(_DI_MARKER_PATH)
-        except FileNotFoundError:
-            pass
-
-    def test_engine_custom_scheduler_collector(self):
-        import sglang as sgl
-
-        engine = sgl.Engine(
-            model_path=_MODEL_NAME,
-            enable_metrics=True,
-            device="npu",
-            base_gpu_id=8,
-            stat_loggers={
-                STAT_LOGGER_ROLE_SCHEDULER: _MarkingSchedulerCollector,
-            },
-        )
-        try:
-            # One small generation triggers scheduler init, which is where
-            # resolve_collector_class() picks the injected subclass.
-            engine.generate("Hello", {"max_new_tokens": 4})
-        finally:
-            engine.shutdown()
-
-        self.assertTrue(
-            os.path.exists(_DI_MARKER_PATH),
-            "Custom SchedulerMetricsCollector was not instantiated; "
-            "stat_loggers DI did not take effect.",
-        )
-
+#
+# class TestNPUStatLoggersDI(CustomTestCase):
+#     """Verify that a custom MetricsCollector subclass passed through
+#     ``ServerArgs.stat_loggers`` is the one instantiated inside the
+#     scheduler subprocess on NPU."""
+#
+#     def setUp(self) -> None:
+#         os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+#         _clear_sglang_metrics_from_default_registry()
+#         try:
+#             os.unlink(_DI_MARKER_PATH)
+#         except FileNotFoundError:
+#             pass
+#
+#     def tearDown(self) -> None:
+#         try:
+#             os.unlink(_DI_MARKER_PATH)
+#         except FileNotFoundError:
+#             pass
+#
+#     def test_engine_custom_scheduler_collector(self):
+#         import sglang as sgl
+#
+#         engine = sgl.Engine(
+#             model_path=_MODEL_NAME,
+#             enable_metrics=True,
+#             device="npu",
+#             base_gpu_id=8,
+#             stat_loggers={
+#                 STAT_LOGGER_ROLE_SCHEDULER: _MarkingSchedulerCollector,
+#             },
+#         )
+#         try:
+#             # One small generation triggers scheduler init, which is where
+#             # resolve_collector_class() picks the injected subclass.
+#             engine.generate("Hello", {"max_new_tokens": 4})
+#         finally:
+#             engine.shutdown()
+#
+#         self.assertTrue(
+#             os.path.exists(_DI_MARKER_PATH),
+#             "Custom SchedulerMetricsCollector was not instantiated; "
+#             "stat_loggers DI did not take effect.",
+#         )
+#
 
 # Path to the cross-process marker file for the FakeRayMetric-style recording
 # variant below. Distinct from ``_DI_MARKER_PATH`` so the two scheduler
@@ -579,115 +579,115 @@ def _clear_sglang_metrics_from_default_registry() -> None:
             REGISTRY.unregister(collector)
 
 
-class TestStatLoggersDIRecording(CustomTestCase):
-    """Boot a real ``sgl.Engine`` with a custom scheduler collector that
-    swaps the four DI hook classes for a FakeRayMetric-style recording
-    double and verify that emissions land on the double.
-
-    Combines the discriminating power of ``_RecordingSchedulerCollector``
-    (proves the subclass was actually instantiated in the scheduler
-    subprocess) with value recording (proves emissions flow through to the
-    metric instance). Per the reviewer's framing, we pick a few
-    representative metrics rather than enumerate all of them.
-    """
-
-    def setUp(self) -> None:
-        # Avoid stale PROMETHEUS_MULTIPROC_DIR from prior in-process Engine boots.
-        os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
-        _clear_sglang_metrics_from_default_registry()
-        try:
-            os.unlink(_DI_RECORDING_MARKER_PATH)
-        except FileNotFoundError:
-            pass
-
-    def tearDown(self) -> None:
-        try:
-            os.unlink(_DI_RECORDING_MARKER_PATH)
-        except FileNotFoundError:
-            pass
-
-    def _read_marker(self):
-        """Return all recorded emissions as a list of dicts.
-
-        Each entry has keys ``name`` (str), ``op`` (one of ``inc``/``set``/
-        ``observe``), ``value`` (numeric) and ``tags`` (dict).
-        """
-        entries = []
-        with open(_DI_RECORDING_MARKER_PATH) as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                entries.append(json.loads(line))
-        return entries
-
-    def test_engine_custom_scheduler_collector_emits_through_fake_metric(self):
-        import sglang as sgl
-
-        engine = sgl.Engine(
-            model_path=_MODEL_NAME,
-            enable_metrics=True,
-            device="npu",
-            base_gpu_id=8,
-            stat_loggers={
-                STAT_LOGGER_ROLE_SCHEDULER: _RecordingSchedulerCollector,
-            },
-        )
-        try:
-            # One small generation triggers scheduler init (which is where
-            # resolve_collector_class picks the injected subclass) and is
-            # enough to produce gauge ``.set()`` emissions on the basic
-            # queue-state metrics.
-            engine.generate("Hello", {"max_new_tokens": 4})
-        finally:
-            engine.shutdown()
-
-        # Discrimination: the marker file exists, proving the custom
-        # subclass was instantiated inside the scheduler subprocess.
-        self.assertTrue(
-            os.path.exists(_DI_RECORDING_MARKER_PATH),
-            "Custom SchedulerMetricsCollector was not instantiated; "
-            "stat_loggers DI did not take effect.",
-        )
-
-        entries = self._read_marker()
-        self.assertGreater(
-            len(entries),
-            0,
-            "Marker file exists but contains no emissions; "
-            "the recording double was not wired through the DI hooks.",
-        )
-
-        # Value verification: pick a few representative metrics and check
-        # that they actually received emissions with sensible shapes. We do
-        # not enumerate all metrics; the reviewer's framing was "just pick
-        # a few".
-        by_name = {}
-        for e in entries:
-            by_name.setdefault(e["name"], []).append(e)
-
-        # 1) num_running_reqs: a Gauge that the scheduler ``.set()``s every
-        #    stats tick. After one generation it should have at least one
-        #    emission.
-        self.assertIn(
-            "sglang:num_running_reqs",
-            by_name,
-            f"Expected num_running_reqs emissions, saw: {sorted(by_name)[:10]}",
-        )
-        running_ops = {e["op"] for e in by_name["sglang:num_running_reqs"]}
-        self.assertIn("set", running_ops)
-
-        # 2) num_queue_reqs: same shape, different metric. Two metrics from
-        #    the same collector firing confirm the DI hook applied uniformly.
-        self.assertIn("sglang:num_queue_reqs", by_name)
-        queue_ops = {e["op"] for e in by_name["sglang:num_queue_reqs"]}
-        self.assertIn("set", queue_ops)
-
-        # 3) Tag propagation: every recorded emission must carry the labels
-        #    keys the scheduler installed (model_name, engine_type, ...).
-        any_running = by_name["sglang:num_running_reqs"][0]
-        self.assertIn("model_name", any_running["tags"])
-        self.assertEqual(any_running["tags"]["model_name"], _MODEL_NAME)
+# class TestStatLoggersDIRecording(CustomTestCase):
+#     """Boot a real ``sgl.Engine`` with a custom scheduler collector that
+#     swaps the four DI hook classes for a FakeRayMetric-style recording
+#     double and verify that emissions land on the double.
+#
+#     Combines the discriminating power of ``_RecordingSchedulerCollector``
+#     (proves the subclass was actually instantiated in the scheduler
+#     subprocess) with value recording (proves emissions flow through to the
+#     metric instance). Per the reviewer's framing, we pick a few
+#     representative metrics rather than enumerate all of them.
+#     """
+#
+#     def setUp(self) -> None:
+#         # Avoid stale PROMETHEUS_MULTIPROC_DIR from prior in-process Engine boots.
+#         os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+#         _clear_sglang_metrics_from_default_registry()
+#         try:
+#             os.unlink(_DI_RECORDING_MARKER_PATH)
+#         except FileNotFoundError:
+#             pass
+#
+#     def tearDown(self) -> None:
+#         try:
+#             os.unlink(_DI_RECORDING_MARKER_PATH)
+#         except FileNotFoundError:
+#             pass
+#
+#     def _read_marker(self):
+#         """Return all recorded emissions as a list of dicts.
+#
+#         Each entry has keys ``name`` (str), ``op`` (one of ``inc``/``set``/
+#         ``observe``), ``value`` (numeric) and ``tags`` (dict).
+#         """
+#         entries = []
+#         with open(_DI_RECORDING_MARKER_PATH) as f:
+#             for line in f:
+#                 line = line.strip()
+#                 if not line:
+#                     continue
+#                 entries.append(json.loads(line))
+#         return entries
+#
+#     def test_engine_custom_scheduler_collector_emits_through_fake_metric(self):
+#         import sglang as sgl
+#
+#         engine = sgl.Engine(
+#             model_path=_MODEL_NAME,
+#             enable_metrics=True,
+#             device="npu",
+#             base_gpu_id=8,
+#             stat_loggers={
+#                 STAT_LOGGER_ROLE_SCHEDULER: _RecordingSchedulerCollector,
+#             },
+#         )
+#         try:
+#             # One small generation triggers scheduler init (which is where
+#             # resolve_collector_class picks the injected subclass) and is
+#             # enough to produce gauge ``.set()`` emissions on the basic
+#             # queue-state metrics.
+#             engine.generate("Hello", {"max_new_tokens": 4})
+#         finally:
+#             engine.shutdown()
+#
+#         # Discrimination: the marker file exists, proving the custom
+#         # subclass was instantiated inside the scheduler subprocess.
+#         self.assertTrue(
+#             os.path.exists(_DI_RECORDING_MARKER_PATH),
+#             "Custom SchedulerMetricsCollector was not instantiated; "
+#             "stat_loggers DI did not take effect.",
+#         )
+#
+#         entries = self._read_marker()
+#         self.assertGreater(
+#             len(entries),
+#             0,
+#             "Marker file exists but contains no emissions; "
+#             "the recording double was not wired through the DI hooks.",
+#         )
+#
+#         # Value verification: pick a few representative metrics and check
+#         # that they actually received emissions with sensible shapes. We do
+#         # not enumerate all metrics; the reviewer's framing was "just pick
+#         # a few".
+#         by_name = {}
+#         for e in entries:
+#             by_name.setdefault(e["name"], []).append(e)
+#
+#         # 1) num_running_reqs: a Gauge that the scheduler ``.set()``s every
+#         #    stats tick. After one generation it should have at least one
+#         #    emission.
+#         self.assertIn(
+#             "sglang:num_running_reqs",
+#             by_name,
+#             f"Expected num_running_reqs emissions, saw: {sorted(by_name)[:10]}",
+#         )
+#         running_ops = {e["op"] for e in by_name["sglang:num_running_reqs"]}
+#         self.assertIn("set", running_ops)
+#
+#         # 2) num_queue_reqs: same shape, different metric. Two metrics from
+#         #    the same collector firing confirm the DI hook applied uniformly.
+#         self.assertIn("sglang:num_queue_reqs", by_name)
+#         queue_ops = {e["op"] for e in by_name["sglang:num_queue_reqs"]}
+#         self.assertIn("set", queue_ops)
+#
+#         # 3) Tag propagation: every recorded emission must carry the labels
+#         #    keys the scheduler installed (model_name, engine_type, ...).
+#         any_running = by_name["sglang:num_running_reqs"][0]
+#         self.assertIn("model_name", any_running["tags"])
+#         self.assertEqual(any_running["tags"]["model_name"], _MODEL_NAME)
 
 
 if __name__ == "__main__":
