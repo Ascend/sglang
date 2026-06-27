@@ -63,7 +63,7 @@ NPU_COMMON_ARGS = [
     "--disable-cuda-graph",
     "--trust-remote-code",
     "--mem-fraction-static",
-    "0.8",
+    "0.5",
 ]
 
 # NPU environment variables required for Ascend PD disaggregation.
@@ -626,7 +626,7 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, NpuEPDBase):
 
     # Qwen2.5-VL-3B-Instruct scores ~0.40 on the 50-sample MMMU subset.
     accuracy = 0.40
-    mmmu_args = ["--limit", "50", "--batch_size", "8"]
+    mmmu_args = ["--limit", "50"]
 
     @classmethod
     def setUpClass(cls):
