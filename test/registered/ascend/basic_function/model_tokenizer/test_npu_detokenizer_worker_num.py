@@ -20,7 +20,7 @@ from sglang.test.test_utils import (
     run_benchmark,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="debug-full-1-npu-a3", nightly=True)
 
 
 class TestNpuMultiDetokenizer(CustomTestCase):
