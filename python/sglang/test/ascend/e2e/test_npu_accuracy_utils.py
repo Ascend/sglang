@@ -80,8 +80,8 @@ def get_accuracy_threshold(datasets, baseline_accuracy):
     question count tolerance. For others (e.g. mmmu), use percentage tolerance.
     """
     dataset = datasets[0] if datasets else None
-    if dataset in DATASET_FLUCTUATION and dataset in DATASET_TOTAL_QUESTIONS:
-        fluctuation = DATASET_FLUCTUATION[dataset] / DATASET_TOTAL_QUESTIONS[dataset]
+    if dataset in DATASET_FLUCTUATION and dataset in DATASET_QUESTION_COUNTS:
+        fluctuation = DATASET_FLUCTUATION[dataset] / DATASET_QUESTION_COUNTS[dataset]
         return baseline_accuracy - fluctuation
     return baseline_accuracy * ACCURACY_TOLERANCE
 
