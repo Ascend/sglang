@@ -209,11 +209,13 @@ jobs:
           UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
         run: |
+          # speed up by using infra cache services
           CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
           sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
           pip config set global.index-url http://${CACHING_URL}/pypi/simple
           pip config set global.trusted-host "${CACHING_URL}"
           sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
           if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
             bash scripts/ci/npu/npu_ci_install_dependency.sh a3
           else
@@ -223,6 +225,7 @@ jobs:
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
           fi
+          # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
       - name: Print Log Information
