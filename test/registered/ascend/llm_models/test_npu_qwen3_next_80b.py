@@ -1,6 +1,7 @@
 import os
 import unittest
 
+from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_PATH,
 )
@@ -8,8 +9,10 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.eval_accuracy_kit import GSM8KMixin
 from sglang.test.kits.kl_divergence_kit import KLDivergenceMixin
 from sglang.test.kits.prefix_cache_branching_kit import PrefixCacheBranchingMixin
-from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
-from sglang.test.server_fixtures.default_fixture import DefaultServerBase, openai_api_env
+from sglang.test.server_fixtures.default_fixture import (
+    DefaultServerBase,
+    openai_api_env,
+)
 from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
@@ -191,6 +194,7 @@ class TestQwen3NextLazyExtraBufferDefaultPage(
 #   - Topk class retains PrefixCacheBranchingMixin (per agreement; observe and
 #     fall back by removing it if the combination fails on NPU).
 #   - gsm8k_accuracy_thres: 0.93 -> 0.92 (NPU baseline).
+
 
 class TestQwen3NextMTPTopk(
     GSM8KMixin, KLDivergenceMixin, PrefixCacheBranchingMixin, _NpuDefaultServerBase
