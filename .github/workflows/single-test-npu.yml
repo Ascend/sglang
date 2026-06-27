@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 7: Qwen3-8B LoRA logprob diff test - handle None logprobs
+# test round 8: Qwen3-8B LoRA logprob diff test - debug logprobs
 
 on:
   pull_request:
