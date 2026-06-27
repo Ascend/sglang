@@ -448,6 +448,7 @@ class TestNPUStatLoggersDI(CustomTestCase):
             model_path=_MODEL_NAME,
             enable_metrics=True,
             device="npu",
+            base_gpu_id=8,
             stat_loggers={
                 STAT_LOGGER_ROLE_SCHEDULER: _MarkingSchedulerCollector,
             },
@@ -627,6 +628,7 @@ class TestStatLoggersDIRecording(CustomTestCase):
             model_path=_MODEL_NAME,
             enable_metrics=True,
             device="npu",
+            base_gpu_id=8,
             stat_loggers={
                 STAT_LOGGER_ROLE_SCHEDULER: _RecordingSchedulerCollector,
             },
