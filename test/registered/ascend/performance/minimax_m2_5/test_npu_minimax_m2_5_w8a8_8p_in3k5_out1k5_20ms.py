@@ -56,7 +56,7 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     3,
     "--chunked-prefill-size",
     -1,
-    "--max-prefill-token",
+    "--max-prefill-tokens",
     8192,
     "--cuda-graph-bs",
     1,
@@ -85,6 +85,10 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     "unquant",
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "minimax-append-think",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 

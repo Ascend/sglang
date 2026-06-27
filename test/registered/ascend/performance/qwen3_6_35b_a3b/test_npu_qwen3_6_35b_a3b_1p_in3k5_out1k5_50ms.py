@@ -39,29 +39,29 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     "npu",
     "--chunked-prefill-size",
     -1,
+    "--max-total-tokens",
+    659840,
     "--max-prefill-tokens",
     43400,
     "--disable-radix-cache",
     "--trust-remote-code",
-    "--enable-prefill-delayer",
-    "--prefill-delayer-max-delay-passes",
-    50,
+    "--prefill-max-requests",
+    "12",
     "--max-running-requests",
-    124,
+    122,
     "--max-mamba-cache-size",
-    124,
+    122,
     "--mem-fraction-static",
-    0.8,
+    0.9,
     "--cuda-graph-bs",
     4,
     16,
     32,
     64,
     96,
-    112,
     116,
     120,
-    124,
+    122,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -77,6 +77,10 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -89,8 +93,8 @@ class TestNPUQwen3_6_35BA3B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBa
     other_args = QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_3K5_1K5_ENVS
     dataset_name = "random"
-    max_concurrency = 124
-    num_prompts = 496
+    max_concurrency = 122
+    num_prompts = 122
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1

@@ -90,6 +90,10 @@ MODEL_CONFIG = {
         "--dtype",
         "bfloat16",
         "--enable-attn-tp-input-scattered",
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "decode_args": [
         "--nnodes",
@@ -138,6 +142,10 @@ MODEL_CONFIG = {
         "bfloat16",
         "--load-balance-method",
         ROUND_ROBIN,
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "router_args": [
         "--mini-lb",

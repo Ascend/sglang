@@ -233,7 +233,7 @@ jobs:
             esac
           }
 
-          single_result-a2="${{ needs.nightly-poc-single-node-a2-tests.result }}"
+          single_result_a2="${{ needs.nightly-poc-single-node-a2-tests.result }}"
           single_result="${{ needs.nightly-poc-single-node-tests.result }}"
           multi_result="${{ needs.nightly-poc-multi-node-tests.result }}"
           mix_result="${{ needs.nightly-poc-multi-node-mix-tests.result }}"
@@ -252,7 +252,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Group | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| single-node-poc-a2 | $(group_icon ${single_result-a2}) ${single_result-a2} |" >> $GITHUB_STEP_SUMMARY
+          echo "| single-node-poc-a2 | $(group_icon ${single_result_a2}) ${single_result_a2} |" >> $GITHUB_STEP_SUMMARY
           echo "| single-node-poc | $(group_icon ${single_result}) ${single_result} |" >> $GITHUB_STEP_SUMMARY
           echo "| multi-node-poc | $(group_icon ${multi_result}) ${multi_result} |" >> $GITHUB_STEP_SUMMARY
           echo "| multi-node-mix-poc | $(group_icon ${mix_result}) ${mix_result} |" >> $GITHUB_STEP_SUMMARY

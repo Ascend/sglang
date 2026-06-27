@@ -46,7 +46,7 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.76,
+    0.872,
     "--max-running-requests",
     176,
     "--chunked-prefill-size",
@@ -67,7 +67,7 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "deepep",
     "--deepep-mode",
     "auto",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
@@ -91,6 +91,10 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--prefill-delayer-max-delay-passes",
     200,
     "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 
@@ -116,7 +120,7 @@ class TestNPUKimiK2_6_W4A8_8P_IN1024x1024_30_OUT1024_50MS(
     random_range_ratio = 1
     warmup_requests = 16
     tpot = 50
-    output_token_throughput = 2600
+    output_token_throughput = 2635.24
 
     def test_npu_kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms(self):
         """Run NPU performance test for Kimi-K2.6-w4a8 multimodal in1024x1024+30 out1024"""

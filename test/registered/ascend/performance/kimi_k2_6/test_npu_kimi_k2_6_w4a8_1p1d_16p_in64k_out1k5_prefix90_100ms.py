@@ -2,6 +2,7 @@ import unittest
 
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     BENCHMARK_TOOL_DEFAULT,
+    KIMI_K2_6_EAGLE3_MODEL_PATH,
     KIMI_K2_6_W4A8_MODEL_PATH,
     TestAscendPerfMultiNodePdSepTestCaseBase,
 )
@@ -21,13 +22,7 @@ PREFILL_ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "HCCL_BUFFSIZE": "8",
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
-    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24699",
-    "ZBAL_ENABLE_GRAPH": "1",
-    "ZBAL_HCCL_OP": "send,recv",
+    "HCCL_BUFFSIZE": "1800",
 }
 
 DECODE_ENVS = {
@@ -85,6 +80,10 @@ PREFILL_ARGS = [
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 DECODE_ARGS = [
@@ -129,7 +128,22 @@ DECODE_ARGS = [
     4,
     6,
     8,
-    12,
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
+    "--speculative-algorithm",
+    "EAGLE3",
+    "--speculative-draft-model-path",
+    KIMI_K2_6_EAGLE3_MODEL_PATH,
+    "--speculative-num-steps",
+    4,
+    "--speculative-eagle-topk",
+    1,
+    "--speculative-num-draft-tokens",
+    5,
+    "--speculative-draft-model-quantization",
+    "unquant",
 ]
 
 MODEL_CONFIG = {
@@ -146,21 +160,21 @@ MODEL_CONFIG = {
 class TestNPUKimiK2_6_W4A8_1P1D_16p_In64k_Out1k5_Prefix90_100ms(
     TestAscendPerfMultiNodePdSepTestCaseBase
 ):
-    """Test NPU performance for Kimi-K2.6-w4a8 1P+1D 16p: input_len=65536, output_len=1536, 90% prefix cache, TPOT=100ms"""
+    """Test NPU performance for Kimi-K2.6-w4a8 1P+1D 16p: 64k input, 1k5 output, 90% prefix cache, TPOT=100ms"""
 
     model_config = MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_name = "generated-shared-prefix"
     max_concurrency = 2
-    num_prompts = 16
+    num_prompts = 8
     request_rate = float("inf")
     repeat_rate = 0.9
-    input_len = 65536
-    output_len = 1536
+    input_len = 64000
+    output_len = 1500
     random_range_ratio = 1
-    tpot = 100
     ttft = 3000
-    output_token_throughput = 13445
+    tpot = 100
+    output_token_throughput = 52.56
 
     def test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms(self):
         """Run NPU performance test for 1P+1D 16p with 64k input, 1k5 output, 90% prefix cache, TPOT=100ms"""

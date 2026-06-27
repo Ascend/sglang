@@ -77,6 +77,10 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--speculative-num-draft-tokens",
     4,
     "--mm-enable-dp-encoder",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 

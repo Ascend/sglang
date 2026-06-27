@@ -68,6 +68,10 @@ QWEN3_6_35B_A3B_984K_1K_OTHER_ARGS = [
     4,
     "--context-length",
     1010000,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 

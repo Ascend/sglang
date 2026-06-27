@@ -102,6 +102,10 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     # 1,
     # "--speculative-num-draft-tokens",
     # 2,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
@@ -160,6 +164,10 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {

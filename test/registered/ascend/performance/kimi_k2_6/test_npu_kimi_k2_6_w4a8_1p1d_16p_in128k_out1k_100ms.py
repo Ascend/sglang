@@ -3,6 +3,7 @@ import unittest
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
+    KIMI_K2_6_EAGLE3_MODEL_PATH,
     KIMI_K2_6_W4A8_MODEL_PATH,
     TestAscendPerfMultiNodePdSepTestCaseBase,
 )
@@ -28,7 +29,6 @@ PREFILL_ENVS = {
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24699",
     "ZBAL_ENABLE_GRAPH": "1",
-    "ZBAL_HCCL_OP": "send,recv",
 }
 
 DECODE_ENVS = {
@@ -68,11 +68,10 @@ PREFILL_ARGS = [
     "--tp-size",
     16,
     "--disable-radix-cache",
-    "--disable-cuda-graph",
     "--mem-fraction-static",
     0.78,
     "--max-running-requests",
-    1,
+    2,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -80,9 +79,9 @@ PREFILL_ARGS = [
     "--chunked-prefill-size",
     16384,
     "--prefill-max-requests",
-    1,
+    2,
     "--max-prefill-tokens",
-    131072,
+    65536,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -111,7 +110,7 @@ DECODE_ARGS = [
     "--mem-fraction-static",
     0.82,
     "--max-running-requests",
-    1,
+    2,
     "--enable-dp-attention",
     "--dp-size",
     1,
@@ -132,8 +131,23 @@ DECODE_ARGS = [
     4,
     6,
     8,
-    12,
     16,
+    "--speculative-algorithm",
+    "EAGLE3",
+    "--speculative-draft-model-path",
+    KIMI_K2_6_EAGLE3_MODEL_PATH,
+    "--speculative-num-steps",
+    3,
+    "--speculative-eagle-topk",
+    1,
+    "--speculative-num-draft-tokens",
+    4,
+    "--speculative-draft-model-quantization",
+    "unquant",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 MODEL_CONFIG = {
@@ -159,11 +173,11 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In128k_Out1k_100ms(
     max_concurrency = 1
     num_prompts = 1
     request_rate = float("inf")
-    input_len = 131072
-    output_len = 1024
+    input_len = 128000
+    output_len = 1000
     random_range_ratio = 1
     tpot = 100
-    output_token_throughput = 21
+    output_token_throughput = 21.41
 
     def test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms(self):
         """Run NPU performance test for 1P+1D 16p with 128k input, 1k output, 0 cache, TPOT=100ms"""

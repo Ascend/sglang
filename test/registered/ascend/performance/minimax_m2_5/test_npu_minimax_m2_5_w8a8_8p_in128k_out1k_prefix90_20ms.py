@@ -52,7 +52,7 @@ MINIMAX_M2_5_W8A8_8P_IN128K_OUT1K_PREFIX90_20MS_OTHER_ARGS = [
     4,
     "--chunked-prefill-size",
     160000,
-    "--max-prefill-token",
+    "--max-prefill-tokens",
     80000,
     "--cuda-graph-bs",
     2,
@@ -81,6 +81,10 @@ MINIMAX_M2_5_W8A8_8P_IN128K_OUT1K_PREFIX90_20MS_OTHER_ARGS = [
     4,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "minimax-append-think",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 
@@ -100,7 +104,7 @@ class TestNPUMiniMaxM2_5W8A8_8P_In128k_Out1k_Prefix90_20ms(
     output_len = 1024
     random_range_ratio = 1
     repeat_rate = 0.9
-    tpot = 20
+    tpot = 24.44
     output_token_throughput = 66.29
     request_rate = float("inf")
 

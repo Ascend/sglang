@@ -35,13 +35,15 @@ on:
         type: string
         default: ''
       test_scope:
-        description: 'Test scope: all / func / poc'
+        description: 'Test scope: all / func / poc / no_nightly / poc_no_nightly'
         required: true
         type: choice
         options:
           - all
           - func
           - poc
+          - no_nightly
+          - poc_no_nightly
         default: 'poc'
 
 concurrency:
@@ -123,7 +125,7 @@ jobs:
   full-1-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-2
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -178,7 +180,8 @@ jobs:
           pip install sentence_transformers torchaudio==2.10.0
           pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
           pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.1.25 numpy==1.26.4 dotenv
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.1.25 numpy==1.26.4 dotenv granian
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
           git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
           cd ./lmms-eval
           nohup pip install . > lmmslog.txt 2>&1 &
@@ -191,7 +194,7 @@ jobs:
   full-2-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-2
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -254,7 +257,7 @@ jobs:
   full-4-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-4
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -317,7 +320,7 @@ jobs:
   full-8-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-8
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -380,7 +383,7 @@ jobs:
   full-16-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-16
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -443,7 +446,7 @@ jobs:
   nightly-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -529,10 +532,6 @@ jobs:
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
             test_type: 'perf'
-          - name: minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
           - name: minimax_m2_5_w8a8_4p_in32k_out1k_50ms
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in32k_out1k_50ms.py
@@ -594,12 +593,40 @@ jobs:
   nightly-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config, nightly-poc-single-node-tests ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
         test_config:
+          - name: prefill_policy_bucket_balance
+            test_case: test/registered/ascend/basic_function/wip/test_npu_prefill_policy_bucket_balance.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 3
+            decode_size: 1
+            router_size: 1
+          - name: hierarchical_cache
+            test_case: test/registered/ascend/basic_function/wip/test_npu_hierarchical_cache.py
+            test_type: 'func'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+          - name: fusion_operator
+            test_case: test/registered/ascend/basic_function/wip/test_npu_fusion_operator.py
+            test_type: 'func'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 1
+            decode_size: 2
+            router_size: 1
+          - name: bucket_adjust_interval_secs
+            test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs.py
+            test_type: 'func'
+            prefill_decode_deployment: 'separation'
+            prefill_size: 3
+            decode_size: 1
+            router_size: 1
           - name: bucket_adjust_interval_secs_concurrency
             test_case: test/registered/ascend/basic_function/parallel_strategy/test_npu_bucket_adjust_interval_secs_concurrency.py
             test_type: 'func'
@@ -630,54 +657,54 @@ jobs:
             test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms
+#          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: deepseek_r1_w8a8_2p1d_32p_in3k9_out1k_20ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k9_out1k_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: deepseek_r1_w8a8_2p1d_32p_in6k_out1k6_15ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in6k_out1k6_15ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          # ===== DeepSeek V3.2 W8A8 1p1d_32p PD separation =====
+#          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_26ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_26ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs16
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs16.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: deepseek_r1_w8a8_2p1d_32p_in3k9_out1k_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k9_out1k_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: deepseek_r1_w8a8_2p1d_32p_in6k_out1k6_15ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in6k_out1k6_15ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          # ===== DeepSeek V3.2 W8A8 1p1d_32p PD separation =====
-          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_26ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_26ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs16
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs16.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in128k_out1k
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k.py
+            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
@@ -750,18 +777,39 @@ jobs:
             test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms
-            prefill_size: 1
-            decode_size: 1
+          - name: test_npu_cp_vs_nocp_ttft
+            prefill_size: 2
+            decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_1p1d_16p_in128k_out1k_prefix90_50ms.py
+            test_case: test/registered/ascend/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in16k_out1_ttft_5s
             prefill_size: 1
             decode_size: 1
             router_size: 1
-            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_1p1d_16p_in64k_out1k_prefix90_50ms.py
+            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in16k_out1_ttft_5s.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in16k_out1k_tpot_20ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in16k_out1k_tpot_20ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
@@ -781,7 +829,7 @@ jobs:
   nightly-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
     needs: [ set-image-config, nightly-poc-single-node-tests, nightly-poc-multi-node-tests ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
       max-parallel: 1

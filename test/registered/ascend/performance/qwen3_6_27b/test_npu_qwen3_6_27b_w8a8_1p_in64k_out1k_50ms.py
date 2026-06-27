@@ -16,7 +16,6 @@ register_npu_ci(
 )
 
 QWEN3_6_27B_64K_1K_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
@@ -24,14 +23,11 @@ QWEN3_6_27B_64K_1K_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
-    "ASCEND_USE_FIA": "1",
 }
 
 QWEN3_6_27B_64K_1K_OTHER_ARGS = [
     "--tp-size",
-    4,
+    2,
     "--nnodes",
     1,
     "--attention-backend",
@@ -41,24 +37,23 @@ QWEN3_6_27B_64K_1K_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    50000,
+    48000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    28,
+    6,
     "--max-mamba-cache-size",
-    50,
+    16,
     "--mem-fraction-static",
-    0.7,
+    0.6,
     "--cuda-graph-bs",
+    1,
     2,
     4,
+    5,
     6,
-    "--enable-multimodal",
     "--quantization",
     "modelslim",
-    "--mm-attention-backend",
-    "ascend_attn",
     "--dtype",
     "bfloat16",
     "--mamba-ssm-dtype",
@@ -71,6 +66,10 @@ QWEN3_6_27B_64K_1K_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -84,12 +83,12 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     envs = QWEN3_6_27B_64K_1K_ENVS
     dataset_name = "random"
     max_concurrency = 6
-    num_prompts = 24
+    num_prompts = 12
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 122.6
+    output_token_throughput = 57.85
 
     def test_npu_qwen3_6_27b_2p_in64k_out1k_50ms(self):
         """Run NPU performance test for Qwen3.6-27B-w8a8 in64k out1k 50ms"""

@@ -65,6 +65,10 @@ QWEN3_235B_OTHER_ARGS = [
     "0.78",
     "--cuda-graph-bs",
     "1",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen25",
 ]
 
 

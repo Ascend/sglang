@@ -81,6 +81,10 @@ QWEN3_30B_OTHER_ARGS = [
     16,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 

@@ -23,10 +23,12 @@ KIMI_K2_6_IN1080P_30_OUT256_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "STREAMS_PER_DEVICE": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
-    "HCCL_BUFFSIZE": "1800",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
+    "HCCL_BUFFSIZE": "2400",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
 }
 
 KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS = [
@@ -43,48 +45,55 @@ KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS = [
     "ascend",
     "--tp-size",
     16,
+    "--base-gpu-id",
+    0,
     "--mem-fraction-static",
-    0.7,
+    0.852,
     "--max-running-requests",
-    80,
+    64,
     "--chunked-prefill-size",
-    -1,
+    16384,
     "--context-length",
     8192,
-    "--prefill-max-requests",
-    1,
+    "--max-prefill-tokens",
+    16384,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
     "--sampling-backend",
     "ascend",
+    "--enable-dp-attention",
+    "--dp-size",
+    16,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
     "auto",
-    "--enable-dp-attention",
-    "--dp-size",
-    16,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
+    3,
     4,
-    6,
-    8,
-    10,
     "--disable-radix-cache",
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
     KIMI_K2_6_EAGLE3_MODEL_PATH,
     "--speculative-num-steps",
-    4,
+    2,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    5,
+    3,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--prefill-delayer-max-delay-passes",
+    200,
+    "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 
@@ -100,14 +109,15 @@ class TestNPUKimiK2_6_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     dataset_name = "image"
     image_resolution = "1920x1080"
     image_count = 1
-    max_concurrency = 20
-    num_prompts = 20
+    max_concurrency = 48
+    num_prompts = 196
     request_rate = float("inf")
     input_len = 30
     output_len = 256
     random_range_ratio = 1
+    warmup_requests = 16
     tpot = 50
-    output_token_throughput = 1374
+    output_token_throughput = 568.11
 
     def test_npu_kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms(self):
         """Run NPU performance test for Kimi-K2.6-w4a8 multimodal in1080p+30 out256"""

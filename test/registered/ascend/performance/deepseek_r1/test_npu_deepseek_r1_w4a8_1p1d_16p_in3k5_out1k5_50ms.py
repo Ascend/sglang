@@ -87,6 +87,10 @@ MODEL_CONFIG = {
         "--disable-shared-experts-fusion",
         "--dtype",
         "bfloat16",
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "decode_args": [
         "--nnodes",
@@ -143,6 +147,10 @@ MODEL_CONFIG = {
         4,
         "--load-balance-method",
         ROUND_ROBIN,
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "router_args": [],
 }
@@ -159,8 +167,8 @@ class TestDeepSeekR1W4A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 3584
     output_len = 1536
     random_range_ratio = 1
-    tpot = 41
-    output_token_throughput = 6835
+    tpot = 50
+    output_token_throughput = 7947.95
 
     def test_throughput(self):
         self.run_throughput()

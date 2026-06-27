@@ -4,7 +4,7 @@ import re
 import unittest
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -29,16 +29,7 @@ class TestMaxQueuedRequests(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-        other_args = (
-            "--max-running-requests",  # Enforce max request concurrency is 1
-            "1",
-            "--max-queued-requests",  # Enforce max queued request number is 1
-            "1",
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-        )
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
 
         cls.stdout = open(STDOUT_FILENAME, "w")
@@ -49,7 +40,14 @@ class TestMaxQueuedRequests(CustomTestCase):
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=other_args,
+            other_args=(
+                "--max-running-requests",  # Enforce max request concurrency is 1
+                "1",
+                "--max-queued-requests",  # Enforce max queued request number is 1
+                "1",
+                "--attention-backend",
+                "ascend",
+            ),
             return_stdout_stderr=(cls.stdout, cls.stderr),
         )
 
@@ -62,7 +60,7 @@ class TestMaxQueuedRequests(CustomTestCase):
         os.remove(STDERR_FILENAME)
 
     def test_max_queued_requests_validation_with_serial_requests(self):
-        # Verify request is not throttled when the max concurrency is 1.
+        """Verify request is not throttled when the max concurrency is 1."""
         status_codes = send_generate_requests(
             self.base_url,
             num_requests=10,
@@ -72,16 +70,17 @@ class TestMaxQueuedRequests(CustomTestCase):
             assert status_code == 200  # request shouldn't be throttled
 
     def test_max_queued_requests_validation_with_concurrent_requests(self):
-        # Verify request throttling with concurrent requests.
+        """Verify request throttling with concurrent requests."""
         status_codes = asyncio.run(
             send_concurrent_generate_requests(self.base_url, num_requests=10)
         )
+        self.assertLessEqual(status_codes.count(200), 2)
 
         expected_status_codes = [200, 200, 503, 503, 503, 503, 503, 503, 503, 503]
-        assert set(status_codes) == set(expected_status_codes)
+        self.assertEqual(status_codes, expected_status_codes)
 
     def test_max_running_requests_and_max_queued_request_validation(self):
-        # Verify running request and queued request numbers based on server logs.
+        """Verify running request and queued request numbers based on server logs."""
         rr_pattern = re.compile(r"#running-req:\s*(\d+)")
         qr_pattern = re.compile(r"#queue-req:\s*(\d+)")
 

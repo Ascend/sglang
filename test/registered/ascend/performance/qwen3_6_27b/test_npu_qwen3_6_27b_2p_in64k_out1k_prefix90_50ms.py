@@ -46,24 +46,23 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     "--max-running-requests",
     20,
     "--max-mamba-cache-size",
-    108,
+    160,
     "--mem-fraction-static",
-    0.7,
+    0.82,
     "--cuda-graph-bs",
     1,
     2,
-    4,
-    8,
-    12,
+    5,
+    10,
     15,
     17,
     19,
     20,
     "--enable-prefill-delayer",
     "--prefill-delayer-queue-min-ratio",
-    0.8,
+    0.7,
     "--prefill-delayer-max-delay-ms",
-    30000,
+    20000,
     "--dtype",
     "bfloat16",
     "--mamba-ssm-dtype",
@@ -76,13 +75,17 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
-class TestNPUQwen3_6_27B_2P_In64k_Out1k_Prefix90_50ms(
+class TestNPUQwen3_6_27B_1P_In64k_Out1k_Prefix90_50ms(
     TestAscendPerformanceTestCaseBase
 ):
-    """Test NPU performance for Qwen3.6-27B 2p in64k out1k prefix90 50ms"""
+    """Test NPU performance for Qwen3.6-27B 1p in64k out1k prefix90 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_6_27B_MODEL_PATH

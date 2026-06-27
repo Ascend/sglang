@@ -69,6 +69,10 @@ QWEN3_8B_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     5,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 

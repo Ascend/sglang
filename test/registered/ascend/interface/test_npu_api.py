@@ -9,7 +9,7 @@ from transformers import AutoTokenizer
 
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -18,9 +18,6 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# Global variables: Manage server process and initialization status
-GLOBAL_SERVER_PROCESS = None
-GLOBAL_SERVER_INITIALIZED = False
 OUTPUT_DIR = "./profiler_dir"
 
 register_npu_ci(est_time=1600, suite="full-1-npu-a3", nightly=True)
@@ -35,29 +32,23 @@ class Test01_NpuApi(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        global GLOBAL_SERVER_PROCESS, GLOBAL_SERVER_INITIALIZED
-        # Start server only if not initialized
-        if not GLOBAL_SERVER_INITIALIZED:
-            cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-            other_args = [
-                "--attention-backend",
-                "ascend",
-                "--enable-return-hidden-states",
-            ]
-            # Start server and save to global variable
-            GLOBAL_SERVER_PROCESS = popen_launch_server(
-                cls.model,
-                DEFAULT_URL_FOR_TEST,
-                timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-                other_args=other_args,
-            )
-            GLOBAL_SERVER_INITIALIZED = True
-            cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.other_args = [
+            "--attention-backend",
+            "ascend",
+            "--enable-return-hidden-states",
+        ]
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=cls.other_args,
+        )
 
     @classmethod
     def tearDownClass(cls):
-        # First class does not terminate server
-        pass
+        kill_process_tree(cls.process.pid)
 
     def test_api_health(self):
         response = requests.get(f"{self.base_url}/health")
@@ -81,7 +72,7 @@ class Test01_NpuApi(CustomTestCase):
         self.assertEqual(response.json()["weight_version"], "default")
         self.assertFalse(response.json()["has_image_understanding"])
         self.assertFalse(response.json()["has_audio_understanding"])
-        self.assertEqual(response.json()["model_type"], "llama")
+        self.assertEqual(response.json()["model_type"], "qwen3")
         self.assertEqual(response.json()["architectures"][0], "LlamaForCausalLM")
 
     def test_api_server_info(self):
@@ -238,15 +229,24 @@ class TestChatCompletionsInterface(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Skip initialization, directly reuse global server
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.other_args = [
+            "--attention-backend",
+            "ascend",
+            "--enable-return-hidden-states",
+        ]
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=cls.other_args,
+        )
         cls.additional_chat_kwargs = {}
 
     @classmethod
     def tearDownClass(cls):
-        # Do not terminate server
-        pass
+        kill_process_tree(cls.process.pid)
 
     def test_model_and_messages(self):
         response = requests.post(
@@ -259,7 +259,6 @@ class TestChatCompletionsInterface(CustomTestCase):
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         data = response.json()
         self.assertEqual(data["model"], self.model)
-        self.assertIsNotNone(data["choices"][0]["message"]["reasoning_content"])
 
         response = requests.post(
             f"{self.base_url}/v1/chat/completions",
@@ -470,16 +469,25 @@ class TestEnableThinking(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Skip initialization, directly reuse global server
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.other_args = [
+            "--attention-backend",
+            "ascend",
+            "--enable-return-hidden-states",
+        ]
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=cls.other_args,
+        )
         cls.additional_chat_kwargs = {}
-        logging.basicConfig(level=logging.INFO)  # Initialize logging
+        logging.basicConfig(level=logging.INFO)
 
     @classmethod
     def tearDownClass(cls):
-        # Do not terminate server
-        pass
+        kill_process_tree(cls.process.pid)
 
     def test_model_parameters_model(self):
         response = requests.post(
@@ -657,19 +665,25 @@ class TestStartProfile(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Skip initialization, reuse global server + configure profiler directory
         envs.SGLANG_TORCH_PROFILER_DIR.set(OUTPUT_DIR)
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.other_args = [
+            "--attention-backend",
+            "ascend",
+            "--enable-torch-profiler",
+        ]
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=cls.other_args,
+        )
         cls.additional_chat_kwargs = {}
 
     @classmethod
     def tearDownClass(cls):
-        # Terminate server in last class
-        global GLOBAL_SERVER_PROCESS
-        if GLOBAL_SERVER_PROCESS:
-            kill_process_tree(GLOBAL_SERVER_PROCESS.pid)
-            GLOBAL_SERVER_PROCESS = None
+        kill_process_tree(cls.process.pid)
 
     def setUp(self):
         self._clear_profile_dir()

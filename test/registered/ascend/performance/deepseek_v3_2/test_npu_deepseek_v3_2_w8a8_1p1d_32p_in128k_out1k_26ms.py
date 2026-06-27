@@ -84,6 +84,10 @@ MODEL_CONFIG = {
         1,
         "--speculative-num-draft-tokens",
         2,
+        "--reasoning-parser",
+        "deepseek-v3",
+        "--tool-call-parser",
+        "deepseekv32",
     ],
     "decode_args": [
         "--nnodes",
@@ -129,6 +133,10 @@ MODEL_CONFIG = {
         "ascend",
         "--disaggregation-mode",
         "decode",
+        "--reasoning-parser",
+        "deepseek-v3",
+        "--tool-call-parser",
+        "deepseekv32",
     ],
     "router_args": [
         "--mini-lb",

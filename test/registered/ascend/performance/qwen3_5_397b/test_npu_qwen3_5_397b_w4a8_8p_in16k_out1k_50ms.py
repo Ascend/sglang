@@ -103,6 +103,10 @@ QWEN3_5_397B_16K_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -116,8 +120,8 @@ class TestNPUQwen3_5_397B_16K_1k_50ms(TestAscendPerformanceTestCaseBase):
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
     warmup_requests = 8
-    max_concurrency = 144
-    num_prompts = 144
+    max_concurrency = 132
+    num_prompts = 132
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1

@@ -19,7 +19,7 @@ QWEN3_5_397B_64K_PREFIX_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "0",
+    "HCCL_BUFFSIZE": "2200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -30,11 +30,6 @@ QWEN3_5_397B_64K_PREFIX_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "58672",
-    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
-    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "ZBAL_ENABLE_GRAPH": "1",
 }
 
 QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
@@ -59,21 +54,6 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     0.6,
     "--max-total-tokens",
     1310720,
-    "--cuda-graph-bs",
-    2,
-    4,
-    6,
-    8,
-    10,
-    12,
-    16,
-    20,
-    24,
-    32,
-    40,
-    48,
-    56,
-    64,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -101,6 +81,10 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -113,8 +97,8 @@ class TestNPUQwen3_5_397B_64K_Prefix90(TestAscendPerformanceTestCaseBase):
     envs = QWEN3_5_397B_64K_PREFIX_ENVS
     dataset_name = "generated-shared-prefix"
     warmup_requests = 0
-    max_concurrency = 128
-    num_prompts = 128
+    max_concurrency = 112
+    num_prompts = 112
     repeat_rate = 0.9
     input_len = 65536
     output_len = 1024
@@ -124,6 +108,7 @@ class TestNPUQwen3_5_397B_64K_Prefix90(TestAscendPerformanceTestCaseBase):
     temperature = 0.6
     top_p = 0.95
     output_token_throughput = 1012.3
+    pop_sglang_is_in_ci_for_gsp = True
 
     def test_npu_qwen3_5_397b_8p_in64k_out1k_prefix90_50ms(self):
         """Run NPU performance test for Qwen3.5-397B-w4a8 8p in64k out1k prefix90"""

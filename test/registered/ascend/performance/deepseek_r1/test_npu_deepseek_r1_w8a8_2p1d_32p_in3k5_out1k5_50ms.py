@@ -96,6 +96,10 @@ MODEL_CONFIG = {
         "--dtype",
         "bfloat16",
         "--enable-attn-tp-input-scattered",
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "decode_args": [
         "--nnodes",
@@ -156,6 +160,10 @@ MODEL_CONFIG = {
         "bfloat16",
         "--load-balance-method",
         ROUND_ROBIN,
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "router_args": [
         "--mini-lb",
@@ -175,8 +183,7 @@ class TestDeepSeekR1W8A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     output_len = 1536
     random_range_ratio = 1
     tpot = 50
-    # T: 224@40ms    800I A3: 1.8*T
-    output_token_throughput = 17588
+    output_token_throughput = 17616.6336
 
     def test_throughput(self):
         self.run_throughput()

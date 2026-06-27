@@ -103,6 +103,10 @@ QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -118,7 +122,7 @@ class TestNPUQwen3_5_397B_W4A8_1P_In3k5_Out1k5_High_GPQA(
     accuracy = 0.884
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
+    generation_config = {"max_tokens": 65536}
     eval_batch_size = 64
 
     def test_npu_qwen3_5_397b_w4a8_1p_in3k5_out1k5_high_gpqa(self):
