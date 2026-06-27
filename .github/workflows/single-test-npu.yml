@@ -71,6 +71,21 @@ jobs:
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
 
+          # Patch ascend_backend.py to handle None input during CUDA graph capture
+          python3 << 'PYEOF'
+import os
+pkg = "/sgl-workspace/sglang/python"
+path = os.path.join(pkg, "sglang/srt/lora/backend/ascend_backend.py")
+with open(path) as f:
+    c = f.read()
+old = "    ) -> torch.Tensor:\n        total_seq_len, _ = x.shape"
+new = "    ) -> torch.Tensor:\n        if x is None:\n            return base_output\n        total_seq_len, _ = x.shape"
+c = c.replace(old, new, 1)
+with open(path, "w") as f:
+    f.write(c)
+print("Patched ascend_backend.py")
+PYEOF
+
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
