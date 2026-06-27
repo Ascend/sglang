@@ -31,10 +31,11 @@ jobs:
         run: |
           export PIP_INDEX_URL=https://repo.huaweicloud.com/repository/pypi/simple
           export PIP_TRUSTED_HOST=repo.huaweicloud.com
-          pip install --retries 10 --timeout 300 "datasets>=2.16.0" "evaluate>=0.4.0" "numpy>=1.26.0"
-          pip install --retries 10 --timeout 300 sentence_transformers pycocoevalcap
-          pip install --retries 10 --timeout 300 "sentencepiece>=0.1.99" nltk av ftfy "sqlitedict>=2.1.0" "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.0"
-          pip install --retries 10 --timeout 300 pytz jsonlines numexpr pybind11 scikit-learn timm einops openai opencv-python-headless hf_transfer tqdm-multiprocess transformers
+          pip install --retries 10 --timeout 300 sentence_transformers
+          pip install --retries 10 --timeout 300 wandb tenacity loguru openpyxl zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install --retries 10 --timeout 300 yt-dlp sentencepiece nltk av ftfy sqlitedict sacrebleu pytablewriter peft accelerate
+          pip install --retries 10 --timeout 300 jsonlines httpx evaluate datasets numexpr numpy dotenv granian
+          pip install --retries 10 --timeout 300 pytz pybind11 scikit-learn timm einops openai opencv-python-headless hf_transfer
           git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 
       - name: Run test
