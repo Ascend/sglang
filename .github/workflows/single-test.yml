@@ -102,9 +102,9 @@ jobs:
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/tmp/test_npu_kimi_k2_6_w4a8_8p.py
             test_type: 'function'
-          - name: test_npu_minimax_m2_7_w8a8_8p
+          - name: test_npu_minimax_m2_7_w8a8_4p
             runner: linux-aarch64-a3-8
-            test_case: test/registered/ascend/tmp/test_npu_minimax_m2_7_w8a8_8p.py
+            test_case: test/registered/ascend/tmp/test_npu_minimax_m2_7_w8a8_4p.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
