@@ -78,6 +78,10 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
 
+          # tabulate is required by sglang.test.send_one (used by the MiniMax
+          # bs=1 speed test) but is not preinstalled in the cann image.
+          pip install tabulate -q
+
           current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
           rm -rf ${log_path}
