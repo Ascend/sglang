@@ -246,7 +246,7 @@ jobs:
           pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
           pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.1.25 numpy==1.26.4 dotenv granian
           cd test
-          python3 -m pytest registered/ascend/basic_function/model_tokenizer/test_npu_tokenizer_backend.py registered/ascend/basic_function/model_tokenizer/test_npu_detokenizer_worker_num.py registered/ascend/basic_function/model_tokenizer/test_npu_model_config_parser.py -v --timeout 3600
+          python3 -m pytest registered/ascend/basic_function/model_tokenizer/test_npu_tokenizer_backend.py registered/ascend/basic_function/model_tokenizer/test_npu_detokenizer_worker_num.py registered/ascend/basic_function/model_tokenizer/test_npu_model_config_parser.py -v --timeout=3600
 
 #   full-2-npu-a3:
 #     needs: [ set-image-config ]
