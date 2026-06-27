@@ -14,7 +14,6 @@ from sglang.test.ascend.test_ascend_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     popen_launch_server,
 )
@@ -123,7 +122,7 @@ class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=3000,
             other_args=other_args,
             env=env,
             return_stdout_stderr=(cls.out, cls.err),
