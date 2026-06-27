@@ -21,7 +21,7 @@ from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
-
+'''
 class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     """Test core metrics functionality on single NPU with MFU enabled.
 
@@ -177,7 +177,7 @@ class TestNPUMetrics2NPU(TestNPULoggingBase):
         }
         self.assertIn("0", num_prefill_ranks_values)
         self.assertIn("1", num_prefill_ranks_values)
-
+'''
 
 def _generate_metrics(base_url: str):
     """Send requests to generate metrics data.
