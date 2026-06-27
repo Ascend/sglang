@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: Qwen3-8B LoRA logprob diff test - fix ascend None input
+# test round 5: Qwen3-8B LoRA logprob diff test - CI patch ascend_backend
 
 on:
   pull_request:
