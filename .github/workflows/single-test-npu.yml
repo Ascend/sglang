@@ -87,9 +87,14 @@ jobs:
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
             echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
+            python -u ${sglang_source_path}/${test_case} || TEST_FAILED=1
             echo "Finished test case ${test_case}"
           done
+
+          if [ -n "$TEST_FAILED" ]; then
+            echo "One or more test cases failed."
+            exit 1
+          fi
 
           plog_path="/root/ascend/log/debug/plog"
           if [ -d "$plog_path" ];then
