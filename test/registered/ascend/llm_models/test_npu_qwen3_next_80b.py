@@ -226,17 +226,29 @@ class TestQwen3NextMTPTopk(
     ]
 
 
-@unittest.skip(
-    "NPU mamba kernel (BiShengIR pipeline) fails to compile mamba_state_update "
-    "for NEXTN speculative decoding; server killed by OOM (-9). Re-enable once "
-    "sgl_kernel_npu supports it."
-)
 class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
     """Port of GPU TestQwen3NextMTPV2: linear (topk=1) NEXTN MTP.
 
     Observes: GSM8K accuracy and KL divergence (tighter threshold 0.0035 because
     linear candidates produce less perturbation). PrefixCacheBranchingMixin is
     not used, matching the GPU source.
+
+    Experimental re-enable after prior CI run (commit before b114593) hit:
+      triton MLIRCompilationError: ub overflow, requires 2097152 bits while
+      1572864 bits available  (sgl_kernel_npu.mamba.mamba_state_update_triton
+      move_intermediate_cache during MTP verify)
+    followed by scheduler-retry storm and OOM (-9).
+
+    Calibration vs the failing run (tp=4, mem=0.8, steps=3, draft=4):
+      - tp-size  4 -> 8   : halve per-card mamba state; smaller intermediate
+                            tensors may fit Ascend UB (192KB) at compile time.
+      - mem-frac 0.8 -> 0.75: extra HBM headroom for BiShengIR JIT intermediate
+                            buffers during the failing compile+retry path.
+      - num-steps 3 -> 1, draft 4 -> 2: shrink move_intermediate_cache working
+                            set; draft_tokens must be >= num_steps*topk.
+    If this still fails with the same ub-overflow, the bug is in
+    sgl_kernel_npu/mamba/mamba_state_update_triton.py tiling and must be
+    fixed kernel-side; we will re-add @unittest.skip.
     """
 
     model = QWEN3_NEXT_MODEL
@@ -247,15 +259,15 @@ class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
         "--speculative-algorithm",
         "NEXTN",
         "--speculative-num-steps",
-        "3",
+        "1",
         "--speculative-eagle-topk",
         "1",
         "--speculative-num-draft-tokens",
-        "4",
+        "2",
         "--mem-fraction-static",
-        "0.8",
+        "0.75",
         "--tp-size",
-        "4",
+        "8",
         "--chunked-prefill-size",
         "2048",
         "--mamba-scheduler-strategy",
