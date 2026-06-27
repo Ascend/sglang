@@ -14,7 +14,7 @@ from sglang.srt.observability.metrics_collector import (
     SchedulerMetricsCollector,
 )
 #from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH as _MODEL_NAME
-_MODEL_NAME="/home/weights/Qwen3-0.6B"
+_MODEL_NAME="/home/weights/Qwen/Qwen3-0.6B"
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
@@ -428,6 +428,8 @@ class TestNPUStatLoggersDI(CustomTestCase):
     scheduler subprocess on NPU."""
 
     def setUp(self) -> None:
+        os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+        _clear_sglang_metrics_from_default_registry()
         try:
             os.unlink(_DI_MARKER_PATH)
         except FileNotFoundError:
@@ -462,24 +464,6 @@ class TestNPUStatLoggersDI(CustomTestCase):
             "Custom SchedulerMetricsCollector was not instantiated; "
             "stat_loggers DI did not take effect.",
         )
-
-_DI_MARKER_PATH = "/tmp/sglang_di_test_marker"
-
-
-class _MarkingSchedulerCollector(SchedulerMetricsCollector):
-    """Records its own instantiation to a file so the test can verify the
-    custom subclass was used in the scheduler subprocess.
-
-    Defined at module level so it is picklable into the scheduler process.
-    Cross-process signalling uses a filesystem marker because the scheduler
-    runs in its own subprocess and cannot share in-memory state with the
-    test runner.
-    """
-
-    def __init__(self, *args, **kwargs):
-        with open(_DI_MARKER_PATH, "w") as f:
-            f.write("scheduler_collector_initialized\n")
-        super().__init__(*args, **kwargs)
 
 
 # Path to the cross-process marker file for the FakeRayMetric-style recording
@@ -592,49 +576,6 @@ def _clear_sglang_metrics_from_default_registry() -> None:
         names = REGISTRY._collector_to_names.get(collector, set())
         if any(name.startswith("sglang:") for name in names):
             REGISTRY.unregister(collector)
-
-
-class TestStatLoggersDI(CustomTestCase):
-    """Verify that a custom MetricsCollector subclass passed through
-    ``ServerArgs.stat_loggers`` is the one instantiated inside the
-    scheduler subprocess."""
-
-    def setUp(self) -> None:
-        _clear_sglang_metrics_from_default_registry()
-        try:
-            os.unlink(_DI_MARKER_PATH)
-        except FileNotFoundError:
-            pass
-
-    def tearDown(self) -> None:
-        try:
-            os.unlink(_DI_MARKER_PATH)
-        except FileNotFoundError:
-            pass
-
-    def test_engine_custom_scheduler_collector(self):
-        import sglang as sgl
-
-        engine = sgl.Engine(
-            model_path=_MODEL_NAME,
-            enable_metrics=True,
-            device="npu",
-            stat_loggers={
-                STAT_LOGGER_ROLE_SCHEDULER: _MarkingSchedulerCollector,
-            },
-        )
-        try:
-            # One small generation triggers scheduler init, which is where
-            # resolve_collector_class() picks the injected subclass.
-            engine.generate("Hello", {"max_new_tokens": 4})
-        finally:
-            engine.shutdown()
-
-        self.assertTrue(
-            os.path.exists(_DI_MARKER_PATH),
-            "Custom SchedulerMetricsCollector was not instantiated; "
-            "stat_loggers DI did not take effect.",
-        )
 
 
 class TestStatLoggersDIRecording(CustomTestCase):
