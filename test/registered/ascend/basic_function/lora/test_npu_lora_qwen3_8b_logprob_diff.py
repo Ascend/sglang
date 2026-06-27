@@ -30,13 +30,13 @@ from unittest.mock import patch
 
 import torch
 import torch.nn as nn
-from huggingface_hub import snapshot_download
 
 import sglang as sgl
 from sglang.srt.lora.utils import auto_detect_lora_target_modules
+from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
-from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
+
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 # BASE_MODEL = "/home/weights/Qwen/Qwen3-8B"
