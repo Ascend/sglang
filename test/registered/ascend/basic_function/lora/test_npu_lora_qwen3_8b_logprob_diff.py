@@ -67,11 +67,21 @@ def get_prompt_logprobs(engine, input_ids, lora_path):
         lora_path=lora_path,
     )
     logprobs = []
-    for logprob, _, _ in out["meta_info"]["input_token_logprobs"]:
+    for item in out["meta_info"]["input_token_logprobs"]:
+        logprob = item[0]
         if logprob is None:
             logprobs.append(0.0)
+        elif isinstance(logprob, torch.Tensor):
+            val = logprob.item()
+            if val != val:  # NaN check
+                logprobs.append(0.0)
+            else:
+                logprobs.append(val)
         else:
-            logprobs.append(logprob)
+            if logprob != logprob:  # NaN check
+                logprobs.append(0.0)
+            else:
+                logprobs.append(logprob)
     return logprobs[1:]
 
 
@@ -160,8 +170,15 @@ class TestLoRAQwen3_8BLogprobDiff(CustomTestCase):
             base_logprobs = get_prompt_logprobs(engine, cdata["tokens"], lora_path=None)
             logprobs = get_prompt_logprobs(engine, cdata["tokens"], lora_path="my_lora")
 
+            print(f"[DEBUG] base_logprobs length: {len(base_logprobs)}, first 5: {base_logprobs[:5]}")
+            print(f"[DEBUG] logprobs length: {len(logprobs)}, first 5: {logprobs[:5]}")
+            print(f"[DEBUG] base_logprobs has None: {any(x is None for x in base_logprobs)}")
+            print(f"[DEBUG] logprobs has None: {any(x is None for x in logprobs)}")
+
             base_t = torch.tensor(base_logprobs)
             lora_t = torch.tensor(logprobs)
+            print(f"[DEBUG] base_t has nan: {torch.isnan(base_t).any().item()}")
+            print(f"[DEBUG] lora_t has nan: {torch.isnan(lora_t).any().item()}")
             diff = (base_t - lora_t).abs()
             print(
                 f"[VERIFY] base vs lora: mean_diff={diff.mean().item():.6f}, "
