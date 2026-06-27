@@ -2,12 +2,13 @@ import os
 import time
 import unittest
 
-import requests
-
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    MINIMAX_M2_5_EAGLE3_MODEL_PATH,
-    MINIMAX_M2_7_W8A8_MODEL_PATH,
+    BENCHMARK_TOOL_DEFAULT,
+    KIMI_K2_6_EAGLE3_MODEL_PATH,
+    KIMI_K2_6_W4A8_MODEL_PATH,
+    TestAscendPerformanceTestCaseBase,
 )
 from sglang.test.ascend.test_ascend_utils import (
     logger,
@@ -17,98 +18,111 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
-    CustomTestCase,
     popen_launch_server,
 )
 
 register_npu_ci(
-    est_time=3600,
+    est_time=1800,
     suite="",
     nightly=True,
-    disabled="performance testcase",
+    disabled="Currently it is executed by the npu performance workflow.",
 )
 
-MINIMAX_M2_5_LOW_LATENCY_ENVS = {
+KIMI_K2_6_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
-    "STREAMS_PER_DEVICE": "32",
-    "HCCL_SOCKET_IFNAME": "lo",
-    "GLOO_SOCKET_IFNAME": "lo",
-    "TASK_QUEUE_ENABLE": "1",
-    "HCCL_BUFFSIZE": "2048",
-    "ASCEND_USE_FIA": "1",
     "SGLANG_SET_CPU_AFFINITY": "1",
+    "HCCL_SOCKET_IFNAME": NIC_NAME,
+    "GLOO_SOCKET_IFNAME": NIC_NAME,
+    "STREAMS_PER_DEVICE": "32",
+    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_NPU_FUSED_MOE_MODE": "2",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "204800",
-    "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
-    "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "96",
+    "HCCL_BUFFSIZE": "1200",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "SGLANG_NPU_USE_MLAPO": "1",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
 }
 
-MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
+KIMI_K2_6_OTHER_ARGS = [
+    "--trust-remote-code",
+    "--attention-backend",
+    "ascend",
+    "--device",
+    "npu",
+    "--quantization",
+    "modelslim",
+    "--dtype",
+    "bfloat16",
     "--tp-size",
     16,
+    "--mem-fraction-static",
+    0.865,
+    "--max-running-requests",
+    80,
+    "--chunked-prefill-size",
+    32768,
+    "--context-length",
+    6144,
+    "--max-prefill-tokens",
+    65536,
+    "--enable-multimodal",
+    "--mm-attention-backend",
+    "ascend_attn",
+    "--sampling-backend",
+    "ascend",
     "--enable-dp-attention",
     "--dp-size",
     16,
-    "--mem-fraction-static",
-    0.53,
-    "--max-running-requests",
-    96,
-    "--disable-radix-cache",
-    "--reasoning-parser",
-    "minimax-append-think",
-    "--tool-call-parser",
-    "minimax-m2",
-    "--prefill-delayer-max-delay-passes",
-    500,
-    "--enable-prefill-delayer",
-    "--prefill-max-requests",
-    3,
-    "--chunked-prefill-size",
-    -1,
-    "--max-prefill-token",
-    8192,
-    "--cuda-graph-bs",
+    "--moe-a2a-backend",
+    "deepep",
+    "--deepep-mode",
+    "auto",
+    "--cuda-graph-bs-decode",
     1,
     2,
     3,
     4,
     5,
-    6,
-    "--moe-a2a-backend",
-    "ascend_fuseep",
-    "--deepep-mode",
-    "auto",
-    "--quantization",
-    "modelslim",
+    "--disable-radix-cache",
+    "--model-loader-extra-config",
+    '{"enable_multithread_load": true}',
     "--speculative-algorithm",
     "EAGLE3",
     "--speculative-draft-model-path",
-    MINIMAX_M2_5_EAGLE3_MODEL_PATH,
+    KIMI_K2_6_EAGLE3_MODEL_PATH,
     "--speculative-num-steps",
-    3,
+    4,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    5,
     "--speculative-draft-model-quantization",
     "unquant",
-    "--dtype",
-    "bfloat16",
+    "--prefill-delayer-max-delay-passes",
+    200,
+    "--enable-prefill-delayer",
     "--reasoning-parser",
-    "minimax-append-think",
+    "kimi_k2",
     "--tool-call-parser",
-    "minimax-m2",
+    "kimi_k2",
 ]
 
 cmd = "npu-smi info"
 
 
-class TestKimiK25W4A8(CustomTestCase):
-    model = MINIMAX_M2_7_W8A8_MODEL_PATH
-    other_args = MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS
-    envs = MINIMAX_M2_5_LOW_LATENCY_ENVS
+class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    model = KIMI_K2_6_W4A8_MODEL_PATH
+    other_args = KIMI_K2_6_OTHER_ARGS
+    envs = KIMI_K2_6_ENVS
+    dataset_name = "random"
+    max_concurrency = 1
+    num_prompts = 1
+    input_len = 65536
+    output_len = 1024
+    random_range_ratio = 1
     out = open(f"./out_log.txt", "w+", encoding="utf-8")
     err = open(f"./err_log.txt", "w+", encoding="utf-8")
 
@@ -157,18 +171,8 @@ class TestKimiK25W4A8(CustomTestCase):
         logger.info(raw_result)
 
     def test_2(self):
-        logger.info("S9、curl一条请求，完成后记录每张卡的HBM内存占用和总内存")
-        response = requests.post(
-            f"{self.base_url}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 100,
-                },
-            },
-        )
-        self.assertEqual(response.status_code, 200)
+        logger.info("S9、curl一条64k长序列请求，完成后记录每张卡的HBM内存占用和总内存")
+        self.run_throughput()
         raw_result = run_command(cmd)
         logger.info(raw_result)
 

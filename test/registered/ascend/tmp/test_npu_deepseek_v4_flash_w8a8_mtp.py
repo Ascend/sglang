@@ -2,11 +2,10 @@ import os
 import time
 import unittest
 
-import requests
-
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    TestAscendPerformanceTestCaseBase,
 )
 from sglang.test.ascend.test_ascend_utils import (
     logger,
@@ -16,7 +15,6 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
-    CustomTestCase,
     popen_launch_server,
 )
 
@@ -90,10 +88,16 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS = [
 cmd = "npu-smi info"
 
 
-class TestDEEPSEEKV4FLASHW8A8MTP(CustomTestCase):
+class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
     model = DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_MTP_ENVS
+    dataset_name = "random"
+    max_concurrency = 1
+    num_prompts = 1
+    input_len = 65536
+    output_len = 1024
+    random_range_ratio = 1
     out = open(f"./out_log.txt", "w+", encoding="utf-8")
     err = open(f"./err_log.txt", "w+", encoding="utf-8")
 
@@ -142,18 +146,8 @@ class TestDEEPSEEKV4FLASHW8A8MTP(CustomTestCase):
         logger.info(raw_result)
 
     def test_2(self):
-        logger.info("S9、curl一条请求，完成后记录每张卡的HBM内存占用和总内存")
-        response = requests.post(
-            f"{self.base_url}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 100,
-                },
-            },
-        )
-        self.assertEqual(response.status_code, 200)
+        logger.info("S9、curl一条64k长序列请求，完成后记录每张卡的HBM内存占用和总内存")
+        self.run_throughput()
         raw_result = run_command(cmd)
         logger.info(raw_result)
 

@@ -2,11 +2,11 @@ import os
 import time
 import unittest
 
-import requests
-
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    BENCHMARK_TOOL_DEFAULT,
     QWEN3_6_27B_W8A8_MODEL_PATH,
+    TestAscendPerformanceTestCaseBase,
 )
 from sglang.test.ascend.test_ascend_utils import (
     logger,
@@ -16,7 +16,6 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
-    CustomTestCase,
     popen_launch_server,
 )
 
@@ -27,21 +26,17 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
-QWEN3_6_27B_3K5_1K5_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+QWEN3_6_27B_64K_1K_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "130",
-    "ASCEND_USE_FIA": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
-QWEN3_6_27B_3K5_1K5_OTHER_ARGS = [
+QWEN3_6_27B_64K_1K_OTHER_ARGS = [
     "--tp-size",
     2,
     "--nnodes",
@@ -53,29 +48,23 @@ QWEN3_6_27B_3K5_1K5_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    60000,
+    48000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    64,
+    6,
     "--max-mamba-cache-size",
-    74,
-    "--mem-fraction-static",
-    0.7,
-    "--cuda-graph-bs",
-    2,
-    8,
     16,
-    32,
-    40,
-    45,
-    50,
-    54,
-    "--enable-multimodal",
+    "--mem-fraction-static",
+    0.6,
+    "--cuda-graph-bs",
+    1,
+    2,
+    4,
+    5,
+    6,
     "--quantization",
     "modelslim",
-    "--mm-attention-backend",
-    "ascend_attn",
     "--dtype",
     "bfloat16",
     "--mamba-ssm-dtype",
@@ -97,10 +86,17 @@ QWEN3_6_27B_3K5_1K5_OTHER_ARGS = [
 cmd = "npu-smi info"
 
 
-class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(CustomTestCase):
+class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase):
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = QWEN3_6_27B_W8A8_MODEL_PATH
-    other_args = QWEN3_6_27B_3K5_1K5_OTHER_ARGS
-    envs = QWEN3_6_27B_3K5_1K5_ENVS
+    other_args = QWEN3_6_27B_64K_1K_OTHER_ARGS
+    envs = QWEN3_6_27B_64K_1K_ENVS
+    dataset_name = "random"
+    max_concurrency = 1
+    num_prompts = 1
+    input_len = 65536
+    output_len = 1024
+    random_range_ratio = 1
     out = open(f"./out_log.txt", "w+", encoding="utf-8")
     err = open(f"./err_log.txt", "w+", encoding="utf-8")
 
@@ -149,18 +145,8 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(CustomTestCase):
         logger.info(raw_result)
 
     def test_2(self):
-        logger.info("S9、curl一条请求，完成后记录每张卡的HBM内存占用和总内存")
-        response = requests.post(
-            f"{self.base_url}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 100,
-                },
-            },
-        )
-        self.assertEqual(response.status_code, 200)
+        logger.info("S9、curl一条64k长序列请求，完成后记录每张卡的HBM内存占用和总内存")
+        self.run_throughput()
         raw_result = run_command(cmd)
         logger.info(raw_result)
 
