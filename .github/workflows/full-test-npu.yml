@@ -239,6 +239,7 @@ jobs:
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
         run: |
+          # speed up by using infra cache services
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install fastokens
