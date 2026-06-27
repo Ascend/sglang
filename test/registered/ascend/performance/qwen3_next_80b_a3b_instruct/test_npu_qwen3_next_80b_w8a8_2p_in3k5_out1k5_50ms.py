@@ -129,7 +129,7 @@ QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS = [
     "--reasoning-parser",
     "qwen3",
     "--tool-call-parser",
-    "qwen",
+    "qwen3_coder",
 ]
 
 
