@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: Qwen3-8B LoRA logprob diff test - sed patch ascend_backend
+# test round 7: Qwen3-8B LoRA logprob diff test - handle None logprobs
 
 on:
   pull_request:
