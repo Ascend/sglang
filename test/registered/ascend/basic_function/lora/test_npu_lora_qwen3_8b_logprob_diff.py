@@ -66,7 +66,13 @@ def get_prompt_logprobs(engine, input_ids, lora_path):
         logprob_start_len=0,
         lora_path=lora_path,
     )
-    return [logprob for logprob, _, _ in out["meta_info"]["input_token_logprobs"]][1:]
+    logprobs = []
+    for logprob, _, _ in out["meta_info"]["input_token_logprobs"]:
+        if logprob is None:
+            logprobs.append(0.0)
+        else:
+            logprobs.append(logprob)
+    return logprobs[1:]
 
 
 class _MockLinearBase(nn.Module):
