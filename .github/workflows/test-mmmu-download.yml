@@ -1,0 +1,87 @@
+name: Test MMMU Dataset Download
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Docker image to use'
+        required: false
+        type: string
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622'
+
+concurrency:
+  group: test-mmmu-download-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  set-image:
+    name: set-image-config
+    runs-on: linux-amd64-cpu-8
+    outputs:
+      image_a3: ${{ steps.set-image.outputs.image_a3 }}
+    steps:
+      - name: Set image
+        id: set-image
+        run: |
+          echo "image_a3=${{ inputs.image || 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622' }}" >> $GITHUB_OUTPUT
+
+  mmmu-test:
+    name: mmmu-download-${{ matrix.test_config.name }}
+    needs: [set-image]
+    runs-on: ${{ matrix.test_config.runner }}
+    container:
+      image: ${{ needs.set-image.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run MMMU test
+        timeout-minutes: 120
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          HF_ENDPOINT: https://hf-mirror.com
+          SGLANG_IS_IN_CI: true
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
+          SGLANG_TEST_METRICS_OUTPUT: /root/.cache/tests/output/metrics/metrics
+        shell: bash
+        run: |
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          ln -sf ${sglang_source_path} /root/sglang
+
+          test_case=${{ matrix.test_config.test_case }}
+          if [ ! -f "${sglang_source_path}/${test_case}" ]; then
+            echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
+            exit 1
+          fi
+
+          current_date=$(date +%Y%m%d)
+          test_data_output_path=/root/.cache/tests/output/function/${current_date}
+          mkdir -p ${test_data_output_path}
+
+          python3 -m pytest \
+            -v \
+            -s \
+            --timeout 3600 \
+            ${sglang_source_path}/${test_case} \
+            --junitxml=${test_data_output_path}/${{ matrix.test_config.name }}.xml \
+            --json-report \
+            --json-report-file=${test_data_output_path}/${{ matrix.test_config.name }}.json
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmmu-test-logs
+          path: |
+            /root/.cache/tests/output/
+            /root/sglang/python/sglang/test/ascend/e2e/*.log
+          retention-days: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        test_config:
+          - name: qwen3_vl_8b_thinking_1p_mmmu
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/accuracy/qwen3_vl_8b_thinking/test_npu_qwen3_vl_8b_thinking_1p_mmmu.py
