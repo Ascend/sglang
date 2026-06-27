@@ -226,29 +226,23 @@ class TestQwen3NextMTPTopk(
     ]
 
 
+@unittest.skip(
+    "NPU mamba kernel (sgl_kernel_npu.mamba.mamba_state_update_triton.py:21 "
+    "move_intermediate_cache) hits BiShengIR ub overflow at compile time; "
+    "verified not a tunable runtime issue. Calibration attempt (commit "
+    "d835386): tp 4->8, mem 0.8->0.75, num-steps 3->1, draft-tokens 4->2 "
+    "produced byte-identical ub overflow (requires 2097152 bits while "
+    "1572864 bits available) -> the overflow is determined by static tiling "
+    "in the Triton kernel, independent of tp/mem/draft-tokens. Must be fixed "
+    "kernel-side; re-enable once sgl_kernel_npu ships a tiling fix."
+)
 class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
     """Port of GPU TestQwen3NextMTPV2: linear (topk=1) NEXTN MTP.
 
     Observes: GSM8K accuracy and KL divergence (tighter threshold 0.0035 because
     linear candidates produce less perturbation). PrefixCacheBranchingMixin is
-    not used, matching the GPU source.
-
-    Experimental re-enable after prior CI run (commit before b114593) hit:
-      triton MLIRCompilationError: ub overflow, requires 2097152 bits while
-      1572864 bits available  (sgl_kernel_npu.mamba.mamba_state_update_triton
-      move_intermediate_cache during MTP verify)
-    followed by scheduler-retry storm and OOM (-9).
-
-    Calibration vs the failing run (tp=4, mem=0.8, steps=3, draft=4):
-      - tp-size  4 -> 8   : halve per-card mamba state; smaller intermediate
-                            tensors may fit Ascend UB (192KB) at compile time.
-      - mem-frac 0.8 -> 0.75: extra HBM headroom for BiShengIR JIT intermediate
-                            buffers during the failing compile+retry path.
-      - num-steps 3 -> 1, draft 4 -> 2: shrink move_intermediate_cache working
-                            set; draft_tokens must be >= num_steps*topk.
-    If this still fails with the same ub-overflow, the bug is in
-    sgl_kernel_npu/mamba/mamba_state_update_triton.py tiling and must be
-    fixed kernel-side; we will re-add @unittest.skip.
+    not used, matching the GPU source. See @unittest.skip above for the
+    calibration experiment and the kernel-side blocker.
     """
 
     model = QWEN3_NEXT_MODEL

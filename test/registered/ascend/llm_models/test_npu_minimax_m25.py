@@ -26,6 +26,19 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
       1. GSM8K accuracy >= 0.90
       2. bs=1 single-request throughput > 90 token/s
       3. (implicit) W8A8 quantization has no accuracy regression
+
+    [Calibration] Prior CI run (commit before this one) crashed during
+    server warmup with NPU aicore exception (error 507015, "D-cache reads
+    and writes data to the UB, the response value returned by the bus is a
+    non-zero value") at MoeInitRouting/aclnnInplaceCopy path, on all 8 ranks
+    simultaneously. Adjusted three knobs to reduce EP routing and memory
+    pressure:
+      - mem-fraction-static  0.9  -> 0.85  (KV cache headroom)
+      - ep-size               8   -> 4     (less cross-card EP all2all)
+      - max-running-requests  64  -> 32    (lower MoE concurrency in warmup)
+    If this still fails with aicore exception, the next experiment is to
+    drop --ep-size entirely (pure TP=8) since the MoeInitRouting UB error
+    is suspected to be EP-path-specific.
     """
 
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
@@ -35,20 +48,20 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.9",
+        "0.85",
         "--attention-backend",
         "ascend",
         "--tp-size",
         "8",
         "--ep-size",
-        "8",
+        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--disable-overlap-schedule",
         "--reasoning-parser",
         "minimax-append-think",
         "--max-running-requests",
-        "64",
+        "32",
         "--chunked-prefill-size",
         "-1",
         "--model-loader-extra-config",
