@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 import unittest
 
@@ -163,8 +164,32 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
         logger.info(raw_result)
 
     def test_2(self):
-        logger.info("S9、curl一条64k长序列请求，完成后记录每张卡的HBM内存占用和总内存")
+        logger.info("S9、curl一条64k长序列请求，同时持续监控HBM占用")
+
+        stop_event = threading.Event()
+
+        def monitor_npu():
+            """线程2：持续采集并实时打印 npu-smi info"""
+            while not stop_event.is_set():
+                try:
+                    raw_result = run_command(cmd)
+                    logger.info("----- npu-smi info -----\n%s", raw_result)
+                except Exception as e:
+                    logger.warning(f"npu-smi monitor error: {e}")
+                time.sleep(0.5)  # 采样间隔，可按需调小
+
+        # 启动监控线程（daemon=True，防止主线程异常退出时挂死）
+        monitor_thread = threading.Thread(target=monitor_npu, daemon=True)
+        monitor_thread.start()
+
+        # 线程1：执行请求
         self.run_throughput()
+
+        # 请求完成，通知监控线程停止
+        stop_event.set()
+        monitor_thread.join(timeout=5)
+
+        logger.info("S9、请求完成，最终 npu-smi info")
         raw_result = run_command(cmd)
         logger.info(raw_result)
 
