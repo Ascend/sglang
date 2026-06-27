@@ -56,6 +56,8 @@ class AscendLoRABackend(BaseLoRABackend):
         *args,
         **kwargs,
     ) -> torch.Tensor:
+        if x is None:
+            return base_output
         total_seq_len, _ = x.shape
         _, weight_out_dim, _ = weights.shape
 
