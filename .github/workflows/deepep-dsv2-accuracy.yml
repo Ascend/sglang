@@ -1,0 +1,100 @@
+name: DeepEP DeepSeek V2 Accuracy Test
+
+on:
+  pull_request:
+    branches:
+      - testcases
+    paths:
+      - ".github/workflows/deepep-dsv2-accuracy.yml"
+      - "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
+      - "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (branch, tag, or SHA) to test.'
+        required: false
+        type: string
+        default: ''
+      image:
+        description: 'Docker image for the test task.'
+        required: false
+        type: string
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3'
+      skip_install_flag:
+        description: 'Skip sglang installation (default: true).'
+        required: false
+        type: string
+        default: 'true'
+
+concurrency:
+  group: deepep-dsv2-accuracy-${{ inputs.ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  set-image-config:
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.set-vars.outputs.ref }}
+      image: ${{ steps.set-vars.outputs.image }}
+      skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
+    steps:
+      - name: Set config
+        id: set-vars
+        run: |
+          if [ -z "${{ inputs.ref }}" ]; then
+            echo "ref=" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ inputs.ref }}" >> $GITHUB_OUTPUT
+          fi
+          if [ -z "${{ inputs.image }}" ]; then
+            echo "image=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
+          else
+            echo "image=${{ inputs.image }}" >> $GITHUB_OUTPUT
+          fi
+          if [ -z "${{ inputs.skip_install_flag }}" ]; then
+            echo "skip_install_flag=false" >> $GITHUB_OUTPUT
+          else
+            echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
+          fi
+
+  deepep-dsv2-accuracy:
+    name: deepep-dsv2-accuracy
+    needs: [set-image-config]
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        test_config:
+          - name: deepep_auto_dsv2
+            test_case: test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py
+            test_type: 'accuracy'
+          - name: deepep_low_latency_dsv2
+            test_case: test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py
+            test_type: 'accuracy'
+    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
+    with:
+      runner: linux-aarch64-a3-8
+      test_type: ${{ matrix.test_config.test_type }}
+      test_config_name: ${{ matrix.test_config.name }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: ${{ needs.set-image-config.outputs.image }}
+      install_sglang_from_source: false
+      transformers_version: ''
+
+  check-all-jobs:
+    needs:
+      - set-image-config
+      - deepep-dsv2-accuracy
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Check job status
+        run: |
+          FAILED=0
+          ${{ contains(needs.*.result, 'failure') }} && FAILED=1
+          ${{ contains(needs.*.result, 'cancelled') }} && FAILED=1
+          if [ $FAILED -eq 1 ]; then
+            echo "Some jobs failed or cancelled"
+            exit 1
+          fi
+          echo "All jobs passed"
