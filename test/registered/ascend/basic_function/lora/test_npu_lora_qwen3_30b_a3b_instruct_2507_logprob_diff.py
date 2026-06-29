@@ -41,7 +41,7 @@ register_cuda_ci(est_time=100, stage="extra-b", runner_config="4-gpu-b200")
 
 BASE_MODEL = QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
 # LORA_HF_REPO = "yushengsu/lora-diff-Qwen3-30B-A3B-Instruct-2507"
-LORA_HF_REPO = "/root/.cache/huggingface/hub/lora-diff-Qwen3-30B-A3B-Instruct-2507"
+LORA_HF_REPO = "yushengsu/lora-diff-Qwen3-30B-A3B-Instruct-2507"
 LORA_BACKEND = "triton"
 MAX_LORA_RANK = 32
 TP_SIZE = 4
