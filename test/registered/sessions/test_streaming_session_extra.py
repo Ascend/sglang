@@ -12,9 +12,6 @@ from sglang.test.server_fixtures.streaming_session_fixture import (
 
 register_npu_ci(est_time=691, suite="", nightly=True)
 
-# Qwen3-8B (32K context) — abort_max_new_tokens must fit within context window.
-_ABORT_MAX_TOKENS = 20000
-
 # Common ascend args for Qwen3-8B + streaming session
 _ASCEND_COMMON_ARGS = [
     "--dtype",
@@ -35,7 +32,6 @@ class TestStreamingSessionRetractMixedChunk(
     """Retract + --enable-mixed-chunk."""
 
     model = QWEN3_8B_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = [
         *_ASCEND_COMMON_ARGS,
         "--chunked-prefill-size",
@@ -52,7 +48,6 @@ class TestStreamingSessionRetractLargePage(
     free would corrupt pages still holding committed tokens."""
 
     model = QWEN3_8B_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = [
         *_ASCEND_COMMON_ARGS,
         "--chunked-prefill-size",
@@ -83,7 +78,6 @@ class TestStreamingSessionEagle(StreamingSessionServerBase, StreamingSessionKitM
 
     kv_inherit_offset = -1
     model = QWEN3_8B_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = [
         *_ASCEND_COMMON_ARGS,
         "--disable-overlap-schedule",
@@ -98,7 +92,6 @@ class TestStreamingSessionEagleV2(StreamingSessionServerBase, StreamingSessionKi
     """EAGLE3 spec v2 (overlap on)."""
 
     model = QWEN3_8B_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = [
         *_ASCEND_COMMON_ARGS,
         "--chunked-prefill-size",
@@ -119,7 +112,6 @@ class TestStreamingSessionEagleRetractLargePage(
 
     kv_inherit_offset = -1
     model = QWEN3_8B_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = [
         *_ASCEND_COMMON_ARGS,
         "--disable-overlap-schedule",

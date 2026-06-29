@@ -17,10 +17,6 @@ from sglang.test.server_fixtures.streaming_session_fixture import (
 
 register_npu_ci(est_time=519, suite="", nightly=True)
 
-# Mistral-7B-Instruct SWA model (32K context) — abort_max_new_tokens must fit
-# within the context window.
-_ABORT_MAX_TOKENS = 20000
-
 # Common ascend args for Mistral-7B SWA + streaming session
 _SWA_COMMON_ARGS = [
     "--dtype",
@@ -38,7 +34,6 @@ class TestStreamingSessionSWA(StreamingSessionServerBase, StreamingSessionKitMix
     """Baseline streaming session on a SWA model."""
 
     model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = ["--chunked-prefill-size", "512", *_SWA_COMMON_ARGS]
 
 
@@ -48,7 +43,6 @@ class TestStreamingSessionSWARetractLargePage(
     """SWA under retract decode with page=256."""
 
     model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = [
         "--chunked-prefill-size",
         "4096",
@@ -65,7 +59,6 @@ class TestStreamingSessionSWARetractMixedChunk(
     """SWA under retract decode with --enable-mixed-chunk."""
 
     model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
-    abort_max_new_tokens = _ABORT_MAX_TOKENS
     extra_args = [
         "--chunked-prefill-size",
         "128",

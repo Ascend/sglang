@@ -28,11 +28,6 @@ class StreamingSessionKitMixin:
     # before max_new stops, so slot.kv_committed_len = input + output - 1.
     kv_inherit_offset = 0
 
-    # max_new_tokens used in abort-recovery tests to trigger a long decode
-    # that is aborted mid-flight. Default 100000 works for 128K-context models;
-    # override for smaller models (e.g. 20000 for 32K models).
-    abort_max_new_tokens = 100000
-
     def test_kv_cache_inheritance(self, gen_len=12):
         """Each turn's cached_tokens must equal previous turn's prompt+completion
         (modulo kv_inherit_offset)."""
@@ -189,7 +184,7 @@ class StreamingSessionKitMixin:
                         "input_ids": ids_2,
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": self.abort_max_new_tokens,
+                            "max_new_tokens": 100000,
                         },
                         "session_params": {"id": session_id, "rid": None},
                     },
@@ -276,7 +271,7 @@ class StreamingSessionKitMixin:
                         "input_ids": ids_1,
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": self.abort_max_new_tokens,
+                            "max_new_tokens": 100000,
                         },
                         "session_params": {"id": session_id, "rid": None},
                     },
