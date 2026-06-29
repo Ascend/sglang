@@ -40,22 +40,22 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
         /opp/built-in/op_impl/ai_core/tbe/kernel/ascend910_93/ops_legacy/cast).
         Tuning ep 8->4 / mem 0.9->0.85 / max-req 64->32 in run 28284609940
         did NOT change the Cast kernel crash (same aicore exception).
-      - This run re-enables the test with:
-          ep-size 8 -> 4   (keep EP to honor the GPU source; per
-                            model_runner.py:1010 `tp_size % ep_size == 0`,
-                            tp=8/ep=4 is valid; 256 experts % 4 == 0, so
-                            experts/rank = 64)
-          mem 0.9 -> 0.85  (KV cache headroom)
-          max-req 64 -> 32 (lower MoE concurrency in warmup)
-          + --tool-call-parser minimax-m2  (official agent param; restores
-                            the model's primary tool-calling path that the
-                            GPU source omitted)
-      - Fallback plan (documented for the next iteration): if ep=4 still
-        hits the Cast kernel aicore exception, drop --ep-size entirely
-        (pure TP=8, ep=1, moe_tp=8) to change the MoE dispatch dtype/shape
-        path and possibly bypass the offending Cast tiling. If that also
-        fails, the bug is in CANN's legacy Cast kernel and must be fixed
-        CANN-side or by a custom sgl_kernel_npu Cast.
+      - Run 28346574313 (commit 874d021) re-enabled the test with ep=4 +
+        --tool-call-parser minimax-m2; same Cast kernel crash
+        (Cast_9f288b80370c6545ffe8cef142d37f5c_high_performance.o, bit-
+        identical path) on all 8 ranks. Confirms EP is not the cause: the
+        offending Cast tiling is the same for ep=8 and ep=4.
+      - This run drops --ep-size entirely (pure TP=8, ep=1, moe_tp=8).
+        Rationale: with ep=1 the MoE dispatch path has no EP all2all, so
+        next_token_ids flows through a different Cast shape/tiling and may
+        bypass the offending Cast_9f288b80...o kernel. If this also fails
+        with the same Cast kernel, the bug is in CANN's legacy Cast kernel
+        itself and must be fixed CANN-side or by a custom sgl_kernel_npu
+        Cast; in that case re-add @unittest.skip.
+      - Kept from prior calibration: mem 0.9->0.85, max-req 64->32,
+        + --tool-call-parser minimax-m2 (official MiniMax-M2.5 agent param
+        per docs.sglang.io; MinimaxM2Detector at
+        python/sglang/srt/function_call/function_call_parser.py:79).
     """
 
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
@@ -70,8 +70,6 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
         "ascend",
         "--tp-size",
         "8",
-        "--ep-size",
-        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--disable-overlap-schedule",
