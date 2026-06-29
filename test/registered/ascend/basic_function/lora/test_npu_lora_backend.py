@@ -62,6 +62,7 @@ class TestLoraBackend(CustomTestCase):
                     "temperature": 0,
                     "max_new_tokens": 32,
                 },
+                "lora_path": "tool_calling",
             },
         )
         self.assertEqual(response.status_code, 200)
