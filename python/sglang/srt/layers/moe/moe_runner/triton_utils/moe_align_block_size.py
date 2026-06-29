@@ -5,14 +5,15 @@ from typing import Tuple
 import torch
 import triton
 
-from sglang.srt.utils import is_cuda, is_hip, is_musa, is_xpu
+from sglang.srt.utils import is_cuda, is_hip, is_musa, is_npu, is_xpu
 
 _is_cuda = is_cuda()
 _is_hip = is_hip()
 _is_xpu = is_xpu()
 _is_musa = is_musa()
+_is_npu = is_npu()
 
-if _is_cuda or _is_hip or _is_xpu or _is_musa:
+if _is_cuda or _is_hip or _is_xpu or _is_musa or _is_npu:
     from sgl_kernel import moe_align_block_size as sgl_moe_align_block_size
 
 
