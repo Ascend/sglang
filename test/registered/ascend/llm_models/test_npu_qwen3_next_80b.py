@@ -22,7 +22,7 @@ register_npu_ci(est_time=1200, suite="full-4-npu-a3", nightly=True)
 
 QWEN3_NEXT_MODEL = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_PATH
 
-# NPU runtime environment required for HCCL/memory pools on Ascend.
+# NPU runtime env: HCCL/memory pools required by Ascend backend.
 _NPU_ENV = {
     **os.environ,
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -38,13 +38,7 @@ _NPU_ENV = {
 
 
 class _NpuDefaultServerBase(DefaultServerBase):
-    """DefaultServerBase variant that injects the NPU runtime environment.
-
-    The GPU kits (GSM8KMixin / KLDivergenceMixin / PrefixCacheBranchingMixin) are
-    hardware-agnostic and only depend on ``base_url`` / ``model``, so they are
-    fully reusable on NPU once the server is launched with the Ascend backend
-    and the HCCL/MF_STORE environment variables.
-    """
+    """DefaultServerBase with NPU runtime env (HCCL/MF_STORE)."""
 
     api_key = "sk-123456"
     timeout = 3000
@@ -83,35 +77,11 @@ class TestQwen3Next80B(GSM8KAscendMixin, CustomTestCase):
     ]
 
 
-# ---------------------------------------------------------------------------
-# Ported from sgl-project/sglang/test/registered/models_e2e/test_qwen3_next_models.py
-# ---------------------------------------------------------------------------
-# The GPU source defines 4 classes for the hybrid-Mamba Qwen3-Next-80B-A3B model:
-#   - TestQwen3NextLazyExtraBuffer            (page_size=1, track_interval=2)
-#   - TestQwen3NextLazyExtraBufferLargePage   (page_size=2, track_interval=2)
-#   - TestQwen3NextLazyExtraBufferAllocFail   (manual-only, skipped -> NOT ported)
-#   - TestQwen3NextLazyExtraBufferLargePageAllocFail (manual-only -> NOT ported)
-# Porting changes:
-#   - model: switched to local modelscope path QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_PATH
-#   - --attention-backend: triton -> ascend (NPU does not support triton)
-#   - --disable-cuda-graph: added (NPU convention)
-#   - --mamba-scheduler-strategy extra_buffer_lazy: kept (NPU supports extra_buffer,
-#     see sglang/srt/server_args._validate_mamba_extra_buffer which checks is_npu())
-#   - page_size: GPU uses 1/2; on NPU these produce broken output (GSM8K accuracy
-#     ~0.01, KL divergence ~3.7-4.0, i.e. the model emits garbage). The Ascend
-#     backend requires the default page_size=128 for correct hybrid-Mamba paging.
-#     Per the agreed fallback plan ("try 1/2 first, fall back to 128 on error"),
-#     the two page_size=1/2 classes are dropped and a single page_size=128 class
-#     is kept. track_interval=128 satisfies ``track_interval % page_size == 0``.
-#   - kl_div_thres: the decode cache-hit KL keeps the strict GPU threshold
-#     (0.002) and passes on NPU. The prefill cache-hit path uses a separate
-#     kl_div_thres_prefill=0.02 because the hybrid-Mamba state-update kernel is
-#     non-deterministic on Ascend (observed KL 0.0077-0.016 across runs). This
-#     is a platform calibration, not a quality loosening: GSM8K accuracy (0.92)
-#     and the decode cache-hit KL keep the GPU threshold.
-#   - gsm8k_accuracy_thres: 0.93 -> 0.92 (NPU baseline)
-#   - DefaultServerBase -> _NpuDefaultServerBase (inject NPU env)
-
+# Ported from sgl-project/sglang/test/registered/models_e2e/test_qwen3_next_models.py.
+# GPU has 4 classes (page_size=1/2 real + 2 manual-only AllocFail skip); on NPU
+# the two real classes merge into one page_size=128 class (Ascend requires the
+# default page_size; 1/2 produce garbage output), and the AllocFail classes are
+# not ported (GPU source already skips them).
 _COMMON_ARGS = [
     "--trust-remote-code",
     "--tp-size",
@@ -129,24 +99,11 @@ _COMMON_ARGS = [
 class TestQwen3NextLazyExtraBuffer(
     GSM8KMixin, KLDivergenceMixin, PrefixCacheBranchingMixin, _NpuDefaultServerBase
 ):
-    """Port of GPU TestQwen3NextLazyExtraBuffer, using the NPU default page_size.
-
-    The GPU source exercises page_size=1/2; on Ascend those values produce broken
-    output, so this port uses the NPU default page_size=128 (see module header).
-    Observes: GSM8K accuracy, KL divergence on prefill/decode cache hit, and
-    prefix cache branching at cache_chunk_size=64.
-    """
-
     model = QWEN3_NEXT_MODEL
     cache_chunk_size = 64
     gsm8k_accuracy_thres = 0.92
-    # Decode cache-hit KL on NPU: GPU uses 0.002, but the Ascend Mamba
-    # state-update path is non-deterministic across runs. CI run 28284609940
-    # observed avg_kl_div=0.002318 (above 0.002), while run 28283374436 with
-    # the same code passed. Bumped to 0.003 (50% headroom over the observed
-    # spike) - still 6.7x tighter than the prefill threshold below.
-    # The prefill cache-hit path is more perturbed (observed KL 0.0077-0.016
-    # across runs) so it gets a separate, calibrated threshold.
+    # GPU uses 0.002; NPU Mamba state-update nondeterminism (observed 0.002318)
+    # requires 0.003 decode-hit and 0.02 prefill-hit thresholds.
     kl_div_thres = 0.003
     kl_div_thres_prefill = 0.02
     other_args = [
@@ -156,49 +113,22 @@ class TestQwen3NextLazyExtraBuffer(
     ]
 
 
-# ---------------------------------------------------------------------------
-# Ported from sgl-project/sglang/test/registered/models_e2e/test_qwen3_next_models_mtp.py
-# ---------------------------------------------------------------------------
-# Porting changes:
-#   - model/attention-backend/disable-cuda-graph: same as above.
-#   - --speculative-algorithm NEXTN: kept (NPU already has NEXTN precedent,
-#     see test/manual/ascend/test_ascend_deepseek_mtp.py).
-#   - --mamba-scheduler-strategy extra_buffer (non-lazy): kept. Per
-#     server_args._validate_mamba_extra_buffer, lazy is unsupported with spec,
-#     so the GPU original uses the non-lazy extra_buffer strategy; NPU supports it.
-#   - --mamba-track-interval 128: kept (satisfies 128 % page_size == 0 for the
-#     NPU default page_size=128).
-#   - Topk class retains PrefixCacheBranchingMixin (per agreement; observe and
-#     fall back by removing it if the combination fails on NPU).
-#   - gsm8k_accuracy_thres: 0.93 -> 0.92 (NPU baseline).
-# KNOWN NPU LIMITATION (CI run 2026-06-27):
-#   Both MTP classes fail at setUpClass because the server cannot start with
-#   --speculative-algorithm NEXTN on the hybrid-Mamba Qwen3-Next model:
-#     * TestQwen3NextMTPTopk  -> server exits code 1, the Ascend compiler raises
-#       "Failed to run BiShengIR pipeline" in sgl_kernel_npu/mamba/mamba_state_update_triton.py
-#       ("block number is more than what user expect due to multi-buffer feature
-#       is enabled and some ops need extra local buffer").
-#     * TestQwen3NextMTPV2    -> server killed (exit code -9, OOM) during the same
-#       mamba state-update kernel compilation.
-#   This is an NPU mamba-kernel/compiler limitation, not a test-config issue, so
-#   the two classes are skipped (failure degradation per agreement) and kept in
-#   source so they can be re-enabled once the sgl_kernel_npu mamba kernel supports
-#   the NEXTN speculative path. Remove the @unittest.skip decorators to re-run.
-
-
+# Ported from sgl-project/sglang/test/registered/models_e2e/test_qwen3_next_models_mtp.py.
+# Both classes @unittest.skip'd: NPU mamba kernel (sgl_kernel_npu.mamba.
+# mamba_state_update_triton) hits BiShengIR UB overflow at compile time for
+# the NEXTN speculative path; verified static tiling issue (tp/mem/draft-tokens
+# produce byte-identical overflow). Remove @unittest.skip once sgl_kernel_npu
+# ships a tiling fix.
 @unittest.skip(
-    "NPU mamba kernel (BiShengIR pipeline) fails to compile mamba_state_update "
-    "for NEXTN speculative decoding; re-enable once sgl_kernel_npu supports it."
+    "NPU mamba kernel fails to compile mamba_state_update for NEXTN; "
+    "re-enable once sgl_kernel_npu supports it."
 )
 class TestQwen3NextMTPTopk(
     GSM8KMixin, KLDivergenceMixin, PrefixCacheBranchingMixin, _NpuDefaultServerBase
 ):
-    """Port of GPU TestQwen3NextMTPTopk: tree (topk>1) NEXTN MTP.
-
-    Observes: GSM8K accuracy, KL divergence (looser threshold 0.008 because tree
-    candidates introduce more numerical perturbation), and prefix cache branching.
-    """
-
+    # topk > 1 (tree) MTP on a hybrid-GDN model, on spec v2: the tree-aware mamba
+    # state update lives in the spec v2 verify path, so mamba + topk > 1 no longer
+    # falls back to spec v1.
     model = QWEN3_NEXT_MODEL
     cache_chunk_size = 64
     gsm8k_accuracy_thres = 0.92
@@ -230,24 +160,10 @@ class TestQwen3NextMTPTopk(
 
 
 @unittest.skip(
-    "NPU mamba kernel (sgl_kernel_npu.mamba.mamba_state_update_triton.py:21 "
-    "move_intermediate_cache) hits BiShengIR ub overflow at compile time; "
-    "verified not a tunable runtime issue. Calibration attempt (commit "
-    "d835386): tp 4->8, mem 0.8->0.75, num-steps 3->1, draft-tokens 4->2 "
-    "produced byte-identical ub overflow (requires 2097152 bits while "
-    "1572864 bits available) -> the overflow is determined by static tiling "
-    "in the Triton kernel, independent of tp/mem/draft-tokens. Must be fixed "
-    "kernel-side; re-enable once sgl_kernel_npu ships a tiling fix."
+    "NPU mamba kernel BiShengIR UB overflow at compile time (static tiling); "
+    "re-enable once sgl_kernel_npu ships a tiling fix."
 )
 class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
-    """Port of GPU TestQwen3NextMTPV2: linear (topk=1) NEXTN MTP.
-
-    Observes: GSM8K accuracy and KL divergence (tighter threshold 0.0035 because
-    linear candidates produce less perturbation). PrefixCacheBranchingMixin is
-    not used, matching the GPU source. See @unittest.skip above for the
-    calibration experiment and the kernel-side blocker.
-    """
-
     model = QWEN3_NEXT_MODEL
     gsm8k_accuracy_thres = 0.92
     kl_div_thres = 0.0035
