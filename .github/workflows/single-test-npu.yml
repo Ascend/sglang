@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: Test Qwen3-30B-A3B-Instruct-2507 LoRA logprob accuracy
+# test round 2: Test Qwen3-30B-A3B-Instruct-2507 LoRA logprob accuracy
 
 on:
   pull_request:
