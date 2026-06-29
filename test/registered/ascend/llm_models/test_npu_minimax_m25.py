@@ -15,23 +15,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=1500, suite="full-8-npu-a3", nightly=True)
 
 
-@unittest.skip(
-    "CANN 9.0.0 Cast kernel crashes on Ascend910_93 with MiniMax-M2.5-W8A8. "
-    "Root cause from CI run 28283374436 (commit 00f6bb2, ep=4/mem=0.85/"
-    "max-req=32): aicore exception (errno 507015) at the first prefill batch, "
-    "KernelLaunch failed: "
-    "  /opp/built-in/op_impl/ai_core/tbe/kernel/ascend910_93/ops_legacy/cast/"
-    "  Cast_9f288b80370c6545ffe8cef142d37f5c_high_performance.o "
-    "triggered from batch_result_processor.py:208 next_token_ids.tolist() -> "
-    "aclnnInplaceCopy -> Cast. Stack: 'fftsplus aivector error, core id 4' + "
-    "'D-cache/UB bus non-zero response' -> hardware-level aicore exception. "
-    "Tuning mem-fraction/ep-size/max-running-requests did not change the "
-    "failure (same Cast kernel, same aicore exception). Next experiment: "
-    "drop --ep-size entirely (pure TP=8) to change MoE dispatch dtype/shape "
-    "path and possibly bypass the offending Cast tiling; if that still "
-    "fails, the bug is in CANN's legacy Cast kernel and must be fixed "
-    "CANN-side or by a custom sgl_kernel_npu Cast."
-)
 class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Verify MiniMax-M2.5 (W8A8) end-to-end on Ascend NPU.
 
@@ -43,10 +26,36 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
       1. GSM8K accuracy >= 0.90
       2. bs=1 single-request throughput > 90 token/s
       3. (implicit) W8A8 quantization has no accuracy regression
+      4. reasoning parser (minimax-append-think) + tool call parser
+         (minimax-m2) wired per the official MiniMax-M2.5 SGLang doc;
+         tool-calling path is the model's primary use case (BrowseComp /
+         SWE-Bench), so this also exercises agent-shaped traffic.
 
-    See @unittest.skip above for the CANN Cast kernel blocker and the
-    calibration history (ep=8 -> ep=4, mem=0.9 -> 0.85, max-req=64 -> 32;
-    next attempt: pure TP=8 without --ep-size).
+    [Calibration history]
+      - Prior CI run 28283374436 (commit 00f6bb2): crashed during warmup
+        with CANN Cast kernel aicore exception (errno 507015) at the first
+        prefill batch, on all 8 ranks. The crash happened at
+        batch_result_processor.py:208 next_token_ids.tolist() -> aclnnInplaceCopy
+        -> Cast (CANN legacy kernel under
+        /opp/built-in/op_impl/ai_core/tbe/kernel/ascend910_93/ops_legacy/cast).
+        Tuning ep 8->4 / mem 0.9->0.85 / max-req 64->32 in run 28284609940
+        did NOT change the Cast kernel crash (same aicore exception).
+      - This run re-enables the test with:
+          ep-size 8 -> 4   (keep EP to honor the GPU source; per
+                            model_runner.py:1010 `tp_size % ep_size == 0`,
+                            tp=8/ep=4 is valid; 256 experts % 4 == 0, so
+                            experts/rank = 64)
+          mem 0.9 -> 0.85  (KV cache headroom)
+          max-req 64 -> 32 (lower MoE concurrency in warmup)
+          + --tool-call-parser minimax-m2  (official agent param; restores
+                            the model's primary tool-calling path that the
+                            GPU source omitted)
+      - Fallback plan (documented for the next iteration): if ep=4 still
+        hits the Cast kernel aicore exception, drop --ep-size entirely
+        (pure TP=8, ep=1, moe_tp=8) to change the MoE dispatch dtype/shape
+        path and possibly bypass the offending Cast tiling. If that also
+        fails, the bug is in CANN's legacy Cast kernel and must be fixed
+        CANN-side or by a custom sgl_kernel_npu Cast.
     """
 
     model = MINIMAX_M2_5_W8A8_MODEL_PATH
@@ -56,20 +65,22 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.9",
+        "0.85",
         "--attention-backend",
         "ascend",
         "--tp-size",
         "8",
         "--ep-size",
-        "8",
+        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--disable-overlap-schedule",
         "--reasoning-parser",
         "minimax-append-think",
+        "--tool-call-parser",
+        "minimax-m2",
         "--max-running-requests",
-        "64",
+        "32",
         "--chunked-prefill-size",
         "-1",
         "--model-loader-extra-config",
