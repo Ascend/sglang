@@ -31,9 +31,12 @@ import torch
 from huggingface_hub import snapshot_download
 
 import sglang as sgl
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_cuda_ci
 from sglang.test.test_utils import CustomTestCase
-from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
+
 register_cuda_ci(est_time=100, stage="extra-b", runner_config="4-gpu-b200")
 
 BASE_MODEL = QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
