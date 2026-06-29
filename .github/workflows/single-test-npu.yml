@@ -71,6 +71,9 @@ jobs:
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
 
+          # Patch moe_align_block_size.py to support NPU
+          python -c "f=open('${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py');c=f.read();f.close();c=c.replace('from sglang.srt.utils import is_cuda, is_hip, is_musa, is_xpu','from sglang.srt.utils import is_cuda, is_hip, is_musa, is_npu, is_xpu');c=c.replace('_is_musa = is_musa()\n','_is_musa = is_musa()\n_is_npu = is_npu()\n');c=c.replace('if _is_cuda or _is_hip or _is_xpu or _is_musa:','if _is_cuda or _is_hip or _is_xpu or _is_musa or _is_npu:');f=open('${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py','w');f.write(c);f.close();print('Patched moe_align_block_size.py for NPU')"
+
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
