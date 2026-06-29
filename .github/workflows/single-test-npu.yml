@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Test Qwen3-30B-A3B-Instruct-2507 LoRA logprob accuracy
+# test round 3: Test Qwen3-30B-A3B-Instruct-2507 LoRA logprob accuracy
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-8
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
