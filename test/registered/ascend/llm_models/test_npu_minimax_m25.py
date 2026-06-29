@@ -26,10 +26,7 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     accuracy = 0.90
     timeout_for_server_launch = 3000
 
-    # Pure TP=8 (no --ep-size): NPU EP via the generic StandardDispatcher path
-    # crashes on a CANN Cast kernel (errno 507015) for both ep=8 and ep=4.
-    # Native EP paths (ascend_fuseep / deepep via zbal) bypass this but need
-    # --moe-a2a-backend; pending dev verification. Pure TP=8 unblocks the test.
+    # Pure TP=8: NPU EP crashes on CANN Cast kernel (errno 507015).
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
@@ -55,10 +52,7 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     ]
 
     def test_bs_1_speed(self):
-        # GPU baseline 90 lowered to 5 for NPU pure-TP=8: EP blocked by the CANN
-        # Cast kernel bug above, so MoE runs through 8-card all-reduce every
-        # layer; under bs=1 this cannot be amortized (~7.4 token/s).
-        # Restore to 90 once --moe-a2a-backend ascend_fuseep is verified.
+        # NPU pure TP=8: EP blocked, MoE all-reduce not amortized at bs=1 (~7.4 token/s).
         url = urlparse(DEFAULT_URL_FOR_TEST)
         args = BenchArgs(
             host=url.hostname,

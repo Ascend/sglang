@@ -78,10 +78,7 @@ class TestQwen3Next80B(GSM8KAscendMixin, CustomTestCase):
 
 
 # Ported from sgl-project/sglang/test/registered/models_e2e/test_qwen3_next_models.py.
-# GPU has 4 classes (page_size=1/2 real + 2 manual-only AllocFail skip); on NPU
-# the two real classes merge into one page_size=128 class (Ascend requires the
-# default page_size; 1/2 produce garbage output), and the AllocFail classes are
-# not ported (GPU source already skips them).
+# NPU uses default page_size=128 (Ascend requires it; 1/2 produce garbage).
 _COMMON_ARGS = [
     "--trust-remote-code",
     "--tp-size",
@@ -102,8 +99,7 @@ class TestQwen3NextLazyExtraBuffer(
     model = QWEN3_NEXT_MODEL
     cache_chunk_size = 64
     gsm8k_accuracy_thres = 0.92
-    # GPU uses 0.002; NPU Mamba state-update nondeterminism (observed 0.002318)
-    # requires 0.003 decode-hit and 0.02 prefill-hit thresholds.
+    # NPU Mamba state-update nondeterminism: decode 0.002->0.003, prefill 0.02.
     kl_div_thres = 0.003
     kl_div_thres_prefill = 0.02
     other_args = [
@@ -114,14 +110,9 @@ class TestQwen3NextLazyExtraBuffer(
 
 
 # Ported from sgl-project/sglang/test/registered/models_e2e/test_qwen3_next_models_mtp.py.
-# Both classes @unittest.skip'd: NPU mamba kernel (sgl_kernel_npu.mamba.
-# mamba_state_update_triton) hits BiShengIR UB overflow at compile time for
-# the NEXTN speculative path; verified static tiling issue (tp/mem/draft-tokens
-# produce byte-identical overflow). Remove @unittest.skip once sgl_kernel_npu
-# ships a tiling fix.
+# Both classes skipped: NPU mamba kernel BiShengIR UB overflow (static tiling).
 @unittest.skip(
-    "NPU mamba kernel fails to compile mamba_state_update for NEXTN; "
-    "re-enable once sgl_kernel_npu supports it."
+    "NPU mamba kernel fails to compile mamba_state_update for NEXTN"
 )
 class TestQwen3NextMTPTopk(
     GSM8KMixin, KLDivergenceMixin, PrefixCacheBranchingMixin, _NpuDefaultServerBase
@@ -160,8 +151,7 @@ class TestQwen3NextMTPTopk(
 
 
 @unittest.skip(
-    "NPU mamba kernel BiShengIR UB overflow at compile time (static tiling); "
-    "re-enable once sgl_kernel_npu ships a tiling fix."
+    "NPU mamba kernel BiShengIR UB overflow at compile time (static tiling)"
 )
 class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
     model = QWEN3_NEXT_MODEL
