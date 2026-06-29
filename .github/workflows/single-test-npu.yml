@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: Test lora backend parameters (triton, csgmv, ascend, torch_native)
+# test round 2: Test lora backend parameters (triton, csgmv, ascend, torch_native)
 
 on:
   pull_request:
