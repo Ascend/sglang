@@ -1,6 +1,9 @@
 import unittest
 
-from sglang.test.ci.ci_register import register_cuda_ci
+from sglang.test.ascend.test_ascend_utils import (
+    MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH,
+)
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.streaming_session_kit import (
     AbortLeakReproKitMixin,
     StreamingSessionKitMixin,
@@ -12,24 +15,26 @@ from sglang.test.server_fixtures.streaming_session_fixture import (
     StreamingSessionServerBase,
 )
 
-register_cuda_ci(est_time=519, stage="base-b", runner_config="1-gpu-large")
+register_npu_ci(est_time=519, suite="", nightly=True)
 
-
-SWA_MODEL = "openai/gpt-oss-20b"
-
-# Common gpt-oss-20b launch args. Matches TestSessionLatency/TestSWARadixCacheKL.
-SWA_COMMON_ARGS = [
+# Common ascend args for Mistral-7B SWA + streaming session
+_SWA_COMMON_ARGS = [
+    "--dtype",
+    "bfloat16",
+    "--attention-backend",
+    "ascend",
+    "--device",
+    "npu",
     "--mem-fraction-static",
-    "0.70",
-    "--disable-piecewise-cuda-graph",
+    "0.78",
 ]
 
 
 class TestStreamingSessionSWA(StreamingSessionServerBase, StreamingSessionKitMixin):
-    """Baseline streaming session on a hybrid-SWA model."""
+    """Baseline streaming session on a SWA model."""
 
-    model = SWA_MODEL
-    extra_args = ["--chunked-prefill-size", "512", *SWA_COMMON_ARGS]
+    model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
+    extra_args = ["--chunked-prefill-size", "512", *_SWA_COMMON_ARGS]
 
 
 class TestStreamingSessionSWARetractLargePage(
@@ -37,13 +42,13 @@ class TestStreamingSessionSWARetractLargePage(
 ):
     """SWA under retract decode with page=256."""
 
-    model = SWA_MODEL
+    model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
     extra_args = [
         "--chunked-prefill-size",
         "4096",
         "--page-size",
         "256",
-        *SWA_COMMON_ARGS,
+        *_SWA_COMMON_ARGS,
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
 
@@ -53,12 +58,12 @@ class TestStreamingSessionSWARetractMixedChunk(
 ):
     """SWA under retract decode with --enable-mixed-chunk."""
 
-    model = SWA_MODEL
+    model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
     extra_args = [
         "--chunked-prefill-size",
         "128",
         "--enable-mixed-chunk",
-        *SWA_COMMON_ARGS,
+        *_SWA_COMMON_ARGS,
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
 
@@ -68,7 +73,7 @@ class TestStreamingSessionSWAAbortLeakRepro(
 ):
     """SWA abort-heavy chunked prefill leak repro."""
 
-    model = SWA_MODEL
+    model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
     extra_args = [
         "--chunked-prefill-size",
         str(ABORT_REPRO_CHUNKED_PREFILL_SIZE),
@@ -80,7 +85,7 @@ class TestStreamingSessionSWAAbortLeakRepro(
         "32",
         "--log-level",
         "info",
-        *SWA_COMMON_ARGS,
+        *_SWA_COMMON_ARGS,
     ]
 
 
