@@ -119,7 +119,7 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     envs = KIMI_K2_6_ENVS
     dataset_name = "random"
     max_concurrency = 1
-    num_prompts = 1
+    num_prompts = 10
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
