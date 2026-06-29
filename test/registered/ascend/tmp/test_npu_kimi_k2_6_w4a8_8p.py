@@ -64,7 +64,7 @@ KIMI_K2_6_OTHER_ARGS = [
     "--chunked-prefill-size",
     32768,
     "--context-length",
-    6144,
+    75000,
     "--max-prefill-tokens",
     65536,
     "--enable-multimodal",
