@@ -1,33 +1,3 @@
-"""NPU adaptation of EPD (Encode-Prefill-Decode) disaggregation tests.
-
-This file ports four of the seven test classes from the upstream GPU test
-``test/registered/disaggregation/test_epd_disaggregation.py`` to Ascend NPU:
-
-  - TestNpuEPDDisaggregationOmni        (local only, image + video + audio)
-  - TestNpuEPDDisaggregationOneEncoder   (CI-skipped, single encoder + MMMU)
-  - TestNpuEPDDisaggregationQwen35       (local only, image + video)
-  - TestNpuEPDDisaggregationMultiEncoders (CI runs, two encoders + MMMU)
-
-The remaining three GPU classes are intentionally NOT ported per the NPU
-adaptation requirements:
-
-  - TestEPDDisaggregationGrpcEncoderMMMU  : requires --grpc-mode (NPU unsupported)
-  - TestEPDDisaggregationGrpcEncoderOnly  : requires --grpc-mode (NPU unsupported)
-  - TestEPDDisaggregationMooncake         : requires mooncake/RDMA (NPU unsupported)
-
-NPU-specific adaptations (applied to every ported class):
-  - ``cls.server_type = "server"`` (HTTP only; --grpc-mode is unsupported).
-  - ``--encoder-transfer-backend zmq_to_scheduler`` (mooncake is GPU/RDMA only).
-  - ``--enable-mm-global-cache`` is removed (NPU unsupported).
-  - Added NPU backend args: ``--attention-backend ascend``,
-    ``--disable-cuda-graph``, ``--mem-fraction-static 0.8``.
-  - ``SGLANG_MM_SKIP_COMPUTE_HASH=True``: the Ascend backend does not
-    support ``_local_scalar_dense_npu`` for UInt64 used by multimodal
-    hash computation; this env var replaces the hash with a random UUID.
-  - ``register_npu_ci`` replaces ``register_cuda_ci``; TP=2 (Qwen2.5-VL-3B
-    still benefits from 2-NPU TP on Ascend for encoder throughput).
-"""
-
 import os
 import threading
 import unittest
@@ -57,7 +27,6 @@ from sglang.test.test_utils import (
     popen_with_error_check,
 )
 
-# NPU common server arguments shared by all server roles.
 NPU_COMMON_ARGS = [
     "--attention-backend",
     "ascend",
@@ -67,14 +36,6 @@ NPU_COMMON_ARGS = [
     "0.5",
 ]
 
-# NPU environment variables required for Ascend PD disaggregation.
-# - ASCEND_MF_STORE_URL: Centralized storage URL for Ascend Transfer Engine
-#   (MemFabric).  The prefill server hosts the config store at this address
-#   and the decode server connects to it.  Without this the transfer engine
-#   fails with "input store URL is null".
-# - SGLANG_MM_SKIP_COMPUTE_HASH: Ascend backend does not support
-#   _local_scalar_dense_npu for UInt64 used by multimodal hash computation;
-#   replaces the hash with a random UUID.
 NPU_ENV = {
     **os.environ,
     "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24666",
@@ -84,18 +45,12 @@ NPU_ENV = {
     "TRANSFORMERS_VERBOSITY": os.getenv("TRANSFORMERS_VERBOSITY", "error"),
 }
 
-# Also set the hash-skip flag in the parent process environment so any
-# in-process multimodal utilities (e.g. test helpers) pick it up.
 os.environ["SGLANG_MM_SKIP_COMPUTE_HASH"] = "True"
 
-# Default encoder transfer backend on NPU (mooncake is GPU/RDMA-only).
 DEFAULT_NPU_ENCODER_TRANSFER_BACKEND = "zmq_to_scheduler"
 
-# Default tensor parallel size for NPU (2 NPUs per encoder/language server).
 DEFAULT_NPU_TP_SIZE = "2"
 
-# A small inline PNG (32x32 blue square) used as a fallback image when the
-# NPU CI image cache is unavailable.  Same as in test_npu_disaggregated_vlm.
 _INLINE_IMAGE_URL = (
     "data:image/png;base64,"
     "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAA7EAAAOxAGVKw4b"
@@ -104,14 +59,10 @@ _INLINE_IMAGE_URL = (
     "3oQCuav58qlAw73kKCSgAAAABJRU5ErkJggg=="
 )
 
-# Register NPU CI.  Only TestNpuEPDDisaggregationMultiEncoders runs in CI
-# (the other three classes are marked ``@unittest.skipIf(is_in_ci(), ...)``).
-# MultiEncoders uses 8 NPUs (encode1: 0-1, encode2: 2-3, prefill: 4-5, decode: 6-7).
 register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 
 def _file_to_data_url(path: str, mime: str = "image/png") -> str:
-    """Encode a local media file as a ``data:`` URL for OpenAI-style payloads."""
     import base64
 
     with open(path, "rb") as f:
@@ -120,11 +71,6 @@ def _file_to_data_url(path: str, mime: str = "image/png") -> str:
 
 
 def _chat_completion(base_url: str, model: str, content: list, **kwargs) -> str:
-    """Send a chat completion to ``base_url`` and return the assistant text.
-
-    Uses the requests library directly to avoid openai client wrapper issues
-    on NPU CI runners.
-    """
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": content}],
@@ -138,33 +84,14 @@ def _chat_completion(base_url: str, model: str, content: list, **kwargs) -> str:
 
 
 class NpuEPDBase(PDDisaggregationServerBase):
-    """Base class for NPU EPD tests.
-
-    Inherits PD-disaggregation plumbing (prefill/decode ports, load balancer,
-    ``transfer_backend`` / ``rdma_devices``) from ``PDDisaggregationServerBase``
-    and adds the NPU-specific server arguments + boot sequence for the
-    encoder/prefill/decode trio.
-
-    Subclasses set ``cls.model`` and may override ``encoder_transfer_backend``
-    or ``tp_size``.
-    """
-
     model = QWEN2_5_VL_3B_INSTRUCT_WEIGHTS_PATH
     encoder_transfer_backend = DEFAULT_NPU_ENCODER_TRANSFER_BACKEND
     tp_size = DEFAULT_NPU_TP_SIZE
-    server_type = "server"  # NPU only supports HTTP ("server"); no --grpc-mode
+    server_type = "server"
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Override the PD-disaggregation transfer backend inherited from
-        # ``PDDisaggregationServerBase``: in CI the base class forces
-        # ``--disaggregation-transfer-backend mooncake`` (GPU/RDMA-only),
-        # which fails on NPU with ``ModuleNotFoundError: No module named
-        # 'mooncake'``.  Additionally, sglang's default value for
-        # ``--disaggregation-transfer-backend`` is also "mooncake", so we
-        # MUST explicitly pass the NPU-native "ascend" backend for PD
-        # disaggregation to avoid loading the mooncake transfer engine.
         cls.transfer_backend = ["--disaggregation-transfer-backend", "ascend"]
         cls.rdma_devices = []
         parsed = urlparse(DEFAULT_URL_FOR_TEST)
@@ -186,12 +113,6 @@ class NpuEPDBase(PDDisaggregationServerBase):
 
     @classmethod
     def start_encode(cls, port=None, base_gpu_id=None):
-        """Start the encoder-only server.
-
-        Args:
-            port: optional override (used by MultiEncoders).
-            base_gpu_id: optional --base-gpu-id (used by MultiEncoders).
-        """
         port = port or cls.encode_port
         url = f"http://{cls.base_host}:{port}"
         encode_args = [
@@ -216,7 +137,6 @@ class NpuEPDBase(PDDisaggregationServerBase):
 
     @classmethod
     def start_prefill(cls, encoder_urls=None):
-        """Start the prefill (language-only) server in PD-disaggregation mode."""
         encoder_urls = encoder_urls or cls.encode_url
         prefill_args = [
             "--language-only",
@@ -247,7 +167,6 @@ class NpuEPDBase(PDDisaggregationServerBase):
 
     @classmethod
     def start_decode(cls):
-        """Start the decode server in PD-disaggregation mode."""
         decode_args = [
             "--disaggregation-mode",
             "decode",
@@ -272,13 +191,6 @@ class NpuEPDBase(PDDisaggregationServerBase):
 
     @classmethod
     def launch_lb(cls):
-        """Launch the load balancer with NPU-compatible arguments.
-
-        Overrides the base class launch_lb which uses GPU-specific args:
-        - Removes --mini-lb (not supported by NPU router).
-        - Passes bootstrap_port as the second value to --prefill (required by
-          the NPU ascend transfer backend to connect prefill/decode).
-        """
         import shlex
 
         lb_command = [
@@ -302,7 +214,6 @@ class NpuEPDBase(PDDisaggregationServerBase):
 
     @classmethod
     def start_all_servers(cls):
-        """Start encode, then prefill+decode in parallel, then lb."""
         cls.process_encode = cls.start_encode()
         t_prefill = threading.Thread(target=cls.start_prefill)
         t_decode = threading.Thread(target=cls.start_decode)
@@ -332,31 +243,14 @@ class NpuEPDBase(PDDisaggregationServerBase):
                     print(f"Error killing process: {e}")
 
 
-# ---------------------------------------------------------------------------
-# 1. Omni model EPD — image + video + audio (local only; CI skipped)
-# ---------------------------------------------------------------------------
-
-
 @unittest.skipIf(
     is_in_ci(),
     "Omni model EPD test with image, video, and audio modalities, running locally only",
 )
 class TestNpuEPDDisaggregationOmni(NpuEPDBase):
-    """EPD test for the Omni model on NPU (local only).
-
-    GPU original (TestEPDDisaggregationOmni) covers image / video / audio with
-    three encoder_transfer_backends and two server_types (grpc / http).
-    On NPU:
-      - server_type = "server" (HTTP only; --grpc-mode is unsupported).
-      - encoder_transfer_backend = zmq_to_scheduler (mooncake is GPU-only).
-      - ``--enable-mm-global-cache`` and cache-hit tests are removed
-        (NPU unsupported).
-      - PD disaggregation (prefill + decode + LB) is preserved, matching the
-        GPU original.
-
-    [Test Category] EPD
-    [Test Target] --encoder-only; --language-only; --encoder-urls;
-                   --encoder-transfer-backend zmq_to_scheduler; multimodal
+    """
+    EPD disaggregation test for omni models on NPU. Covers image and video
+    modalities with encoder_transfer_backend: zmq_to_scheduler.
     """
 
     model = QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH
@@ -375,7 +269,6 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
         return openai.Client(api_key=self.api_key, base_url=f"{self.lb_url}/v1")
 
     def test_image(self):
-        """Single-image request through the EPD pipeline."""
         content = [
             {"type": "image_url", "image_url": {"url": _INLINE_IMAGE_URL}},
             {"type": "text", "text": "Describe this image in a sentence."},
@@ -387,7 +280,6 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
         self.assertGreater(len(text), 0)
 
     def test_image_local_file(self):
-        """Image request using a local file from the NPU CI image cache."""
         if not os.path.exists(IMAGES_MAN_PATH):
             self.skipTest(f"Image file not found: {IMAGES_MAN_PATH}")
         image_url = _file_to_data_url(IMAGES_MAN_PATH)
@@ -400,7 +292,6 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
         self.assertGreater(len(text), 0)
 
     def test_video(self):
-        """Video request through the EPD pipeline (local only)."""
         if not os.path.exists(VIDEO_JOBS_PATH):
             self.skipTest(f"Video file not found: {VIDEO_JOBS_PATH}")
         video_url = _file_to_data_url(VIDEO_JOBS_PATH, mime="video/mp4")
@@ -413,7 +304,6 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
         self.assertGreater(len(text), 0)
 
     def test_mixed_image_video(self):
-        """Image + video in one request to test multi-modal routing."""
         if not os.path.exists(VIDEO_JOBS_PATH):
             self.skipTest(f"Video file not found: {VIDEO_JOBS_PATH}")
         video_url = _file_to_data_url(VIDEO_JOBS_PATH, mime="video/mp4")
@@ -430,22 +320,13 @@ class TestNpuEPDDisaggregationOmni(NpuEPDBase):
         self.assertGreater(len(text), 0)
 
 
-# ---------------------------------------------------------------------------
-# 2. One encoder + MMMU (CI-skipped to reduce multi-NPU runtime)
-# ---------------------------------------------------------------------------
-
-
 @unittest.skipIf(is_in_ci(), "Skipping in CI to reduce multi-NPU runtime")
 class TestNpuEPDDisaggregationOneEncoder(MMMUMixin, NpuEPDBase):
-    """Single-encoder EPD test with MMMU evaluation (CI-skipped, like GPU).
-
-    GPU original (TestEPDDisaggregationOneEncoder) uses the small VLM
-    ``DEFAULT_SMALL_VLM_MODEL_NAME_FOR_TEST`` (Qwen2.5-VL-3B-Instruct) and
-    enables ``--enable-prefix-mm-cache``.  On NPU we use the Ascend-converted
-    weights ``QWEN2_5_VL_3B_INSTRUCT_WEIGHTS_PATH`` and keep the prefix cache.
+    """
+    Single-encoder EPD test with MMMU evaluation.
+    Uses --enable-prefix-mm-cache, same as GPU original.
     """
 
-    # Qwen2.5-VL-3B-Instruct scores ~0.40 on the 50-sample MMMU subset.
     accuracy = 0.40
     mmmu_args = ["--limit", "50"]
 
@@ -461,7 +342,6 @@ class TestNpuEPDDisaggregationOneEncoder(MMMUMixin, NpuEPDBase):
 
     @classmethod
     def start_encode(cls, port=None, base_gpu_id=None):
-        """Override to add --enable-prefix-mm-cache (same as GPU original)."""
         port = port or cls.encode_port
         url = f"http://{cls.base_host}:{port}"
         encode_args = [
@@ -486,22 +366,14 @@ class TestNpuEPDDisaggregationOneEncoder(MMMUMixin, NpuEPDBase):
         )
 
 
-# ---------------------------------------------------------------------------
-# 3. Qwen3.5 model EPD — image + video (local only; CI skipped)
-# ---------------------------------------------------------------------------
-
-
 @unittest.skipIf(
     is_in_ci(),
     "Qwen3.5 EPD image/video test runs locally only",
 )
 class TestNpuEPDDisaggregationQwen35(NpuEPDBase):
-    """EPD test for the Qwen3.5 model on NPU (local only).
-
-    GPU original (TestEPDDisaggregationQwen35) uses ``QWEN35_27B_MODEL`` and
-    adds ``--reasoning-parser qwen3`` + ``--model-loader-extra-config`` with
-    multi-threaded loading.  The GPU original only starts encode + prefill
-    (no decode / no LB); we preserve that here.
+    """
+    EPD test for Qwen3.5 model on NPU (local only).
+    Uses --reasoning-parser qwen3 with multi-threaded loading.
     """
 
     model = QWEN3_5_27B_MODEL_WEIGHTS_PATH
@@ -637,29 +509,12 @@ class TestNpuEPDDisaggregationQwen35(NpuEPDBase):
         self.assertGreater(len(text), 0)
 
 
-# ---------------------------------------------------------------------------
-# 4. Multi-encoder EPD + MMMU (CI runs)
-# ---------------------------------------------------------------------------
-
-
 class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, NpuEPDBase):
-    """EPD test with multiple encode servers for load balancing (CI runs).
-
-    GPU original (TestEPDDisaggregationMultiEncoders) starts two encode servers
-    on GPU 0/1 and runs MMMU.  On NPU we start two encode servers on NPU 0 and
-    NPU 2 (each encoder uses TP=2, so encode1 occupies NPU 0-1 and encode2
-    occupies NPU 2-3).  Prefill uses NPU 0-1 and decode uses NPU 2-3 via
-    ``--base-gpu-id``.
-
-    NOTE: The NPU runner has 4 NPUs total.  Because each encoder/language
-    server uses TP=2, the two encoders cannot both occupy NPU 0-1 simultaneously
-    with the prefill server.  To fit in 4 NPUs we let encode1 + prefill share
-    NPU 0-1 and encode2 + decode share NPU 2-3 (encode is encoder-only and
-    prefill is language-only, so they can co-locate on the same NPUs via
-    different processes).
+    """
+    EPD test with multiple encode servers for load balancing.
+    Uses 8 NPUs: 2 encoders (TP=2 each) + prefill (TP=2) + decode (TP=2).
     """
 
-    # Qwen2.5-VL-3B-Instruct scores ~0.40 on the 50-sample MMMU subset.
     accuracy = 0.40
     mmmu_args = ["--limit", "50", "--batch_size", "4"]
 
@@ -677,10 +532,6 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, NpuEPDBase):
             f"prefill={cls.prefill_port}, decode={cls.decode_port}"
         )
 
-        # Start two encode servers in parallel.
-        # NPU allocation (8 NPUs available, TP=2 per server):
-        #   encode1 -> NPU 0-1, encode2 -> NPU 2-3,
-        #   prefill -> NPU 4-5, decode  -> NPU 6-7
         t1 = threading.Thread(target=cls._start_encode1, args=(cls.encode_port1, 0))
         t2 = threading.Thread(target=cls._start_encode2, args=(cls.encode_port2, 2))
         t1.start()
@@ -688,7 +539,6 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, NpuEPDBase):
         t1.join()
         t2.join()
 
-        # Start prefill + decode in parallel.
         tp = threading.Thread(target=cls.start_prefill)
         td = threading.Thread(target=cls.start_decode)
         tp.start()
@@ -750,11 +600,6 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, NpuEPDBase):
 
     @classmethod
     def start_prefill(cls, encoder_urls=None):
-        """Start prefill pointing at BOTH encoder URLs (load balancing).
-
-        Uses NPU 4-5 (base-gpu-id=4) to avoid OOM: encode1 occupies NPU 0-1,
-        encode2 occupies NPU 2-3, so prefill must use NPU 4-5.
-        """
         prefill_args = [
             "--language-only",
             "--encoder-urls",
@@ -785,7 +630,6 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, NpuEPDBase):
 
     @classmethod
     def start_decode(cls):
-        """Start decode on NPU 6-7 (base-gpu-id=6)."""
         decode_args = [
             "--disaggregation-mode",
             "decode",
