@@ -99,6 +99,7 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     "minimax-append-think",
     "--tool-call-parser",
     "minimax-m2",
+    "--skip-server-warmup",
 ]
 
 cmd = "npu-smi info"

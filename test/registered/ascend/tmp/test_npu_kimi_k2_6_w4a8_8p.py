@@ -107,6 +107,7 @@ KIMI_K2_6_OTHER_ARGS = [
     "kimi_k2",
     "--tool-call-parser",
     "kimi_k2",
+    "--skip-server-warmup",
 ]
 
 cmd = "npu-smi info"

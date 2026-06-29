@@ -82,6 +82,7 @@ QWEN3_6_27B_64K_1K_OTHER_ARGS = [
     "qwen3",
     "--tool-call-parser",
     "qwen3_coder",
+    "--skip-server-warmup",
 ]
 
 cmd = "npu-smi info"
