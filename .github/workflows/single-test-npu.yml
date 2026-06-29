@@ -71,6 +71,9 @@ jobs:
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
 
+          # Patch ascend_backend.py to handle None input during CUDA graph capture
+          sed -i '/def run_lora_b_sgemm/,/total_seq_len, _ = x.shape/{s/        total_seq_len, _ = x.shape/        if x is None:\n            return base_output\n        total_seq_len, _ = x.shape/}' ${sglang_pkg_path}/sglang/srt/lora/backend/ascend_backend.py
+
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
