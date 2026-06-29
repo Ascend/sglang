@@ -64,7 +64,7 @@ class TestQwen3_5_27B_mmmu(TestAscendAccuracyTestCaseBase):
     model = QWEN3_5_27B_MODEL_PATH
     envs = ENVS
     other_args = OTHER_ARGS
-    accuracy = 0.773
+    accuracy = 0.782
     datasets = ["mmmu"]
     generation_config = {
         "max_tokens": 40000,

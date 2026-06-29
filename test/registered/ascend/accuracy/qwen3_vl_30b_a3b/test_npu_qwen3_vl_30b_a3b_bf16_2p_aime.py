@@ -33,27 +33,38 @@ QWEN3_VL_30B_A3B_ENVS = {
 }
 
 QWEN3_VL_30B_A3B_OTHER_ARGS = [
+    "--attention-backend",
+    "ascend",
+    "--mm-attention-backend",
+    "ascend_attn",
+    "--device",
+    "npu",
     "--tp-size",
     2,
     "--dp-size",
     2,
-    "--attention-backend",
-    "ascend",
-    "--device",
-    "npu",
-    "--disable-radix-cache",
-    "--trust-remote-code",
-    "--mem-fraction-static",
-    0.7,
+    "--enable-dp-attention",
     "--tool-call-parser",
     "qwen3_coder",
     "--reasoning-parser",
     "qwen3",
+    "--disable-radix-cache",
+    "--trust-remote-code",
+    "--mem-fraction-static",
+    0.7,
     "--enable-multimodal",
+    "--dtype",
+    "bfloat16",
+    "--chunked-prefill-size",
+    -1,
+    "--max-prefill-tokens",
+    102400,
+    "--max-running-requests",
+    512,
 ]
 
 
-class TestNPUQWEN3_VL_30B_aime25(TestAscendAccuracyTestCaseBase):
+class TestNPUQWEN3_VL_30B_A3B_aime25(TestAscendAccuracyTestCaseBase):
     model = QWEN3_VL_30B_MODEL_PATH
     envs = QWEN3_VL_30B_A3B_ENVS
     other_args = QWEN3_VL_30B_A3B_OTHER_ARGS

@@ -67,7 +67,7 @@ class TestNPUQwen3_VL_8B_mmmu(TestAscendAccuracyTestCaseBase):
     model = QWEN3_VL_8B_MODEL_PATH
     envs = QWEN3_VL_8B_ENVS
     other_args = QWEN3_VL_8B_OTHER_ARGS
-    accuracy = 0.593
+    accuracy = 0.603
     datasets = ["mmmu"]
     eval_batch_size = 30
     generation_config = {

@@ -56,7 +56,7 @@ OTHER_ARGS = [
     "--max-running-requests",
     32,
     "--context-length",
-    140000,
+    65536,
     "--disable-radix-cache",
     "--chunked-prefill-size",
     -1,
@@ -95,11 +95,12 @@ class TestNPUDeepSeek_V3_2_gpqa(TestAscendAccuracyTestCaseBase):
     accuracy = 0.732
     datasets = ["gpqa_diamond"]
     generation_config = {
-        "max_tokens": 131072,
+        "max_tokens": 32768,
+        "seed": 3407,
         "temperature": 1.0,
         "top_p": 0.95,
     }
-    eval_batch_size = 30
+    eval_batch_size = 4
 
     def test_gpqa(self):
         self.run_accuracy()

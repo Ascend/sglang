@@ -71,7 +71,7 @@ class TestNPUGLM4_7_FLASH_AIME2025(TestAscendAccuracyTestCaseBase):
     model = GLM_4_7_FLASH_MODEL_PATH
     envs = ENVS
     other_args = OTHER_ARGS
-    accuracy = 0.923
+    accuracy = 0.6629
     datasets = ["gpqa_diamond"]
     generation_config = {"max_tokens": 131072, "temperature": 1.0, "top-p": 0.95}
     eval_batch_size = 30

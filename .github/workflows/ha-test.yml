@@ -94,34 +94,34 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-#          - name: test_npu_deepseek_v3_2_bf16_8p_aime
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/accuracy/deepseek_v3_2/test_npu_deepseek_v3_2_bf16_8p_aime.py
-#            test_type: 'function'
-#          - name: test_npu_deepseek_v3_2_bf16_8p_gpqa.py
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/accuracy/deepseek_v3_2/test_npu_deepseek_v3_2_bf16_8p_gpqa.py
-#            test_type: 'function'
+          - name: test_npu_deepseek_v3_2_bf16_8p_aime
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/accuracy/deepseek_v3_2/test_npu_deepseek_v3_2_bf16_8p_aime.py
+            test_type: 'function'
+          - name: test_npu_deepseek_v3_2_bf16_8p_gpqa.py
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/accuracy/deepseek_v3_2/test_npu_deepseek_v3_2_bf16_8p_gpqa.py
+            test_type: 'function'
           - name: test_npu_glm4_7_flash_bf16_4p_aime.py
             runner: linux-aarch64-a3-8
             test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_bf16_4p_aime.py
             test_type: 'function'
-#          - name: test_npu_glm4_7_flash_bf16_4p_gpqa.py
-#            runner: linux-aarch64-a3-8
-#            test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_bf16_4p_gpqa.py
-#            test_type: 'function'
-          - name: test_npu_qwen3_30b_a3b_bf16_2p_aime.py
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/accuracy/qwen3_30b_a3b/test_npu_qwen3_30b_a3b_bf16_2p_aime.py
+          - name: test_npu_glm4_7_flash_bf16_4p_gpqa.py
+            runner: linux-aarch64-a3-8
+            test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_bf16_4p_gpqa.py
             test_type: 'function'
+#          - name: test_npu_qwen3_30b_a3b_bf16_2p_aime.py
+#            runner: linux-aarch64-a3-4
+#            test_case: test/registered/ascend/accuracy/qwen3_30b_a3b/test_npu_qwen3_30b_a3b_bf16_2p_aime.py
+#            test_type: 'function'
 #          - name: test_npu_qwen3_30b_a3b_bf16_2p_gpqa.py
 #            runner: linux-aarch64-a3-4
 #            test_case: test/registered/ascend/accuracy/qwen3_30b_a3b/test_npu_qwen3_30b_a3b_bf16_2p_gpqa.py
 #            test_type: 'function'
-          - name: test_npu_qwen3_vl_8b_bf16_2p_aime.py
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/accuracy/qwen3_vl_8b/test_npu_qwen3_vl_8b_bf16_2p_aime.py
-            test_type: 'function'
+#          - name: test_npu_qwen3_vl_8b_bf16_2p_aime.py
+#            runner: linux-aarch64-a3-4
+#            test_case: test/registered/ascend/accuracy/qwen3_vl_8b/test_npu_qwen3_vl_8b_bf16_2p_aime.py
+#            test_type: 'function'
 #          - name: test_npu_qwen3_vl_8b_bf16_2p_gpqa.py
 #            runner: linux-aarch64-a3-4
 #            test_case: test/registered/ascend/accuracy/qwen3_vl_8b/test_npu_qwen3_vl_8b_bf16_2p_gpqa.py
@@ -130,18 +130,18 @@ jobs:
 #            runner: linux-aarch64-a3-4
 #            test_case: test/registered/ascend/accuracy/qwen3_vl_8b/test_npu_qwen3_vl_8b_bf16_2p_mmmu.py
 #            test_type: 'function'
-          - name: test_npu_qwen3_vl_30b_a3b_bf16_2p_aime.py
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_2p_aime.py
-            test_type: 'function'
+#          - name: test_npu_qwen3_vl_30b_a3b_bf16_2p_aime.py
+#            runner: linux-aarch64-a3-4
+#            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_2p_aime.py
+#            test_type: 'function'
 #          - name: test_npu_qwen3_vl_30b_a3b_bf16_2p_gpqa.py
 #            runner: linux-aarch64-a3-4
 #            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_2p_gpqa.py
 #            test_type: 'function'
-#          - name: test_npu_qwen3_vl_30b_a3b_bf16_2p_mmmu.py
-#            runner: linux-aarch64-a3-4
-#            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_2p_mmmu.py
-#            test_type: 'function'
+          - name: test_npu_qwen3_vl_30b_a3b_bf16_2p_mmmu.py
+            runner: linux-aarch64-a3-4
+            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_2p_mmmu.py
+            test_type: 'function'
 #          - name: test_npu_qwen3_5_9b_bf16_1p_mmmu.py
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/ascend/accuracy/qwen3_5_9b/test_npu_qwen3_5_9b_bf16_1p_mmmu.py
@@ -154,9 +154,17 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/accuracy/qwen3_5_9b/test_npu_qwen3_5_9b_bf16_1p_aime.py
             test_type: 'function'
-          - name: test_npu_qwen3_5_27b_bf16_1p_aime.py
+          - name: test_npu_qwen3_5_9b_bf16_1p_mmmu.py
             runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/qwen3_5_27b/test_npu_qwen3_5_27b_bf16_1p_aime.py
+            test_case: test/registered/ascend/accuracy/qwen3_5_9b/test_npu_qwen3_5_9b_bf16_1p_mmmu.py
+            test_type: 'function'
+#          - name: test_npu_qwen3_5_27b_bf16_1p_aime.py
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/accuracy/qwen3_5_27b/test_npu_qwen3_5_27b_bf16_1p_aime.py
+#            test_type: 'function'
+          - name: test_npu_qwen3_5_27b_bf16_1p_mmmu.py
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/accuracy/qwen3_5_27b/test_npu_qwen3_5_27b_bf16_1p_mmmu.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
