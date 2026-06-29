@@ -37,7 +37,7 @@ BASE_MODEL = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-4B"
 LORA_HF_REPO = "/root/.cache/huggingface/hub/lora-test-case-Qwen3.5-4B"
 
 
-LORA_BACKEND = "ascend"
+LORA_BACKEND = "torch_native"
 MAX_LORA_RANK = 64
 TP_SIZE = 1
 

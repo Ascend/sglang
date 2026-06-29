@@ -72,7 +72,12 @@ jobs:
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
 
           # Patch ascend_backend.py to handle None input during CUDA graph capture
-          sed -i '/def run_lora_b_sgemm/,/total_seq_len, _ = x.shape/{s/        total_seq_len, _ = x.shape/        if x is None:\n            return base_output\n        total_seq_len, _ = x.shape/}' ${sglang_pkg_path}/sglang/srt/lora/backend/ascend_backend.py
+          python -c "
+f=open('${sglang_pkg_path}/sglang/srt/lora/backend/ascend_backend.py');c=f.read();f.close()
+c=c.replace('    def run_lora_b_sgemm(\n        self,\n        x: torch.Tensor,\n        weights: torch.Tensor,\n        base_output: torch.Tensor = None,\n        *args,\n        **kwargs,\n    ) -> torch.Tensor:\n        total_seq_len, _ = x.shape','    def run_lora_b_sgemm(\n        self,\n        x: torch.Tensor,\n        weights: torch.Tensor,\n        base_output: torch.Tensor = None,\n        *args,\n        **kwargs,\n    ) -> torch.Tensor:\n        if x is None:\n            return base_output\n        total_seq_len, _ = x.shape')
+f=open('${sglang_pkg_path}/sglang/srt/lora/backend/ascend_backend.py','w');f.write(c);f.close()
+print('Patched ascend_backend.py for None input handling')
+"
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
