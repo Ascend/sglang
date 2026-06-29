@@ -1,11 +1,11 @@
 """End-to-end test for --tokenizer-backend on NPU.
 
 Transplanted from: test/registered/unit/utils/test_hf_transformers_fastokens.py (GPU/CPU)
-- T1 test_shim_is_applied: verify fastokens injection (removed @unittest.skipUnless)
-- T2 test_encode_decode_roundtrip: verify encode → decode roundtrip (removed @unittest.skipUnless)
+- T1 test_fastokens_shim_is_applied_npu: verify fastokens injection (removed @unittest.skipUnless)
+- T2 test_fastokens_encode_decode_roundtrip_npu: verify encode → decode roundtrip (removed @unittest.skipUnless)
 New:
-- T3 test_tokenizer_backend_huggingface: verify huggingface backend server + inference
-- T4 test_tokenizer_backend_fastokens: verify fastokens backend server + inference
+- T3 test_tokenizer_backend_fastokens: verify fastokens backend server + inference
+  (default huggingface already covered by all other NPU tests)
 """
 
 import unittest
@@ -43,6 +43,7 @@ class TestNpuFastokensBackend(CustomTestCase):
         GPU origin: test_shim_is_applied in test/registered/unit/utils/test_hf_transformers_fastokens.py
         """
         from fastokens._compat import _TokenizerShim
+
         from sglang.srt.utils.hf_transformers.tokenizer import get_tokenizer
 
         tokenizer = get_tokenizer(
@@ -72,53 +73,6 @@ class TestNpuFastokensBackend(CustomTestCase):
         ids = tokenizer.encode(text, add_special_tokens=False)
         self.assertGreater(len(ids), 0)
         self.assertEqual(tokenizer.decode(ids, skip_special_tokens=True), text)
-
-
-class TestNpuTokenizerBackendHuggingface(CustomTestCase):
-    """Verify --tokenizer-backend=huggingface starts server and inference succeeds.
-
-    [Test Category] Parameter
-    [Test Target] --tokenizer-backend=huggingface (default value, E2E)
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        cls.model = SERVER_MODEL
-        cls.base_url = DEFAULT_URL_FOR_TEST
-        other_args = [
-            "--trust-remote-code",
-            "--mem-fraction-static",
-            "0.8",
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--tokenizer-backend",
-            "huggingface",
-        ]
-        cls.process = popen_launch_server(
-            cls.model,
-            cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=other_args,
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        kill_process_tree(cls.process.pid)
-
-    def test_tokenizer_backend_huggingface(self):
-        response = requests.post(
-            f"{DEFAULT_URL_FOR_TEST}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 32,
-                },
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Paris", response.text)
 
 
 class TestNpuTokenizerBackendFastokens(CustomTestCase):
