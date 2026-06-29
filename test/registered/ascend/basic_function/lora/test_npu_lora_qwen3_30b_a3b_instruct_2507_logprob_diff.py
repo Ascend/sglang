@@ -29,7 +29,6 @@ import unittest
 
 import torch
 
-
 import sglang as sgl
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
