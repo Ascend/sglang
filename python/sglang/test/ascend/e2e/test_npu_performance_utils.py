@@ -160,7 +160,9 @@ MIMO_V2_FLASH_MODEL_PATH = (
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )
-
+MIMO_V2_FLASH_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/iridiumine/MiMo-V2-Flash-W8A8"
+)
 QWEN3_5_397B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w8a8-mtp"
 )
