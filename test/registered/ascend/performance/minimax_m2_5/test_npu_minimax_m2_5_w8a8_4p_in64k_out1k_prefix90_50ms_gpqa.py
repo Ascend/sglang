@@ -52,7 +52,7 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     10,
     "--chunked-prefill-size",
     67072,
-    "--max-prefill-token",
+    "--max-prefill-tokens",
     67000,
     "--cuda-graph-bs",
     2,
@@ -126,7 +126,7 @@ class TestNPUMiniMaxM2_5_W8A8_4P_In3k5_Out1k5_GPQA(TestAscendAccuracyTestCaseBas
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     generation_config = {"max_tokens": 65536, "temperature": 1.0}
-    max_concurrency = 64
+    eval_batch_size = 64
 
     def test_accuracy(self):
         self.run_accuracy()

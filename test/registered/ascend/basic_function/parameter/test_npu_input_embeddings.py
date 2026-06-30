@@ -7,7 +7,7 @@ import requests
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -28,7 +28,7 @@ class TestInputEmbeds(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = QWEN3_0_6B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.tokenizer = AutoTokenizer.from_pretrained(cls.model)
         cls.ref_model = AutoModelForCausalLM.from_pretrained(cls.model)
@@ -137,6 +137,7 @@ class TestInputEmbeds(CustomTestCase):
             print(
                 f"Embeddings Input (for text '{text}'):\nEmbedding-Based Response: {json.dumps(embed_response, indent=2)}\n{'-' * 80}"
             )
+            self.assertEqual(text_response["text"], embed_response["text"])
 
     def test_generate_from_file(self):
         """Test the /generate_from_file endpoint using tokenized embeddings."""

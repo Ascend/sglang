@@ -154,6 +154,9 @@ GLM_5_1_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.1-w
 MINIMAX_M2_5_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
 )
+MIMO_V2_FLASH_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/iridiumine/MiMo-V2-Flash-W8A8"
+)
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )

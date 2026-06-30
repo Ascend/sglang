@@ -71,7 +71,7 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--served-model-name",
     "glm-5",
     "--chunked-prefill-size",
-    8096,
+    8192,
     "--max-prefill-tokens",
     180000,
     "--moe-a2a-backend",

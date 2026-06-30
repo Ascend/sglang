@@ -202,6 +202,69 @@ def run_test_scenario(test_case_cls):
         unittest.TextTestRunner(verbosity=2).run(suite)
 
 
+# ===================== Watchdog Tests =====================
+class BaseTestSoftWatchdog:
+    """Testcase: Verify that soft-watchdog-timeout triggers correctly when Scheduler init is stuck.
+
+    [Test Category] Parameter
+    [Test Target] --soft-watchdog-timeout
+    """
+
+    env_override = None
+    expected_message = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.stdout = io.StringIO()
+        cls.stderr = io.StringIO()
+
+        with cls.env_override():
+            cls.process = popen_launch_server(
+                QWEN3_0_6B_WEIGHTS_PATH,
+                DEFAULT_URL_FOR_TEST,
+                timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+                other_args=[
+                    "--soft-watchdog-timeout",
+                    "20",
+                    "--skip-server-warmup",
+                ],
+                return_stdout_stderr=(cls.stdout, cls.stderr),
+            )
+
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+        cls.stdout.close()
+        cls.stderr.close()
+
+    def test_scheduler_init_watchdog(self):
+        logger.info("Start call /generate API")
+        try:
+            requests.post(
+                DEFAULT_URL_FOR_TEST + "/generate",
+                json={
+                    "text": "Hello, please repeat this sentence for 100 times.",
+                    "sampling_params": {"max_new_tokens": 100, "temperature": 0},
+                },
+                timeout=30,
+            )
+        except requests.exceptions.ReadTimeout as e:
+            logger.info(f"requests.post timeout (but expected): {e}")
+
+        combined_output = self.stdout.getvalue() + self.stderr.getvalue()
+        self.assertIn(self.expected_message, combined_output)
+
+
+class TestSoftWatchdogTokenizer(BaseTestSoftWatchdog, CustomTestCase):
+    env_override = lambda: envs.SGLANG_TEST_STUCK_TOKENIZER.override(30)
+    expected_message = "TokenizerManager watchdog timeout"
+
+
+class TestSoftWatchdogSchedulerInit(BaseTestSoftWatchdog, CustomTestCase):
+    env_override = lambda: envs.SGLANG_TEST_STUCK_SCHEDULER_INIT.override(30)
+    expected_message = "Scheduler watchdog timeout"
+
+
 # ===================== Main Function (Execute Four Scenarios) =====================
 if __name__ == "__main__":
     # Scenario 1: CI + no soft-watchdog
@@ -225,3 +288,11 @@ if __name__ == "__main__":
         "\n=== Scenario 4: Non-CI Environment - No soft-watchdog (Verify AssertionError) ==="
     )
     run_test_scenario(TestNonCIWithoutSoftWatchdog)
+
+    logger.info("\n=== Scenario 5: Tokenizer soft-watchdog ===")
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestSoftWatchdogTokenizer)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    logger.info("\n=== Scenario 6: SchedulerInit soft-watchdog ===")
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestSoftWatchdogSchedulerInit)
+    unittest.TextTestRunner(verbosity=2).run(suite)

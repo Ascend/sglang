@@ -52,7 +52,7 @@ MINIMAX_M2_5_W8A8_8P_IN128K_OUT1K_PREFIX90_20MS_OTHER_ARGS = [
     4,
     "--chunked-prefill-size",
     160000,
-    "--max-prefill-token",
+    "--max-prefill-tokens",
     80000,
     "--cuda-graph-bs",
     2,
