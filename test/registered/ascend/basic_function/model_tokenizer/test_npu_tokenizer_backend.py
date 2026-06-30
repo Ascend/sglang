@@ -1,12 +1,3 @@
-"""E2E test for --tokenizer-backend on NPU.
-
-Test cases:
-- test_fastokens_shim_is_applied_npu: verify fastokens injection
-- test_fastokens_encode_decode_roundtrip_npu: verify encode-decode roundtrip
-- test_tokenizer_backend_fastokens: verify fastokens backend server startup and inference
-  (default huggingface backend is implicitly covered by all other NPU tests)
-"""
-
 import unittest
 
 import requests

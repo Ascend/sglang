@@ -1,14 +1,3 @@
-"""E2E test for --model-config-parser on NPU.
-
-Test cases:
-- test_register_then_get_roundtrip_npu: verify parser registration roundtrip
-- test_register_rejects_non_subclass_npu: verify non-subclass rejection
-- test_unknown_name_raises_with_registered_list_npu: verify error on unknown parser name
-- test_model_config_parser_auto: auto -> mistral parser routing + inference (Mistral-7B)
-- test_model_config_parser_hf: hf parser override + inference (Mistral-7B)
-  (auto/hf follow different code paths on Mistral; on Llama they are equivalent)
-"""
-
 import unittest
 
 import requests
