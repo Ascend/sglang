@@ -150,7 +150,7 @@ jobs:
     if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 1
       matrix:
         test_config:
           - name: test_npu_mimo_v2_accept_rate
