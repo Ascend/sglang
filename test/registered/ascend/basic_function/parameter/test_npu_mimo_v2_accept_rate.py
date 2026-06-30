@@ -25,6 +25,7 @@ class TestMimoV2AcceptRate(CustomTestCase):
     """
 
     accept_rate = 0.25
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 1800
 
     @classmethod
     def setUpClass(cls):

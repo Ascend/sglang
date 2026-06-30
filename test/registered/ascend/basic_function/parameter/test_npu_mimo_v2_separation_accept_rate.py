@@ -133,14 +133,14 @@ DECODE_ARGS = [
     4,
     "--enable-multi-layer-eagle",
     "--disable-radix-cache",
-]
-
-ROUTER_ARGS = [
     "--log-requests",
     "--log-requests-level",
     3,
     "--log-requests-target",
     temp_dir,
+]
+
+ROUTER_ARGS = [
     "--health-check-interval-secs",
     "3600",
     "--mini-lb",
