@@ -1,7 +1,4 @@
 import os
-import re
-import subprocess
-import threading
 import time
 import unittest
 
@@ -9,16 +6,17 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
-    SERVER_INITIALIZATION_DELAY,
+    ACTIVE_TEST_CLASS,
     SERVICE_PORT,
-    TestAscendMultiNodePdSepTestCaseBase,
     check_role,
     launch_router,
-    wait_server_ready,
+    wait_for_prefill_decode_exit,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     DEEPSEEK_R1_W8A8_MODEL_PATH,
     ROUND_ROBIN,
+    TestAscendPerfMultiNodePdSepTestCaseBase,
+    logger,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -191,7 +189,7 @@ def create_model_config_with_param(bucket_interval):
     return config
 
 
-class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBase):
+class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCaseBase):
     """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
 
     test_cases = [
@@ -222,38 +220,63 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
 
     @classmethod
     def setUpClass(cls):
-        cls.degradation_tolerance = 0
-        cls.model = DEEPSEEK_R1_W8A8_MODEL_PATH
-        cls.config = MODEL_CONFIG_BASE.copy()
-        super().setUpClass()
+        cls.process = None
+        cls.local_ip = "127.0.0.1"
+        cls.host = os.getenv("POD_IP")
+        cls.port = SERVICE_PORT
+        cls.base_url = f"http://{cls.host}:{cls.port}"
+        cls.hostname = os.getenv("HOSTNAME")
+        cls.role = (
+            "router"
+            if "router" in cls.hostname
+            else "prefill" if "prefill" in cls.hostname else "decode"
+        )
+        logger.info(f"Init {cls.host} {cls.role=}!")
+
         cls.start_pd_server()
 
     @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
+    @check_role(allowed_roles=["router"])
+    def start_router_server(cls):
+        wait_for_prefill_decode_exit(key=ACTIVE_TEST_CLASS, value=cls.__name__)
+        logger.info("Starting router in thread...")
 
-    def is_router_server_running(self, timeout=30):
-        """检查router服务器是否正常运行，通过HTTP请求检测"""
-        url = f"http://127.0.0.1:{self.port}/health"
-        start_time = time.perf_counter()
-        check_interval = 2
+        from concurrent.futures import ThreadPoolExecutor
 
+        executor = ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(launch_router, cls.model_config)
+
+        cls.process = future.result()
+
+        health_check_url = f"{cls.base_url}/health"
+        logger.info(f"Waiting for router to be ready at {health_check_url}")
+        return cls._wait_server_ready(health_check_url)
+
+    @classmethod
+    def _wait_server_ready(cls, url, timeout=120):
+        start = time.perf_counter()
         while True:
-            try:
-                response = requests.get(url, timeout=5)
-                if response.status_code == 200:
-                    print(f"Router server at {url} is ready!")
-                    return True
-                else:
-                    print(f"Router server returned status code: {response.status_code}")
-            except Exception as e:
-                print(f"Router server not ready yet: {e}")
-
-            elapsed_time = time.perf_counter() - start_time
-            if elapsed_time > timeout:
-                print(f"Router server failed to start within {timeout}s")
+            if requests.get(url).status_code == 200:
+                logger.info(f"Server {url} is ready")
+                return True
+            if time.perf_counter() - start > timeout:
                 return False
-            time.sleep(check_interval)
+            time.sleep(2)
+
+    @check_role(allowed_roles=["router"])
+    def stop_router_server(self):
+        if self.process:
+            try:
+                kill_process_tree(self.process.pid)
+                for _ in range(60):
+                    if self.process.poll() is not None:
+                        logger.info("Process fully exited")
+                        break
+                    time.sleep(1)
+                else:
+                    logger.warning("Process did NOT exit in time")
+            except Exception as e:
+                logger.error(f"Error during tearDown: {e}")
 
     @staticmethod
     def print_test_case_info(test_case):
@@ -267,57 +290,6 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
         print(f"期望结果: {'启动成功' if should_succeed else '启动失败'}")
         print("=" * 60)
 
-    def _find_router_pid_by_port(self):
-        result = subprocess.run(
-            ["ss", "-tlnp"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        for line in result.stdout.split("\n"):
-            if f":{SERVICE_PORT}" in line:
-                match = re.search(r"pid=(\d+)", line)
-                if match:
-                    return int(match.group(1))
-        return None
-
-    def _start_router_server(self):
-        cls = self.__class__
-        cls.sglang_thread = threading.Thread(
-            target=launch_router, args=(cls.model_config,)
-        )
-        cls.sglang_thread.daemon = True
-        cls.sglang_thread.start()
-
-        health_check_url = f"{cls.base_url}/health"
-        wait_server_ready(health_check_url)
-
-        time.sleep(SERVER_INITIALIZATION_DELAY)
-
-        cls._router_pid = self._find_router_pid_by_port()
-        if cls._router_pid is None:
-            raise RuntimeError(
-                f"Failed to find router process PID on port {SERVICE_PORT}"
-            )
-
-    def _stop_router_server(self):
-        cls = self.__class__
-        router_pid = getattr(cls, "_router_pid", None)
-        if router_pid is not None:
-            try:
-                kill_process_tree(router_pid)
-            except Exception:
-                pass
-            cls._router_pid = None
-
-        if cls.sglang_thread is not None:
-            if cls.sglang_thread.is_alive():
-                cls.stop_event.set()
-                cls.sglang_thread.join(timeout=5)
-            cls.sglang_thread = None
-
-        time.sleep(5)
-
     @check_role(allowed_roles=["router"])
     def validate_bucket_adjust_interval_secs(self, test_case):
         self.print_test_case_info(test_case)
@@ -327,12 +299,8 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
 
         self.__class__.model_config = create_model_config_with_param(value)
 
-        try:
-            self._start_router_server()
-            is_running = self.is_router_server_running(timeout=60)
-            self.assert_result(value, is_running, should_succeed)
-        finally:
-            self._stop_router_server()
+        is_running = self.start_router_server()
+        self.assert_result(value, is_running, should_succeed)
 
     @check_role(allowed_roles=["router"])
     def test_bucket_adjust_interval_secs_validation(self):
@@ -340,6 +308,7 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendMultiNodePdSepTestCaseBas
         print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
         for test_case in self.test_cases:
             self.validate_bucket_adjust_interval_secs(test_case)
+            self.stop_router_server()
 
     def assert_result(self, value, success, should_succeed):
         """断言测试结果"""
