@@ -28,9 +28,10 @@ import os
 import unittest
 from unittest.mock import patch
 
+os.environ["ASCEND_GRID_DIM_SPLIT_ENABLE"] = "1"
+
 import torch
 import torch.nn as nn
-# export ASCEND_GRID_DIM_SPLIT_ENABLE=1
 import sglang as sgl
 from sglang.srt.lora.utils import auto_detect_lora_target_modules
 from sglang.test.ci.ci_register import register_npu_ci
