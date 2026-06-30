@@ -88,6 +88,11 @@ PREFILL_ARGS = [
     "--disaggregation-transfer-backend",
     "ascend",
     "--disable-radix-cache",
+    "--log-requests",
+    "--log-requests-level",
+    3,
+    "--log-requests-target",
+    temp_dir,
 ]
 
 DECODE_ARGS = [
