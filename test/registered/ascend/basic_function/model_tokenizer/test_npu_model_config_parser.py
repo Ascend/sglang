@@ -12,7 +12,6 @@ from sglang.srt.configs.model_config_parser_registry import (
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH,
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
