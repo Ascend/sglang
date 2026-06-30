@@ -26,7 +26,11 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     accuracy = 0.90
     timeout_for_server_launch = 3000
 
-    # Pure TP=8: NPU EP crashes on CANN Cast kernel (errno 507015).
+    # NPU EP only supports deepep backend (see Ascend reference:
+    #   test_npu_deepep.py, test_npu_deepep_auto_qwen3_30b_a3b_w8a8.py).
+    # Use dp-size instead of ep-size; moe-a2a-backend=deepep replaces the
+    # crashing generic EP path (moe_a2a_backend='none' -> StandardDispatcher
+    # -> CANN Cast kernel errno 507015).
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
@@ -35,6 +39,12 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
         "ascend",
         "--tp-size",
         "8",
+        "--dp-size",
+        "1",
+        "--moe-a2a-backend",
+        "deepep",
+        "--deepep-mode",
+        "auto",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--disable-overlap-schedule",
@@ -51,8 +61,18 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
         "--weight-loader-prefetch-checkpoints",
     ]
 
+    # Deepep needs larger HCCL buffer and dispatch token budget
+    # (see test_npu_deepep.py: HCCL_BUFFSIZE=1000, dispatch=32).
+    env = {
+        **GSM8KAscendMixin.env,
+        "HCCL_BUFFSIZE": "1000",
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
+        "SGLANG_WARMUP_TIMEOUT": "3600",
+        "TRANSFORMERS_VERBOSITY": "error",
+    }
+
     def test_bs_1_speed(self):
-        # NPU pure TP=8: EP blocked, MoE all-reduce not amortized at bs=1 (~7.4 token/s).
+        # NPU TP=8 + deepep: bs=1 MoE all-to-all not amortized (~7.4 token/s baseline).
         url = urlparse(DEFAULT_URL_FOR_TEST)
         args = BenchArgs(
             host=url.hostname,
@@ -63,8 +83,8 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
 
         if is_in_ci():
             write_github_step_summary(
-                f"### test_bs_1_speed (minimax-m25-w8a8, pure TP=8)\n"
-                f"- speed: {speed:.2f} token/s (NPU TP-only, EP blocked)\n"
+                f"### test_bs_1_speed (minimax-m25-w8a8, TP=8 + deepep)\n"
+                f"- speed: {speed:.2f} token/s\n"
                 f"- accept_length: {acc_length:.2f}\n"
             )
 

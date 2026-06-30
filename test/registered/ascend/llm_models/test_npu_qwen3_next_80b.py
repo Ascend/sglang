@@ -34,6 +34,9 @@ _NPU_ENV = {
     "STREAMS_PER_DEVICE": "32",
     "AUTO_USE_UC_MEMORY": "0",
     "P2P_HCCL_BUFFSIZE": "20",
+    # NPU spec v2 path required for NEXTN MTP (see Ascend reference:
+    # test_npu_qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms.py).
+    "SGLANG_ENABLE_SPEC_V2": "1",
 }
 
 
@@ -110,49 +113,14 @@ class TestQwen3NextLazyExtraBuffer(
 
 
 # Ported from sgl-project/sglang/test/registered/models_e2e/test_qwen3_next_models_mtp.py.
-# Both classes skipped: NPU mamba kernel BiShengIR UB overflow (static tiling).
-@unittest.skip(
-    "NPU mamba kernel fails to compile mamba_state_update for NEXTN"
-)
-class TestQwen3NextMTPTopk(
-    GSM8KMixin, KLDivergenceMixin, PrefixCacheBranchingMixin, _NpuDefaultServerBase
-):
-    # topk > 1 (tree) MTP on a hybrid-GDN model, on spec v2: the tree-aware mamba
-    # state update lives in the spec v2 verify path, so mamba + topk > 1 no longer
-    # falls back to spec v1.
-    model = QWEN3_NEXT_MODEL
-    cache_chunk_size = 64
-    gsm8k_accuracy_thres = 0.92
-    kl_div_thres = 0.008
-    other_args = [
-        "--trust-remote-code",
-        "--speculative-algorithm",
-        "NEXTN",
-        "--speculative-num-steps",
-        "5",
-        "--speculative-eagle-topk",
-        "4",
-        "--speculative-num-draft-tokens",
-        "8",
-        "--mem-fraction-static",
-        "0.8",
-        "--tp-size",
-        "4",
-        "--chunked-prefill-size",
-        "2048",
-        "--mamba-scheduler-strategy",
-        "extra_buffer",
-        "--mamba-track-interval",
-        "128",
-        "--attention-backend",
-        "ascend",
-        "--disable-cuda-graph",
-    ]
-
-
-@unittest.skip(
-    "NPU mamba kernel BiShengIR UB overflow at compile time (static tiling)"
-)
+# NPU MTP migration notes (see Ascend reference:
+#   test_npu_qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms.py):
+#   - Must set SGLANG_ENABLE_SPEC_V2=1 (added to _NPU_ENV above).
+#   - NPU only supports the speculative combination: steps=3, topk=1, draft=4.
+#   - Use --cuda-graph-bs (small values) instead of --disable-cuda-graph.
+#   - topk>1 (tree MTP) is an NPU-unsupported test observation point, so the
+#     TestQwen3NextMTPTopk class is removed per the migration principle
+#     (param is the observation point but NPU does not support it -> drop class).
 class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
     model = QWEN3_NEXT_MODEL
     gsm8k_accuracy_thres = 0.92
@@ -162,11 +130,13 @@ class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
         "--speculative-algorithm",
         "NEXTN",
         "--speculative-num-steps",
-        "1",
+        "3",
         "--speculative-eagle-topk",
         "1",
         "--speculative-num-draft-tokens",
-        "2",
+        "4",
+        "--mamba-ssm-dtype",
+        "bfloat16",
         "--mem-fraction-static",
         "0.75",
         "--tp-size",
@@ -179,7 +149,11 @@ class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
         "128",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--cuda-graph-bs",
+        "1",
+        "2",
+        "4",
+        "8",
     ]
 
 
