@@ -93,7 +93,7 @@ class TestMimoV2AcceptRate(CustomTestCase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=cls.DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             env=env,
             other_args=other_args,
             return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
