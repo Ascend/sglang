@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: Qwen3-8B LoRA logprob diff test - set ASCEND_GRID_DIM_SPLIT_ENABLE in CI env
+# test round 4: Qwen3-8B LoRA logprob diff test - use csgmv backend to avoid Triton grid limit
 
 on:
   pull_request:
