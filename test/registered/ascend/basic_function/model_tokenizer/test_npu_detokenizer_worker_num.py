@@ -1,8 +1,8 @@
-"""End-to-end test for --detokenizer-worker-num on NPU.
+"""E2E test for --detokenizer-worker-num on NPU.
 
-Transplanted from: test/registered/tokenizer/test_multi_detokenizer.py (GPU)
-- T1 test_multi_detokenizer_ttft: benchmark with 4 detokenizer + 4 tokenizer workers
-  Adapted for NPU: Llama-3.2-1B model, ascend backend, register_npu_ci
+Test cases:
+- test_multi_detokenizer_ttft_npu: multi-detokenizer worker benchmark
+  (default value 1 is implicitly covered by all other NPU tests)
 """
 
 import unittest
@@ -24,18 +24,9 @@ register_npu_ci(est_time=400, suite="debug-full-1-npu-a3", nightly=True)
 
 
 class TestNpuMultiDetokenizer(CustomTestCase):
-    """Transplanted from GPU test_multi_detokenizer.py — verify multi-detokenizer worker
-    in benchmark scenario.
+    """Testcase: multi-detokenizer worker performance under high concurrency
 
-    GPU origin: TestMultiDetokenizer.test_multi_detokenizer_ttft
-    Differences:
-    - Model: DEFAULT_MODEL_NAME_FOR_TEST → LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-    - Registration: register_cuda_ci + register_amd_ci → register_npu_ci
-    - Backend: added --attention-backend ascend, --mem-fraction-static 0.7
-    - Worker count: detokenizer=4 (same), tokenizer=4 (reduced from 8 for 1B model)
-    - Removed: MMLUMixin, write_github_step_summary (not applicable to NPU CI)
-
-    [Test Category] Parameter / Boundary
+    [Test Category] Parameter
     [Test Target] --detokenizer-worker-num=4
     """
 
@@ -65,10 +56,6 @@ class TestNpuMultiDetokenizer(CustomTestCase):
         kill_process_tree(cls.process.pid)
 
     def test_multi_detokenizer_ttft_npu(self):
-        """Run benchmark with multi-detokenizer workers, verify completion and latency.
-
-        GPU origin: test_multi_detokenizer_ttft in test/registered/tokenizer/test_multi_detokenizer.py
-        """
         args = get_benchmark_args(
             base_url=self.base_url,
             dataset_name="random",

@@ -1,11 +1,10 @@
-"""End-to-end test for --tokenizer-backend on NPU.
+"""E2E test for --tokenizer-backend on NPU.
 
-Transplanted from: test/registered/unit/utils/test_hf_transformers_fastokens.py (GPU/CPU)
-- T1 test_fastokens_shim_is_applied_npu: verify fastokens injection (removed @unittest.skipUnless)
-- T2 test_fastokens_encode_decode_roundtrip_npu: verify encode → decode roundtrip (removed @unittest.skipUnless)
-New:
-- T3 test_tokenizer_backend_fastokens: verify fastokens backend server + inference
-  (default huggingface already covered by all other NPU tests)
+Test cases:
+- test_fastokens_shim_is_applied_npu: verify fastokens injection
+- test_fastokens_encode_decode_roundtrip_npu: verify encode-decode roundtrip
+- test_tokenizer_backend_fastokens: verify fastokens backend server startup and inference
+  (default huggingface backend is implicitly covered by all other NPU tests)
 """
 
 import unittest
@@ -30,18 +29,13 @@ SERVER_MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 
 
 class TestNpuFastokensBackend(CustomTestCase):
-    """Transplanted from GPU test_hf_transformers_fastokens.py — verify fastokens tokenizer injection
-    and encode/decode correctness. @unittest.skipUnless has been removed per NPU policy.
+    """Testcase: verify fastokens backend injection and encode-decode correctness
 
     [Test Category] Parameter
-    [Test Target] --tokenizer-backend=fastokens (unit-level verification)
+    [Test Target] --tokenizer-backend=fastokens
     """
 
     def test_fastokens_shim_is_applied_npu(self):
-        """Verify _TokenizerShim is applied when tokenizer_backend='fastokens'.
-
-        GPU origin: test_shim_is_applied in test/registered/unit/utils/test_hf_transformers_fastokens.py
-        """
         from fastokens._compat import _TokenizerShim
 
         from sglang.srt.utils.hf_transformers.tokenizer import get_tokenizer
@@ -59,10 +53,6 @@ class TestNpuFastokensBackend(CustomTestCase):
         )
 
     def test_fastokens_encode_decode_roundtrip_npu(self):
-        """Verify encode → decode roundtrip with fastokens backend.
-
-        GPU origin: test_encode_decode_roundtrip in test/registered/unit/utils/test_hf_transformers_fastokens.py
-        """
         from sglang.srt.utils.hf_transformers.tokenizer import get_tokenizer
 
         tokenizer = get_tokenizer(
@@ -76,10 +66,10 @@ class TestNpuFastokensBackend(CustomTestCase):
 
 
 class TestNpuTokenizerBackendFastokens(CustomTestCase):
-    """Verify --tokenizer-backend=fastokens starts server and inference succeeds.
+    """Testcase: verify server startup and inference with --tokenizer-backend=fastokens
 
-    [Test Category] Parameter / Boundary
-    [Test Target] --tokenizer-backend=fastokens (E2E)
+    [Test Category] Parameter
+    [Test Target] --tokenizer-backend=fastokens
     """
 
     @classmethod

@@ -1,12 +1,12 @@
-"""Test for --model-config-parser on NPU.
+"""E2E test for --model-config-parser on NPU.
 
-Transplanted from: test/registered/unit/configs/test_model_config_parser_registry.py (GPU/CPU)
-- T1 test_register_then_get_roundtrip: verify parser registration → retrieval
-- T2 test_register_rejects_non_subclass: verify non-subclass rejected
-- T3 test_unknown_name_raises_with_registered_list: verify error msg on unknown name
-New:
-- T4 test_model_config_parser_auto: verify auto parser starts server + inference
-- T5 test_model_config_parser_hf: verify hf parser starts server + inference
+Test cases:
+- test_register_then_get_roundtrip_npu: verify parser registration roundtrip
+- test_register_rejects_non_subclass_npu: verify non-subclass rejection
+- test_unknown_name_raises_with_registered_list_npu: verify error on unknown parser name
+- test_model_config_parser_auto: auto -> mistral parser routing + inference (Mistral-7B)
+- test_model_config_parser_hf: hf parser override + inference (Mistral-7B)
+  (auto/hf follow different code paths on Mistral; on Llama they are equivalent)
 """
 
 import unittest
@@ -21,7 +21,10 @@ from sglang.srt.configs.model_config_parser_registry import (
     register_model_config_parser,
 )
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH,
+    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -44,12 +47,10 @@ class _AnotherFakeParser(ModelConfigParserBase):
 
 
 class TestNpuModelConfigParserRegistry(CustomTestCase):
-    """Transplanted from GPU test_model_config_parser_registry.py — verify parser registry API.
+    """Testcase: model config parser registry API validation
 
-    GPU origin: TestModelConfigParserRegistry in test/registered/unit/configs/test_model_config_parser_registry.py
-
-    [Test Category] Parameter / Unit
-    [Test Target] --model-config-parser registry API
+    [Test Category] Parameter
+    [Test Target] --model-config-parser
     """
 
     def setUp(self):
@@ -61,19 +62,10 @@ class TestNpuModelConfigParserRegistry(CustomTestCase):
         _MODEL_CONFIG_PARSER_REGISTRY.update(self._saved_registry)
 
     def test_register_then_get_roundtrip_npu(self):
-        """Verify register → get returns correct parser instance.
-
-        GPU origin: test_register_then_get_roundtrip
-        """
         register_model_config_parser("fake")(_FakeParser)
         self.assertIsInstance(get_model_config_parser("fake"), _FakeParser)
 
     def test_register_rejects_non_subclass_npu(self):
-        """Verify registering a non-ModelConfigParserBase class raises ValueError.
-
-        GPU origin: test_register_rejects_non_subclass
-        """
-
         class NotAParser:
             pass
 
@@ -82,10 +74,6 @@ class TestNpuModelConfigParserRegistry(CustomTestCase):
         self.assertIn("ModelConfigParserBase", str(ctx.exception))
 
     def test_unknown_name_raises_with_registered_list_npu(self):
-        """Verify get with unknown name raises ValueError containing registered names.
-
-        GPU origin: test_unknown_name_raises_with_registered_list
-        """
         register_model_config_parser("fake")(_FakeParser)
         register_model_config_parser("another")(_AnotherFakeParser)
         with self.assertRaises(ValueError) as ctx:
@@ -97,15 +85,15 @@ class TestNpuModelConfigParserRegistry(CustomTestCase):
 
 
 class TestNpuModelConfigParserAuto(CustomTestCase):
-    """Verify --model-config-parser=auto starts server and inference succeeds.
+    """Testcase: verify auto mode routes to mistral parser on Mistral model
 
     [Test Category] Parameter
-    [Test Target] --model-config-parser=auto (default value, E2E)
+    [Test Target] --model-config-parser=auto
     """
 
     @classmethod
     def setUpClass(cls):
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         other_args = [
             "--trust-remote-code",
@@ -144,15 +132,15 @@ class TestNpuModelConfigParserAuto(CustomTestCase):
 
 
 class TestNpuModelConfigParserHf(CustomTestCase):
-    """Verify --model-config-parser=hf starts server and inference succeeds.
+    """Testcase: verify explicit hf parser overrides auto detection on Mistral model
 
-    [Test Category] Parameter / Boundary
-    [Test Target] --model-config-parser=hf (E2E)
+    [Test Category] Parameter
+    [Test Target] --model-config-parser=hf
     """
 
     @classmethod
     def setUpClass(cls):
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.model = MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         other_args = [
             "--trust-remote-code",
