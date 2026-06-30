@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Qwen3-8B LoRA logprob diff test - fix ASCEND_GRID_DIM_SPLIT_ENABLE
+# test round 3: Qwen3-8B LoRA logprob diff test - set ASCEND_GRID_DIM_SPLIT_ENABLE in CI env
 
 on:
   pull_request:
@@ -32,6 +32,7 @@ jobs:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
           SGLANG_IS_IN_CI: true
+          ASCEND_GRID_DIM_SPLIT_ENABLE: "1"
         shell: bash
         run: |
           sglang_source_path=$(pwd)
