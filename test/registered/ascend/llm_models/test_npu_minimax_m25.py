@@ -27,6 +27,12 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     timeout_for_server_launch = 3000
 
     # NPU EP requires deepep backend (--moe-a2a-backend=deepep).
+    # When deepep is enabled, ep_size is auto-set to tp_size (server_args.py
+    # _handle_a2a_moe), so --ep-size is not needed.
+    # --dp-size / --enable-dp-attention are for DP-Attention mode (not EP),
+    # and add extra attention workspace memory (server_args.py:1558). Omit
+    # them to avoid OOM on the 230B W8A8 model (CI run 28494887328 OOM with
+    # only 244 MiB free when enable-dp-attention was on).
     # W8A8 model MUST declare --quantization modelslim, otherwise the INT32-
     # packed weights are fed to the BF16 GMM kernel and fail with
     # aclnnGroupedMatmulWeightNz error 161002 (CI run 28452151866).
@@ -37,15 +43,11 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.8",
+        "0.85",
         "--attention-backend",
         "ascend",
         "--tp-size",
         "8",
-        "--ep-size",
-        "8",
-        "--dp-size",
-        "2",
         "--moe-a2a-backend",
         "deepep",
         "--deepep-mode",
