@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 7: LoRA radix cache test - install peft
+# test round 8: LoRA radix cache test - upgrade torchao
 
 on:
   pull_request:
@@ -73,6 +73,7 @@ jobs:
 
           # Install peft for LoRA testing
           pip install peft -q
+          pip install torchao>=0.16.0 -q
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
