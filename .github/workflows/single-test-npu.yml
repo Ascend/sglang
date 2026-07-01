@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: LoRA radix cache test - use a3-2 runner
+# test round 7: LoRA radix cache test - install peft
 
 on:
   pull_request:
