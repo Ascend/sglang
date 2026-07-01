@@ -193,7 +193,7 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase)
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
         logger.info("S9、停止服务，等待服务完全停止后，记录每张卡的HBM内存占用和总内")
-        time.sleep(30)
+        time.sleep(31)
         raw_result = run_command(cmd)
         logger.info(raw_result)
 
