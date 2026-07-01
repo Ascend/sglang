@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: Qwen3-8B LoRA logprob diff test - use ascend backend (torch.ops.npu.sgmv)
+# test round 6: Qwen3-8B LoRA logprob diff test - fix lint import order
 
 on:
   pull_request:
