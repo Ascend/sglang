@@ -26,11 +26,14 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     accuracy = 0.90
     timeout_for_server_launch = 3000
 
-    # NPU EP only supports deepep backend (see Ascend reference:
-    #   test_npu_deepep.py, test_npu_deepep_auto_qwen3_30b_a3b_w8a8.py).
-    # Use dp-size instead of ep-size; moe-a2a-backend=deepep replaces the
-    # crashing generic EP path (moe_a2a_backend='none' -> StandardDispatcher
-    # -> CANN Cast kernel errno 507015).
+    # NPU EP requires deepep backend (--moe-a2a-backend=deepep).
+    # W8A8 model MUST declare --quantization modelslim, otherwise the INT32-
+    # packed weights are fed to the BF16 GMM kernel and fail with
+    # aclnnGroupedMatmulWeightNz error 161002 (CI run 28452151866).
+    # DEEP_NORMAL_MODE_USE_INT8_QUANT=1 is required for W8A8 deepep dispatch
+    # and is mutually exclusive with SGLANG_DEEPEP_BF16_DISPATCH (the latter
+    # is for bf16 unquant models; see qwen3_next_mtp.py override logic where
+    # BF16_DISPATCH=True forces INT8_QUANT=False).
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
@@ -39,12 +42,17 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
         "ascend",
         "--tp-size",
         "8",
+        "--ep-size",
+        "8",
         "--dp-size",
-        "1",
+        "2",
+        "--enable-dp-attention",
         "--moe-a2a-backend",
         "deepep",
         "--deepep-mode",
         "auto",
+        "--quantization",
+        "modelslim",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--disable-overlap-schedule",
@@ -61,12 +69,16 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
         "--weight-loader-prefetch-checkpoints",
     ]
 
-    # Deepep needs larger HCCL buffer and dispatch token budget
-    # (see test_npu_deepep.py: HCCL_BUFFSIZE=1000, dispatch=32).
+    # deepep needs larger HCCL buffer and INT8 quant dispatch for W8A8.
+    # DEEP_NORMAL_MODE_USE_INT8_QUANT conflicts with SGLANG_DEEPEP_BF16_DISPATCH;
+    # W8A8 quantized model uses the INT8 path (see deepep.py:_update_int8_quant_env
+    # where use_fp8=True -> INT8_QUANT=1, and unquant.py where
+    # use_fp8 = not SGLANG_DEEPEP_BF16_DISPATCH).
     env = {
         **GSM8KAscendMixin.env,
-        "HCCL_BUFFSIZE": "1000",
-        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
+        "HCCL_BUFFSIZE": "2048",
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
+        "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
         "SGLANG_WARMUP_TIMEOUT": "3600",
         "TRANSFORMERS_VERBOSITY": "error",
     }

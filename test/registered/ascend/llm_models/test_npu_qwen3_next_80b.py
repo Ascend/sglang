@@ -125,6 +125,9 @@ class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
     model = QWEN3_NEXT_MODEL
     gsm8k_accuracy_thres = 0.92
     kl_div_thres = 0.0035
+    # NPU Mamba prefill-path nondeterminism: prefill avg_kl_div~0.018 (same
+    # behavior as TestQwen3NextLazyExtraBuffer which uses 0.02 for prefill).
+    kl_div_thres_prefill = 0.02
     other_args = [
         "--trust-remote-code",
         "--speculative-algorithm",
@@ -154,6 +157,7 @@ class TestQwen3NextMTPV2(GSM8KMixin, KLDivergenceMixin, _NpuDefaultServerBase):
         "2",
         "4",
         "8",
+        "16",
     ]
 
 
