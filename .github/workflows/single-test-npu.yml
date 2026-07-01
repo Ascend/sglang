@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: Qwen3Next MambaCache test with cann9.0.0-a3-B080
+# test round 2: Qwen3Next MambaCache - fix model path and add register_npu_ci
 
 on:
   pull_request:
