@@ -71,9 +71,9 @@ class TestDecodeBackendBreakable(CustomTestCase):
         self.err_log_file.seek(0)
         err_log = self.err_log_file.read()
         self.assertIn(
-            "backend=breakable",
+            "cuda_graph_backend_decode='breakable'",
             err_log,
-            "Expected stderr to contain 'backend=breakable', "
+            "Expected stderr to contain \"cuda_graph_backend_decode='breakable'\", "
             "proving breakable backend was selected for decode graph",
         )
 
@@ -133,9 +133,9 @@ class TestDecodeBackendTcPiecewise(CustomTestCase):
         self.err_log_file.seek(0)
         err_log = self.err_log_file.read()
         self.assertIn(
-            "backend=tc_piecewise",
+            "cuda_graph_backend_decode='tc_piecewise'",
             err_log,
-            "Expected stderr to contain 'backend=tc_piecewise', "
+            "Expected stderr to contain \"cuda_graph_backend_decode='tc_piecewise'\", "
             "proving tc_piecewise backend was selected for decode graph",
         )
 
