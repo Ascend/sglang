@@ -783,6 +783,7 @@ def launch_router(model_config):
     try:
         router_process = subprocess.Popen(router_command)
         logger.info(f"Router process started with PID: {router_process.pid}")
+        return router_process
     except Exception as e:
         raise RuntimeError(f"Failed to start router process: {e}")
 

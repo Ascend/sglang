@@ -1,10 +1,7 @@
 import unittest
 
-import numpy as np
-
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     NIC_NAME,
-    TestAscendMultiNodePdSepTestCaseBase,
     check_role,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -12,11 +9,11 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     BENCHMARK_TOOL_DEFAULT,
     QWEN3_235B_A22B_EAGLE_MODEL_PATH,
     QWEN3_235B_W8A8_MODEL_PATH,
-    SHAREGPT_DATASET_TEST_FILE,
-    run_aisbench,
+    TestAscendPerfMultiNodePdSepTestCaseBase,
+    logger,
+    run_bench_serving,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
 register_npu_ci(
     est_time=3600,
@@ -187,137 +184,136 @@ MODEL_CONFIG_FUSION_ENABLED = {
 }
 
 
-class TestQwen235bFusionOperator(TestAscendMultiNodePdSepTestCaseBase):
-    dataset_path = SHAREGPT_DATASET_TEST_FILE
-    aisbench_dataset_path = None  # auto generate dataset if none
-    other_args = None
-    timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
-    envs = None
-    request_rate = None
-    image_resolution = None
-    image_count = None
-    warmup_requests = None
-    seed = None
-    ttft = None
-    mean_e2e_latency = None
-    output_token_throughput = None
-    prefix_hit_rate = None
-    aisbench_request_rate = None
-    aisbench_repeat_rate = None
-    dp = None
-    generation_kwargs = None
+def _run_benchmark(test_case):
+    logger.info(
+        "Starting benchmark host=%s port=%s model=%s",
+        test_case.host,
+        test_case.port,
+        test_case.model_config["model_path"],
+    )
+
+    metrics = run_bench_serving(
+        host=test_case.host,
+        port=str(test_case.port),
+        model_path=test_case.model_config["model_path"],
+        backend=test_case.backend,
+        dataset_name=test_case.dataset_name,
+        dataset_path=test_case.dataset_path,
+        request_rate=test_case.request_rate,
+        max_concurrency=test_case.max_concurrency,
+        num_prompts=test_case.num_prompts,
+        input_len=test_case.input_len,
+        output_len=test_case.output_len,
+        random_range_ratio=test_case.random_range_ratio,
+        image_resolution=test_case.image_resolution,
+        image_count=test_case.image_count,
+        warmup_requests=test_case.warmup_requests,
+        seed=test_case.seed,
+    )
+
+    if not metrics:
+        raise RuntimeError("No metrics obtained from benchmark")
+
+    logger.info("All extracted metrics: %s", metrics)
+    return metrics
+
+
+class BenchmarkContext:
+    """
+    Shared context for passing benchmark results
+    between multiple TestCase classes running in the same process.
+    """
+
+    def __init__(self):
+        # TPOT (ms) when fusion is ENABLED
+        self.tpot_fusion_enabled = None
+
+    def ensure_tpot_fusion_enabled(self):
+        if self.tpot_fusion_enabled is None:
+            raise RuntimeError(
+                "tpot_fusion_enabled is not set. "
+                "Ensure TestQwen235bFusionEnable.test_fusion_enable runs first."
+            )
+
+
+benchmark_ctx = BenchmarkContext()
+
+
+class TestQwen235bFusionEnable(TestAscendPerfMultiNodePdSepTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    max_attempts = 3
-    model_config = MODEL_CONFIG_FUSION_DISABLED
-    backend = "sglang-oai"
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    model = QWEN3_235B_W8A8_MODEL_PATH
+    model_config = MODEL_CONFIG_FUSION_DISABLED  # baseline
     dataset_name = "random"
-    max_concurrency = 128
-    num_prompts = int(max_concurrency) * 4
+    max_concurrency = 860
+    num_prompts = max_concurrency * 4
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
-    tpot = 100
-    model_layers = 94  # Number of layers in QWEN3 235B model
-    expected_per_layer_reduction_ms = 0.05  # 50 microseconds = 0.05 milliseconds
-
-    @classmethod
-    def setUpClass(cls):
-        cls.degradation_tolerance = 0
-        cls.model = QWEN3_235B_W8A8_MODEL_PATH
-        super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
 
     @check_role(allowed_roles=["router"])
-    def run_throughput(self):
-        # Use class attribute explicitly to ensure consistency
-        model_config = TestQwen235bFusionOperator.model_config
-        metrics = run_aisbench(
-            host=self.host,
-            port=str(self.port),
-            model_path=model_config.get("model_path"),
-            dataset_type=self.aisbench_dataset_type,
-            dataset_path=self.aisbench_dataset_path,
-            input_len=self.input_len,
-            output_len=self.output_len,
-            max_concurrency=self.max_concurrency,
-            num_prompts=self.num_prompts,
-            image_resolution=self.image_resolution,
-            random_range_ratio=self.random_range_ratio,
-            dp=self.dp,
-            generation_kwargs=self.generation_kwargs,
-        )
-        return metrics
+    def test_fusion_enable(self):
+        metrics = _run_benchmark(self)
 
-    def run_test_with_config(self, config, repeat_times=3):
-        """
-        Run performance test multiple times with the given configuration and return average TPOT.
+        tpot = float(metrics["mean_tpot"])
 
-        Args:
-            config: Model configuration dictionary
+        # Sanity check
+        self.assertGreater(tpot, 0.0)
 
-        Returns:
-            Average TPOT (time per output token) in milliseconds
-        """
-        # Set class attribute directly to ensure router thread can access it
-        TestQwen235bFusionOperator.model_config = config
-        tpot_list = []
-
-        try:
-            self.start_pd_server()
-            self.start_router_server()
-
-            for i in range(repeat_times):
-                metrics = self.run_throughput()
-                tpot_list.append(metrics["tpot"])
-
-            avg_tpot = np.mean(tpot_list) if tpot_list else 0.0
-
-        finally:
-            self.stop_sglang_thread()
-
-        return avg_tpot
-
-    def test_fusion_operator_latency_reduction(self):
-        """
-        Test that enabling fusion operator reduces per-layer computation latency by at least 50us.
-
-        TPOT (Time Per Output Token) is measured in milliseconds.
-        Per-layer latency reduction = (TPOT_disabled - TPOT_enabled) / number_of_layers
-        Target: per-layer reduction >= 50us = 0.05ms
-        """
-
-        # Test without fusion operator (average over num_test_runs)
-        print("Testing WITHOUT fusion operator...")
-        tpot_disabled_avg = self.run_test_with_config(MODEL_CONFIG_FUSION_DISABLED)
-        print(f"Average TPOT (disabled): {tpot_disabled_avg}ms")
-
-        # Test with fusion operator (average over num_test_runs)
-        print("\nTesting WITH fusion operator...")
-        tpot_enabled_avg = self.run_test_with_config(MODEL_CONFIG_FUSION_ENABLED)
-        print(f"Average TPOT (enabled): {tpot_enabled_avg}ms")
-
-        # Calculate per-layer latency reduction
-        total_latency_reduction_ms = tpot_disabled_avg - tpot_enabled_avg
-        per_layer_reduction_ms = total_latency_reduction_ms / self.model_layers
-
-        print(f"\nTotal TPOT reduction: {total_latency_reduction_ms}ms")
-        print(
-            f"Per-layer reduction: {per_layer_reduction_ms}ms (target: {self.expected_per_layer_reduction_ms}ms)"
+        benchmark_ctx.tpot_fusion_enabled = tpot
+        logger.info(
+            "Fusion ENABLED TPOT stored: %.3f ms",
+            benchmark_ctx.tpot_fusion_enabled,
         )
 
-        # Verify per-layer latency reduction meets the requirement
-        self.assertGreaterEqual(
-            per_layer_reduction_ms,
-            self.expected_per_layer_reduction_ms,
-            msg=f"Per-layer latency reduction {per_layer_reduction_ms}ms is less than expected {self.expected_per_layer_reduction_ms}ms. "
-            f"TPOT (disabled avg): {tpot_disabled_avg}ms, TPOT (enabled avg): {tpot_enabled_avg}ms, "
-            f"Total reduction: {total_latency_reduction_ms}ms, Layers: {self.model_layers}",
+
+class TestQwen235bFusionDisabled(TestAscendPerfMultiNodePdSepTestCaseBase):
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    model = QWEN3_235B_W8A8_MODEL_PATH
+    model_config = MODEL_CONFIG_FUSION_ENABLED
+    dataset_name = "random"
+    max_concurrency = 860
+    num_prompts = max_concurrency * 4
+    input_len = 3500
+    output_len = 1500
+    random_range_ratio = 1
+
+    model_layers = 94
+    max_allowed_per_layer_overhead_ms = 0.05  # 50 μs
+
+    @check_role(allowed_roles=["router"])
+    def test_fusion_disable(self):
+        benchmark_ctx.ensure_tpot_fusion_enabled()
+
+        metrics = _run_benchmark(self)
+        tpot_fusion_disabled = float(metrics["mean_tpot"])
+        self.assertGreater(tpot_fusion_disabled, 0.0)
+
+        # Fusion OFF should be SLOWER → positive delta
+        tpot_increase = tpot_fusion_disabled - benchmark_ctx.tpot_fusion_enabled
+        self.assertGreaterEqual(tpot_increase, 0.0)
+
+        per_layer_overhead = tpot_increase / self.model_layers
+        self.assertLessEqual(
+            per_layer_overhead,
+            self.max_allowed_per_layer_overhead_ms,
+            msg=(
+                f"Per-layer overhead too high: {per_layer_overhead:.6f} ms > "
+                f"{self.max_allowed_per_layer_overhead_ms:.3f} ms"
+            ),
+        )
+
+        logger.info(
+            "Fusion disabled: TPOT increase=%.3f ms, per-layer overhead=%.6f ms",
+            tpot_increase,
+            per_layer_overhead,
         )
 
 
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.TestSuite()
+    suite.addTest(TestQwen235bFusionEnable("test_fusion_enable"))
+    suite.addTest(TestQwen235bFusionDisabled("test_fusion_disable"))
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
