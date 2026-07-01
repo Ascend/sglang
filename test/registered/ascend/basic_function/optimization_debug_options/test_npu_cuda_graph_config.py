@@ -71,6 +71,15 @@ class TestCudaGraphConfigOverride(CustomTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Paris", response.text)
 
+        self.err_log_file.seek(0)
+        err_log = self.err_log_file.read()
+        self.assertIn(
+            "cuda_graph_config",
+            err_log,
+            "Expected stderr to contain cuda_graph_config parse log, "
+            "proving JSON config was processed and overrode the disabled flag",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
