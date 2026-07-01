@@ -17,8 +17,8 @@ import unittest
 
 import torch
 
-from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.ascend.lora_utils import CI_MULTI_LORA_MODELS, run_lora_test_one_by_one
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
