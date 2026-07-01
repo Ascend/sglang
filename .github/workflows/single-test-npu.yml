@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: LoRA max_lora_rank parameter test
+# test round 2: LoRA max_lora_rank parameter test
 
 on:
   pull_request:
