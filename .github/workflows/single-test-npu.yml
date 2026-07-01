@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: LoRA radix cache test
+# test round 2: LoRA radix cache test
 
 on:
   pull_request:
