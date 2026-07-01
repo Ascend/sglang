@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: LoRA radix cache test - fix isort blank line
+# test round 6: LoRA radix cache test - use a3-2 runner
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-1
+    runs-on: linux-aarch64-a3-2
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
