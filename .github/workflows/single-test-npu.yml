@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 12: LoRA radix cache test - add attention_backend=ascend
+# test round 13: LoRA radix cache test - disable cuda graph
 
 on:
   pull_request:
