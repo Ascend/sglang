@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Qwen3Next MambaCache - fix model path and add register_npu_ci
+# test round 3: Qwen3Next MambaCache - fix isort order, tp-size 4->2
 
 on:
   pull_request:
