@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: Qwen3Next MambaCache - fix _replay_metadata in_capture arg
+# test round 7: Qwen3Next MambaCache - fix seq_lens_cpu type handling
 
 on:
   pull_request:

@@ -129,12 +129,19 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
         req_pool_indices: torch.Tensor,
         forward_mode: ForwardMode,
         spec_info: Optional[SpecInput],
-        seq_lens_cpu: Optional[torch.Tensor],
+        seq_lens_cpu: Optional[torch.Tensor] = None,
         **kwargs,
     ):
-        num_padding = torch.count_nonzero(
-            seq_lens_cpu == self.get_cuda_graph_seq_len_fill_value()
-        )
+        # Handle case where seq_lens_cpu might be a bool (in_capture) due to API mismatch
+        if not isinstance(seq_lens_cpu, torch.Tensor):
+            seq_lens_cpu = None
+
+        if seq_lens_cpu is not None:
+            num_padding = torch.count_nonzero(
+                seq_lens_cpu == self.get_cuda_graph_seq_len_fill_value()
+            )
+        else:
+            num_padding = 0
         # Make sure forward metadata is correctly handled for padding reqs
         req_pool_indices[bs - num_padding :] = 0
         mamba_indices = self.req_to_token_pool.get_mamba_indices(req_pool_indices)
