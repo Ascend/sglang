@@ -192,6 +192,7 @@ def create_model_config_with_param(bucket_interval):
 class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCaseBase):
     """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
 
+    model_config = MODEL_CONFIG_BASE
     test_cases = [
         {"value": "1", "should_succeed": True, "description": "合法值: 最小正整数"},
         {
@@ -237,14 +238,14 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
 
     @classmethod
     @check_role(allowed_roles=["router"])
-    def start_router_server(cls):
+    def start_router_server(cls, model_config):
         wait_for_prefill_decode_exit(key=ACTIVE_TEST_CLASS, value=cls.__name__)
         logger.info("Starting router in thread...")
 
         from concurrent.futures import ThreadPoolExecutor
 
         executor = ThreadPoolExecutor(max_workers=1)
-        future = executor.submit(launch_router, cls.model_config)
+        future = executor.submit(launch_router, model_config)
 
         cls.process = future.result()
 
@@ -263,13 +264,14 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
                 return False
             time.sleep(2)
 
+    @classmethod
     @check_role(allowed_roles=["router"])
-    def stop_router_server(self):
-        if self.process:
+    def stop_router_server(cls):
+        if cls.process:
             try:
-                kill_process_tree(self.process.pid)
+                kill_process_tree(cls.process.pid)
                 for _ in range(60):
-                    if self.process.poll() is not None:
+                    if cls.process.poll() is not None:
                         logger.info("Process fully exited")
                         break
                     time.sleep(1)
@@ -284,11 +286,11 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
         value = test_case["value"]
         should_succeed = test_case["should_succeed"]
         description = test_case["description"]
-        print(f"\n{'=' * 60}")
-        print(f"测试: {description}")
-        print(f"参数值: '{value}'")
-        print(f"期望结果: {'启动成功' if should_succeed else '启动失败'}")
-        print("=" * 60)
+        logger.info(f"\n{'=' * 60}")
+        logger.info(f"测试: {description}")
+        logger.info(f"参数值: '{value}'")
+        logger.info(f"期望结果: {'启动成功' if should_succeed else '启动失败'}")
+        logger.info("=" * 60)
 
     @check_role(allowed_roles=["router"])
     def validate_bucket_adjust_interval_secs(self, test_case):
@@ -297,15 +299,15 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
         value = test_case["value"]
         should_succeed = test_case["should_succeed"]
 
-        self.__class__.model_config = create_model_config_with_param(value)
+        self.model_config = create_model_config_with_param(value)
 
-        is_running = self.start_router_server()
+        is_running = self.start_router_server(self.model_config)
         self.assert_result(value, is_running, should_succeed)
 
     @check_role(allowed_roles=["router"])
     def test_bucket_adjust_interval_secs_validation(self):
         """测试 --bucket-adjust-interval-secs 参数的合法性验证"""
-        print("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
+        logger.info("=== 开始测试 --bucket-adjust-interval-secs 参数验证 ===\n")
         for test_case in self.test_cases:
             self.validate_bucket_adjust_interval_secs(test_case)
             self.stop_router_server()
@@ -314,10 +316,10 @@ class TestBucketAdjustIntervalSecsValidation(TestAscendPerfMultiNodePdSepTestCas
         """断言测试结果"""
         if should_succeed:
             self.assertTrue(success, msg=f"参数 '{value}' 应该启动成功，但实际失败")
-            print(f"✓ 验证通过: 服务启动成功")
+            logger.info(f"✓ 验证通过: 服务启动成功")
         else:
             self.assertFalse(success, msg=f"参数 '{value}' 应该启动失败，但实际成功")
-            print(f"✓ 验证通过: 服务启动失败（预期行为）")
+            logger.info(f"✓ 验证通过: 服务启动失败（预期行为）")
 
 
 if __name__ == "__main__":
