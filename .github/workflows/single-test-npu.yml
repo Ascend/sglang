@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: LoRA radix cache test - fix lint import order
+# test round 4: LoRA radix cache test - fix missing import
 
 on:
   pull_request:
