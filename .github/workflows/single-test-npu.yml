@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 4: Qwen3Next MambaCache - suite full-16-npu-a3, restore tp-size 4
+# test round 5: Qwen3Next MambaCache - runner linux-aarch64-a3-16 for 80B model
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-16
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B080
     steps:
