@@ -37,7 +37,7 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.85",
+        "0.8",
         "--attention-backend",
         "ascend",
         "--tp-size",
