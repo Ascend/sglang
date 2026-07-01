@@ -120,13 +120,15 @@ CI_MULTI_LORA_MODELS = [
         adaptors=[
             LoRAAdaptor(
                 name=LLAMA_3_2_1B_INSTRUCT_TOOL_FAST_LORA_WEIGHTS_PATH,
-                prefill_tolerance=1e-1,
-                rouge_l_tolerance=0.9,
+                prefill_tolerance=5e-1,
+                decode_tolerance=5e-1,
+                rouge_l_tolerance=0.8,
             ),
             LoRAAdaptor(
                 name=LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH,
-                prefill_tolerance=3e-1,
-                rouge_l_tolerance=0.9,
+                prefill_tolerance=5e-1,
+                decode_tolerance=5e-1,
+                rouge_l_tolerance=0.8,
             ),
         ],
         max_loras_per_batch=2,

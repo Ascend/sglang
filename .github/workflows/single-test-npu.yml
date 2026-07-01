@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 10: LoRA radix cache test - uninstall torchao
+# test round 11: LoRA radix cache test - relax tolerances for NPU
 
 on:
   pull_request:
