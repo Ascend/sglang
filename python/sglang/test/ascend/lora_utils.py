@@ -12,6 +12,7 @@ from sglang.test.ascend.test_ascend_utils import (
 from sglang.test.runners import HFRunner, SRTRunner
 from sglang.test.test_utils import calculate_rouge_l
 
+
 @dataclasses.dataclass
 class LoRAAdaptor:
     name: str
