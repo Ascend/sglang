@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: Qwen3Next MambaCache - fix isort order, tp-size 4->2
+# test round 4: Qwen3Next MambaCache - suite full-16-npu-a3, restore tp-size 4
 
 on:
   pull_request:
