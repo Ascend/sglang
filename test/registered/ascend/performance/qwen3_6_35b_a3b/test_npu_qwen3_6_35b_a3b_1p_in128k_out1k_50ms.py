@@ -14,6 +14,7 @@ register_npu_ci(
     nightly=True,
     disabled="performance testcase",
 )
+# useless line
 
 QWEN3_6_35B_A3B_128K_1K_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
