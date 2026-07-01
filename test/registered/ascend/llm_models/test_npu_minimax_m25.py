@@ -46,7 +46,6 @@ class TestMiniMaxM25(GSM8KAscendMixin, CustomTestCase):
         "8",
         "--dp-size",
         "2",
-        "--enable-dp-attention",
         "--moe-a2a-backend",
         "deepep",
         "--deepep-mode",
