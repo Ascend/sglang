@@ -74,10 +74,6 @@ MODEL_CONFIG_BASE = {
     "prefill_args": [
         "--disaggregation-mode",
         "prefill",
-        "--nnodes",
-        1,
-        "--node-rank",
-        "0",
         "--tp",
         16,
         "--trust-remote-code",
@@ -113,10 +109,6 @@ MODEL_CONFIG_BASE = {
     "decode_args": [
         "--disaggregation-mode",
         "decode",
-        "--nnodes",
-        "1",
-        "--node-rank",
-        "0",
         "--tp",
         16,
         "--moe-dense-tp-size",
