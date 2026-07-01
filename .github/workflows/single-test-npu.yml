@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: Qwen3Next MambaCache - runner linux-aarch64-a3-16 for 80B model
+# test round 6: Qwen3Next MambaCache - fix _replay_metadata in_capture arg
 
 on:
   pull_request:
@@ -70,6 +70,10 @@ jobs:
           mkdir -p ${ascend_test_util_path}
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+
+          # Copy fixed NPU backend to override image version
+          cp ${sglang_source_path}/python/sglang/srt/hardware_backend/npu/attention/ascend_hybrid_linear_attn_backend.py \
+             ${sglang_pkg_path}/sglang/srt/hardware_backend/npu/attention/
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true

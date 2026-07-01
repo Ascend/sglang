@@ -130,6 +130,7 @@ class AscendMambaAttnBackendBase(MambaAttnBackendBase):
         forward_mode: ForwardMode,
         spec_info: Optional[SpecInput],
         seq_lens_cpu: Optional[torch.Tensor],
+        **kwargs,
     ):
         num_padding = torch.count_nonzero(
             seq_lens_cpu == self.get_cuda_graph_seq_len_fill_value()
