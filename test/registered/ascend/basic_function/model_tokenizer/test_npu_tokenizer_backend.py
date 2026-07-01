@@ -1,4 +1,6 @@
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
@@ -17,6 +19,7 @@ register_npu_ci(est_time=400, suite="debug-full-1-npu-a3", nightly=True)
 
 TOKENIZER_MODEL = DEFAULT_SMALL_MODEL_NAME_FOR_TEST_QWEN
 SERVER_MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+CONCURRENT_REQUESTS = 5
 
 
 class TestNpuFastokensBackend(CustomTestCase):
@@ -56,51 +59,78 @@ class TestNpuFastokensBackend(CustomTestCase):
         self.assertEqual(tokenizer.decode(ids, skip_special_tokens=True), text)
 
 
-class TestNpuTokenizerBackendFastokens(CustomTestCase):
-    """Testcase: verify server startup and inference with --tokenizer-backend=fastokens
+class TestNpuTokenizerBackendConcurrent(CustomTestCase):
+    """Testcase: verify fastokens tokenization latency is lower than
+    huggingface under concurrent load
 
     [Test Category] Parameter
-    [Test Target] --tokenizer-backend=fastokens
+    [Test Target] --tokenizer-backend
     """
 
+    model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+    base_url = DEFAULT_URL_FOR_TEST
+    server_args = [
+        "--trust-remote-code",
+        "--mem-fraction-static",
+        "0.8",
+        "--attention-backend",
+        "ascend",
+        "--disable-cuda-graph",
+    ]
+
     @classmethod
-    def setUpClass(cls):
-        cls.model = SERVER_MODEL
-        cls.base_url = DEFAULT_URL_FOR_TEST
-        other_args = [
-            "--trust-remote-code",
-            "--mem-fraction-static",
-            "0.8",
-            "--attention-backend",
-            "ascend",
-            "--disable-cuda-graph",
-            "--tokenizer-backend",
-            "fastokens",
-        ]
+    def _send_concurrent(cls, n):
+        def _request():
+            return requests.post(
+                f"{cls.base_url}/generate",
+                json={
+                    "text": "The capital of France is",
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": 32,
+                    },
+                },
+            )
+
+        start = time.time()
+        with ThreadPoolExecutor(max_workers=n) as executor:
+            futures = [executor.submit(_request) for _ in range(n)]
+            results = [f.result() for f in as_completed(futures)]
+        elapsed = time.time() - start
+        return results, elapsed
+
+    @classmethod
+    def _launch_server(cls, backend):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=other_args,
+            other_args=cls.server_args + ["--tokenizer-backend", backend],
         )
 
-    @classmethod
-    def tearDownClass(cls):
-        kill_process_tree(cls.process.pid)
+    def test_tokenizer_backend_concurrent(self):
+        # Test with huggingface backend
+        self._launch_server("huggingface")
+        results_hf, elapsed_hf = self._send_concurrent(CONCURRENT_REQUESTS)
+        for r in results_hf:
+            self.assertEqual(r.status_code, 200)
+            self.assertIn("Paris", r.text)
+        kill_process_tree(self.process.pid)
 
-    def test_tokenizer_backend_fastokens(self):
-        response = requests.post(
-            f"{DEFAULT_URL_FOR_TEST}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 32,
-                },
-            },
+        # Test with fastokens backend
+        self._launch_server("fastokens")
+        results_ft, elapsed_ft = self._send_concurrent(CONCURRENT_REQUESTS)
+        for r in results_ft:
+            self.assertEqual(r.status_code, 200)
+            self.assertIn("Paris", r.text)
+        kill_process_tree(self.process.pid)
+
+        self.assertLess(
+            elapsed_ft,
+            elapsed_hf,
+            f"Expected fastokens latency ({elapsed_ft:.2f}s) "
+            f"< huggingface latency ({elapsed_hf:.2f}s)",
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Paris", response.text)
 
 
 if __name__ == "__main__":
