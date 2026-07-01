@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 8: LoRA radix cache test - upgrade torchao
+# test round 9: LoRA radix cache test - use B080 image
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B080
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
