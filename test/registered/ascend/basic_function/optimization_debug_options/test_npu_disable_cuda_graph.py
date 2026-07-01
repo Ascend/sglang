@@ -21,7 +21,7 @@ class TestDisableCudaGraph(CustomTestCase):
     and --disable-piecewise-cuda-graph all resolve to disabled backend
 
     [Test Category] Parameter
-    [Test Target] --disable-prefill-cuda-graph, --disable-decode-cuda-graph,
+    [Test Target] --disable-prefill-cuda-graph; --disable-decode-cuda-graph;
                   --disable-piecewise-cuda-graph
     """
 
