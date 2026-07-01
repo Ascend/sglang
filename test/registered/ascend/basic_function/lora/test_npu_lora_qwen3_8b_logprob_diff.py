@@ -43,7 +43,7 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 # LORA_HF_REPO = "/home/weights/lora-diff-Qwen3-8B"
 BASE_MODEL = QWEN3_8B_WEIGHTS_PATH
 LORA_HF_REPO = "/root/.cache/huggingface/hub/lora-diff-Qwen3-8B"
-LORA_BACKEND = "csgmv"
+LORA_BACKEND = "ascend"
 MAX_LORA_RANK = 32
 TP_SIZE = 1
 PREFILL_ATTENTION_BACKEND = "ascend"
