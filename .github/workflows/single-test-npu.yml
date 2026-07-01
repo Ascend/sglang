@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 11: LoRA radix cache test - relax tolerances for NPU
+# test round 12: LoRA radix cache test - add attention_backend=ascend
 
 on:
   pull_request:
