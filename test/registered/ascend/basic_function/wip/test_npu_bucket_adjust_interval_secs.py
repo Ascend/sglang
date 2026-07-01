@@ -7,6 +7,7 @@ import requests
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     ACTIVE_TEST_CLASS,
+    NIC_NAME,
     SERVICE_PORT,
     check_role,
     launch_router,
@@ -27,10 +28,6 @@ register_npu_ci(
     disabled="multi nodes testcase",
 )
 
-# ConfigMap相关配置
-CONFIGMAP_NAME = os.environ.get("KUBE_CONFIG_MAP")
-NAMESPACE = os.environ.get("NAMESPACE")
-
 # ====================== Base Configuration ======================
 MODEL_CONFIG_BASE = {
     "model_path": DEEPSEEK_R1_W8A8_MODEL_PATH,
@@ -48,9 +45,8 @@ MODEL_CONFIG_BASE = {
         "ENABLE_MOE_NZ": "1",
         "PROFILING_MODE": "dynamic",
         "HCCL_OP_EXPANSION_MODE": "AIV",
-        # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
-        # "HCCL_SOCKET_IFNAME": NIC_NAME,
-        # "GLOO_SOCKET_IFNAME": NIC_NAME,
+        "HCCL_SOCKET_IFNAME": NIC_NAME,
+        "GLOO_SOCKET_IFNAME": NIC_NAME,
         "TRANSFORMERS_VERBOSITY": "error",
     },
     "decode_envs": {
@@ -68,15 +64,11 @@ MODEL_CONFIG_BASE = {
         "HCCL_OP_EXPANSION_MODE": "AIV",
         "TASK_QUEUE_ENABLE": "0",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-        # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
-        # "HCCL_SOCKET_IFNAME": NIC_NAME,
-        # "GLOO_SOCKET_IFNAME": NIC_NAME,
+        "HCCL_SOCKET_IFNAME": NIC_NAME,
+        "GLOO_SOCKET_IFNAME": NIC_NAME,
         "TRANSFORMERS_VERBOSITY": "error",
     },
     "router_envs": {
-        # "ASCEND_MF_STORE_URL": "tcp://192.168.0.60:24667",
-        # "HCCL_SOCKET_IFNAME": NIC_NAME,
-        # "GLOO_SOCKET_IFNAME": NIC_NAME,
         "TRANSFORMERS_VERBOSITY": "error",
     },
     "prefill_args": [
