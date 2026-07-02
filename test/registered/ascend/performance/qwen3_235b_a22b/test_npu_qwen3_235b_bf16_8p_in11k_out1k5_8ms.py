@@ -86,6 +86,8 @@ class TestQwen235B(TestAscendPerformanceTestCaseBase):
     random_range_ratio = 1
     tpot = 8
     output_token_throughput = 118.67
+    seed = 1
+
 
     def test_qwen3_235b(self):
         self.run_throughput()
