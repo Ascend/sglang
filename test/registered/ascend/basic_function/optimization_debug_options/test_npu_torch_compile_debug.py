@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_32B_WEIGHTS_PATH, QWEN3_14B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval
 from sglang.test.test_utils import (
@@ -24,7 +24,7 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
     [Test Target] --enable-torch-compile-debug-mode
     """
 
-    model = QWEN3_14B_WEIGHTS_PATH
+    model = QWEN3_8B_WEIGHTS_PATH
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",

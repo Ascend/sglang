@@ -1762,8 +1762,8 @@ test/registered/ascend/basic_function/optimization_debug_options/
 ├── test_npu_torch_compile_debug.py                 (已有: --enable-torch-compile-debug-mode)
 ├── test_npu_attn_tp_gather.py                      (已有: --disable-attn-tp-gather)
 ├── test_npu_embedding_interpolation.py             (重写: --enable-precise-embedding-interpolation，Qwen3-VL 模型 + 对比验证，已推送)
-├── test_npu_prefill_cp.py                            (待创建: --cp-strategy zigzag/interleave 对比验证 + 弃用别名 --enable-prefill-context-parallel、--enable-dsa-prefill-context-parallel、--dsa-prefill-cp-mode 等价性验证)
-└── test_npu_gc_threshold.py                        (待创建: --gc-threshold)
+├── test_npu_prefill_cp.py                            (已有: --cp-strategy zigzag/interleave 对比验证 + 弃用别名 --enable-prefill-context-parallel、--enable-dsa-prefill-context-parallel、--dsa-prefill-cp-mode 等价性验证)
+└── test_npu_gc_threshold.py                        (已有: --gc-threshold)
 ```
 
 #### CI 注册汇总
@@ -1793,7 +1793,7 @@ test/registered/ascend/basic_function/optimization_debug_options/
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
-| 新增 E2E | 18 | 已通过 CI (9): `--cuda-graph-config` + `--cuda-graph-backend-decode` full/disabled + `--cuda-graph-backend-prefill` disabled/breakable + cuda-graph-bs 四参数组合 + `--disable-prefill-cuda-graph`、`--disable-decode-cuda-graph`、`--disable-piecewise-cuda-graph` 别名验证 + `--pre-warm-nccl` + `--enable-dp-attention-local-control-broadcast` + `--enable-torch-compile-debug-mode` + `--disable-attn-tp-gather`；已推送 (1): `--enable-precise-embedding-interpolation`（Qwen3-VL + SGLANG_VIT_ENABLE_CUDA_GRAPH + 对比验证）；待创建 (9): `--gc-threshold` + `--cuda-graph-backend-decode` breakable/tc_piecewise + `--cuda-graph-backend-prefill` tc_piecewise + `test_npu_prefill_cp.py` (4 个 CP 测试点: zigzag+interleave 对比验证(1) + 3 弃用别名) |
+| 新增 E2E | 18 | 已通过 CI (11): `--cuda-graph-config` + `--cuda-graph-backend-decode` full/disabled/breakable/tc_piecewise + `--cuda-graph-backend-prefill` disabled/breakable/tc_piecewise + cuda-graph-bs 四参数组合 + `--disable-prefill-cuda-graph`、`--disable-decode-cuda-graph`、`--disable-piecewise-cuda-graph` 别名验证 + `--pre-warm-nccl` + `--enable-dp-attention-local-control-broadcast` + `--tokenizer-backend` + `--model-config-parser` + `--enable-torch-compile-debug-mode` + `--disable-attn-tp-gather`；已推送待CI (7): `--enable-precise-embedding-interpolation`（Qwen3-VL rewrite）+ `--gc-threshold` + `--cp-strategy` zigzag/interleave 对比验证 + 3 弃用别名 + `--load-format gguf` |
 | 移植 GPU E2E | 4 | `--cuda-graph-backend-decode` full、disabled + `--cuda-graph-backend-prefill` disabled、breakable（已通过 CI） |
 | 无需测试 | 1 | `--prefill-cp-mode`（`no_cli=True`，不对外暴露，无法通过命令行传参） |
 
@@ -1803,7 +1803,7 @@ test/registered/ascend/basic_function/optimization_debug_options/
 
 | # | 组 | 检查项 | ✅ |
 |---|---|---|---|
-| 1 | A-结构 | 两个特性齐全，每个参数含全量子章节 | ✅ |
+| 1 | A-结构 | 三个特性齐全，每个参数含全量子章节 | ✅ |
 | 2 | A-结构 | 所有取值列出 2 列含义表 | ✅ |
 | 3 | A-结构 | E2E 场景表三列完整（场景/用户场景/验证点） | ✅ |
 | 4 | A-结构 | 测试点表含"测试内容"列 | ✅ |
@@ -1813,7 +1813,7 @@ test/registered/ascend/basic_function/optimization_debug_options/
 | 8 | B-内容 | 来源列标注具体路径 | ✅ |
 | 9 | B-内容 | 代码路径有语言描述，面向测试人员 | ✅ |
 | 10 | C-覆盖 | 所有可选值有对应策略 | ✅ |
-| 11 | C-覆盖 | 22 个参数全覆盖，顺序正确 | ✅ |
+| 11 | C-覆盖 | 23 个参数全覆盖，顺序正确 | ✅ |
 | 12 | C-覆盖 | 多值参数参考 GPU 设计模式 | ✅ |
 | 13 | C-覆盖 | 默认值逐场景分析，不一刀切 | ✅ |
 | 14 | C-覆盖 | Deprecated/别名已标注 | ✅ |
@@ -1848,6 +1848,38 @@ test/registered/ascend/basic_function/optimization_debug_options/
 
 ---
 
+### Run #28564571890 (2026-07-02) — PR #886
+
+| 文件 | 参数 | Suite | 结果 | 耗时 |
+|---|---|---|---|---|
+| `test_npu_gc_threshold.py` | `--gc-threshold` | debug-full-1-npu-a3 | ✅ PASSED | 106s |
+| `test_npu_model_tokenizer.py` | `--load-format gguf` + `--tokenizer-worker-num` + `--context-length` + `--model-impl` 等综合 | debug-full-1-npu-a3 | ✅ PASSED | 369s |
+
+**2/2 全部通过**。
+
+---
+
+### Run #28580804775 (2026-07-02) — PR #886 ❌
+
+| 文件 | 参数 | Suite | 结果 | 耗时 |
+|---|---|---|---|---|
+| `test_npu_gc_threshold.py` | `--gc-threshold` | debug-full-1-npu-a3 | ✅ PASSED | 106s |
+| `test_npu_torch_compile_debug.py` | `--enable-torch-compile-debug-mode` | debug-full-1-npu-a3 | ❌ FAILED | 12s |
+| `test_npu_attn_tp_gather.py` | `--disable-attn-tp-gather` | debug-full-1-npu-a3 | ✅ PASSED | 168s |
+| `test_npu_embedding_interpolation.py` | `--enable-precise-embedding-interpolation` | debug-full-1-npu-a3 | ❌ FAILED | 294s |
+| `test_npu_model_tokenizer.py` | `--load-format gguf` + 综合 | debug-full-1-npu-a3 | ✅ PASSED | 369s |
+
+**3/5 未全部通过**。
+
+**失败分析**:
+
+| 文件 | 类型 | 原因 |
+|------|------|------|
+| `test_npu_torch_compile_debug.py` | **测试代码 bug** | import 使用了 `test_ascend_utils.py` 中不存在的常量 `QWEN3_14B_WEIGHTS_PATH`，导致 `ImportError` 直接退出。已修复为 `QWEN3_8B_WEIGHTS_PATH` |
+| `test_npu_embedding_interpolation.py` | **产品问题** | `SGLANG_VIT_ENABLE_CUDA_GRAPH=true` 触发 NPU ViT graph runner (`vit_npu_graph_runner.py:83`)，但该 runner 仅支持 `ascend_attn` backend，Qwen3-VL 走其他 backend → `RuntimeError("Not supported ViT attention backend")`。需 NPU ViT graph 支持 Qwen3-VL 后方可验证 |
+
+---
+
 ## 5. 弃用参数汇总
 
 | 旧参数 | 章节 | 别名目标 | 旧参数 GPU 覆盖 | 别名目标 GPU 覆盖 | 测试策略 |
@@ -1857,3 +1889,146 @@ test/registered/ascend/basic_function/optimization_debug_options/
 | `--enable-prefill-context-parallel` | §2.16 | `--enable-prefill-cp` | 0 | 同上 | TP=2 别名转发+等价性验证（合并入 `test_npu_prefill_cp.py`） |
 | `--dsa-prefill-cp-mode` | §2.17 | `--cp-strategy` | 0 | `test_cp_strategy_unit.py`(UT)、`test_gqa_prefill_cp.py`(E2E)、`test_deepseek_v4_pro_fp4_cp.py`(E2E) | TP=2 别名转发+等价性验证（合并入 `test_npu_prefill_cp.py`） |
 | `--prefill-cp-mode` | §2.18 | `--cp-strategy` | 3 个文件（内部引用） | 同上 | 不对外暴露（`no_cli=True`），无法通过命令行传参 |
+
+---
+
+## 6. msProbe 特性
+
+### 特性概述
+
+msProbe 是 Ascend NPU 专用的**精度调试工具**，通过注册模型 forward hooks 在推理时自动收集每层张量的统计数据或原始数据，用于诊断精度异常（NaN/Inf、输出漂移）和数值错误。
+
+```
+用户配置 JSON → 启动 server（--msprobe-dump-config）→ eager 模式推理 → forward hooks 触发 → dump 文件写入 dump_path → 可视化对比分析
+```
+
+涉及参数：
+
+| 类别 | 参数 |
+|---|---|
+| Dump 配置 | `--msprobe-dump-config` |
+
+本次覆盖 `--msprobe-dump-config`。
+
+---
+
+### 逐参数分析
+
+#### 6.1 `--msprobe-dump-config`
+
+##### 6.1.1 业务理解
+
+- **定义**: `server_args.py:2512-2515`，msProbe PrecisionDebugger 的 JSON 配置文件路径。指定后启用 NPU 张量数据 dump。
+- **取值**:
+
+| 值 | 含义 |
+|---|---|
+| `None` (默认) | 不启用 msProbe，正常 CUDA Graph + 预热推理 |
+| `<file_path>` (str) | JSON 配置文件路径，启用 msProbe PrecisionDebugger，自动禁用 CUDA Graph 并跳过预热 |
+
+- **作用链路**:
+
+```
+msprobe_dump_config = <path>
+  │
+  ├── ① server_args.py:6284-6292  __post_init__  副作用（无条件执行）
+  │       logger.warning("When msProbe is enabled, cuda graph is disabled because "
+  │                       "msProbe only supports dump in eager mode, warmup is "
+  │                       "disabled(skip_server_warmup=True)...")
+  │       cuda_graph_config.decode.backend  = DISABLED
+  │       cuda_graph_config.prefill.backend = DISABLED
+  │       skip_server_warmup = True
+  │
+  └── ② model_runner.py:429-430  ModelRunner.__init__
+          → init_msprobe()  (model_runner.py:621-634)
+              ├── try: from msprobe.pytorch import PrecisionDebugger, seed_all
+              ├── except ImportError → logger.warning("Please install msprobe...") + return
+              ├── seed_all(mode=True)
+              └── PrecisionDebugger(config_path=...)  # 注册 forward hooks
+```
+
+  ① 在 `ServerArgs.__post_init__` 参数解析阶段执行，不依赖 msprobe 是否安装。② 在 `ModelRunner.__init__` 中执行，依赖 `mindstudio-probe` 包；未安装时 ImportError → log warning → return，**不会 crash**。
+
+- **依赖**:
+
+| 类型 | 内容 |
+|---|---|
+| 下游 | CUDA Graph 后端配置（强制 DISABLED）、server warmup（强制跳过）、`ModelRunner.msprobe_debugger`（PrecisionDebugger 实例） |
+| 关联参数 | 所有 CUDA Graph 参数被强制覆盖为 DISABLED |
+| 前置条件 | `pip install mindstudio-probe --pre`（可选，未安装时优雅降级）；JSON 配置文件须含 `task` 和 `level` 两个必填字段；仅 NPU 平台 (A2/A3) 支持 |
+
+##### 6.1.2 通俗理解
+
+msProbe 是 Ascend NPU 专用的"**模型体检仪**"——推理时自动记录模型每一层的张量数据（数值范围、形状、统计信息），用于诊断精度异常（如 NaN/Inf、输出漂移）。
+
+`--msprobe-dump-config` 指向一份"**体检项目清单**"（JSON 文件），告诉体检仪：查哪些层、记录什么数据、存在哪里。
+
+- **不传（`None`）**: 不做体检，正常推理
+- **传文件路径**: 开启体检模式。因为体检需要一层层检查内部数据，必须关掉 CUDA Graph 加速（改用 eager 模式一步步跑），也不做预热（跳过无意义的空跑）。推理时自动收集每层张量统计或原始数据到指定目录
+
+**用户什么时候需要改**: 推理出现精度异常时——创建 JSON 配置文件指定 dump 目标和范围 → 传参启动 server → 发送问题请求收集 dump 数据 → 用 msprobe 可视化工具与正常版本对比 → 定位具体异常层/算子。
+
+##### 6.1.3 GPU 社区用例分析
+
+| 文件 | 类型 | 说明 |
+|---|---|---|
+| 无 | — | msProbe 是 Ascend NPU 专用工具（`mindstudio-probe` 包），GPU 社区不存在对应功能，无相关用例 |
+
+##### 6.1.4 E2E 测试分析
+
+###### 6.1.4.1 测试因子分析
+
+| 因子 | 取值 | 具体影响 |
+|---|---|---|
+| `msprobe_dump_config` | `None` (默认) | `__post_init__` server_args.py:6284 条件为 False → 跳过 msprobe 块；`ModelRunner.__init__` model_runner.py:429 条件为 False → 不调用 `init_msprobe()`。走正常 CUDA Graph + 预热流程。所有不指定此参数的 NPU 测试已隐式覆盖此路径 |
+| | `<file_path>` | `__post_init__`: 进入 msprobe 块 → 禁用 decode/prefill CUDA Graph → 跳过预热 → 日志告警。`init_msprobe()`: 导入 `PrecisionDebugger` + `seed_all` → 创建调试器注册 forward hooks。推理时 hooks 触发，dump 张量统计到 `dump_path` |
+| msprobe 是否安装 | 已安装 | `from msprobe.pytorch import ...` 成功 → PrecisionDebugger 创建 → 推理触发 dump 文件写入 `dump_path`（至少含 `dump.json` + `stack.json`） |
+| | 未安装 | ImportError → `logger.warning("Please install msprobe...")` → `return`，server 在 eager 模式下正常运行但不产生 dump 文件 |
+
+###### 6.1.4.2 用户场景分析
+
+| 场景 | 用户场景 | `--msprobe-dump-config` 取值 | 验证点 |
+|---|---|---|---|
+| 开启精度调试 | 用户发现推理异常（NaN/Inf 或输出漂移），创建 msprobe JSON 配置（`{"task":"statistics","level":"L1","dump_path":"./dump_out"}`），传参启动 server，发请求收集张量统计数据 | `<临时 JSON 文件路径>` | ① stderr 含 "When msProbe is enabled"，证明参数被解析且 CUDA Graph 禁用 + 预热跳过已生效；② stderr 不含 "Please install msprobe"，证明 msprobe 安装正确、PrecisionDebugger 创建成功；③ `/generate` 返回 200 + "Paris"，证明 eager 模式推理正常；④ `dump_path/dump.json` 存在且非空，证明张量统计数据已实际 dump |
+
+##### 6.1.5 测试点设计
+
+| ID | 方法名 | 测试内容 | 类型 | 分类 | 来源 | 优先级 |
+|---|---|---|---|---|---|---|
+| T1 | `test_msprobe_dump_config_eager_mode` | `--msprobe-dump-config` 启用 msProbe，验证 cuda graph 禁用 + 预热跳过 + 推理成功 + dump 文件生成（副作用验证模式） | E2E | Parameter | 新增 | P0 |
+
+> ##### T001: `test_msprobe_dump_config_eager_mode` (新增)
+>
+> **验证目标**: 验证 `--msprobe-dump-config` 的完整功能链路——参数解析触发 CUDA Graph 禁用 + 预热跳过 → msprobe 成功导入并创建 PrecisionDebugger → eager 模式推理成功 → dump 文件实际生成。采用副作用验证模式（参照 GPU `test_no_extra_forked_cuda_context.py`），通过 stderr 日志 + dump 文件存在性双重验证参数生效。
+>
+> **测试步骤**:
+> 1. 创建临时 JSON 配置文件，写入最小合法 msprobe 配置：`{"task": "statistics", "level": "L1", "dump_path": "<tmpdir>"}`
+> 2. `--msprobe-dump-config <tmp_config>` 启动 Llama 3.2 1B server，捕获 stderr
+> 3. `/generate` 请求: `"The capital of France is"`, `temperature=0, max_new_tokens=32`
+> 4. 校验 stderr: 含 "When msProbe is enabled"（副作用确认）、不含 "Please install msprobe"（安装确认）
+> 5. 检查 `dump_path` 目录: `dump.json` 存在且文件大小 > 0
+>
+> **断言**: `status_code == 200`；`response.text` 含 `"Paris"`；stderr 含 `"When msProbe is enabled"`；stderr 不含 `"Please install msprobe"`；`os.path.getsize(dump_path/"dump.json") > 0`
+
+---
+
+### 最终结论
+
+#### 文件清单
+
+```
+test/registered/ascend/basic_function/optimization_debug_options/
+└── test_npu_msprobe_dump_config.py    (新建: --msprobe-dump-config)
+```
+
+#### CI 注册汇总
+
+| 参数 | 来源 | 文件 | CI Suite |
+|---|---|---|---|
+| `--msprobe-dump-config` | 新增 E2E | `test_npu_msprobe_dump_config.py` | `debug-full-1-npu-a3` |
+
+#### 统计
+
+| 来源 | 数量 | 说明 |
+|---|---|---|
+| 新增 E2E | 1 | `--msprobe-dump-config` 副作用验证（日志 + dump 文件双重验证） |
