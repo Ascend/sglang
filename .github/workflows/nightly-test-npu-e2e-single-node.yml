@@ -65,6 +65,8 @@ jobs:
           SGLANG_TEST_METRICS_OUTPUT: /root/.cache/tests/output/metrics/metrics
         shell: bash
         run: |
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
