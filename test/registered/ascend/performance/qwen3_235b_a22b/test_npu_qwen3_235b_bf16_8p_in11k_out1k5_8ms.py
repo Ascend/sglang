@@ -84,6 +84,7 @@ class TestQwen235B(TestAscendPerformanceTestCaseBase):
     input_len = 11000
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 8
     output_token_throughput = 118.67
 
