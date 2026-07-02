@@ -247,6 +247,7 @@ jobs:
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
           pip install fastokens
+          pip install mindstudio-probe --pre
           pip install sentence_transformers torchaudio==2.10.0
           pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
           pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
