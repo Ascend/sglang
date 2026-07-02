@@ -62,13 +62,13 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: docker
-          file: docker/npu_meituan_0_day.Dockerfile
+          file: docker/npu_cann9_0_custom.Dockerfile
           platforms: linux/arm64, linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           push: ${{ github.repository == 'Ascend/sglang' }}
           provenance: false
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=0630
+            SGLANG_KERNEL_NPU_TAG=2026.07.0
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}

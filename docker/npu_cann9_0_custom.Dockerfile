@@ -18,7 +18,7 @@ ARG PTA_URL_ARM64="https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-
 ARG PTA_URL_AMD64="https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_x86_64.whl"
 ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.06.15.post2
+ARG SGLANG_KERNEL_NPU_TAG=2026.07.0
 
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
@@ -98,15 +98,17 @@ RUN git clone https://github.com/sgl-project/sglang --branch $SGLANG_TAG /sgl-wo
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
-RUN wget https://github.com/randgun/sgl-kernel-npu/releases/download/dsv4-pta2.10.0/CANN-custom_ops-none-linux.aarch64.run && \
-    wget https://github.com/randgun/sgl-kernel-npu/releases/download/dsv4-pta2.10.0/cann-ops-transformer-custom_linux-aarch64.run && \
-    wget https://github.com/randgun/sgl-kernel-npu/releases/download/dsv4-pta2.10.0/custom_ops-1.0-cp311-cp311-linux_aarch64.whl && \
+RUN mkdir cann-custom-ops && \
+    cd cann-custom-ops && \
+    wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    unzip ops-transformer-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     chmod +x *.run && \
-    ./CANN-custom_ops-none-linux.aarch64.run --install-path=/usr/local/Ascend/cann-9.0.0/opp && \
-    ./cann-ops-transformer-custom_linux-aarch64.run --install-path=/usr/local/Ascend/cann-9.0.0/opp && \
-    ${PIP_INSTALL} custom_ops-1.0-cp311-cp311-linux_aarch64.whl && \
-    rm -rf *.run && \
-    rm -rf *.whl
+    ./CANN-custom_ops-none-linux.$(arch).run --install-path=/usr/local/Ascend/cann-${DEVICE_TYPE}/opp && \
+    ./cann-ops-transformer-custom_linux-$(arch).run --install-path=/usr/local/Ascend/cann-${DEVICE_TYPE}/opp && \
+    ${PIP_INSTALL} custom_ops-1.0-cp311-cp311-linux_$(arch).whl && \
+    && cd .. && rm -rf cann-custom-ops
 
 # Install Deep-ep
 # pin wheel to 0.45.1 ref: https://github.com/pypa/wheel/issues/662
