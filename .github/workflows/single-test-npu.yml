@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 7: Qwen3Next MambaCache - fix seq_lens_cpu type handling
+# test round 8: Qwen3Next MambaCache - add disable-radix-cache, mem-fraction-static, suite full-16-npu-a3
 
 on:
   pull_request:

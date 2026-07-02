@@ -20,6 +20,9 @@ class TestQwen3Next(
     gsm8k_accuracy_thres = 0.93
     kl_div_thres = 0.0025
     other_args = [
+        "--trust-remote-code",
+        "--mem-fraction-static",
+        "0.5",
         "--tp-size",
         "4",
         "--chunked-prefill-size",
@@ -32,6 +35,8 @@ class TestQwen3Next(
         "1",
         "--attention-backend",
         "ascend",
+        "--disable-cuda-graph",
+        "--disable-radix-cache",
     ]
 
 
