@@ -1,16 +1,29 @@
 import unittest
 
-from sglang.test.ci.ci_register import register_cuda_ci
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_8B_EAGLE3_WEIGHTS_PATH,
+    QWEN3_8B_WEIGHTS_PATH,
+)
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.streaming_session_kit import StreamingSessionKitMixin
 from sglang.test.server_fixtures.streaming_session_fixture import (
     StreamingSessionServerBase,
 )
-from sglang.test.test_utils import (
-    DEFAULT_DRAFT_MODEL_EAGLE3,
-    DEFAULT_TARGET_MODEL_EAGLE3,
-)
 
-register_cuda_ci(est_time=691, stage="extra-a", runner_config="1-gpu-large")
+register_npu_ci(est_time=691, suite="", nightly=True)
+
+# Common ascend args for Qwen3-8B + streaming session
+_ASCEND_COMMON_ARGS = [
+    "--dtype",
+    "bfloat16",
+    "--attention-backend",
+    "ascend",
+    "--device",
+    "npu",
+    "--trust-remote-code",
+    "--mem-fraction-static",
+    "0.78",
+]
 
 
 class TestStreamingSessionRetractMixedChunk(
@@ -18,7 +31,13 @@ class TestStreamingSessionRetractMixedChunk(
 ):
     """Retract + --enable-mixed-chunk."""
 
-    extra_args = ["--chunked-prefill-size", "128", "--enable-mixed-chunk"]
+    model = QWEN3_8B_WEIGHTS_PATH
+    extra_args = [
+        *_ASCEND_COMMON_ARGS,
+        "--chunked-prefill-size",
+        "128",
+        "--enable-mixed-chunk",
+    ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
 
 
@@ -28,34 +47,39 @@ class TestStreamingSessionRetractLargePage(
     """Retract + page=256: exercises page-aligned `_free_tail`. Partial-page
     free would corrupt pages still holding committed tokens."""
 
-    extra_args = ["--chunked-prefill-size", "4096", "--page-size", "256"]
+    model = QWEN3_8B_WEIGHTS_PATH
+    extra_args = [
+        *_ASCEND_COMMON_ARGS,
+        "--chunked-prefill-size",
+        "4096",
+        "--page-size",
+        "256",
+    ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
 
 
-# Common EAGLE3 spec args; reused by Eagle/EagleV2/EagleRetractLargePage variants.
+# Common EAGLE3 spec args for Qwen3-8B.
 _EAGLE3_SPEC_ARGS = [
-    "--dtype=float16",
     "--speculative-algorithm",
     "EAGLE3",
-    "--speculative-draft-model",
-    DEFAULT_DRAFT_MODEL_EAGLE3,
+    "--speculative-draft-model-path",
+    QWEN3_8B_EAGLE3_WEIGHTS_PATH,
     "--speculative-num-steps",
     "3",
     "--speculative-eagle-topk",
     "1",
     "--speculative-num-draft-tokens",
     "4",
-    "--mem-fraction-static",
-    "0.7",
 ]
 
 
 class TestStreamingSessionEagle(StreamingSessionServerBase, StreamingSessionKitMixin):
-    """EAGLE3 spec v1 (overlap disabled); offset=-1 — see kit's note."""
+    """EAGLE3 spec v2, overlap disabled; inherited count jitters {0, -1} — see kit's note."""
 
     kv_inherit_offset = -1
-    model = DEFAULT_TARGET_MODEL_EAGLE3
+    model = QWEN3_8B_WEIGHTS_PATH
     extra_args = [
+        *_ASCEND_COMMON_ARGS,
         "--disable-overlap-schedule",
         "--chunked-prefill-size",
         "512",
@@ -67,14 +91,14 @@ class TestStreamingSessionEagle(StreamingSessionServerBase, StreamingSessionKitM
 class TestStreamingSessionEagleV2(StreamingSessionServerBase, StreamingSessionKitMixin):
     """EAGLE3 spec v2 (overlap on)."""
 
-    model = DEFAULT_TARGET_MODEL_EAGLE3
+    model = QWEN3_8B_WEIGHTS_PATH
     extra_args = [
+        *_ASCEND_COMMON_ARGS,
         "--chunked-prefill-size",
         "512",
         *_EAGLE3_SPEC_ARGS,
     ]
     env_overrides = [
-        ("SGLANG_ENABLE_SPEC_V2", True),
         ("SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN", True),
     ]
 
@@ -82,12 +106,14 @@ class TestStreamingSessionEagleV2(StreamingSessionServerBase, StreamingSessionKi
 class TestStreamingSessionEagleRetractLargePage(
     StreamingSessionServerBase, StreamingSessionKitMixin
 ):
-    """EAGLE3 spec v1 + retract + page=256: max-pressure on `_free_tail`
-    (spec tail + retract alloc-commit gap + page alignment)."""
+    """EAGLE3 spec v2 (overlap disabled) + retract + page=256: max-pressure on
+    `_free_tail` (spec tail + retract alloc-commit gap + page alignment).
+    Inherited count jitters {0, -1} — see kit's note."""
 
     kv_inherit_offset = -1
-    model = DEFAULT_TARGET_MODEL_EAGLE3
+    model = QWEN3_8B_WEIGHTS_PATH
     extra_args = [
+        *_ASCEND_COMMON_ARGS,
         "--disable-overlap-schedule",
         "--chunked-prefill-size",
         "4096",
