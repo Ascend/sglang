@@ -95,11 +95,11 @@ jobs:
       matrix:
         test_config:
           - name: test_npu_metrics
-            runner: linux-aarch64-a3-1
+            runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/basic_function/logging/test_npu_metrics.py
             test_type: 'function'
           - name: test_npu_tracing
-            runner: linux-aarch64-a3-1
+            runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/basic_function/logging/test_npu_tracing.py
             test_type: 'function'
           - name: test_npu_tracing_disaggregation
@@ -107,7 +107,7 @@ jobs:
             test_case: test/registered/ascend/basic_function/logging/test_npu_tracing_disaggregation.py
             test_type: 'function'
           - name: test_npu_enable_forward_pass_metrics
-            runner: linux-aarch64-a3-1
+            runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/basic_function/logging/test_npu_enable_forward_pass_metrics.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
