@@ -998,16 +998,75 @@ jobs:
       - nightly-poc-multi-node-tests
       - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     steps:
-      - name: Check job status
+      - name: Download all metrics
+        uses: actions/download-artifact@v4
+        with:
+          pattern: metrics-*
+          path: /tmp/metrics
+          merge-multiple: false
+
+      - name: Generate results table
         run: |
-          FAILED=0
-          echo "=== Check non-skipped jobs ==="
-          ${{ contains(needs.*.result, 'failure') }} && FAILED=1
-          ${{ contains(needs.*.result, 'cancelled') }} && FAILED=1
-          if [ $FAILED -eq 1 ]; then
-            echo "❌ Some jobs failed or cancelled"
-            exit 1
+          group_icon() {
+            case "$1" in
+              success)   echo "✅" ;;
+              failure)   echo "❌" ;;
+              cancelled) echo "⏭️" ;;
+              skipped)   echo "⏭️" ;;
+              *)         echo "❓" ;;
+            esac
+          }
+
+          single_result="${{ needs.nightly-poc-single-node-tests.result }}"
+          multi_result="${{ needs.nightly-poc-multi-node-tests.result }}"
+          mix_result="${{ needs.nightly-poc-multi-node-mix-tests.result }}"
+
+          echo "## Full Test POC Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Group | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| single-node-poc | $(group_icon ${single_result}) ${single_result} |" >> $GITHUB_STEP_SUMMARY
+          echo "| multi-node-poc | $(group_icon ${multi_result}) ${multi_result} |" >> $GITHUB_STEP_SUMMARY
+          echo "| multi-node-mix-poc | $(group_icon ${mix_result}) ${mix_result} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Per-Test Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          has_metrics=false
+          for dir in /tmp/metrics/metrics-*/; do
+            file="${dir}metrics.json"
+            if [ -f "$file" ]; then
+              has_metrics=true
+              echo "import json" > /tmp/parse_metrics.py
+              echo "with open('$file') as f:" >> /tmp/parse_metrics.py
+              echo "    d = json.load(f)" >> /tmp/parse_metrics.py
+              echo "tc = d.get('test_case', '-')" >> /tmp/parse_metrics.py
+              echo "tp = d.get('test_type', '-')" >> /tmp/parse_metrics.py
+              echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
+              echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
+              echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
+              echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
+              echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
+              echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
+              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
+              python3 /tmp/parse_metrics.py
+            fi
+          done > /tmp/metrics_table.txt
+
+          if [ "${has_metrics}" = "true" ]; then
+            echo "| Test Case | Type | Status | Metrics | Baseline |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|------|--------|---------|----------|" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/metrics_table.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No per-test metrics available (artifacts not found)." >> $GITHUB_STEP_SUMMARY
           fi
-          echo "✅ All selected scope jobs passed"
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          FAIL=0
+          if [ "${single_result}" != "success" ] && [ "${single_result}" != "skipped" ]; then FAIL=1; fi
+          if [ "${multi_result}" != "success" ] && [ "${multi_result}" != "skipped" ]; then FAIL=1; fi
+          if [ "${mix_result}" != "success" ] && [ "${mix_result}" != "skipped" ]; then FAIL=1; fi
+          exit $FAIL
