@@ -32,7 +32,7 @@ class TestQwen3Next(
         "1",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        #"--disable-cuda-graph",
         "--max-running-requests",
         "4",
     ]
