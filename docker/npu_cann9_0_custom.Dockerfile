@@ -100,10 +100,10 @@ RUN git clone https://github.com/sgl-project/sglang --branch $SGLANG_TAG /sgl-wo
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
-    wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
-    wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
-    unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
-    unzip ops-transformer-${SGLANG_KERNEL_NPU_TAG}-cann2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    unzip ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     chmod +x *.run && \
     ./CANN-custom_ops-none-linux.$(arch).run --install-path=/usr/local/Ascend/cann-${DEVICE_TYPE}/opp && \
     ./cann-ops-transformer-custom_linux-$(arch).run --install-path=/usr/local/Ascend/cann-${DEVICE_TYPE}/opp && \
