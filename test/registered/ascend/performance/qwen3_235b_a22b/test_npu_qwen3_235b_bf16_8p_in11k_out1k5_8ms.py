@@ -88,6 +88,7 @@ class TestQwen235B(TestAscendPerformanceTestCaseBase):
     output_token_throughput = 118.67
     seed = 1
 
+
     def test_qwen3_235b(self):
         self.run_throughput()
 
