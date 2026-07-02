@@ -103,6 +103,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     random_range_ratio = 1
     image_resolution = "1024x1024"
     image_count = 1
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     output_token_throughput = 2382.2

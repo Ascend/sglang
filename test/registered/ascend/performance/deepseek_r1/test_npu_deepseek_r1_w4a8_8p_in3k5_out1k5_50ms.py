@@ -23,9 +23,9 @@ MODEL_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "56",
-    "HCCL_BUFFSIZE": "1200",
+    "HCCL_BUFFSIZE": "2000",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "10",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "512",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "SGLANG_NPU_USE_MLAPO": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
@@ -51,7 +51,7 @@ MODEL_OTHER_ARGS = [
     12,
     14,
     "--mem-fraction-static",
-    0.77,
+    0.9,
     "--max-running-requests",
     224,
     "--context-length",
@@ -83,6 +83,8 @@ MODEL_OTHER_ARGS = [
     "deepseek-r1",
     "--tool-call-parser",
     "deepseekv3",
+    "--max-total-tokens",
+    112500,
 ]
 
 
@@ -98,6 +100,7 @@ class TestNPUDeepSeekR1W4A8(TestAscendPerformanceTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 3457.1
 

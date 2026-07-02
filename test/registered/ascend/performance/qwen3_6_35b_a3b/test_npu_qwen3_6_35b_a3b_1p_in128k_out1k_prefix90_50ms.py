@@ -99,6 +99,7 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     output_len = 1000
     random_range_ratio = 1
     repeat_rate = 0.9
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     output_token_throughput = 308.2

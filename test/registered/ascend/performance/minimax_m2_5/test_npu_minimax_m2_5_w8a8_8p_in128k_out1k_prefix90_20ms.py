@@ -104,6 +104,7 @@ class TestNPUMiniMaxM2_5W8A8_8P_In128k_Out1k_Prefix90_20ms(
     output_len = 1024
     random_range_ratio = 1
     repeat_rate = 0.9
+    seed = 1
     tpot = 24.44
     output_token_throughput = 66.29
     request_rate = float("inf")

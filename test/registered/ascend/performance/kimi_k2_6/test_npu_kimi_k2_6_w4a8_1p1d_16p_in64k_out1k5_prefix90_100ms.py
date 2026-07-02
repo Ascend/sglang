@@ -172,6 +172,7 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In64k_Out1k5_Prefix90_100ms(
     input_len = 64000
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     ttft = 3000
     pop_sglang_is_in_ci_for_gsp = True
     tpot = 100

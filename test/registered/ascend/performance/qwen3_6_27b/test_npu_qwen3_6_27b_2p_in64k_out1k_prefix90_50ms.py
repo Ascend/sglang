@@ -100,6 +100,7 @@ class TestNPUQwen3_6_27B_1P_In64k_Out1k_Prefix90_50ms(
     repeat_rate = 0.9
     request_rate = float("inf")
     warmup_requests = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 225
 

@@ -101,6 +101,7 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     random_range_ratio = 1
     image_resolution = "1920x1080"
     image_count = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 226
 

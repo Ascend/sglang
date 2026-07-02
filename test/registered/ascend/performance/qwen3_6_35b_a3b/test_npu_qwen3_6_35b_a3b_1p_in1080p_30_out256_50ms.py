@@ -106,6 +106,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1080p_30_Out256_50ms(
     random_range_ratio = 1
     image_resolution = "1920x1080"
     image_count = 1
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     output_token_throughput = 534.3
