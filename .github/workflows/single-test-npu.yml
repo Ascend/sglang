@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 8: Qwen3Next MambaCache - add disable-radix-cache, mem-fraction-static, suite full-16-npu-a3
+# test round 1: Qwen3 Next Mamba Cache Test
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-16
+    runs-on: linux-aarch64-a3-2
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B080
     steps:
@@ -70,10 +70,6 @@ jobs:
           mkdir -p ${ascend_test_util_path}
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-
-          # Copy fixed NPU backend to override image version
-          cp ${sglang_source_path}/python/sglang/srt/hardware_backend/npu/attention/ascend_hybrid_linear_attn_backend.py \
-             ${sglang_pkg_path}/sglang/srt/hardware_backend/npu/attention/
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true

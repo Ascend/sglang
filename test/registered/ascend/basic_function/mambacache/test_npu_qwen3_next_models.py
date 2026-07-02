@@ -9,7 +9,7 @@ from sglang.test.kits.kl_divergence_kit import KLDivergenceMixin
 from sglang.test.kits.prefix_cache_branching_kit import PrefixCacheBranchingMixin
 from sglang.test.server_fixtures.default_fixture import DefaultServerBase
 
-register_npu_ci(est_time=600, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
 
 
 class TestQwen3Next(
@@ -20,9 +20,6 @@ class TestQwen3Next(
     gsm8k_accuracy_thres = 0.93
     kl_div_thres = 0.0025
     other_args = [
-        "--trust-remote-code",
-        "--mem-fraction-static",
-        "0.5",
         "--tp-size",
         "4",
         "--chunked-prefill-size",
@@ -36,7 +33,8 @@ class TestQwen3Next(
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--disable-radix-cache",
+        "--max-running-requests",
+        "4",
     ]
 
 
