@@ -9,7 +9,7 @@ import zmq
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=120, suite="full-1-npu-a1", nightly=True)
+register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 
 class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
