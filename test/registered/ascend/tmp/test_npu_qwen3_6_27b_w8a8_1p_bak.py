@@ -15,7 +15,6 @@ from sglang.test.ascend.test_ascend_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     popen_launch_server,
 )
@@ -109,7 +108,7 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase)
     def setUpClass(cls):
         raw_result = run_command(cmd)
         logger.info("S1、服务启动前执行npu-smi info")
-        logger.info(raw_result)
+        logger.info("----- npu-smi info -----\n%s", raw_result)
 
         cls.base_url = DEFAULT_URL_FOR_TEST
         env = os.environ.copy()
@@ -126,7 +125,7 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase)
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=3000,
             other_args=other_args,
             env=env,
             return_stdout_stderr=(cls.out, cls.err),
@@ -135,16 +134,16 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase)
     def test_1(self):
         logger.info("S3、记录HCCL初始化完成后、模型加载前，通信域内存占用")
         res1 = run_command("cat ./err_log.txt | grep 'Init torch distributed ends'")
-        logger.info(res1)
+        logger.info("----- 通信域内存占用 -----\n%s", res1)
         logger.info("S4、记录模型加载后，模型权重内存占用")
         res2 = run_command("cat ./err_log.txt | grep 'Load weight end'")
-        logger.info(res2)
+        logger.info("----- 模型权重内存占用 -----\n%s", res2)
         logger.info("S5、记录KV cache分配后，KV cache内存占用")
         res3 = run_command("cat ./err_log.txt | grep 'KV Cache is allocated'")
-        logger.info(res3)
+        logger.info("----- KV cache内存占用 -----\n%s", res3)
         logger.info("S6、记录NPU graph buffer分配后，NPU graph buffer内存占用")
         res4 = run_command("cat ./err_log.txt | grep 'Capture npu graph end'")
-        logger.info(res4)
+        logger.info("----- NPU graph buffer内存占用 -----\n%s", res4)
         logger.info("S7、服务启动成功后执行npu-smi info")
         raw_result = run_command(cmd)
         logger.info(raw_result)
@@ -177,7 +176,7 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase)
 
         logger.info("S9、请求完成，最终 npu-smi info")
         raw_result = run_command(cmd)
-        logger.info(raw_result)
+        logger.info("----- npu-smi info -----\n%s", raw_result)
 
     def test_3(self):
         if self.process:
@@ -193,9 +192,9 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBase)
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
         logger.info("S9、停止服务，等待服务完全停止后，记录每张卡的HBM内存占用和总内")
-        time.sleep(31)
+        time.sleep(30)
         raw_result = run_command(cmd)
-        logger.info(raw_result)
+        logger.info("----- npu-smi info -----\n%s", raw_result)
 
     @classmethod
     def tearDownClass(cls):

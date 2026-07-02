@@ -29,13 +29,15 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "INF_NAN_MODE_FORCE_DISABLE": "1",
-    "HCCL_BUFFSIZE": "2000",
+    "SGLANG_SET_CPU_AFFINITY": "1",
+    "HCCL_SOCKET_IFNAME": "lo",
+    "GLOO_SOCKET_IFNAME": "lo",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "HCCL_BUFFSIZE": "1000",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
-    "IS_DEEPSEEK_V4": "1",
-    "USE_FUSED_HC_PRE_ASCENDC": "1",
-    "SGLANG_DSV4_NPU_FUSED_COMPRESSOR": "1",
-    "SGLANG_DSV4_NPU_FUSED_COMPRESSOR_PREFILL": "0",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
+    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
     "FORCE_DRAFT_MODEL_NON_QUANT": "1",
@@ -46,43 +48,56 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
+    "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
 DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS = [
+    "--page-size",
+    128,
+    "--tp-size",
+    16,
     "--trust-remote-code",
     "--attention-backend",
     "dsv4",
-    "--quantization",
-    "modelslim",
-    "--kv-cache-dtype",
-    "auto",
-    "--tp-size",
-    16,
+    "--watchdog-timeout",
+    9000,
+    "--mem-fraction-static",
+    0.85,
+    "--prefill-max-requests",
+    2,
+    "--disable-radix-cache",
+    "--chunked-prefill-size",
+    -1,
+    "--max-running-requests",
+    160,
     "--dp-size",
     16,
     "--enable-dp-attention",
-    "--enable-dp-lm-head",
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
     "auto",
-    "--page-size",
-    128,
-    "--max-running-requests",
-    16,
-    "--mem-fraction-static",
-    0.65,
-    "--disable-radix-cache",
-    "--chunked-prefill-size",
-    -1,
-    "--disable-overlap-schedule",
-    "--skip-server-warmup",
-    "--watchdog-timeout",
-    9000,
+    "--quantization",
+    "modelslim",
+    "--enable-dp-lm-head",
+    "--kv-cache-dtype",
+    "bfloat16",
     "--cuda-graph-bs",
     1,
     2,
     4,
+    8,
+    10,
+    "--speculative-algorithm",
+    "EAGLE",
+    "--speculative-num-steps",
+    "2",
+    "--speculative-eagle-topk",
+    "1",
+    "--speculative-num-draft-tokens",
+    "3",
+    "--skip-server-warmup",
 ]
 
 cmd = "npu-smi info"
@@ -105,7 +120,7 @@ class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
     def setUpClass(cls):
         raw_result = run_command(cmd)
         logger.info("S1、服务启动前执行npu-smi info")
-        logger.info(raw_result)
+        logger.info("----- npu-smi info -----\n%s", raw_result)
 
         cls.base_url = DEFAULT_URL_FOR_TEST
         env = os.environ.copy()
@@ -131,16 +146,16 @@ class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
     def test_1(self):
         logger.info("S3、记录HCCL初始化完成后、模型加载前，通信域内存占用")
         res1 = run_command("cat ./err_log.txt | grep 'Init torch distributed ends'")
-        logger.info(res1)
+        logger.info("----- 通信域内存占用 -----\n%s", res1)
         logger.info("S4、记录模型加载后，模型权重内存占用")
         res2 = run_command("cat ./err_log.txt | grep 'Load weight end'")
-        logger.info(res2)
+        logger.info("----- 模型权重内存占用 -----\n%s", res2)
         logger.info("S5、记录KV cache分配后，KV cache内存占用")
         res3 = run_command("cat ./err_log.txt | grep 'KV Cache is allocated'")
-        logger.info(res3)
+        logger.info("----- KV cache内存占用 -----\n%s", res3)
         logger.info("S6、记录NPU graph buffer分配后，NPU graph buffer内存占用")
         res4 = run_command("cat ./err_log.txt | grep 'Capture npu graph end'")
-        logger.info(res4)
+        logger.info("----- NPU graph buffer内存占用 -----\n%s", res4)
         logger.info("S7、服务启动成功后执行npu-smi info")
         raw_result = run_command(cmd)
         logger.info(raw_result)
@@ -173,7 +188,7 @@ class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
 
         logger.info("S9、请求完成，最终 npu-smi info")
         raw_result = run_command(cmd)
-        logger.info(raw_result)
+        logger.info("----- npu-smi info -----\n%s", raw_result)
 
     def test_3(self):
         if self.process:
@@ -191,7 +206,7 @@ class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
         logger.info("S9、停止服务，等待服务完全停止后，记录每张卡的HBM内存占用和总内")
         time.sleep(30)
         raw_result = run_command(cmd)
-        logger.info(raw_result)
+        logger.info("----- npu-smi info -----\n%s", raw_result)
 
     @classmethod
     def tearDownClass(cls):
