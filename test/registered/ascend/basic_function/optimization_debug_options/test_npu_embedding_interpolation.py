@@ -1,4 +1,5 @@
 import os
+import time
 import unittest
 
 import requests
@@ -27,7 +28,7 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
     """
 
     model = QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH
-    base_url = DEFAULT_URL_FOR_TEST
+
     server_args = [
         "--trust-remote-code",
         "--enable-multimodal",
@@ -37,7 +38,7 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
         "0.8",
     ]
 
-    def _launch_server(self, extra_args=None):
+    def _launch_server(self, base_url, extra_args=None):
         env = os.environ.copy()
         # The parameter is only read inside the ViT cuda-graph path
         # (_prepare_graph_inputs → fast_pos_embed_interpolate).
@@ -50,15 +51,20 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
 
         self.process = popen_launch_server(
             self.model,
-            self.base_url,
+            base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
             env=env,
         )
 
-    def _image_request(self):
+    def _cleanup(self):
+        if hasattr(self, "process") and self.process is not None:
+            kill_process_tree(self.process.pid)
+            self.process = None
+
+    def _image_request(self, base_url):
         return requests.post(
-            f"{self.base_url}/v1/chat/completions",
+            f"{base_url}/v1/chat/completions",
             json={
                 "model": "default",
                 "messages": [
@@ -77,25 +83,52 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
                     },
                 ],
                 "temperature": 0,
+                # Limit output to keep inference predictable;
+                # a single-sentence description is well under 128 tokens.
+                "max_tokens": 128,
             },
         )
 
     def test_precise_embedding_interpolation_contrastive(self):
-        # Run WITH --enable-precise-embedding-interpolation
-        self._launch_server(
-            extra_args=["--enable-precise-embedding-interpolation"]
-        )
-        resp_enabled = self._image_request()
-        self.assertEqual(resp_enabled.status_code, 200)
-        text_enabled = resp_enabled.json()["choices"][0]["message"]["content"]
-        kill_process_tree(self.process.pid)
+        # Port for the second launch (first uses DEFAULT_URL_FOR_TEST).
+        # Sequential launch/teardown on the same port risks TIME_WAIT.
+        alt_url = "http://127.0.0.1:23001"
 
-        # Run WITHOUT the flag (default: False)
-        self._launch_server()
-        resp_default = self._image_request()
-        self.assertEqual(resp_default.status_code, 200)
-        text_default = resp_default.json()["choices"][0]["message"]["content"]
-        kill_process_tree(self.process.pid)
+        # ---- Launch WITH --enable-precise-embedding-interpolation ----
+        self._launch_server(
+            base_url=DEFAULT_URL_FOR_TEST,
+            extra_args=["--enable-precise-embedding-interpolation"],
+        )
+        try:
+            resp_enabled = self._image_request(DEFAULT_URL_FOR_TEST)
+            self.assertEqual(
+                resp_enabled.status_code,
+                200,
+                f"Image request failed (flag=enabled): HTTP {resp_enabled.status_code} "
+                f"— check whether {IMAGE_MAN_IRONING_URL} is reachable",
+            )
+            text_enabled = resp_enabled.json()["choices"][0]["message"]["content"]
+        finally:
+            self._cleanup()
+
+        # Brief pause so the OS releases the first port before binding
+        # the second one.  Together with using a different port this
+        # eliminates any TIME_WAIT race.
+        time.sleep(2)
+
+        # ---- Launch WITHOUT the flag (default: False) ----
+        self._launch_server(base_url=alt_url)
+        try:
+            resp_default = self._image_request(alt_url)
+            self.assertEqual(
+                resp_default.status_code,
+                200,
+                f"Image request failed (flag=default): HTTP {resp_default.status_code} "
+                f"— check whether {IMAGE_MAN_IRONING_URL} is reachable",
+            )
+            text_default = resp_default.json()["choices"][0]["message"]["content"]
+        finally:
+            self._cleanup()
 
         # Both outputs should describe the same image
         for text in (text_enabled, text_default):
@@ -109,12 +142,18 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
                 f"Expected vehicle-related word in: {text}",
             )
 
-        # Core assertion: outputs differ, proving the flag changes interpolation
+        # Core assertion: outputs differ, proving the flag changes interpolation.
+        # If this fails with identical outputs it may indicate the ViT graph path
+        # is not active (silent fallback to eager, which hardcodes align_corners=True
+        # regardless of the flag) or the flag is no longer read at model init.
         self.assertNotEqual(
             text_enabled,
             text_default,
             "Outputs should differ because --enable-precise-embedding-interpolation "
-            "changes _get_interpolation_indices (align_corners=True vs False)",
+            "changes _get_interpolation_indices (align_corners=True vs False). "
+            "Identical outputs may mean the ViT graph path is not active "
+            "(SGLANG_VIT_ENABLE_CUDA_GRAPH fallback to eager) or the flag is "
+            "not being read at model init time.",
         )
 
 
