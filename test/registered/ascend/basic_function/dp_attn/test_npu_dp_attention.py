@@ -55,11 +55,12 @@ class TestDPAttentionDP2TP2(
                 "--enable-dp-attention",
                 "--dp",
                 "2",
+                "--attention-backend",
+                "ascend",
+                "--disable-cuda-graph",
                 "--enable-torch-compile",
                 "--torch-compile-max-bs",
                 "2",
-                "--attention-backend",
-                "ascend",
             ],
         )
 

@@ -78,6 +78,7 @@ class TestEplbMinRebalancingUtilizationThresholdBase(CustomTestCase):
                 "HCCL_BUFFSIZE": "1024",
                 "SGLANG_DEEPEP_BF16_DISPATCH": "1",
                 "TRANSFORMERS_VERBOSITY": "error",
+                "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
                 **os.environ,
             },
             return_stdout_stderr=(cls.out_file, cls.err_file),

@@ -52,28 +52,32 @@ class TestAscendCudaGraphGC(unittest.TestCase):
         if enable_cudagraph_gc:
             other_args.append("--enable-cudagraph-gc")
 
-        # Start server and redirect log
-        with open(self.gc_log, "w", encoding="utf-8") as f:
-            self.server_process = popen_launch_server(
-                self.model,
-                DEFAULT_URL_FOR_TEST,
-                timeout=3600,
-                other_args=other_args,
-                return_stdout_stderr=(f, f),
+        try:
+            # Start server and redirect log
+            with open(self.gc_log, "w", encoding="utf-8") as f:
+                TestAscendCudaGraphGC.server_process = popen_launch_server(
+                    self.model,
+                    DEFAULT_URL_FOR_TEST,
+                    timeout=3600,
+                    other_args=other_args,
+                    return_stdout_stderr=(f, f),
+                )
+
+            # Parse available memory from log
+            with open(self.gc_log, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            match = re.search(
+                r"Capture.*graph end\..*avail mem=([\d\.]+) GB", content, re.IGNORECASE
             )
+            self.assertIsNotNone(match, "Capture npu graph end log not found")
 
-        # Parse available memory from log
-        with open(self.gc_log, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        match = re.search(r"Capture npu graph end\..*avail mem=([\d\.]+) GB", content)
-        self.assertIsNotNone(match, "Capture npu graph end log not found")
-
-        avail_mem = float(match.group(1))
-        kill_process_tree(self.server_process.pid)
-        self.server_process = None
-
-        return avail_mem
+            avail_mem = float(match.group(1))
+            return avail_mem
+        finally:
+            if TestAscendCudaGraphGC.server_process:
+                kill_process_tree(TestAscendCudaGraphGC.server_process.pid)
+                TestAscendCudaGraphGC.server_process = None
 
     def test_gc_avail_mem_comparison(self):
         # Disable cudagraph GC

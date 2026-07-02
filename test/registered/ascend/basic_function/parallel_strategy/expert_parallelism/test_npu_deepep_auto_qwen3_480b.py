@@ -82,6 +82,7 @@ class TestDeepEpQwen(CustomTestCase):
                 "HCCL_BUFFSIZE": "2100",
                 "HCCL_OP_EXPANSION_MODE": "AIV",
                 "TRANSFORMERS_VERBOSITY": "error",
+                "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
                 **os.environ,
             },
         )

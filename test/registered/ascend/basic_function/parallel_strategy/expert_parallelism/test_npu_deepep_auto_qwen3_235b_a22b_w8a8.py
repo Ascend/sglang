@@ -59,6 +59,7 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
                 "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "512",
                 "HCCL_BUFFSIZE": "2048",
                 "TRANSFORMERS_VERBOSITY": "error",
+                "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
                 **os.environ,
             },
         )
