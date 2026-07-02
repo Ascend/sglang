@@ -1878,6 +1878,9 @@ test/registered/ascend/basic_function/optimization_debug_options/
 | `test_npu_torch_compile_debug.py` | **测试代码 bug** | import 使用了 `test_ascend_utils.py` 中不存在的常量 `QWEN3_14B_WEIGHTS_PATH`，导致 `ImportError` 直接退出。已修复为 `QWEN3_8B_WEIGHTS_PATH` |
 | `test_npu_embedding_interpolation.py` | **产品问题** | `SGLANG_VIT_ENABLE_CUDA_GRAPH=true` 触发 NPU ViT graph runner (`vit_npu_graph_runner.py:83`)，但该 runner 仅支持 `ascend_attn` backend，Qwen3-VL 走其他 backend → `RuntimeError("Not supported ViT attention backend")`。需 NPU ViT graph 支持 Qwen3-VL 后方可验证 |
 
+> 同 run 中新增 `test_npu_msprobe_dump_config.py`（`--msprobe-dump-config`）亦失败，耗时 617s。
+> `TimeoutError`: `mindstudio-probe 26.0.0` 已安装，`PrecisionDebugger.start()` → step0 dump 正常完成，step1 启动后 server 静默挂死，600s 未就绪。需 msprobe 团队排查集成兼容性。
+
 ---
 
 ## 5. 弃用参数汇总
