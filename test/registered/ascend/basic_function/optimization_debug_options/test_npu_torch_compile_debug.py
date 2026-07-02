@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_32B_WEIGHTS_PATH, QWEN3_14B_WEIGHTS_PATH
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -11,6 +12,8 @@ from sglang.test.test_utils import (
     popen_launch_server,
     CustomTestCase,
 )
+
+register_npu_ci(est_time=400, suite="debug-full-1-npu-a3", nightly=True)
 
 
 class TestEnableTorchCompileDebugMode(CustomTestCase):
