@@ -393,6 +393,68 @@ def _verify_metrics_common(test_case, metrics_text, metrics, expect_mfu_metrics:
 _DI_MARKER_PATH = "/tmp/sglang_di_test_marker"
 
 
+class TestNPUMetricsExtraLabels(_BaseTestNPUMetrics):
+    """Test that --extra-metric-labels injects constant labels into all metrics.
+
+    [Description]
+        Validates that when --extra-metric-labels is provided, all Prometheus
+        metrics exported by the server carry the specified labels unchanged.
+        This test checks label presence, correctness, and consistency across
+        multiple metric families (counters, gauges, histograms).
+
+    [Test Category] Functionality
+    [Test Target] --extra-metric-labels
+    """
+
+    metrics_args = [
+        "--enable-metrics",
+        "--extra-metric-labels",
+        '{"env":"prod","team":"npu-inference","region":"us-east-1"}',
+    ]
+
+    def test_extra_metric_labels(self):
+        metrics_response = requests.get(f"{self.base_url}/metrics")
+        self.assertEqual(metrics_response.status_code, 200)
+        metrics_text = metrics_response.text
+
+        expected_labels = {
+            "env": "prod",
+            "team": "npu-inference",
+            "region": "us-east-1",
+        }
+
+        # 1. Raw text sanity check
+        for k, v in expected_labels.items():
+            self.assertIn(f'{k}="{v}"', metrics_text)
+
+        # 2. Parsed metrics structural check
+        metrics = _parse_prometheus_metrics(metrics_text)
+
+        # Pick a representative set of metrics to verify
+        metrics_to_check = [
+            "sglang:num_running_reqs",
+            "sglang:prompt_tokens_total",
+            "sglang:generation_tokens_total",
+            "sglang:time_to_first_token_seconds_sum",
+            "sglang:forward_execution_seconds_total",
+        ]
+
+        for metric_name in metrics_to_check:
+            self.assertIn(metric_name, metrics, f"Missing metric: {metric_name}")
+
+            samples = metrics[metric_name]
+            self.assertGreater(len(samples), 0, f"{metric_name} has no samples")
+
+            for sample in samples:
+                for k, v in expected_labels.items():
+                    self.assertEqual(
+                        sample.labels.get(k),
+                        v,
+                        f"{metric_name}: label {k} mismatch: "
+                        f"got {sample.labels.get(k)}, want {v}",
+                    )
+
+
 class _MarkingSchedulerCollector(SchedulerMetricsCollector):
     """Records its own instantiation to a file so the test can verify the
     custom subclass was used in the scheduler subprocess.
