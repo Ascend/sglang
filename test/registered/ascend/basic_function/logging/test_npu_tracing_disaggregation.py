@@ -101,8 +101,8 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             "localhost:4317",
             "--dist-init-addr",
             "127.0.0.1:10000",
-            "--trace-modules",
-            "request",
+            # "--trace-modules",
+            # "request",
         ]
 
         cls.process_decode = popen_launch_pd_server(

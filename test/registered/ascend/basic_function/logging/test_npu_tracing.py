@@ -165,6 +165,9 @@ class TestNPUTracing(TestNPULoggingBase):
                     f"1111111111111111111111111111111111111111111111111111111111\n {span_names}"
                 )
                 matched = [name for name in expected_spans if name in span_names]
+                logger.info(
+                    f"2222222222222222222222222222222222222222222222222222222222\n {matched}"
+                )
                 self.assertGreater(
                     len(matched),
                     0,
