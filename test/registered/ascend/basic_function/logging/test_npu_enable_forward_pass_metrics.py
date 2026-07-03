@@ -20,8 +20,8 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     # -----------------------------
     # Constants
     # -----------------------------
-    ipc_name = f"/tmp/sglang-test-fwd-metrics-{os.getpid()}"
-    ipc_url = f"ipc://{ipc_name}"
+    ipc_path = f"/tmp/sglang-test-fwd-metrics-{os.getpid()}"
+    ipc_endpoint = f"ipc://{ipc_path}"
 
     zmq_rcv_timeout_ms = 5000
 
@@ -30,7 +30,7 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
         "--forward-pass-metrics-worker-id",
         "should-be-overridden",
         "--forward-pass-metrics-ipc-name",
-        ipc_name,
+        ipc_endpoint,
     ]
 
     # -----------------------------
@@ -56,7 +56,7 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
         cls._zmq_sub = cls._zmq_ctx.socket(zmq.SUB)
         cls._zmq_sub.setsockopt_string(zmq.SUBSCRIBE, "")
         cls._zmq_sub.setsockopt(zmq.RCVTIMEO, cls.zmq_rcv_timeout_ms)
-        cls._zmq_sub.connect(cls.ipc_url)
+        cls._zmq_sub.connect(cls.ipc_endpoint)
 
     @classmethod
     def tearDownClass(cls):
@@ -71,7 +71,7 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     # Test case
     # -----------------------------
     def test_forward_pass_metrics_all_args_configured(self):
-        ipc_path = Path(self.ipc_name)
+        ipc_path = Path(self.ipc_path)
 
         # --- Trigger forward pass ---
         resp = requests.post(
@@ -94,7 +94,7 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
             metric = json.loads(self._zmq_sub.recv_string())
         except zmq.Again:
             self.fail(
-                f"No forward-pass metrics received on {self.ipc_url}. "
+                f"No forward-pass metrics received on {self.ipc_endpoint}. "
                 f"IPC exists: {ipc_path.exists()}, server: {self.base_url}"
             )
 
