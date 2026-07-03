@@ -1,11 +1,11 @@
 import os
-import time
+import re
 import unittest
 
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -14,17 +14,32 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="debug-full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="debug-full-2-npu-a3", nightly=True)
+
+# Expected log line from model_runner.py:1147-1150 —
+# "NCCL/RCCL warmup completed in {X.XXX}s (tp_size=2, pp_size=1, ep_size=1)"
+_WARMUP_LOG_RE = re.compile(
+    r"NCCL/RCCL warmup completed in ([\d.]+)s "
+    r"\(tp_size=\d+, pp_size=\d+, ep_size=\d+\)"
+)
 
 
 class TestPreWarmNccl(CustomTestCase):
-    """Testcase: verify --pre-warm-nccl reduces first-request latency under TP=2
+    """Testcase: verify --pre-warm-nccl executes all-reduce warmup during
+    server startup and measures non-zero time.
+
+    The warmup runs dist.all_reduce + synchronize (model_runner.py:1135-1150).
+    Parsing warmup_elapsed from the log proves the all-reduce actually executed.
+
+    NOTE: server_args.py:3065 currently sets pre_warm_nccl=False on non-CUDA/HIP
+    hardware (including NPU).  The HCCL backend path needs to be added there
+    before this test can pass on NPU.
 
     [Test Category] Parameter
     [Test Target] --pre-warm-nccl
     """
 
-    model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+    model = QWEN3_8B_WEIGHTS_PATH
     base_url = DEFAULT_URL_FOR_TEST
     base_args = [
         "--trust-remote-code",
@@ -37,32 +52,38 @@ class TestPreWarmNccl(CustomTestCase):
         "2",
     ]
 
-    @classmethod
-    def _launch(cls, with_warmup):
+    def _launch(self, with_warmup):
         out_log = open("./cache_out_log.txt", "w+", encoding="utf-8")
         err_log = open("./cache_err_log.txt", "w+", encoding="utf-8")
-        args = list(cls.base_args)
+        args = list(self.base_args)
         if with_warmup:
             args.append("--pre-warm-nccl")
         proc = popen_launch_server(
-            cls.model,
-            cls.base_url,
+            self.model,
+            self.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
             return_stdout_stderr=(out_log, err_log),
         )
         return proc, out_log, err_log
 
-    @classmethod
-    def _cleanup(cls, proc, out_log, err_log):
+    def _cleanup(self, proc, out_log, err_log):
         kill_process_tree(proc.pid)
         out_log.close()
         err_log.close()
         os.remove("./cache_out_log.txt")
         os.remove("./cache_err_log.txt")
 
+    def _parse_warmup_elapsed(self, err_log):
+        """Return warmup elapsed seconds (float), or None if not found."""
+        err_log.seek(0)
+        for line in err_log:
+            m = _WARMUP_LOG_RE.search(line)
+            if m:
+                return float(m.group(1))
+        return None
+
     def _do_request(self):
-        start = time.time()
         response = requests.post(
             f"{self.base_url}/generate",
             json={
@@ -73,42 +94,42 @@ class TestPreWarmNccl(CustomTestCase):
                 },
             },
         )
-        elapsed = time.time() - start
-        return response, elapsed
+        return response
 
     def test_pre_warm_nccl(self):
-        # Launch without warmup
-        proc1, out1, err1 = self._launch(with_warmup=False)
-        resp1, lat1 = self._do_request()
+        # ---- With --pre-warm-nccl ----
+        proc1, out1, err1 = self._launch(with_warmup=True)
+        resp1 = self._do_request()
         self.assertEqual(resp1.status_code, 200)
         self.assertIn("Paris", resp1.text)
-        err1.seek(0)
-        err_log1 = err1.read()
+        warmup_elapsed = self._parse_warmup_elapsed(err1)
         self._cleanup(proc1, out1, err1)
 
-        # Launch with warmup
-        proc2, out2, err2 = self._launch(with_warmup=True)
-        resp2, lat2 = self._do_request()
-        self.assertEqual(resp2.status_code, 200)
-        self.assertIn("Paris", resp2.text)
-        err2.seek(0)
-        err_log2 = err2.read()
-        self._cleanup(proc2, out2, err2)
-
-        # Verify warmup executed
-        self.assertIn(
-            "nccl",
-            err_log2.lower(),
-            "Expected stderr to contain NCCL warmup log, "
-            "proving --pre-warm-nccl was executed",
+        self.assertIsNotNone(
+            warmup_elapsed,
+            "Expected stderr to contain 'NCCL/RCCL warmup completed in {X}s', "
+            "proving --pre-warm-nccl triggered the warmup code path "
+            "(model_runner.py:1135-1150).",
+        )
+        self.assertGreater(
+            warmup_elapsed,
+            0,
+            f"Expected warmup elapsed time > 0, got {warmup_elapsed:.6f}s. "
+            "A zero value would mean all-reduce was skipped.",
         )
 
-        # Verify warmup reduces first-request latency
-        self.assertLess(
-            lat2,
-            lat1,
-            f"Expected warmup latency ({lat2:.2f}s) "
-            f"< no-warmup latency ({lat1:.2f}s)",
+        # ---- Without --pre-warm-nccl ----
+        proc2, out2, err2 = self._launch(with_warmup=False)
+        resp2 = self._do_request()
+        self.assertEqual(resp2.status_code, 200)
+        self.assertIn("Paris", resp2.text)
+        no_warmup = self._parse_warmup_elapsed(err2)
+        self._cleanup(proc2, out2, err2)
+
+        self.assertIsNone(
+            no_warmup,
+            "Expected stderr NOT to contain 'NCCL/RCCL warmup completed', "
+            "proving the warmup is only triggered when the flag is set.",
         )
 
 

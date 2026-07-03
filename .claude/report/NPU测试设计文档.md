@@ -1883,6 +1883,24 @@ test/registered/ascend/basic_function/optimization_debug_options/
 
 ---
 
+### Run #28595366438 (2026-07-02 13:52 UTC) — PR #886
+
+#### debug-full-1-npu-a3
+
+| 文件 | 参数 | 结果 | 耗时 | 备注 |
+|------|------|------|------|------|
+| `test_npu_model_tokenizer_multimodal.py` | 综合 | ✅ | 109s | 🆕 首次通过 |
+| `test_npu_openai_embedding.py` | 综合 | ✅ | 112s | 🆕 首次通过 |
+| `test_npu_torch_compile_debug.py` | `--enable-torch-compile-debug-mode` | ✅ | 428s | 🆕 修复已验证 |
+
+#### debug-full-2-npu-a3
+
+| 文件 | 参数 | 结果 | 耗时 | 备注 |
+|------|------|------|------|------|
+| `test_npu_dp_attention.py` | `--enable-dp-attention-local-control-broadcast` | ✅ | 117s | 🆕 首次通过 |
+
+---
+
 ## 5. 弃用参数汇总
 
 | 旧参数 | 章节 | 别名目标 | 旧参数 GPU 覆盖 | 别名目标 GPU 覆盖 | 测试策略 |

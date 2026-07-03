@@ -185,9 +185,12 @@ class TestNpuCPStrategyAliases(_CPTestBase):
         self._run_and_check(["--enable-dsa-prefill-context-parallel"])
 
     def test_dsa_cp_mode_alias(self):
-        """in-seq-split → zigzag via legacy mode→strategy mapping."""
+        """in-seq-split → zigzag via legacy mode→strategy mapping.
+        Works with --enable-dsa-prefill-context-parallel (not --enable-prefill-cp)
+        because the legacy handler maps dsa_prefill_cp_mode only through the
+        DSA enable flag."""
         self._run_and_check(
-            ["--enable-prefill-cp", "--dsa-prefill-cp-mode", "in-seq-split"]
+            ["--enable-dsa-prefill-context-parallel", "--dsa-prefill-cp-mode", "in-seq-split"]
         )
 
 
