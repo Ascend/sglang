@@ -95,8 +95,6 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--enable-dp-lm-head",
     "--moe-dense-tp",
     1,
-    "--pp-size",
-    8,
     "--reasoning-parser",
     "glm45",
     "--tool-call-parser",
