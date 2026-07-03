@@ -185,7 +185,7 @@ class TestNPUMetricsExtraLabels(_BaseTestNPUMetrics):
         '{"env":"prod","team":"npu-inference","region":"us-east-1"}',
     ]
 
-    def test_extra_metric_labels(self):
+    def test_metric_extra_metric_labels(self):
         metrics_response = requests.get(f"{self.base_url}/metrics")
         self.assertEqual(metrics_response.status_code, 200)
         metrics_text = metrics_response.text
@@ -202,6 +202,7 @@ class TestNPUMetricsExtraLabels(_BaseTestNPUMetrics):
 
         # 2. Parsed metrics structural check
         metrics = _parse_prometheus_metrics(metrics_text)
+        print(f"extra_metric_labels_text=\n{metrics_text}")
 
         # Pick a representative set of metrics to verify
         metrics_to_check = [
