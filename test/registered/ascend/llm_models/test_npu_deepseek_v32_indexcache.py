@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -18,11 +19,31 @@ class TestDeepseekV32IndexTopkPattern(GSM8KAscendMixin, CustomTestCase):
         "--trust-remote-code",
         "--tp",
         "16",
+        "--mem-fraction-static",
+        "0.8",
+        "--attention-backend",
+        "ascend",
+        "--disable-cuda-graph",
         "--model-loader-extra-config",
         '{"enable_multithread_load": true, "num_threads": 64}',
         "--json-model-override-args",
         '{"index_topk_pattern": "FFSFSSSFSSFFFSSSFFFSFSSSSSSFFSFFSFFSSFFFFFFSFFFFFSFFSSSSSSFSF"}',
     ]
+
+    env = {
+        **os.environ,
+        "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+        "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24666",
+        "HCCL_BUFFSIZE": "200",
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "24",
+        "USE_VLLM_CUSTOM_ALLREDUCE": "1",
+        "HCCL_EXEC_TIMEOUT": "200",
+        "STREAMS_PER_DEVICE": "32",
+        "SGLANG_ENBLE_TORCH_COMILE": "1",
+        "AUTO_USE_UC_MEMORY": "0",
+        "P2P_HCCL_BUFFSIZE": "20",
+        "TRANSFORMERS_VERBOSITY": "error",
+    }
 
 
 class TestDeepseekV32IndexFreq(GSM8KAscendMixin, CustomTestCase):
@@ -33,11 +54,31 @@ class TestDeepseekV32IndexFreq(GSM8KAscendMixin, CustomTestCase):
         "--trust-remote-code",
         "--tp",
         "16",
+        "--mem-fraction-static",
+        "0.8",
+        "--attention-backend",
+        "ascend",
+        "--disable-cuda-graph",
         "--model-loader-extra-config",
         '{"enable_multithread_load": true, "num_threads": 64}',
         "--json-model-override-args",
         '{"index_topk_freq": 4}',
     ]
+
+    env = {
+        **os.environ,
+        "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+        "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24666",
+        "HCCL_BUFFSIZE": "200",
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "24",
+        "USE_VLLM_CUSTOM_ALLREDUCE": "1",
+        "HCCL_EXEC_TIMEOUT": "200",
+        "STREAMS_PER_DEVICE": "32",
+        "SGLANG_ENBLE_TORCH_COMILE": "1",
+        "AUTO_USE_UC_MEMORY": "0",
+        "P2P_HCCL_BUFFSIZE": "20",
+        "TRANSFORMERS_VERBOSITY": "error",
+    }
 
 
 if __name__ == "__main__":
