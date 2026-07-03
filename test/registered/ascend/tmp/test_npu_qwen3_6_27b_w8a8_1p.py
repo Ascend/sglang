@@ -46,7 +46,7 @@ QWEN3_6_27B_64K_1K_OTHER_ARGS = [
     "--device",
     "npu",
     "--chunked-prefill-size",
-    -1,
+    16384,
     "--max-prefill-tokens",
     48000,
     "--disable-radix-cache",
