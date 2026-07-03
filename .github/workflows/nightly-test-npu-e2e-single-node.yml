@@ -66,6 +66,7 @@ jobs:
         shell: bash
         run: |
           pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+          pip install msgpack
 
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
