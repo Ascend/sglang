@@ -121,6 +121,10 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     # Test case
     # -----------------------------
     def test_forward_pass_metrics_all_args_configured(self):
+        self.err_log_file.seek(0)
+        content = self.err_log_file.read()
+        self.assertIn(f"FPM: ZMQ PUB bound on {self.IPC_SUBSCRIBE_ENDPOINT}", content)
+
         response = requests.post(
             f"{self.base_url}/generate",
             json={
