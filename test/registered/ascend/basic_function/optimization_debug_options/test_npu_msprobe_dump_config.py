@@ -104,11 +104,19 @@ class TestNpuMsprobeDumpConfig(CustomTestCase):
             "mindstudio-probe is installed and PrecisionDebugger was created",
         )
 
-        dump_json = os.path.join(self._dump_dir, "dump.json")
+        # msprobe writes dump.json into per-step subdirectories
+        # (e.g. step31/dump.json), not at the root of the dump dir.
+        dump_files = []
+        for root, _dirs, files in os.walk(self._dump_dir):
+            for f in files:
+                if f == "dump.json":
+                    dump_files.append(os.path.join(root, f))
         self.assertTrue(
-            os.path.isfile(dump_json) and os.path.getsize(dump_json) > 0,
-            f"Expected {dump_json} to exist and be non-empty, proving "
-            "msProbe actually dumped tensor statistics during inference",
+            len(dump_files) > 0
+            and any(os.path.getsize(df) > 0 for df in dump_files),
+            f"Expected at least one non-empty dump.json under {self._dump_dir} "
+            f"to exist and be non-empty, proving msProbe actually dumped tensor "
+            f"statistics during inference. Found: {dump_files}",
         )
 
 
