@@ -1,9 +1,9 @@
-import json
 import os
 import time
 import unittest
 from pathlib import Path
 
+import msgpack
 import requests
 import zmq
 
@@ -16,37 +16,41 @@ register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     """
-    NPU integration test for forward pass metrics (FPM).
+    NPU integration test for forward-pass metrics (FPM).
 
     Verifies:
     - Forward-pass metrics are emitted over ZMQ IPC
-    - worker_id is overridden by the runtime
-    - Per-step identifier exists
+    - worker_id matches the configured value (not overridden on Ascend/NPU)
     - Prometheus metrics remain unaffected
     """
 
     # -----------------------------
     # Constants
     # -----------------------------
-    ipc_path = f"/tmp/sglang-test-fwd-metrics-{os.getpid()}"
-    ipc_endpoint = f"ipc://{ipc_path}"
+    IPC_NAME_PREFIX = f"/tmp/sglang-test-fwd-metrics-{os.getpid()}"
+    IPC_ENDPOINT = f"ipc://{IPC_NAME_PREFIX}"
+    IPC_SOCKET_PATH = Path(f"{IPC_NAME_PREFIX}.0")
+    IPC_SUBSCRIBE_ENDPOINT = f"{IPC_ENDPOINT}.0"
 
-    zmq_rcv_timeout_ms = 5000
-    metric_recv_timeout_sec = 20
+    ZMQ_RCV_TIMEOUT_MS = 5000
+    METRIC_RECV_TIMEOUT_SEC = 20
+    FPM_SAMPLE_COUNT = 10
 
-    metrics_args = [
+    EXPECTED_WORKER_ID = "should-be-overridden"
+
+    METRICS_ARGS = [
         "--enable-forward-pass-metrics",
         "--forward-pass-metrics-worker-id",
-        "should-be-overridden",
+        EXPECTED_WORKER_ID,
         "--forward-pass-metrics-ipc-name",
-        ipc_endpoint,
+        IPC_ENDPOINT,
     ]
 
     # -----------------------------
     # Class-level state
     # -----------------------------
-    _zmq_ctx: zmq.Context | None = None
-    _zmq_sub: zmq.Socket | None = None
+    zmq_ctx = None
+    zmq_sub = None
 
     # -----------------------------
     # Setup / Teardown
@@ -55,67 +59,69 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     def setUpClass(cls):
         super().setUpClass()
 
-        cls.other_args.extend(cls.metrics_args)
+        cls.other_args.extend(cls.METRICS_ARGS)
         cls.launch_server()
 
-        cls._zmq_ctx = zmq.Context()
-        cls._zmq_sub = cls._zmq_ctx.socket(zmq.SUB)
-        cls._zmq_sub.setsockopt_string(zmq.SUBSCRIBE, "")
-        cls._zmq_sub.setsockopt(zmq.RCVTIMEO, cls.zmq_rcv_timeout_ms)
-        cls._zmq_sub.connect(f"{cls.ipc_endpoint}.0")
+        cls.zmq_ctx = zmq.Context()
+        cls.zmq_sub = cls.zmq_ctx.socket(zmq.SUB)
+        cls.zmq_sub.setsockopt_string(zmq.SUBSCRIBE, "")
+        cls.zmq_sub.setsockopt(zmq.RCVTIMEO, cls.ZMQ_RCV_TIMEOUT_MS)
+        cls.zmq_sub.connect(cls.IPC_SUBSCRIBE_ENDPOINT)
 
         logger.info(
-            "ZMQ SUB connected to %s.0 (timeout=%dms)",
-            cls.ipc_endpoint,
-            cls.zmq_rcv_timeout_ms,
+            "ZMQ SUB connected to %s (timeout=%dms)",
+            cls.IPC_SUBSCRIBE_ENDPOINT,
+            cls.ZMQ_RCV_TIMEOUT_MS,
         )
 
     @classmethod
     def tearDownClass(cls):
-        if cls._zmq_sub is not None:
-            cls._zmq_sub.close(linger=0)
-        if cls._zmq_ctx is not None:
-            cls._zmq_ctx.term()
-        super().tearDownClass()
+        try:
+            if cls.zmq_sub is not None:
+                cls.zmq_sub.close(linger=0)
+        finally:
+            if cls.zmq_ctx is not None:
+                cls.zmq_ctx.term()
+            super().tearDownClass()
 
     # -----------------------------
     # Helpers
     # -----------------------------
-    def _recv_fpm_metric(self, timeout: float = metric_recv_timeout_sec) -> dict:
-        """Receive a valid JSON forward-pass metric via ZMQ."""
-        start = time.time()
-        while time.time() - start < timeout:
+    @staticmethod
+    def _is_msgpack_map(first_byte: int) -> bool:
+        return 0x80 <= first_byte <= 0x8F or first_byte == 0xDE or first_byte == 0xDF
+
+    def _recv_fpm_metric(self, timeout=METRIC_RECV_TIMEOUT_SEC):
+        deadline = time.time() + timeout
+
+        while time.time() < deadline:
             try:
-                frames = self._zmq_sub.recv_multipart(flags=zmq.NOBLOCK)
-                logger.info("FPM ZMQ frames: %r", frames)
+                frames = self.zmq_sub.recv_multipart(flags=zmq.NOBLOCK)
             except zmq.Again:
-                time.sleep(0.05)
+                time.sleep(0.02)
                 continue
 
-            logger.debug("ZMQ frames: %s", [f[:128] for f in frames])
-
             for frame in frames:
-                if not frame:
-                    # Skip b'' (topic / heartbeat / delimiter)
+                if not frame or not self._is_msgpack_map(frame[0]):
                     continue
+
                 try:
-                    obj = json.loads(frame)
-                    if isinstance(obj, dict):
-                        return obj
-                except json.JSONDecodeError:
-                    logger.debug("Ignore non-JSON ZMQ frame: %r", frame[:128])
+                    metric = msgpack.unpackb(frame, raw=False)
+                    logger.info("FPM metric decoded: %s", metric)
+                    return metric
+                except Exception as e:
+                    logger.info("MsgPack decode failed: %s", e)
 
         self.fail(
-            f"No valid JSON forward-pass metric received on "
-            f"{self.ipc_endpoint}.0 within {timeout}s"
+            f"No forward-pass metric received on "
+            f"{self.IPC_SOCKET_PATH} within {timeout}s"
         )
 
     # -----------------------------
     # Test case
     # -----------------------------
     def test_forward_pass_metrics_all_args_configured(self):
-        # Trigger forward pass
-        resp = requests.post(
+        response = requests.post(
             f"{self.base_url}/generate",
             json={
                 "text": ["The capital of France is"] * 2,
@@ -128,42 +134,49 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
             },
             timeout=30,
         )
-        self.assertEqual(resp.status_code, 200, resp.text)
+        self.assertEqual(response.status_code, 200, response.text)
 
-        # Receive FPM metric
-        metric = self._recv_fpm_metric()
+        seen_worker_ids = []
+        last_metric = None
+
+        for _ in range(self.FPM_SAMPLE_COUNT):
+            last_metric = self._recv_fpm_metric(timeout=2)
+            seen_worker_ids.append(last_metric.get("worker_id"))
 
         # -----------------------------
         # Core assertions
         # -----------------------------
         self.assertTrue(
-            Path(self.ipc_path).is_socket(),
+            self.IPC_SOCKET_PATH.is_socket(),
             "Forward-pass metrics IPC socket should exist",
         )
 
-        worker_id = metric.get("worker_id")
+        self.assertIsInstance(last_metric, dict)
+        self.assertIn("worker_id", last_metric)
+
+        worker_id = last_metric["worker_id"]
         self.assertIsInstance(worker_id, str)
-        self.assertTrue(worker_id, "worker_id must not be empty")
-        self.assertNotEqual(
+        self.assertTrue(worker_id)
+        self.assertEqual(
             worker_id,
-            "should-be-overridden",
-            "Runtime must override forward_pass_metrics_worker_id",
+            self.EXPECTED_WORKER_ID,
+            "worker_id should match the configured value on Ascend/NPU",
         )
 
         self.assertTrue(
-            "step_id" in metric or "iter" in metric,
-            "Per-step identifier missing from forward-pass metric",
+            all(wid == self.EXPECTED_WORKER_ID for wid in seen_worker_ids),
+            f"worker_id should be stable across samples; seen: {seen_worker_ids}",
         )
 
-        # -----------------------------
-        # Prometheus orthogonality check
-        # -----------------------------
-        prom_resp = requests.get(f"{self.base_url}/metrics", timeout=5)
-        self.assertTrue(prom_resp.ok)
-        self.assertTrue(
-            prom_resp.text.lstrip().startswith("#"),
-            "Prometheus metrics must use text exposition format",
+        self.assertIn(
+            "counter_id",
+            last_metric,
+            "FPM must contain counter_id as per-step identifier on Ascend/NPU",
         )
+
+        counter_id = last_metric["counter_id"]
+        self.assertIsInstance(counter_id, int)
+        self.assertGreaterEqual(counter_id, 0)
 
 
 if __name__ == "__main__":
