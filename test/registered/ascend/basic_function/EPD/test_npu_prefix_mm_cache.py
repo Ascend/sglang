@@ -156,10 +156,16 @@ class TestPrefixMMCacheE2E(CustomTestCase):
 
         # Both responses should have content
         content1 = (
-            response1.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+            response1.json()
+            .get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
         )
         content2 = (
-            response2.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+            response2.json()
+            .get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
         )
         self.assertGreater(len(content1), 0)
         self.assertGreater(len(content2), 0)
