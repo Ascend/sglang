@@ -92,9 +92,11 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
 
         # --- Receive ZMQ metric ---
         try:
-            msg = self._zmq_sub.recv_string()
-            logger.info(f"self._zmq_sub.recv_string():{msg}")
-            metric = json.loads(msg)
+            # msg = self._zmq_sub.recv_string()
+            # logger.info(f"self._zmq_sub.recv_string():{msg}")
+            msg1 = self._zmq_sub.recv()
+            logger.info(f"self._zmq_sub.recv():{msg1}")
+            metric = json.loads(msg1)
         except zmq.Again:
             self.fail(
                 f"No forward-pass metrics received on {self.ipc_endpoint}.0. "
