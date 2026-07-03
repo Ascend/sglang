@@ -20,17 +20,17 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     # -----------------------------
     # Constants
     # -----------------------------
-    _IPC_NAME = f"/tmp/sglang-test-fwd-metrics-{os.getpid()}"
-    _IPC_URL = f"ipc://{_IPC_NAME}"
+    ipc_name = f"/tmp/sglang-test-fwd-metrics-{os.getpid()}"
+    ipc_url = f"ipc://{ipc_name}"
 
-    _ZMQ_RCV_TIMEOUT_MS = 5000
+    zmq_rcv_timeout_ms = 5000
 
-    _METRICS_ARGS = [
+    metrics_args = [
         "--enable-forward-pass-metrics",
         "--forward-pass-metrics-worker-id",
         "should-be-overridden",
         "--forward-pass-metrics-ipc-name",
-        _IPC_NAME,
+        ipc_name,
     ]
 
     # -----------------------------
@@ -44,19 +44,19 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     # -----------------------------
     @classmethod
     def setUpClass(cls):
-        # Inject forward-pass metrics arguments before server startup
-        cls.other_args.extend(cls._METRICS_ARGS)
         super().setUpClass()
+        # Inject forward-pass metrics arguments before server startup
+        cls.other_args.extend(cls.metrics_args)
+
+        # launch_server() already performs startup + health check
+        cls.launch_server()
 
         # ZMQ subscriber setup
         cls._zmq_ctx = zmq.Context()
         cls._zmq_sub = cls._zmq_ctx.socket(zmq.SUB)
         cls._zmq_sub.setsockopt_string(zmq.SUBSCRIBE, "")
-        cls._zmq_sub.setsockopt(zmq.RCVTIMEO, cls._ZMQ_RCV_TIMEOUT_MS)
-        cls._zmq_sub.connect(cls._IPC_URL)
-
-        # launch_server() already performs startup + health check
-        cls.launch_server()
+        cls._zmq_sub.setsockopt(zmq.RCVTIMEO, cls.zmq_rcv_timeout_ms)
+        cls._zmq_sub.connect(cls.ipc_url)
 
     @classmethod
     def tearDownClass(cls):
@@ -71,7 +71,7 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
     # Test case
     # -----------------------------
     def test_forward_pass_metrics_all_args_configured(self):
-        ipc_path = Path(self._IPC_NAME)
+        ipc_path = Path(self.ipc_name)
 
         # --- Trigger forward pass ---
         resp = requests.post(
@@ -94,7 +94,7 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
             metric = json.loads(self._zmq_sub.recv_string())
         except zmq.Again:
             self.fail(
-                f"No forward-pass metrics received on {self._IPC_URL}. "
+                f"No forward-pass metrics received on {self.ipc_url}. "
                 f"IPC exists: {ipc_path.exists()}, server: {self.base_url}"
             )
 
