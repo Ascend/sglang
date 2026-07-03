@@ -56,7 +56,7 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
         cls._zmq_sub = cls._zmq_ctx.socket(zmq.SUB)
         cls._zmq_sub.setsockopt_string(zmq.SUBSCRIBE, "")
         cls._zmq_sub.setsockopt(zmq.RCVTIMEO, cls.zmq_rcv_timeout_ms)
-        cls._zmq_sub.connect(cls.ipc_endpoint)
+        cls._zmq_sub.connect(f"{cls.ipc_endpoint}.0")
 
     @classmethod
     def tearDownClass(cls):
