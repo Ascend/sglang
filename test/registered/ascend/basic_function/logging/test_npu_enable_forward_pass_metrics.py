@@ -6,6 +6,7 @@ from pathlib import Path
 import requests
 import zmq
 
+from sglang.test.ascend.test_ascend_utils import logger
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -91,10 +92,12 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
 
         # --- Receive ZMQ metric ---
         try:
-            metric = json.loads(self._zmq_sub.recv_string())
+            msg = self._zmq_sub.recv_string()
+            logger.info(f"self._zmq_sub.recv_string():{msg}")
+            metric = json.loads(msg)
         except zmq.Again:
             self.fail(
-                f"No forward-pass metrics received on {self.ipc_endpoint}. "
+                f"No forward-pass metrics received on {self.ipc_endpoint}.0. "
                 f"IPC exists: {ipc_path.exists()}, server: {self.base_url}"
             )
 
