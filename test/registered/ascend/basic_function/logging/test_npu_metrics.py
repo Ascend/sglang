@@ -185,7 +185,7 @@ class TestNPUMetricsExtraLabels(_BaseTestNPUMetrics):
         '{"env":"prod","team":"npu-inference","region":"us-east-1"}',
     ]
 
-    def test_metric_extra_metric_labels(self):
+    def test_metrics_extra_metric_labels(self):
         metrics_response = requests.get(f"{self.base_url}/metrics")
         self.assertEqual(metrics_response.status_code, 200)
         metrics_text = metrics_response.text
