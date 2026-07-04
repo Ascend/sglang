@@ -1,8 +1,8 @@
 import unittest
 from types import SimpleNamespace
 
-# from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -12,7 +12,6 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH = "/home/weights/DeepSeek-V3.2-W8A8"
 register_npu_ci(est_time=200, suite="full-8-npu-a3", nightly=True)
 
 
