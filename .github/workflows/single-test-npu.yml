@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 9: DeepEP large expert parallelism test - use dp=8 tp=16 to reduce per-rank weights
+# test round 10: DeepEP large expert parallelism test - set redundant experts to 0
 
 on:
   pull_request:
