@@ -153,22 +153,8 @@ class TestPrefixMMCacheE2E(CustomTestCase):
             timeout=120,
         )
         self.assertEqual(response2.status_code, 200)
-
-        # Both responses should have content
-        content1 = (
-            response1.json()
-            .get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
-        content2 = (
-            response2.json()
-            .get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
-        self.assertGreater(len(content1), 0)
-        self.assertGreater(len(content2), 0)
+        self.assertEqual(response1.json()["meta_info"]["cached_tokens"], 0)
+        self.assertGreater(response2.json()["meta_info"]["cached_tokens"], 0)
 
     def test_text_generation(self):
         """Test that text-only generation works."""
