@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: DeepEP large expert parallelism test
+# test round 2: DeepEP large expert parallelism test - fix class variable syntax
 
 on:
   pull_request:
