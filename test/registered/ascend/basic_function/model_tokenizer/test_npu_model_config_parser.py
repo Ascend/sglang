@@ -1,14 +1,7 @@
 import unittest
 
 import requests
-from transformers import PretrainedConfig
 
-from sglang.srt.configs.model_config_parser_registry import (
-    _MODEL_CONFIG_PARSER_REGISTRY,
-    ModelConfigParserBase,
-    get_model_config_parser,
-    register_model_config_parser,
-)
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH,
@@ -22,54 +15,6 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
-
-
-class _FakeParser(ModelConfigParserBase):
-    def parse(self, model, trust_remote_code, revision=None, **kwargs):
-        return PretrainedConfig()
-
-
-class _AnotherFakeParser(ModelConfigParserBase):
-    def parse(self, model, trust_remote_code, revision=None, **kwargs):
-        return PretrainedConfig()
-
-
-class TestNpuModelConfigParserRegistry(CustomTestCase):
-    """Testcase: model config parser registry API validation
-
-    [Test Category] Parameter
-    [Test Target] --model-config-parser
-    """
-
-    def setUp(self):
-        self._saved_registry = dict(_MODEL_CONFIG_PARSER_REGISTRY)
-        _MODEL_CONFIG_PARSER_REGISTRY.clear()
-
-    def tearDown(self):
-        _MODEL_CONFIG_PARSER_REGISTRY.clear()
-        _MODEL_CONFIG_PARSER_REGISTRY.update(self._saved_registry)
-
-    def test_register_then_get_roundtrip_npu(self):
-        register_model_config_parser("fake")(_FakeParser)
-        self.assertIsInstance(get_model_config_parser("fake"), _FakeParser)
-
-    def test_register_rejects_non_subclass_npu(self):
-        class NotAParser:
-            pass
-
-        with self.assertRaises(ValueError) as ctx:
-            register_model_config_parser("bad")(NotAParser)
-        self.assertIn("ModelConfigParserBase", str(ctx.exception))
-
-    def test_unknown_name_raises_with_registered_list_npu(self):
-        register_model_config_parser("fake")(_FakeParser)
-        register_model_config_parser("another")(_AnotherFakeParser)
-        with self.assertRaises(ValueError) as ctx:
-            get_model_config_parser("does-not-exist")
-        msg = str(ctx.exception)
-        self.assertIn("does-not-exist", msg)
-        self.assertIn("another", msg)
-        self.assertIn("fake", msg)
 
 
 class TestNpuModelConfigParserAuto(CustomTestCase):

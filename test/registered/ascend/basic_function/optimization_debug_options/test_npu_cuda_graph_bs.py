@@ -1,136 +1,344 @@
 import os
+import re
+import subprocess
+import tempfile
 import unittest
+from typing import List, Optional
+from urllib.parse import urlparse
 
-import requests
-
+from sglang.bench_serving import run_benchmark
+from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.server_fixtures.disaggregation_fixture import (
+    get_rdma_devices_args,
+)
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
-    popen_launch_server,
+    get_benchmark_args,
+    is_in_ci,
 )
+from sglang.utils import wait_for_http_ready
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=1200, suite="full-2-npu-a3", nightly=True)
+
+MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+_LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
+
+_BS_LOG_RE = re.compile(r"Capture cuda graph bs \[([^\]]+)\]")
+_MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
 
 
-class TestCudaGraphBsOverride(CustomTestCase):
-    """Testcase: verify --cuda-graph-max-bs-decode, --cuda-graph-max-bs-prefill,
-    --cuda-graph-bs-decode and --cuda-graph-bs-prefill all override defaults,
-    and smaller max_bs reduces CUDA Graph memory
+# ══════════════════════════════════════════════════════════════
+# PD helpers
+# ══════════════════════════════════════════════════════════════
+
+def _pd_ports():
+    p = urlparse(DEFAULT_URL_FOR_TEST)
+    host = p.hostname
+    bp = str(p.port)
+    return {
+        "host": host,
+        "lb": bp,
+        "prefill": str(int(bp) + 100),
+        "decode": str(int(bp) + 200),
+        "bootstrap": str(int(bp) + 500),
+    }
+
+
+def _pd_transport_args():
+    if is_in_ci():
+        backend = ["--disaggregation-transfer-backend", "mooncake"]
+        devices = ["--disaggregation-ib-device", get_rdma_devices_args()]
+    else:
+        backend = ["--disaggregation-transfer-backend",
+                   envs.SGLANG_TEST_PD_DISAGG_BACKEND.get()]
+        dev = envs.SGLANG_TEST_PD_DISAGG_DEVICES.get()
+        devices = ["--disaggregation-ib-device", dev] if dev else []
+    return backend + devices
+
+
+def _launch_pd_server(url, *, mode, bootstrap_port, extra_args, base_gpu_id="0"):
+    """Launch one PD server (prefill or decode), capturing stderr to a temp file.
+
+    Returns (process, stderr_file_path).
+    """
+    _, host, port = url.split(":")
+    host = host[2:]
+    err_fd, err_path = tempfile.mkstemp(suffix=".log", prefix=f"pd_{mode}_")
+    os.close(err_fd)
+
+    cmd = [
+        "python3", "-m", "sglang.launch_server",
+        "--model-path", MODEL,
+        "--host", host,
+        "--port", port,
+        "--trust-remote-code",
+        "--attention-backend", "ascend",
+        "--mem-fraction-static", "0.8",
+        "--disaggregation-mode", mode,
+        "--disaggregation-bootstrap-port", bootstrap_port,
+        "--base-gpu-id", base_gpu_id,
+        "--tp", "1",
+        *extra_args,
+        *_pd_transport_args(),
+    ]
+    with open(err_path, "w") as err_file:
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.DEVNULL, stderr=err_file, text=True,
+        )
+    wait_for_http_ready(url + "/health", timeout=_LAUNCH_TIMEOUT, process=proc)
+    return proc, err_path
+
+
+def _launch_router(prefill_url, decode_url, host, lb_port):
+    cmd = [
+        "python3", "-m", "sglang_router.launch_router",
+        "--pd-disaggregation",
+        "--prefill", prefill_url,
+        "--decode", decode_url,
+        "--host", host,
+        "--port", lb_port,
+    ]
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    lb_url = f"http://{host}:{lb_port}"
+    wait_for_http_ready(lb_url + "/health", timeout=_LAUNCH_TIMEOUT, process=proc)
+    return proc, lb_url
+
+
+def _launch_pd(*, prefill_args=None, decode_args=None):
+    """Launch full PD stack. Returns (prefill_proc, decode_proc, lb_proc, lb_url,
+    prefill_err_path, decode_err_path).
+    """
+    ports = _pd_ports()
+    prefill_url = f"http://{ports['host']}:{ports['prefill']}"
+    decode_url = f"http://{ports['host']}:{ports['decode']}"
+
+    os.environ["MC_TCP_ENABLE_CONNECTION_POOL"] = "true"
+
+    pp, pe = _launch_pd_server(
+        prefill_url, mode="prefill", bootstrap_port=ports["bootstrap"],
+        extra_args=prefill_args or [], base_gpu_id="0",
+    )
+    dp, de = _launch_pd_server(
+        decode_url, mode="decode", bootstrap_port=ports["bootstrap"],
+        extra_args=decode_args or [], base_gpu_id="1",
+    )
+    lp, lb_url = _launch_router(prefill_url, decode_url,
+                                ports["host"], ports["lb"])
+    return pp, dp, lp, lb_url, pe, de
+
+
+def _cleanup_pd(pp, dp, lp, pe, de):
+    for proc in (lp, dp, pp):
+        if proc:
+            kill_process_tree(proc.pid)
+    for path in (pe, de):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def _read_log(path):
+    with open(path, encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
+def _parse_capture_bs(log_text: str) -> Optional[List[int]]:
+    for line in log_text.splitlines():
+        m = _BS_LOG_RE.search(line)
+        if m:
+            return [int(x.strip()) for x in m.group(1).split(",")]
+    return None
+
+
+def _parse_graph_memory_gb(log_text: str) -> Optional[float]:
+    for line in log_text.splitlines():
+        m = _MEM_LOG_RE.search(line)
+        if m:
+            return float(m.group(1))
+    return None
+
+
+def _has_graph_begin(log_text: str) -> bool:
+    return any("graph begin" in line for line in log_text.splitlines())
+
+
+def _run_bench(base_url):
+    bench_args = get_benchmark_args(
+        base_url=base_url,
+        backend="sglang",
+        dataset_name="random",
+        tokenizer=MODEL,
+        num_prompts=10,
+        random_input_len=256,
+        random_output_len=32,
+        request_rate=float("inf"),
+    )
+    bench_args.warmup_requests = 0
+    return run_benchmark(bench_args)
+
+
+# ══════════════════════════════════════════════════════════════
+# Tests
+# ══════════════════════════════════════════════════════════════
+
+class TestCudaGraphBsPD(CustomTestCase):
+    """Testcase: verify per-phase CUDA-graph BS parameters in PD disaggregation.
+
+    PD hook (pd_disaggregation_hook.py:77) force-disables CG on the prefill
+    server, so --cuda-graph-max-bs-decode / --cuda-graph-bs-decode are parsed
+    but never trigger graph capture on the prefill side.  The decode server
+    captures CUDA graphs normally and respects the parameters.
+
+    All tests launch a full PD stack (prefill + decode + LB), send traffic
+    through the LB with bench_serving, and verify CG behaviour on each side
+    independently.
 
     [Test Category] Parameter
     [Test Target] --cuda-graph-max-bs-decode; --cuda-graph-max-bs-prefill;
-                  --cuda-graph-bs-decode; --cuda-graph-bs-prefill
+                  --cuda-graph-bs-decode; --cuda-graph-bs-prefill;
+                  --disaggregation-mode
     """
 
-    model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-    base_url = DEFAULT_URL_FOR_TEST
-
-    @classmethod
-    def _launch(cls, max_bs_decode, max_bs_prefill, bs_decode, bs_prefill):
-        out_log = open("./cache_out_log.txt", "w+", encoding="utf-8")
-        err_log = open("./cache_err_log.txt", "w+", encoding="utf-8")
-        proc = popen_launch_server(
-            cls.model,
-            cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=[
-                "--trust-remote-code",
-                "--mem-fraction-static",
-                "0.8",
-                "--attention-backend",
-                "ascend",
-                "--cuda-graph-max-bs-decode",
-                str(max_bs_decode),
-                "--cuda-graph-max-bs-prefill",
-                str(max_bs_prefill),
-                "--cuda-graph-bs-decode",
-            ]
-            + [str(b) for b in bs_decode]
-            + [
-                "--cuda-graph-bs-prefill",
-            ]
-            + [str(b) for b in bs_prefill],
-            return_stdout_stderr=(out_log, err_log),
+    # ── S1: max_bs only → bs auto-generated (decode side) ─────
+    def test_max_bs_auto_generates_bs(self):
+        pp, dp, lp, lb_url, pe, de = _launch_pd(
+            decode_args=["--cuda-graph-max-bs-decode", "8"],
         )
-        return proc, out_log, err_log
+        try:
+            res = _run_bench(lb_url)
+            self.assertEqual(res["completed"], 10)
 
-    @classmethod
-    def _cleanup(cls, proc, out_log, err_log):
-        kill_process_tree(proc.pid)
-        out_log.close()
-        err_log.close()
-        os.remove("./cache_out_log.txt")
-        os.remove("./cache_err_log.txt")
+            prefill_log = _read_log(pe)
+            decode_log = _read_log(de)
+        finally:
+            _cleanup_pd(pp, dp, lp, pe, de)
 
-    def _do_request(self):
-        response = requests.post(
-            f"{self.base_url}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 32,
-                },
-            },
+        # Prefill: CG disabled by PD hook
+        self.assertFalse(_has_graph_begin(prefill_log),
+                         "Prefill CG must be disabled by PD hook")
+        # Decode: bs auto-generated, all ≤ 8
+        decode_bs = _parse_capture_bs(decode_log)
+        self.assertIsNotNone(decode_bs, "Expected capture bs in decode log")
+        self.assertEqual(max(decode_bs), 8)
+        self.assertTrue(all(b <= 8 for b in decode_bs))
+
+    # ── S2: bs only → max_bs derived (decode side) ────────────
+    def test_explicit_bs_derives_max_bs(self):
+        pp, dp, lp, lb_url, pe, de = _launch_pd(
+            decode_args=["--cuda-graph-bs-decode", "1", "2", "4", "8"],
         )
-        return response
+        try:
+            res = _run_bench(lb_url)
+            self.assertEqual(res["completed"], 10)
+            decode_log = _read_log(de)
+            prefill_log = _read_log(pe)
+        finally:
+            _cleanup_pd(pp, dp, lp, pe, de)
 
-    def test_cuda_graph_bs_override(self):
-        # Launch with small max_bs
-        proc1, out1, err1 = self._launch(1, 1, [1], [1])
-        resp1 = self._do_request()
-        self.assertEqual(resp1.status_code, 200)
-        self.assertIn("Paris", resp1.text)
-        err1.seek(0)
-        err_log1 = err1.read()
-        self._cleanup(proc1, out1, err1)
+        self.assertFalse(_has_graph_begin(prefill_log))
+        decode_bs = _parse_capture_bs(decode_log)
+        self.assertEqual(decode_bs, [1, 2, 4, 8])
+        mem = _parse_graph_memory_gb(decode_log)
+        self.assertIsNotNone(mem)
+        self.assertGreater(mem, 0)
 
-        # Launch with larger max_bs
-        proc2, out2, err2 = self._launch(8, 8, [1, 2, 4, 8], [1, 2, 4])
-        resp2 = self._do_request()
-        self.assertEqual(resp2.status_code, 200)
-        self.assertIn("Paris", resp2.text)
-        err2.seek(0)
-        err_log2 = err2.read()
-        self._cleanup(proc2, out2, err2)
-
-        # Verify parameters were parsed in both launches
-        self.assertIn(
-            "max_bs",
-            err_log1,
-            "Expected stderr to contain 'max_bs', proving max_bs was parsed",
+    # ── S3: both set → max_bs silently overwritten ─────────────
+    def test_max_bs_overwritten_when_bs_set(self):
+        pp, dp, lp, lb_url, pe, de = _launch_pd(
+            decode_args=["--cuda-graph-max-bs-decode", "4",
+                         "--cuda-graph-bs-decode", "1", "2", "8"],
         )
-        self.assertIn(
-            "bs",
-            err_log2,
-            "Expected stderr to contain 'bs', proving bs list was parsed",
+        try:
+            res = _run_bench(lb_url)
+            self.assertEqual(res["completed"], 10)
+            decode_log = _read_log(de)
+            prefill_log = _read_log(pe)
+        finally:
+            _cleanup_pd(pp, dp, lp, pe, de)
+
+        self.assertFalse(_has_graph_begin(prefill_log))
+        decode_bs = _parse_capture_bs(decode_log)
+        self.assertEqual(decode_bs, [1, 2, 8])
+        self.assertEqual(max(decode_bs), 8,
+                         "max_bs should be 8 (overwritten), not 4")
+
+    # ── S4: padding disabled → sequential bs ───────────────────
+    def test_disable_padding_sequential_bs(self):
+        pp, dp, lp, lb_url, pe, de = _launch_pd(
+            decode_args=["--cuda-graph-max-bs-decode", "8",
+                         "--disable-cuda-graph-padding"],
         )
+        try:
+            res = _run_bench(lb_url)
+            self.assertEqual(res["completed"], 10)
+            decode_log = _read_log(de)
+            prefill_log = _read_log(pe)
+        finally:
+            _cleanup_pd(pp, dp, lp, pe, de)
 
-        # Verify max_bs controls memory: smaller max_bs uses less CUDA Graph memory
-        mem1 = self._extract_graph_memory(err_log1)
-        mem2 = self._extract_graph_memory(err_log2)
-        if mem1 is not None and mem2 is not None:
-            self.assertLess(
-                mem1,
-                mem2,
-                f"Expected max_bs=1 graph memory ({mem1}MB) "
-                f"< max_bs=8 graph memory ({mem2}MB)",
-            )
+        self.assertFalse(_has_graph_begin(prefill_log))
+        decode_bs = _parse_capture_bs(decode_log)
+        self.assertEqual(decode_bs, list(range(1, 9)))
 
-    @staticmethod
-    def _extract_graph_memory(err_log):
-        """Extract CUDA Graph memory in MB from stderr log."""
-        import re
+    # ── S5: CG disabled → no graph, serving works ──────────────
+    def test_disable_cuda_graph_serving_works(self):
+        pp, dp, lp, lb_url, pe, de = _launch_pd(
+            decode_args=["--cuda-graph-max-bs-decode", "8",
+                         "--disable-cuda-graph"],
+        )
+        try:
+            res = _run_bench(lb_url)
+            self.assertEqual(res["completed"], 10)
+            decode_log = _read_log(de)
+            prefill_log = _read_log(pe)
+        finally:
+            _cleanup_pd(pp, dp, lp, pe, de)
 
-        for line in err_log.splitlines():
-            m = re.search(r"(\d+)\s*MB", line)
-            if m and "graph" in line.lower():
-                return int(m.group(1))
-        return None
+        self.assertFalse(_has_graph_begin(prefill_log),
+                         "Prefill CG must be disabled by PD hook")
+        self.assertFalse(_has_graph_begin(decode_log),
+                         "Decode CG must be disabled by --disable-cuda-graph")
+
+    # ── S6+S7 (integrated): every test above already verifies ──
+    #     prefill CG disabled + decode CG behaviour.
+
+    # ── S8: TTFT comparison with different max_bs ──────────────
+    def test_max_bs_ttft_comparison(self):
+        # max_bs=1
+        pp1, dp1, lp1, lb1, pe1, de1 = _launch_pd(
+            decode_args=["--cuda-graph-max-bs-decode", "1"],
+        )
+        try:
+            r1 = _run_bench(lb1)
+            self.assertEqual(r1["completed"], 10)
+        finally:
+            _cleanup_pd(pp1, dp1, lp1, pe1, de1)
+
+        # max_bs=8
+        pp8, dp8, lp8, lb8, pe8, de8 = _launch_pd(
+            decode_args=["--cuda-graph-max-bs-decode", "8"],
+        )
+        try:
+            r8 = _run_bench(lb8)
+            self.assertEqual(r8["completed"], 10)
+        finally:
+            _cleanup_pd(pp8, dp8, lp8, pe8, de8)
+
+        t1, t8 = r1["mean_ttft_ms"], r8["mean_ttft_ms"]
+        p1, p8 = r1["p99_ttft_ms"], r8["p99_ttft_ms"]
+        print(
+            f"\n=== TTFT comparison (PD mode): max_bs=1 vs max_bs=8 ===\n"
+            f"  Mean TTFT: {t1:.1f} ms (max_bs=1) vs {t8:.1f} ms (max_bs=8)\n"
+            f"  P99  TTFT: {p1:.1f} ms (max_bs=1) vs {p8:.1f} ms (max_bs=8)"
+        )
+        self.assertGreater(t1, 0)
+        self.assertGreater(t8, 0)
 
 
 if __name__ == "__main__":

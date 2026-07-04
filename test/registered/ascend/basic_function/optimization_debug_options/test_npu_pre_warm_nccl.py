@@ -2,8 +2,7 @@ import os
 import re
 import unittest
 
-import requests
-
+from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
@@ -11,6 +10,7 @@ from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    get_benchmark_args,
     popen_launch_server,
 )
 
@@ -26,10 +26,11 @@ _WARMUP_LOG_RE = re.compile(
 
 class TestPreWarmNccl(CustomTestCase):
     """Testcase: verify --pre-warm-nccl executes all-reduce warmup during
-    server startup and measures non-zero time.
+    server startup and serving works correctly via bench_serving.
 
     The warmup runs dist.all_reduce + synchronize (model_runner.py:1135-1150).
     Parsing warmup_elapsed from the log proves the all-reduce actually executed.
+    bench_serving is used to verify TTFT after server startup.
 
     NOTE: server_args.py:3065 currently sets pre_warm_nccl=False on non-CUDA/HIP
     hardware (including NPU).  The HCCL backend path needs to be added there
@@ -83,27 +84,32 @@ class TestPreWarmNccl(CustomTestCase):
                 return float(m.group(1))
         return None
 
-    def _do_request(self):
-        response = requests.post(
-            f"{self.base_url}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 32,
-                },
-            },
+    def _run_bench(self):
+        """Run bench_serving and verify TTFT metrics."""
+        args = get_benchmark_args(
+            base_url=self.base_url,
+            backend="sglang",
+            dataset_name="random",
+            tokenizer=self.model,
+            num_prompts=10,
+            random_input_len=256,
+            random_output_len=32,
+            request_rate=float("inf"),
         )
-        return response
+        args.warmup_requests = 0
+        res = run_benchmark(args)
+        self.assertEqual(res["completed"], 10)
+        self.assertGreater(res["mean_ttft_ms"], 0, "TTFT must be > 0 ms")
+        return res
 
     def test_pre_warm_nccl(self):
         # ---- With --pre-warm-nccl ----
         proc1, out1, err1 = self._launch(with_warmup=True)
-        resp1 = self._do_request()
-        self.assertEqual(resp1.status_code, 200)
-        self.assertIn("Paris", resp1.text)
-        warmup_elapsed = self._parse_warmup_elapsed(err1)
-        self._cleanup(proc1, out1, err1)
+        try:
+            res_warmup = self._run_bench()
+            warmup_elapsed = self._parse_warmup_elapsed(err1)
+        finally:
+            self._cleanup(proc1, out1, err1)
 
         self.assertIsNotNone(
             warmup_elapsed,
@@ -120,16 +126,34 @@ class TestPreWarmNccl(CustomTestCase):
 
         # ---- Without --pre-warm-nccl ----
         proc2, out2, err2 = self._launch(with_warmup=False)
-        resp2 = self._do_request()
-        self.assertEqual(resp2.status_code, 200)
-        self.assertIn("Paris", resp2.text)
-        no_warmup = self._parse_warmup_elapsed(err2)
-        self._cleanup(proc2, out2, err2)
+        try:
+            res_no_warmup = self._run_bench()
+            no_warmup = self._parse_warmup_elapsed(err2)
+        finally:
+            self._cleanup(proc2, out2, err2)
 
         self.assertIsNone(
             no_warmup,
             "Expected stderr NOT to contain 'NCCL/RCCL warmup completed', "
             "proving the warmup is only triggered when the flag is set.",
+        )
+
+        # ---- Compare TTFT ----
+        ttft_w = res_warmup["mean_ttft_ms"]
+        ttft_nw = res_no_warmup["mean_ttft_ms"]
+        p99_w = res_warmup["p99_ttft_ms"]
+        p99_nw = res_no_warmup["p99_ttft_ms"]
+        print(
+            f"\n=== TTFT Comparison: --pre-warm-nccl vs default ===\n"
+            f"  Mean TTFT: {ttft_w:.1f} ms (warmup) vs {ttft_nw:.1f} ms (no-warmup)\n"
+            f"  P99  TTFT: {p99_w:.1f} ms (warmup) vs {p99_nw:.1f} ms (no-warmup)\n"
+        )
+        self.assertLessEqual(
+            ttft_w,
+            ttft_nw,
+            f"Expected --pre-warm-nccl mean TTFT ({ttft_w:.1f} ms) <= "
+            f"no-warmup ({ttft_nw:.1f} ms). NCCL warmup should prime all-reduce "
+            f"communication and reduce or match first-request latency.",
         )
 
 

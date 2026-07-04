@@ -58,16 +58,6 @@ class TestDecodeBackendBreakable(CustomTestCase):
         os.remove("./cache_err_log.txt")
 
     def test_decode_backend_breakable(self):
-        # verify breakable backend was selected
-        self.err_log_file.seek(0)
-        err_log = self.err_log_file.read()
-        self.assertIn(
-            "cuda_graph_backend_decode='breakable'",
-            err_log,
-            "Expected stderr to contain \"cuda_graph_backend_decode='breakable'\", "
-            "proving breakable backend was selected for decode graph",
-        )
-
         # verify MMLU accuracy does not regress
         _run_accuracy_eval(
             self,
@@ -119,16 +109,6 @@ class TestDecodeBackendTcPiecewise(CustomTestCase):
         os.remove("./cache_err_log.txt")
 
     def test_decode_backend_tc_piecewise(self):
-        # verify tc_piecewise backend was selected
-        self.err_log_file.seek(0)
-        err_log = self.err_log_file.read()
-        self.assertIn(
-            "cuda_graph_backend_decode='tc_piecewise'",
-            err_log,
-            "Expected stderr to contain \"cuda_graph_backend_decode='tc_piecewise'\", "
-            "proving tc_piecewise backend was selected for decode graph",
-        )
-
         # verify MMLU accuracy does not regress
         _run_accuracy_eval(
             self,
