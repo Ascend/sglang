@@ -1,8 +1,6 @@
 import unittest
 from types import SimpleNamespace
 
-import requests
-
 # from sglang.test.ascend.test_ascend_utils import
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ci.ci_register import register_npu_ci
@@ -19,7 +17,8 @@ register_npu_ci(est_time=200, suite="full-4-npu-a3", nightly=True)
 
 
 class TestDtypeAuto(CustomTestCase):
-    dtype="auto"
+    dtype = "auto"
+
     @classmethod
     def setUpClass(cls):
         cls.model = model
@@ -61,11 +60,14 @@ class TestDtypeAuto(CustomTestCase):
 
         self.assertGreater(metrics["score"], 0.83)
 
+
 class TestDtypeBf16(TestDtypeAuto):
     dtype = "bf16"
 
+
 class TestDtypeInt8(TestDtypeAuto):
     dtype = "int8"
+
 
 if __name__ == "__main__":
     unittest.main()
