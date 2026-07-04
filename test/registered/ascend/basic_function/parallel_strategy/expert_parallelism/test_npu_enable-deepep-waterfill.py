@@ -48,6 +48,7 @@ class TestDeepSeekV32(CustomTestCase):
                 "--deepep-mode",
                 "auto",
                 "--enable-deepep-waterfill",
+                "--enforce-shared-experts-fusion",
                 "--mem-fraction-static",
                 0.82,
                 "--disable-cuda-graph",
