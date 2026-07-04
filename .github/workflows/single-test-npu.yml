@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: DeepEP large expert parallelism test - fix class variable syntax
+# test round 3: DeepEP large expert parallelism test - fix weights path import
 
 on:
   pull_request:
