@@ -6,7 +6,6 @@ from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
@@ -29,11 +28,11 @@ class TestDeepSeekV32(CustomTestCase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=6000,
             other_args=[
                 "--trust-remote-code",
                 "--mem-fraction-static",
-                "0.8",
+                "0.7",
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
