@@ -152,6 +152,8 @@ class TestPrefixMMCacheE2E(CustomTestCase):
             json=payload,
             timeout=120,
         )
+        print("ufhgsfduioffbnc;oaihfninfioooooooojhffffffffffffffffffffhh")
+        print(response1.json())
         self.assertEqual(response2.status_code, 200)
         self.assertEqual(response1.json()["meta_info"]["cached_tokens"], 0)
         self.assertGreater(response2.json()["meta_info"]["cached_tokens"], 0)
