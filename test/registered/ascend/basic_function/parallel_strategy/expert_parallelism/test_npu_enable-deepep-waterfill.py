@@ -1,7 +1,6 @@
 import unittest
 from types import SimpleNamespace
 
-
 # from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ci.ci_register import register_npu_ci
@@ -12,8 +11,10 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
-DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH="/home/weights/DeepSeek-V3.2-W8A8"
+
+DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH = "/home/weights/DeepSeek-V3.2-W8A8"
 register_npu_ci(est_time=200, suite="full-8-npu-a3", nightly=True)
+
 
 class TestDeepSeekV32(CustomTestCase):
     """Testcase: Verify that the inference accuracy of the vllm-ascend/DeepSeek-V3.2-W8A8 model on the GSM8K dataset is no less than 0.95.
@@ -42,7 +43,7 @@ class TestDeepSeekV32(CustomTestCase):
                 "--quantization",
                 "modelslim",
                 "--disable-radix-cache",
-                "--enable-deepep-waterfill"
+                "--enable-deepep-waterfill",
             ],
         )
 
