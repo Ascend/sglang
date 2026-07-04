@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: DeepEP dispatcher output dtype test
+# test round 2: DeepEP dispatcher output dtype test
 
 on:
   pull_request:
