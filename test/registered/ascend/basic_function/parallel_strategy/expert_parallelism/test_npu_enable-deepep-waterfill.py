@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -7,13 +8,12 @@ from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
 )
 
-register_npu_ci(est_time=200, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class TestDeepSeekV32(CustomTestCase):
@@ -36,24 +36,41 @@ class TestDeepSeekV32(CustomTestCase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=6000,
             other_args=[
                 "--trust-remote-code",
-                "--mem-fraction-static",
-                "0.8",
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
                 "--tp-size",
                 "16",
                 "--quantization",
                 "modelslim",
-                "--disable-radix-cache",
+                "--moe-a2a-backend",
+                "deepep",
+                "--deepep-mode",
+                "auto",
                 "--enable-deepep-waterfill",
+                "--mem-fraction-static",
+                0.82,
+                "--disable-cuda-graph",
+                "--disable-radix-cache",
+                "--context-length",
+                40960,
+                "--max-prefill-tokens",
+                40960,
+                "--max-total-tokens",
+                40960,
             ],
             return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
             env={
-                "HCCL_BUFFSIZE": "2048",
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+                "STREAMS_PER_DEVICE": "32",
+                "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "16",
+                "HCCL_BUFFSIZE": "1600",
+                "HCCL_OP_EXPANSION_MODE": "AIV",
+                "SGLANG_NPU_USE_MLAPO": "0",
+                "SGLANG_NPU_USE_MULTI_STREAM": "1",
+                "TASK_QUEUE_ENABLE": "0",
+                "TRANSFORMERS_VERBOSITY": "error",
+                **os.environ,
             },
         )
 
