@@ -32,7 +32,7 @@ class TestDeepSeekV32(CustomTestCase):
             other_args=[
                 "--trust-remote-code",
                 "--mem-fraction-static",
-                "0.7",
+                "0.6",
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
