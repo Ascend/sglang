@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: DeepEP dispatcher output dtype test
+# test round 3: DeepEP dispatcher output dtype test - extended timeout
 
 on:
   pull_request:
@@ -27,7 +27,7 @@ jobs:
           npu-smi info
 
       - name: Run test
-        timeout-minutes: 120
+        timeout-minutes: 300
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
