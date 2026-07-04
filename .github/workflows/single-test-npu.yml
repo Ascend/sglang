@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 5: DeepEP large expert parallelism test - fix unused imports and trigger CI
+# test round 6: DeepEP large expert parallelism test - reduce memory fraction to avoid OOM
 
 on:
   pull_request:
