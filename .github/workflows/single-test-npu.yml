@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 6: DeepEP large expert parallelism test - reduce memory fraction to avoid OOM
+# test round 7: DeepEP large expert parallelism test - further reduce memory fraction and context length
 
 on:
   pull_request:
