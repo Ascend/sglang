@@ -48,7 +48,7 @@ KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS = [
     "--base-gpu-id",
     0,
     "--mem-fraction-static",
-    0.74,
+    0.852,
     "--max-running-requests",
     64,
     "--chunked-prefill-size",
@@ -116,6 +116,7 @@ class TestNPUKimiK2_6_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     output_len = 256
     random_range_ratio = 1
     warmup_requests = 16
+    seed = 1
     tpot = 50
     output_token_throughput = 568.11
 

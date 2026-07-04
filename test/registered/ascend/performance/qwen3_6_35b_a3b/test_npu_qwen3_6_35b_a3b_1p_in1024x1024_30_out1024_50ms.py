@@ -94,7 +94,8 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     model = QWEN3_6_35B_A3B_MODEL_PATH
     other_args = QWEN3_6_35B_A3B_1024_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1024_ENVS
-    dataset_name = "random"
+    backend = "sglang-oai-chat"
+    dataset_name = "image"
     max_concurrency = 120
     num_prompts = 480
     input_len = 30
@@ -102,6 +103,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     random_range_ratio = 1
     image_resolution = "1024x1024"
     image_count = 1
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     output_token_throughput = 2382.2

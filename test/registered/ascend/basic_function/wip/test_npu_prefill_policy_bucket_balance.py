@@ -178,6 +178,7 @@ class TestNPUBalance(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 300
     output_len = 20
     random_range_ratio = 1
+    seed = 1
     tolerance_ratio = 0.01
 
     def get_router_metrics(self):

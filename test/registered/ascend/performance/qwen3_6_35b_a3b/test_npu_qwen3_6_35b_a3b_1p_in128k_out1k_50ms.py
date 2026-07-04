@@ -42,6 +42,8 @@ QWEN3_6_35B_A3B_128K_1K_OTHER_ARGS = [
     "npu",
     "--chunked-prefill-size",
     -1,
+    "--max-total-tokens",
+    420000,
     "--max-prefill-tokens",
     128000,
     "--max-total-tokens",
@@ -53,7 +55,7 @@ QWEN3_6_35B_A3B_128K_1K_OTHER_ARGS = [
     "--max-running-requests",
     3,
     "--max-mamba-cache-size",
-    10,
+    3,
     "--cuda-graph-bs",
     1,
     2,
@@ -94,6 +96,7 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_50ms(TestAscendPerformanceTestCaseBa
     input_len = 128000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 60.57
 

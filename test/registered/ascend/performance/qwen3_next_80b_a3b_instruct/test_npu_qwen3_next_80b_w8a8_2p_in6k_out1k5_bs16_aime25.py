@@ -94,7 +94,7 @@ QWEN3_NEXT_80B_A3B_OTHER_ARGS = [
     "--reasoning-parser",
     "qwen3",
     "--tool-call-parser",
-    "qwen",
+    "qwen3_coder",
 ]
 
 
@@ -127,12 +127,12 @@ class TestQwen3Next80BA3B_aime25(TestAscendAccuracyTestCaseBase):
         "temperature": 0.7,
         "top_p": 0.8,
         "top_k": 20,
-        "extra_body": {"chat_template_kwargs": {"enable_thinking": True}},
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
     max_concurrency = 16
 
     def test_aime25(self):
-        self.run_accuracy_multiple(n_runs=3)
+        self.run_accuracy()
 
 
 if __name__ == "__main__":

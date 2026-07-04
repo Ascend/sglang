@@ -46,24 +46,23 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     "--max-running-requests",
     20,
     "--max-mamba-cache-size",
-    108,
+    160,
     "--mem-fraction-static",
-    0.7,
+    0.82,
     "--cuda-graph-bs",
     1,
     2,
-    4,
-    8,
-    12,
+    5,
+    10,
     15,
     17,
     19,
     20,
     "--enable-prefill-delayer",
     "--prefill-delayer-queue-min-ratio",
-    0.8,
+    0.7,
     "--prefill-delayer-max-delay-ms",
-    30000,
+    20000,
     "--dtype",
     "bfloat16",
     "--mamba-ssm-dtype",
@@ -101,6 +100,7 @@ class TestNPUQwen3_6_27B_1P_In64k_Out1k_Prefix90_50ms(
     repeat_rate = 0.9
     request_rate = float("inf")
     warmup_requests = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 225
 

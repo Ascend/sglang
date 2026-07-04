@@ -124,6 +124,7 @@ class TestNPUQwen3_5_397B_W4A8_1P_In3k5_Out1k5_High_GPQA(
     few_shot_num = 0
     generation_config = {"max_tokens": 65536}
     eval_batch_size = 64
+    seed = 1
 
     def test_npu_qwen3_5_397b_w4a8_1p_in3k5_out1k5_high_gpqa(self):
         self.run_accuracy()

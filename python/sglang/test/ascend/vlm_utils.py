@@ -56,7 +56,7 @@ class TestVLMModels(CustomTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if cls.process and cls.process.poll() is None:
+        if cls.process:
             print(f"Cleaning up server process {cls.process.pid}")
             try:
                 kill_process_tree(cls.process.pid)

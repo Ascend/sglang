@@ -56,7 +56,7 @@ MINIMAX_M2_5_LOW_LATENCY_OTHER_ARGS = [
     3,
     "--chunked-prefill-size",
     -1,
-    "--max-prefill-token",
+    "--max-prefill-tokens",
     8192,
     "--cuda-graph-bs",
     1,
@@ -108,6 +108,7 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_LowLatency(
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 20
     output_token_throughput = 3114.37
 

@@ -43,6 +43,8 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "npu",
     "--chunked-prefill-size",
     -1,
+    "--max-total-tokens",
+    470784,
     "--max-prefill-tokens",
     65536,
     "--max-total-tokens",
@@ -55,7 +57,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--max-running-requests",
     42,
     "--max-mamba-cache-size",
-    210,
+    200,
     "--cuda-graph-bs",
     2,
     8,
@@ -128,6 +130,7 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_Prefix90_50ms(
     output_len = 1024
     random_range_ratio = 1
     repeat_rate = 0.9
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     output_token_throughput = 660

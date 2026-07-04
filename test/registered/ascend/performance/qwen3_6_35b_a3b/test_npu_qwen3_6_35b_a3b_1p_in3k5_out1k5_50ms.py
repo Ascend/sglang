@@ -39,6 +39,8 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     "npu",
     "--chunked-prefill-size",
     -1,
+    "--max-total-tokens",
+    659840,
     "--max-prefill-tokens",
     45500,
     "--max-total-tokens",
@@ -98,6 +100,7 @@ class TestNPUQwen3_6_35BA3B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBa
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 2031.71
 
