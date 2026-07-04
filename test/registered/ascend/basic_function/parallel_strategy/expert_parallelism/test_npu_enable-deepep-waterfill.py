@@ -1,4 +1,5 @@
 import tempfile
+import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
@@ -11,7 +12,6 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
-
 
 register_npu_ci(est_time=200, suite="full-16-npu-a3", nightly=True)
 
