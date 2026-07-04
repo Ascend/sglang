@@ -1,3 +1,4 @@
+import os
 import unittest
 from types import SimpleNamespace
 
@@ -14,7 +15,19 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=200, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+
+_DEEPEP_ENV = {
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "STREAMS_PER_DEVICE": "32",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "16",
+    "HCCL_BUFFSIZE": "1600",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "SGLANG_NPU_USE_MLAPO": "0",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
+    "TASK_QUEUE_ENABLE": "0",
+    "TRANSFORMERS_VERBOSITY": "error",
+}
 
 
 class TestDeepseek(CustomTestCase):
@@ -27,7 +40,7 @@ class TestDeepseek(CustomTestCase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=6000,
             other_args=[
                 "--trust-remote-code",
                 "--tp",
@@ -40,20 +53,32 @@ class TestDeepseek(CustomTestCase):
                 "--enable-dp-lm-head",
                 "--moe-a2a-backend",
                 "deepep",
+                "--deepep-mode",
+                "auto",
                 "--ep-num-redundant-experts",
                 "32",
                 "--ep-dispatch-algorithm",
                 cls.ep_dispatch_algorithm,
                 "--eplb-algorithm",
                 "deepseek",
-                "--cuda-graph-bs",
-                "256",
+                "--quantization",
+                "modelslim",
+                "--mem-fraction-static",
+                "0.82",
+                "--disable-cuda-graph",
+                "--context-length",
+                "8192",
+                "--max-prefill-tokens",
+                "8192",
+                "--max-total-tokens",
+                "8192",
                 "--max-running-requests",
-                "2048",
+                "256",
                 "--disable-radix-cache",
                 "--model-loader-extra-config",
                 '{"enable_multithread_load": true,"num_threads": 64}',
             ],
+            env=_DEEPEP_ENV,
         )
 
     @classmethod
@@ -88,7 +113,7 @@ class TestDeepseekMTP(CustomTestCase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=6000,
             other_args=[
                 "--disable-overlap-schedule",
                 "--trust-remote-code",
@@ -102,16 +127,27 @@ class TestDeepseekMTP(CustomTestCase):
                 "--enable-dp-lm-head",
                 "--moe-a2a-backend",
                 "deepep",
+                "--deepep-mode",
+                "auto",
                 "--ep-num-redundant-experts",
                 "32",
                 "--ep-dispatch-algorithm",
                 "dynamic",
                 "--eplb-algorithm",
                 "deepseek",
-                "--cuda-graph-bs",
-                "64",
+                "--quantization",
+                "modelslim",
+                "--mem-fraction-static",
+                "0.82",
+                "--disable-cuda-graph",
+                "--context-length",
+                "8192",
+                "--max-prefill-tokens",
+                "8192",
+                "--max-total-tokens",
+                "8192",
                 "--max-running-requests",
-                "512",
+                "128",
                 "--speculative-algorithm",
                 "EAGLE",
                 "--speculative-num-steps",
@@ -124,6 +160,7 @@ class TestDeepseekMTP(CustomTestCase):
                 "--model-loader-extra-config",
                 '{"enable_multithread_load": true,"num_threads": 64}',
             ],
+            env=_DEEPEP_ENV,
         )
 
     @classmethod

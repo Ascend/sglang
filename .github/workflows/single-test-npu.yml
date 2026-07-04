@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: DeepEP large expert parallelism test - fix weights path import
+# test round 4: DeepEP large expert parallelism test - add quantization and memory limits for a3-16
 
 on:
   pull_request:
