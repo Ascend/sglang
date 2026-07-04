@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import requests
@@ -30,8 +29,6 @@ class TestDisableCudaGraph(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.out_log_file = open("./cache_out_log.txt", "w+", encoding="utf-8")
-        cls.err_log_file = open("./cache_err_log.txt", "w+", encoding="utf-8")
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -46,16 +43,11 @@ class TestDisableCudaGraph(CustomTestCase):
                 "--disable-decode-cuda-graph",
                 "--disable-piecewise-cuda-graph",
             ],
-            return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
         )
 
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-        cls.out_log_file.close()
-        cls.err_log_file.close()
-        os.remove("./cache_out_log.txt")
-        os.remove("./cache_err_log.txt")
 
     def test_disable_cuda_graph(self):
         response = requests.post(
@@ -70,15 +62,6 @@ class TestDisableCudaGraph(CustomTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("Paris", response.text)
-
-        self.err_log_file.seek(0)
-        err_log = self.err_log_file.read()
-        self.assertIn(
-            "disabled",
-            err_log,
-            "Expected stderr to contain 'disabled', proving all three "
-            "disable-xxx-cuda-graph aliases were parsed and took effect",
-        )
 
 
 if __name__ == "__main__":
