@@ -79,9 +79,17 @@ class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
         try:
             if cls.zmq_sub is not None:
                 cls.zmq_sub.close(linger=0)
-        finally:
             if cls.zmq_ctx is not None:
                 cls.zmq_ctx.term()
+
+            try:
+                cls.IPC_SOCKET_PATH.unlink(missing_ok=True)
+                logger.info("Cleaned up IPC socket: %s", cls.IPC_SOCKET_PATH)
+            except Exception as e:
+                logger.warning(
+                    "Could not remove IPC socket %s: %s", cls.IPC_SOCKET_PATH, e
+                )
+        finally:
             super().tearDownClass()
 
     # -----------------------------
