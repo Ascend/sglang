@@ -155,8 +155,8 @@ class TestPrefixMMCacheE2E(CustomTestCase):
         print("ufhgsfduioffbnc;oaihfninfioooooooojhffffffffffffffffffffhh")
         print(response1.json())
         self.assertEqual(response2.status_code, 200)
-        self.assertEqual(response1.json()["meta_info"]["cached_tokens"], 0)
-        self.assertGreater(response2.json()["meta_info"]["cached_tokens"], 0)
+        self.assertEqual(response1.json()["prompt_tokens_details"]["cached_tokens"], 0)
+        self.assertGreater(response2.json()["prompt_tokens_details"]["cached_tokens"], 0)
 
     def test_text_generation(self):
         """Test that text-only generation works."""
