@@ -16,12 +16,14 @@ register_npu_ci(est_time=400, suite="debug-full-1-npu-a3", nightly=True)
 
 
 class TestDisableCudaGraph(CustomTestCase):
-    """Testcase: verify --disable-prefill-cuda-graph, --disable-decode-cuda-graph
-    and --disable-piecewise-cuda-graph all resolve to disabled backend
+    """Testcase: verify --disable-prefill-cuda-graph, --disable-decode-cuda-graph,
+    --disable-piecewise-cuda-graph, --enable-dp-attention-local-control-broadcast
+    and --gc-threshold all take effect and inference succeeds
 
     [Test Category] Parameter
     [Test Target] --disable-prefill-cuda-graph; --disable-decode-cuda-graph;
-                  --disable-piecewise-cuda-graph
+                  --disable-piecewise-cuda-graph;
+                  --enable-dp-attention-local-control-broadcast; --gc-threshold
     """
 
     model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
@@ -42,6 +44,9 @@ class TestDisableCudaGraph(CustomTestCase):
                 "--disable-prefill-cuda-graph",
                 "--disable-decode-cuda-graph",
                 "--disable-piecewise-cuda-graph",
+                "--enable-dp-attention-local-control-broadcast",
+                "--gc-threshold",
+                "50",
             ],
         )
 
