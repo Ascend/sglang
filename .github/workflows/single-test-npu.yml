@@ -76,42 +76,7 @@ jobs:
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
 
           # Patch moe_align_block_size.py: add pure-PyTorch fallback for NPU
-          # (sgl_kernel only exports moe_align_block_size for CUDA/HIP/XPU/MUSA)
-          python -c "
-import pathlib
-p = pathlib.Path('${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py')
-src = p.read_text()
-patch = '''
-def _moe_align_block_size_pytorch(topk_ids, num_experts, block_size, sorted_token_ids, experts_ids, num_tokens_post_pad, cumsum_buffer, pad_sorted_token_ids=False):
-    import torch
-    device = topk_ids.device
-    flat = topk_ids.reshape(-1)
-    total_tokens = flat.numel()
-    max_padded = total_tokens + (num_experts + 1) * (block_size - 1)
-    sorted_token_ids.fill_(0)
-    experts_ids.fill_(0)
-    num_tokens_post_pad.fill_(0)
-    offset = 0
-    for e in range(num_experts):
-        mask = (flat == e).nonzero(as_tuple=False).flatten()
-        cnt = mask.numel()
-        padded = ((cnt + block_size - 1) // block_size) * block_size
-        if cnt > 0:
-            sorted_token_ids[offset:offset + cnt] = mask.to(torch.int32)
-        bcount = padded // block_size
-        if bcount > 0:
-            experts_ids[offset // block_size:offset // block_size + bcount] = e
-        offset += padded
-    num_tokens_post_pad[0] = offset
-'''
-src = src.replace(
-    '    sgl_moe_align_block_size(',
-    patch + '\n    if not globals().get(\"sgl_moe_align_block_size\"):\n        _moe_align_block_size_pytorch(topk_ids, num_experts + 1, block_size, sorted_ids, expert_ids, num_tokens_post_pad, cumsum_buffer, True)\n        return sorted_ids, expert_ids, num_tokens_post_pad\n\n    sgl_moe_align_block_size(',
-    1
-)
-p.write_text(src)
-print('Patched moe_align_block_size.py with PyTorch fallback for NPU')
-"
+          python -c "import pathlib;p=pathlib.Path('${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py');src=p.read_text();patch='\ndef _moe_align_block_size_pytorch(topk_ids, num_experts, block_size, sorted_token_ids, experts_ids, num_tokens_post_pad, cumsum_buffer, pad_sorted_token_ids=False):\n    import torch\n    flat = topk_ids.reshape(-1)\n    sorted_token_ids.fill_(0)\n    experts_ids.fill_(0)\n    num_tokens_post_pad.fill_(0)\n    offset = 0\n    for e in range(num_experts):\n        mask = (flat == e).nonzero(as_tuple=False).flatten()\n        cnt = mask.numel()\n        padded = ((cnt + block_size - 1) // block_size) * block_size\n        if cnt > 0:\n            sorted_token_ids[offset:offset + cnt] = mask.to(torch.int32)\n        bcount = padded // block_size\n        if bcount > 0:\n            experts_ids[offset // block_size:offset // block_size + bcount] = e\n        offset += padded\n    num_tokens_post_pad[0] = offset\n';src=src.replace('    sgl_moe_align_block_size(',patch+'\n    if not globals().get(\"sgl_moe_align_block_size\"):\n        _moe_align_block_size_pytorch(topk_ids, num_experts + 1, block_size, sorted_ids, expert_ids, num_tokens_post_pad, cumsum_buffer, True)\n        return sorted_ids, expert_ids, num_tokens_post_pad\n\n    sgl_moe_align_block_size(',1);p.write_text(src);print('Patched moe_align_block_size.py with PyTorch fallback for NPU')"
 
           current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
