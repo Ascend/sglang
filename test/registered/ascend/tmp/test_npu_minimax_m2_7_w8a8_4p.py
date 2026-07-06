@@ -157,7 +157,9 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
         res3 = run_command("cat ./err_log.txt | grep 'KV Cache is allocated'")
         logger.info("----- KV cache内存占用 -----\n%s", res3)
         logger.info("S6、记录NPU graph buffer分配后，NPU graph buffer内存占用")
-        res4 = run_command("cat ./err_log.txt | grep 'Capture npu graph end'")
+        res4 = run_command(
+            "cat ./err_log.txt | grep 'Capture target verify NPU graph end'"
+        )
         logger.info("----- NPU graph buffer内存占用 -----\n%s", res4)
         logger.info("S7、服务启动成功后执行npu-smi info")
         raw_result = run_command(cmd)
