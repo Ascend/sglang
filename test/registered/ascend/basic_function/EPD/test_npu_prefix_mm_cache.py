@@ -154,6 +154,8 @@ class TestPrefixMMCacheE2E(CustomTestCase):
         )
         print("ufhgsfduioffbnc;oaihfninfioooooooojhffffffffffffffffffffhh")
         print(response1.json())
+        print("ufhgsfduioffbnc;oaihfninfioooooooojhffffffffffffffffffffhh")
+        print(response2.json())
         self.assertEqual(response2.status_code, 200)
         self.assertEqual(response1.json()["usage"]["prompt_tokens_details"]["cached_tokens"], 0)
         self.assertGreater(response2.json()["usage"]["prompt_tokens_details"]["cached_tokens"], 0)
