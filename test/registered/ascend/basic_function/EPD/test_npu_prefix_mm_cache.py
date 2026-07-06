@@ -30,6 +30,7 @@ _INLINE_IMAGE_URL = (
     "cua9HOR7Y6w6swBwMy0qLTpkeI77qdEBpBFAHBBDAGH8WrwJKI4AAegUCfAKgEgpQDvh3CR"
     "3oQCuav58qlAw73kKCSgAAAABJRU5ErkJggg=="
 )
+image_url = "https://raw.githubusercontent.com/sgl-project/sglang/main/test/images/cat.jpg"
 
 
 class TestPrefixMMCacheE2E(CustomTestCase):
@@ -128,7 +129,7 @@ class TestPrefixMMCacheE2E(CustomTestCase):
                     "content": [
                         {
                             "type": "image_url",
-                            "image_url": {"url": _INLINE_IMAGE_URL},
+                            "image_url": {"url": image_url},
                         },
                         {"type": "text", "text": "Describe the image briefly."},
                     ],
