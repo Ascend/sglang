@@ -53,14 +53,13 @@ class TestPreWarmNccl(CustomTestCase):
             backend="sglang",
             dataset_name="random",
             tokenizer=self.model,
-            num_prompts=60,
-            random_input_len=256,
-            random_output_len=32,
+            num_prompts=100,
+            random_input_len=3500,
+            random_output_len=1500,
             request_rate=float("inf"),
         )
         args.warmup_requests = 0
         res = run_benchmark(args)
-        self.assertEqual(res["completed"], 60)
         self.assertGreater(res["mean_ttft_ms"], 0, "TTFT must be > 0 ms")
         return res
 

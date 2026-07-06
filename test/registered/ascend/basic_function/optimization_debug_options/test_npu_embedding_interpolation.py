@@ -34,6 +34,8 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
         "--enable-multimodal",
         "--attention-backend",
         "ascend",
+        "--mm-attention-backend",
+        "ascend_attn",
         "--mem-fraction-static",
         "0.8",
     ]
