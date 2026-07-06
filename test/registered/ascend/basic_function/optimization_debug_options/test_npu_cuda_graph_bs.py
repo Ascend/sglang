@@ -7,23 +7,18 @@ from typing import List, Optional
 from urllib.parse import urlparse
 
 from sglang.bench_serving import run_benchmark
-from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.server_fixtures.disaggregation_fixture import (
-    get_rdma_devices_args,
-)
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     get_benchmark_args,
-    is_in_ci,
 )
 from sglang.utils import wait_for_http_ready
 
-register_npu_ci(est_time=1200, suite="debug-full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=1200, suite="full-2-npu-a3", nightly=True)
 
 MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
@@ -50,15 +45,8 @@ def _pd_ports():
 
 
 def _pd_transport_args():
-    if is_in_ci():
-        backend = ["--disaggregation-transfer-backend", "mooncake"]
-        devices = ["--disaggregation-ib-device", get_rdma_devices_args()]
-    else:
-        backend = ["--disaggregation-transfer-backend",
-                   envs.SGLANG_TEST_PD_DISAGG_BACKEND.get()]
-        dev = envs.SGLANG_TEST_PD_DISAGG_DEVICES.get()
-        devices = ["--disaggregation-ib-device", dev] if dev else []
-    return backend + devices
+    # NPU uses ascend transfer backend (no RDMA/IB devices needed).
+    return ["--disaggregation-transfer-backend", "ascend"]
 
 
 def _launch_pd_server(url, *, mode, bootstrap_port, extra_args, base_gpu_id="0"):
@@ -86,9 +74,13 @@ def _launch_pd_server(url, *, mode, bootstrap_port, extra_args, base_gpu_id="0")
         *extra_args,
         *_pd_transport_args(),
     ]
+    env = {
+        **os.environ,
+        "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:26666",
+    }
     with open(err_path, "w") as err_file:
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.DEVNULL, stderr=err_file, text=True,
+            cmd, stdout=subprocess.DEVNULL, stderr=err_file, text=True, env=env,
         )
     wait_for_http_ready(url + "/health", timeout=_LAUNCH_TIMEOUT, process=proc)
     return proc, err_path

@@ -1,3 +1,4 @@
+import os
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -39,6 +40,18 @@ class TestNpuTokenizerBackendConcurrent(CustomTestCase):
     ]
 
     @classmethod
+    def setUpClass(cls):
+        cls.out_log_file = open("./cache_out_log.txt", "w+", encoding="utf-8")
+        cls.err_log_file = open("./cache_err_log.txt", "w+", encoding="utf-8")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.out_log_file.close()
+        cls.err_log_file.close()
+        os.remove("./cache_out_log.txt")
+        os.remove("./cache_err_log.txt")
+
+    @classmethod
     def _send_concurrent(cls, n):
         def _request():
             with requests.Session() as session:
@@ -67,6 +80,7 @@ class TestNpuTokenizerBackendConcurrent(CustomTestCase):
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls.server_args + ["--tokenizer-backend", backend],
+            return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
         )
 
     def test_tokenizer_backend_concurrent(self):
@@ -83,6 +97,14 @@ class TestNpuTokenizerBackendConcurrent(CustomTestCase):
         # Test with fastokens backend
         self._launch_server("fastokens")
         try:
+            self.err_log_file.seek(0)
+            err_log = self.err_log_file.read()
+            self.assertIn(
+                "fastokens backend enabled",
+                err_log,
+                "Expected stderr to confirm fastokens patch was applied",
+            )
+
             results_ft, elapsed_ft = self._send_concurrent(CONCURRENT_REQUESTS)
             for r in results_ft:
                 self.assertEqual(r.status_code, 200)

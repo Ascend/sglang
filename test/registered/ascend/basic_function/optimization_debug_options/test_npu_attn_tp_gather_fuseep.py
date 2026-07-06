@@ -62,10 +62,11 @@ class TestAttnTpGatherA2APath(CustomTestCase):
         #   via "not get_moe_a2a_backend().is_none()" condition;
         #   SGLANG_NPU_FUSED_MOE_MODE defaults to 1 (valid).
         "--moe-a2a-backend", "ascend_fuseep",
+        "--tp-size", "2",
     ]
 
-    def test_contrastive_single_card(self):
-        """T1+T2: Contrastive — with/without flag on single card.
+    def test_contrastive_tp2(self):
+        """T1+T2: Contrastive — with/without flag on tp=2.
 
         Phase 1 (no flag): require_attn_tp_gather() → Branch C (a2a path) → True
             → global_dp_buffer_len = num_tokens (model_runner.py:2579)
@@ -76,6 +77,7 @@ class TestAttnTpGatherA2APath(CustomTestCase):
         [Branch] C→F vs A→G
         [Does NOT cover] dense_tp=1 path, DP attention scenarios
         """
+        _require_devices(self, 2)
         prompts = [
             "The capital of France is",
             "What is the largest planet in our solar system?",
@@ -208,8 +210,6 @@ class TestAttnTpGatherA2ATp2(CustomTestCase):
         [Branch] C→F vs A→G (tp=2)
         [Does NOT cover] DP attention scenarios
         """
-        _require_devices(self, 2)
-
         prompts = [
             "The capital of France is",
             "What is the largest planet in our solar system?",
