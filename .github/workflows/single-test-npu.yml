@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: Experts shared outer LoRA test
+# test round 2: Experts shared outer LoRA test
 
 on:
   pull_request:
