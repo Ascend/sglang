@@ -34,7 +34,7 @@ class TestDtypeAuto(CustomTestCase):
                 "--mem-fraction-static",
                 "0.8",
                 "--moe-a2a-backend",
-                "deepep"
+                "deepep",
                 "--deepep-dispatcher-output-dtype",
                 cls.dtype,
                 "--attention-backend",
