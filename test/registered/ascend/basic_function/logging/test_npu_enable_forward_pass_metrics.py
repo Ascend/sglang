@@ -15,13 +15,10 @@ register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 
 class TestNPUMetricsMFUEnabled(TestNPULoggingBase):
-    """
-    NPU integration test for forward-pass metrics (FPM).
+    """Testcase: Verify forward-pass metrics emission over ZMQ IPC with configured worker_id.
 
-    Verifies:
-    - Forward-pass metrics are emitted over ZMQ IPC
-    - worker_id matches the configured value (not overridden on Ascend/NPU)
-    - Prometheus metrics remain unaffected
+    [Test Category] Parameter
+    [Test Target] --enable-forward-pass-metrics, --forward-pass-metrics-worker-id, --forward-pass-metrics-ipc-name
     """
 
     # -----------------------------

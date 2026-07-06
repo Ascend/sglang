@@ -5,7 +5,7 @@ import requests
 
 from sglang import Engine
 from sglang.srt.observability.req_time_stats import RequestStage
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH, logger
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.otel_collector import LightweightOtlpCollector
@@ -161,13 +161,7 @@ class TestNPUTracing(TestNPULoggingBase):
 
             if expected_spans:
                 span_names = self.collector.get_span_names()
-                logger.info(
-                    f"1111111111111111111111111111111111111111111111111111111111\n {span_names}"
-                )
                 matched = [name for name in expected_spans if name in span_names]
-                logger.info(
-                    f"2222222222222222222222222222222222222222222222222222222222\n {matched}"
-                )
                 self.assertGreater(
                     len(matched),
                     0,

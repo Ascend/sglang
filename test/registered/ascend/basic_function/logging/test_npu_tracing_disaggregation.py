@@ -6,7 +6,7 @@ import requests
 
 from sglang.srt.observability.req_time_stats import RequestStage
 from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH, logger
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.otel_collector import LightweightOtlpCollector
 from sglang.test.test_utils import (
@@ -187,9 +187,6 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
 
         # Verify disaggregation-specific spans exist
         span_names = self.collector.get_span_names()
-        logger.info(
-            f"1111111111111111111111111111111111111111111111111111111111\n {span_names}"
-        )
         self.assertTrue(
             self.collector.has_any_span(
                 [

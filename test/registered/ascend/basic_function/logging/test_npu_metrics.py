@@ -167,15 +167,9 @@ class TestNPUMetrics2NPU(_BaseTestNPUMetrics):
 
 
 class TestNPUMetricsExtraLabels(_BaseTestNPUMetrics):
-    """Test that --extra-metric-labels injects constant labels into all metrics.
+    """Testcase: Verify that --extra-metric-labels injects constant labels into all metrics.
 
-    [Description]
-        Validates that when --extra-metric-labels is provided, all Prometheus
-        metrics exported by the server carry the specified labels unchanged.
-        This test checks label presence, correctness, and consistency across
-        multiple metric families (counters, gauges, histograms).
-
-    [Test Category] Functionality
+    [Test Category] Parameter
     [Test Target] --extra-metric-labels
     """
 
