@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Experts shared outer LoRA test
+# test round 3: Fix moe_align_block_size.py import
 
 on:
   pull_request:
