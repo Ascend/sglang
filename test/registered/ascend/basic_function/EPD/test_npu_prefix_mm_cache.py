@@ -18,7 +18,6 @@ from sglang.test.test_utils import (
 )
 
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
-os.environ["SGLANG_MM_SKIP_COMPUTE_HASH"] = "True"
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
