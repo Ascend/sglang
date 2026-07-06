@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 2: Experts shared outer LoRA test
+# test round 3: Experts shared outer LoRA test
 
 on:
   pull_request:
@@ -76,7 +76,58 @@ jobs:
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
 
           # Patch moe_align_block_size.py: add pure-PyTorch fallback for NPU
-          python -c "import pathlib;p=pathlib.Path('${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py');src=p.read_text();patch='\ndef _moe_align_block_size_pytorch(topk_ids, num_experts, block_size, sorted_token_ids, experts_ids, num_tokens_post_pad, cumsum_buffer, pad_sorted_token_ids=False):\n    import torch\n    flat = topk_ids.reshape(-1)\n    sorted_token_ids.fill_(0)\n    experts_ids.fill_(0)\n    num_tokens_post_pad.fill_(0)\n    offset = 0\n    for e in range(num_experts):\n        mask = (flat == e).nonzero(as_tuple=False).flatten()\n        cnt = mask.numel()\n        padded = ((cnt + block_size - 1) // block_size) * block_size\n        if cnt > 0:\n            sorted_token_ids[offset:offset + cnt] = mask.to(torch.int32)\n        bcount = padded // block_size\n        if bcount > 0:\n            experts_ids[offset // block_size:offset // block_size + bcount] = e\n        offset += padded\n    num_tokens_post_pad[0] = offset\n';src=src.replace('    sgl_moe_align_block_size(',patch+'\n    if not globals().get(\"sgl_moe_align_block_size\"):\n        _moe_align_block_size_pytorch(topk_ids, num_experts + 1, block_size, sorted_ids, expert_ids, num_tokens_post_pad, cumsum_buffer, True)\n        return sorted_ids, expert_ids, num_tokens_post_pad\n\n    sgl_moe_align_block_size(',1);p.write_text(src);print('Patched moe_align_block_size.py with PyTorch fallback for NPU')"
+          cat > ${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py << 'EOF'
+from __future__ import annotations
+from typing import Tuple
+import torch
+import triton
+from sglang.srt.utils import is_cuda, is_hip, is_musa, is_xpu
+
+_is_cuda = is_cuda()
+_is_hip = is_hip()
+_is_xpu = is_xpu()
+_is_musa = is_musa()
+
+if _is_cuda or _is_hip or _is_xpu or _is_musa:
+    from sgl_kernel import moe_align_block_size as sgl_moe_align_block_size
+
+def _moe_align_block_size_pytorch(topk_ids, num_experts, block_size, sorted_token_ids, experts_ids, num_tokens_post_pad, cumsum_buffer, pad_sorted_token_ids=False):
+    flat = topk_ids.reshape(-1)
+    sorted_token_ids.fill_(0)
+    experts_ids.fill_(0)
+    num_tokens_post_pad.fill_(0)
+    offset = 0
+    for e in range(num_experts):
+        mask = (flat == e).nonzero(as_tuple=False).flatten()
+        cnt = mask.numel()
+        padded = ((cnt + block_size - 1) // block_size) * block_size
+        if cnt > 0:
+            sorted_token_ids[offset:offset + cnt] = mask.to(torch.int32)
+        bcount = padded // block_size
+        if bcount > 0:
+            experts_ids[offset // block_size:offset // block_size + bcount] = e
+        offset += padded
+    num_tokens_post_pad[0] = offset
+
+def moe_align_block_size(
+    topk_ids: torch.Tensor, block_size: int, num_experts: int
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    if topk_ids.numel() < num_experts + 1:
+        max_num_tokens_padded = topk_ids.numel() * block_size
+    else:
+        max_num_tokens_padded = topk_ids.numel() + (num_experts + 1) * (block_size - 1)
+    sorted_ids = torch.empty((max_num_tokens_padded,), dtype=torch.int32, device=topk_ids.device)
+    max_num_m_blocks = triton.cdiv(max_num_tokens_padded, block_size)
+    expert_ids = torch.empty((max_num_m_blocks,), dtype=torch.int32, device=topk_ids.device)
+    num_tokens_post_pad = torch.empty((1), dtype=torch.int32, device=topk_ids.device)
+    cumsum_buffer = torch.empty((num_experts + 2,), dtype=torch.int32, device=topk_ids.device)
+    if not globals().get("sgl_moe_align_block_size"):
+        _moe_align_block_size_pytorch(topk_ids, num_experts + 1, block_size, sorted_ids, expert_ids, num_tokens_post_pad, cumsum_buffer, True)
+        return sorted_ids, expert_ids, num_tokens_post_pad
+    sgl_moe_align_block_size(topk_ids, num_experts + 1, block_size, sorted_ids, expert_ids, num_tokens_post_pad, cumsum_buffer, True)
+    return sorted_ids, expert_ids, num_tokens_post_pad
+EOF
+          echo "Patched moe_align_block_size.py with PyTorch fallback for NPU"
 
           current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
