@@ -63,7 +63,7 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS = [
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.85,
+    0.7,
     "--prefill-max-requests",
     2,
     "--disable-radix-cache",
