@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 3: Experts shared outer LoRA test
+# test round 4: Experts shared outer LoRA test
 
 on:
   pull_request:
@@ -76,57 +76,7 @@ jobs:
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
 
           # Patch moe_align_block_size.py: add pure-PyTorch fallback for NPU
-          cat > ${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py << 'EOF'
-from __future__ import annotations
-from typing import Tuple
-import torch
-import triton
-from sglang.srt.utils import is_cuda, is_hip, is_musa, is_xpu
-
-_is_cuda = is_cuda()
-_is_hip = is_hip()
-_is_xpu = is_xpu()
-_is_musa = is_musa()
-
-if _is_cuda or _is_hip or _is_xpu or _is_musa:
-    from sgl_kernel import moe_align_block_size as sgl_moe_align_block_size
-
-def _moe_align_block_size_pytorch(topk_ids, num_experts, block_size, sorted_token_ids, experts_ids, num_tokens_post_pad, cumsum_buffer, pad_sorted_token_ids=False):
-    flat = topk_ids.reshape(-1)
-    sorted_token_ids.fill_(0)
-    experts_ids.fill_(0)
-    num_tokens_post_pad.fill_(0)
-    offset = 0
-    for e in range(num_experts):
-        mask = (flat == e).nonzero(as_tuple=False).flatten()
-        cnt = mask.numel()
-        padded = ((cnt + block_size - 1) // block_size) * block_size
-        if cnt > 0:
-            sorted_token_ids[offset:offset + cnt] = mask.to(torch.int32)
-        bcount = padded // block_size
-        if bcount > 0:
-            experts_ids[offset // block_size:offset // block_size + bcount] = e
-        offset += padded
-    num_tokens_post_pad[0] = offset
-
-def moe_align_block_size(
-    topk_ids: torch.Tensor, block_size: int, num_experts: int
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    if topk_ids.numel() < num_experts + 1:
-        max_num_tokens_padded = topk_ids.numel() * block_size
-    else:
-        max_num_tokens_padded = topk_ids.numel() + (num_experts + 1) * (block_size - 1)
-    sorted_ids = torch.empty((max_num_tokens_padded,), dtype=torch.int32, device=topk_ids.device)
-    max_num_m_blocks = triton.cdiv(max_num_tokens_padded, block_size)
-    expert_ids = torch.empty((max_num_m_blocks,), dtype=torch.int32, device=topk_ids.device)
-    num_tokens_post_pad = torch.empty((1), dtype=torch.int32, device=topk_ids.device)
-    cumsum_buffer = torch.empty((num_experts + 2,), dtype=torch.int32, device=topk_ids.device)
-    if not globals().get("sgl_moe_align_block_size"):
-        _moe_align_block_size_pytorch(topk_ids, num_experts + 1, block_size, sorted_ids, expert_ids, num_tokens_post_pad, cumsum_buffer, True)
-        return sorted_ids, expert_ids, num_tokens_post_pad
-    sgl_moe_align_block_size(topk_ids, num_experts + 1, block_size, sorted_ids, expert_ids, num_tokens_post_pad, cumsum_buffer, True)
-    return sorted_ids, expert_ids, num_tokens_post_pad
-EOF
+          echo "ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwpmcm9tIHR5cGluZyBpbXBvcnQgVHVwbGUKaW1wb3J0IHRvcmNoCmltcG9ydCB0cml0b24KZnJvbSBzZ2xhbmcucnQudXRpbHMgaW1wb3J0IGlzX2N1ZGEsIGlzX2hpcCwgaXNfbXVzYSwgaXNfeHB1CgpfY3VkaSA9IGlzX2N1ZGEoKQpfaGlwID0gaXNfaGlwKCkKX3hwdSA9IGlzX3hwdSgpCl9tdXNhID0gaXNfbXVzYSgpCgppZiBfY3VkaSBvciBfaGlwIG9yIF94cHUgb3IgX211c2E6CiAgICBmcm9tIHNnbF9rZXJuZWwgaW1wb3J0IG1vZV9hbGlnbl9ibG9ja19zaXplIGFzIHNnbF9tb2VfYWxpZ25fYmxvY2tfc2l6ZQoKZGVmIF9tb2VfYWxpZ25fYmxvY2tfc2l6ZV9weXRvcmNoKHRvcGtfaWRzLCBudW1fZXhwZXJ0cywgYmxvY2tfc2l6ZSwgc29ydGVkX3Rva2VuX2lkcywgZXhwZXJ0c19pZHMsIG51bV90b2tlbnNfcG9zdF9wYWQsIGN1bXN1bV9idWZmZXIsIHBhZF9zb3J0ZWRfdG9rZW5faWRzPUZhbHNlKToKICAgIGZsYXQgPSB0b3BraWRzLnJlc2hhcGUoLTEpCiAgICBzb3J0ZWRfdG9rZW5faWRzLmZpbGxfKDApCiAgICBleHBlcnRzX2lkcy5maWxsXygwKQogICAgbnVtX3Rva2Vuc19wb3N0X3BhZC5maWxsXygwKQogICAgb2Zmc2V0ID0gMAogICAgZm9yIGUgaW4gcmFuZ2UobnVtX2V4cGVydHMpOgogICAgICAgIG1hc2sgPSAoZmxhdCA9PSBlKS5ub256ZXJvKGFzX3R1cGxlPUZhbHNlKS5mbGF0dGVuKCkKICAgICAgICBjbnQgPSBtYXNrLm51bWVsKCkKICAgICAgICBwYWRkZWQgPSAoKGNudCArIGJsb2NrX3NpemUgLSAxKSAvLyBibG9ja19zaXplKSAqIGJsb2NrX3NpemUKICAgICAgICBpZiBjbnQgPiAwOgogICAgICAgICAgICBzb3J0ZWRfdG9rZW5faWRzW29mZnNldDpvZmZzZXQgKyBjbnRdID0gbWFzay50byh0b3JjaC5pbnQzMikKICAgICAgICBiY291bnQgPSBwYWRkZWQgLy8gYmxvY2tfc2l6ZQogICAgICAgIGlmIGJjb3VudCA+IDA6CiAgICAgICAgICAgIGV4cGVydHNfaWRzW29mZnNldCAvLyBibG9ja19zaXplOm9mZnNldCAvLyBibG9ja19zaXplICsgYmNvdW50XSA9IGUKICAgICAgICBvZmZzZXQgKz0gcGFkZGVkCiAgICBudW1fdG9rZW5zX3Bvc3RfcGFkWzBdID0gb2Zmc2V0CgpkZWYgbW9lX2FsaWduX2Jsb2NrX3NpemUoCiAgICB0b3BrX2lkczogdG9yY2guVGVuc29yLCBibG9ja19zaXplOiBpbnQsIG51bV9leHBlcnRzOiBpbnQKKSAtPiBUdXBsZVt0b3JjaC5UZW5zb3IsIHRvcmNoLlRlbnNvciwgdG9yY2guVGVuc29yXToKICAgIGlmIHRvcGtfaWRzLm51bWVsKCkgPCBudW1fZXhwZXJ0cyArIDE6CiAgICAgICAgbWF4X251bV90b2tlbnNfcGFkZGVkID0gdG9wa19pZHMubnVtZWwoKSAqIGJsb2NrX3NpemUKICAgIGVsc2U6CiAgICAgICAgbWF4X251bV90b2tlbnNfcGFkZGVkID0gdG9wa19pZHMubnVtZWwoKSArIChudW1fZXhwZXJ0cyArIDEpICogKGJsb2NrX3NpemUgLSAxKQogICAgc29ydGVkX2lkcyA9IHRvcmNoLmVtcHR5KChtYXhfbnVtX3Rva2Vuc19wYWRkZWQsKSwgZHR5cGU9dG9yY2guaW50MzIsIGRldmljZT10b3BrX2lkcy5kZXZpY2UpCiAgICBtYXhfbnVtX21fYmxvY2tzID0gdHJpdG9uLmNkaXYobWF4X251bV90b2tlbnNfcGFkZGVkLCBibG9ja19zaXplKQogICAgZXhwZXJ0X2lkcyA9IHRvcmNoLmVtcHR5KChtYXhfbnVtX21fYmxvY2tzLCksIGR0eXBlPXRvcmNoLmludDMyLCBkZXZpY2U9dG9wa19pZHMuZGV2aWNlKQogICAgbnVtX3Rva2Vuc19wb3N0X3BhZCA9IHRvcmNoLmVtcHR5KCgxKSwgZHR5cGU9dG9yY2guaW50MzIsIGRldmljZT10b3BrX2lkcy5kZXZpY2UpCiAgICBjdW1zdW1fYnVmZmVyID0gdG9yY2guZW1wdHkoKG51bV9leHBlcnRzICsgMiwpLCBkdHlwZT10b3JjaC5pbnQzMiwgZGV2aWNlPXRvcGtfaWRzLmRldmljZSkKICAgIGlmIG5vdCBnbG9iYWxzKCkuZ2V0KCJzZ2xfbW9lX2FsaWduX2Jsb2NrX3NpemUiKToKICAgICAgICBfbW9lX2FsaWduX2Jsb2NrX3NpemVfcHl0b3JjaCh0b3BrX2lkcywgbnVtX2V4cGVydHMgKyAxLCBibG9ja19zaXplLCBzb3J0ZWRfaWRzLCBleHBlcnRfaWRzLCBudW1fdG9rZW5zX3Bvc3RfcGFkLCBjdW1zdW1fYnVmZmVyLCBUcnVlKQogICAgICAgIHJldHVybiBzb3J0ZWRfaWRzLCBleHBlcnRfaWRzLCBudW1fdG9rZW5zX3Bvc3RfcGFkCiAgICBzZ2xfbW9lX2FsaWduX2Jsb2NrX3NpemUodG9wa19pZHMsIG51bV9leHBlcnRzICsgMSwgYmxvY2tfc2l6ZSwgc29ydGVkX2lkcywgZXhwZXJ0X2lkcywgbnVtX3Rva2Vuc19wb3N0X3BhZCwgY3Vtc3VtX2J1ZmZlciwgVHJ1ZSkKICAgIHJldHVybiBzb3J0ZWRfaWRzLCBleHBlcnRfaWRzLCBudW1fdG9rZW5zX3Bvc3RfcGFkCg==" | base64 -d > ${sglang_pkg_path}/sglang/srt/layers/moe/moe_runner/triton_utils/moe_align_block_size.py
           echo "Patched moe_align_block_size.py with PyTorch fallback for NPU"
 
           current_date=$(date +%Y%m%d)
