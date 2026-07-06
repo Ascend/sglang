@@ -40,7 +40,7 @@ class TestNpuMsprobeDumpConfig(CustomTestCase):
         json.dump(
             {
                 "task": "statistics",
-                "level": "L1",
+                "level": "L0",
                 "dump_path": cls._dump_dir,
             },
             cls._tmp_config,
