@@ -30,7 +30,7 @@ _INLINE_IMAGE_URL = (
     "cua9HOR7Y6w6swBwMy0qLTpkeI77qdEBpBFAHBBDAGH8WrwJKI4AAegUCfAKgEgpQDvh3CR"
     "3oQCuav58qlAw73kKCSgAAAABJRU5ErkJggg=="
 )
-image_url = "https://raw.githubusercontent.com/sgl-project/sglang/main/test/images/cat.jpg"
+image_url = "/root/.cache/modelscope/hub/datasets/images/invoice_with_barcode_logo.jpeg"
 
 
 class TestPrefixMMCacheE2E(CustomTestCase):
