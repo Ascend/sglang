@@ -16,7 +16,7 @@ register_npu_ci(
 )
 
 QWEN3_6_27B_1080P_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    # "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
@@ -44,25 +44,28 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    76160,
+    87040,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    35,
+    40,
     "--max-mamba-cache-size",
-    35,
+    40,
     "--mem-fraction-static",
     0.76,
     "--cuda-graph-bs",
+    1,
     2,
     4,
     8,
+    12,
     16,
     20,
     24,
     28,
     30,
     35,
+    40,
     # 40,
     # "--enable-prefill-delayer",
     # "--prefill-delayer-queue-min-ratio",
@@ -102,8 +105,8 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     envs = QWEN3_6_27B_1080P_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    max_concurrency = 35
-    num_prompts = 35
+    max_concurrency = 40
+    num_prompts = 40
     input_len = 30
     output_len = 256
     random_range_ratio = 1
