@@ -100,8 +100,8 @@ class TestNPUDeepSeekR1W4A8(TestAscendPerformanceTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
-    seed = 1
     tpot = 50
+    seed = 1
     output_token_throughput = 3457.1
 
     def test_throughput(self):
