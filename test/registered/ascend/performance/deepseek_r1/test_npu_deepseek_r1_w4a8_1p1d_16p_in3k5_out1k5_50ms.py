@@ -57,7 +57,7 @@ MODEL_CONFIG = {
         "--tp-size",
         16,
         "--mem-fraction-static",
-        0.9,
+        0.85,
         "--quantization",
         "modelslim",
         "--max-running-requests",
