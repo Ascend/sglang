@@ -59,6 +59,7 @@ class TestAttnTpGatherA2APath(CustomTestCase):
         "0.8",
         "--attention-backend",
         "ascend",
+        "--disable-cuda-graph",
         # --moe-a2a-backend ascend_fuseep:
         #   triggers require_attn_tp_gather=true at common.py:3102
         #   via "not get_moe_a2a_backend().is_none()" condition;
@@ -163,6 +164,7 @@ class TestAttnTpGatherDense(CustomTestCase):
                 "0.8",
                 "--attention-backend",
                 "ascend",
+                "--disable-cuda-graph",
                 "--disable-attn-tp-gather",
                 # For non-MOE: moe_a2a_backend="none" AND moe_dense_tp_size=None
                 # → both conditions at common.py:3102 are False
@@ -201,6 +203,7 @@ class TestAttnTpGatherA2ATp2(CustomTestCase):
         "0.8",
         "--attention-backend",
         "ascend",
+        "--disable-cuda-graph",
         # --moe-a2a-backend ascend_fuseep:
         #   triggers require_attn_tp_gather=true at common.py:3102
         #   via "not get_moe_a2a_backend().is_none()" condition.
@@ -302,6 +305,7 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
             "0.8",
             "--attention-backend",
             "ascend",
+            "--disable-cuda-graph",
             "--moe-a2a-backend",
             "deepep",
             # --enable-dp-attention: required to exercise Branch B
