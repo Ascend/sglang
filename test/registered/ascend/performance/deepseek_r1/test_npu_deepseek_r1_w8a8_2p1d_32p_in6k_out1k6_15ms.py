@@ -160,6 +160,7 @@ class TestDeepSeekR1W8A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 6000
     output_len = 1600
     random_range_ratio = 1
+    seed = 1
     tpot = 20.5
     # T: None   800I A3: None     Dev-800I: 1181/32@19.81
     output_token_throughput = 1058

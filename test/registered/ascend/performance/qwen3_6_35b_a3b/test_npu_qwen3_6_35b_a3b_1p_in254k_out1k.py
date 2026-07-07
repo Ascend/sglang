@@ -86,6 +86,7 @@ class TestNPUQwen3_6_35BA3B_1P_In254k_Out1k_50ms(TestAscendPerformanceTestCaseBa
     input_len = 254000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     tpot = 16.1
     output_token_throughput = 20.70
 

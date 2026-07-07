@@ -20,10 +20,11 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestLoraMaxLoraRank(CustomTestCase):
-    """Testcase：Verify set the --max-load-rank parameter, load lora that match the number of ranks, inference request successful.
+    """Testcase：Verify set the --max-load-rank, --lora-backend parameter, load lora that match the number of ranks,
+    inference request successful.
 
     [Test Category] Parameter
-    [Test Target] --max-load-rank
+    [Test Target] --max-load-rank, --lora-backend
     """
 
     lora_a = LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH
@@ -37,6 +38,8 @@ class TestLoraMaxLoraRank(CustomTestCase):
             f"lora_a={cls.lora_a}",
             "--max-lora-rank",
             cls.max_lora_rank,
+            "--lora-backend",
+            "ascend",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",

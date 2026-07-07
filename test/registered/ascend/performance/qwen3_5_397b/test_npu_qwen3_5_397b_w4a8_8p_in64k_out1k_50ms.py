@@ -116,6 +116,7 @@ class TestNPUQwen3_5_397B_64K(TestAscendPerformanceTestCaseBase):
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     temperature = 0.6

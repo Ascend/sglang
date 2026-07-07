@@ -175,6 +175,7 @@ class TestNPUMimo_v2_flash_1P1D_16p_In16k_Out1k_TTFT_5s(
     input_len = 16000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     tpot = 20
 
     def test_npu_mimo_v2_flash_1p1d_16p_in16k_out1k_tpot_20ms(self):
