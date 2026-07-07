@@ -1,5 +1,5 @@
-﻿name: Single Test (NPU)
-# test round 1: MambaCache test
+name: Single Test (NPU)
+# test round 2: MambaCache test - retry after network issue
 
 on:
   pull_request:
