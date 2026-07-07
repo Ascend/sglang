@@ -44,17 +44,15 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    87040,
+    95744,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    40,
+    44,
     "--max-mamba-cache-size",
-    40,
+    44,
     "--mem-fraction-static",
-    0.76,
-    "--max-total-tokens",
-    110000,
+    0.70,
     "--cuda-graph-bs",
     1,
     2,
@@ -68,6 +66,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     30,
     35,
     40,
+    44,
     # 40,
     # "--enable-prefill-delayer",
     # "--prefill-delayer-queue-min-ratio",
@@ -107,8 +106,8 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     envs = QWEN3_6_27B_1080P_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    max_concurrency = 40
-    num_prompts = 40
+    max_concurrency = 44
+    num_prompts = 44
     input_len = 30
     output_len = 256
     random_range_ratio = 1
