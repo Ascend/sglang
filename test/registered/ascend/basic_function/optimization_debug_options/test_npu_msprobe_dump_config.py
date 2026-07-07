@@ -40,6 +40,7 @@ class TestNpuMsprobeDumpConfig(CustomTestCase):
             {
                 "task": "statistics",
                 "level": "L0",
+                "step": [0],
                 "dump_path": cls._dump_dir,
             },
             cls._tmp_config,
