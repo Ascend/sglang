@@ -76,21 +76,18 @@ class TestPreWarmNccl(CustomTestCase):
         finally:
             kill_process_tree(proc2.pid)
 
-        ttft_w = res_warmup["mean_ttft_ms"]
-        ttft_nw = res_no_warmup["mean_ttft_ms"]
         p99_w = res_warmup["p99_ttft_ms"]
         p99_nw = res_no_warmup["p99_ttft_ms"]
         print(
-            f"\n=== TTFT Comparison: --pre-warm-nccl vs default ===\n"
-            f"  Mean TTFT: {ttft_w:.1f} ms (warmup) vs {ttft_nw:.1f} ms (no-warmup)\n"
-            f"  P99  TTFT: {p99_w:.1f} ms (warmup) vs {p99_nw:.1f} ms (no-warmup)\n"
+            f"\n=== P99 TTFT Comparison: --pre-warm-nccl vs default ===\n"
+            f"  P99 TTFT: {p99_w:.1f} ms (warmup) vs {p99_nw:.1f} ms (no-warmup)\n"
         )
         self.assertLessEqual(
-            ttft_w,
-            ttft_nw,
-            f"Expected --pre-warm-nccl mean TTFT ({ttft_w:.1f} ms) <= "
-            f"no-warmup ({ttft_nw:.1f} ms). NCCL warmup should prime all-reduce "
-            f"communication and reduce or match first-request latency.",
+            p99_w,
+            p99_nw,
+            f"Expected --pre-warm-nccl P99 TTFT ({p99_w:.1f} ms) <= "
+            f"no-warmup ({p99_nw:.1f} ms). "
+            f"NCCL warmup should reduce tail latency.",
         )
 
 

@@ -61,7 +61,7 @@ class TestAttnTpGatherA2APath(CustomTestCase):
         #   triggers require_attn_tp_gather=true at common.py:3102
         #   via "not get_moe_a2a_backend().is_none()" condition;
         #   SGLANG_NPU_FUSED_MOE_MODE defaults to 1 (valid).
-        "--moe-a2a-backend", "ascend_fuseep",
+        "--moe-a2a-backend", "deepep",
         "--tp-size", "2",
     ]
 
@@ -196,7 +196,7 @@ class TestAttnTpGatherA2ATp2(CustomTestCase):
         # --moe-a2a-backend ascend_fuseep:
         #   triggers require_attn_tp_gather=true at common.py:3102
         #   via "not get_moe_a2a_backend().is_none()" condition.
-        "--moe-a2a-backend", "ascend_fuseep",
+        "--moe-a2a-backend", "deepep",
         "--tp-size", "2",
     ]
 
@@ -290,7 +290,7 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
             "--trust-remote-code",
             "--mem-fraction-static", "0.8",
             "--attention-backend", "ascend",
-            "--moe-a2a-backend", "ascend_fuseep",
+            "--moe-a2a-backend", "deepep",
             # --enable-dp-attention: required to exercise Branch B
             # (common.py:3103-3104) in require_attn_tp_gather().
             "--enable-dp-attention",
