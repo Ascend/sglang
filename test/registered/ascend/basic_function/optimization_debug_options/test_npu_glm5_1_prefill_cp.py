@@ -24,7 +24,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(
-    est_time=3600, suite="full-8-npu-a3", nightly=True
+    est_time=3600, suite="debug-full-8-npu-a3", nightly=True
 )
 
 GLM5_1_MODEL = GLM_5_1_W4A8_MODEL_PATH
