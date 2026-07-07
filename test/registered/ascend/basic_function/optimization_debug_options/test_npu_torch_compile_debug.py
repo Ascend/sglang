@@ -9,8 +9,8 @@ from sglang.test.few_shot_gsm8k import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
-    popen_launch_server,
     CustomTestCase,
+    popen_launch_server,
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
@@ -46,7 +46,7 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         self.process = None
 
     def tearDown(self):
-        if hasattr(self, 'process') and self.process and self.process.pid:
+        if hasattr(self, "process") and self.process and self.process.pid:
             try:
                 kill_process_tree(self.process.pid)
                 self.process = None
@@ -104,9 +104,12 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         print("run_gsm8k_avg_time1:", avg_time1)
         print("run_gsm8k_avg_time2:", avg_time2)
         # Assertion: Debug mode should be slower
-        self.assertGreater(avg_time1, avg_time2,
-                           f"Debug mode should be slower, but measured time: "
-                           f"normal mode={avg_time2}s, debug mode={avg_time1}s")
+        self.assertGreater(
+            avg_time1,
+            avg_time2,
+            f"Debug mode should be slower, but measured time: "
+            f"normal mode={avg_time2}s, debug mode={avg_time1}s",
+        )
 
 
 if __name__ == "__main__":

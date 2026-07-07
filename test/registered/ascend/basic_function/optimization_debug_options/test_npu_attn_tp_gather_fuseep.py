@@ -55,14 +55,18 @@ class TestAttnTpGatherA2APath(CustomTestCase):
     base_url = DEFAULT_URL_FOR_TEST
     base_args = [
         "--trust-remote-code",
-        "--mem-fraction-static", "0.8",
-        "--attention-backend", "ascend",
+        "--mem-fraction-static",
+        "0.8",
+        "--attention-backend",
+        "ascend",
         # --moe-a2a-backend ascend_fuseep:
         #   triggers require_attn_tp_gather=true at common.py:3102
         #   via "not get_moe_a2a_backend().is_none()" condition;
         #   SGLANG_NPU_FUSED_MOE_MODE defaults to 1 (valid).
-        "--moe-a2a-backend", "deepep",
-        "--tp-size", "2",
+        "--moe-a2a-backend",
+        "deepep",
+        "--tp-size",
+        "2",
     ]
 
     def test_contrastive_tp2(self):
@@ -155,8 +159,10 @@ class TestAttnTpGatherDense(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
                 "--trust-remote-code",
-                "--mem-fraction-static", "0.8",
-                "--attention-backend", "ascend",
+                "--mem-fraction-static",
+                "0.8",
+                "--attention-backend",
+                "ascend",
                 "--disable-attn-tp-gather",
                 # For non-MOE: moe_a2a_backend="none" AND moe_dense_tp_size=None
                 # → both conditions at common.py:3102 are False
@@ -191,13 +197,17 @@ class TestAttnTpGatherA2ATp2(CustomTestCase):
     base_url = DEFAULT_URL_FOR_TEST
     base_args = [
         "--trust-remote-code",
-        "--mem-fraction-static", "0.8",
-        "--attention-backend", "ascend",
+        "--mem-fraction-static",
+        "0.8",
+        "--attention-backend",
+        "ascend",
         # --moe-a2a-backend ascend_fuseep:
         #   triggers require_attn_tp_gather=true at common.py:3102
         #   via "not get_moe_a2a_backend().is_none()" condition.
-        "--moe-a2a-backend", "deepep",
-        "--tp-size", "2",
+        "--moe-a2a-backend",
+        "deepep",
+        "--tp-size",
+        "2",
     ]
 
     def test_contrastive_tp2(self):
@@ -288,14 +298,19 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
         """
         args = [
             "--trust-remote-code",
-            "--mem-fraction-static", "0.8",
-            "--attention-backend", "ascend",
-            "--moe-a2a-backend", "deepep",
+            "--mem-fraction-static",
+            "0.8",
+            "--attention-backend",
+            "ascend",
+            "--moe-a2a-backend",
+            "deepep",
             # --enable-dp-attention: required to exercise Branch B
             # (common.py:3103-3104) in require_attn_tp_gather().
             "--enable-dp-attention",
-            "--tp-size", str(tp_size),
-            "--dp-size", str(dp_size),
+            "--tp-size",
+            str(tp_size),
+            "--dp-size",
+            str(dp_size),
         ]
         if disable_gather:
             args.append("--disable-attn-tp-gather")

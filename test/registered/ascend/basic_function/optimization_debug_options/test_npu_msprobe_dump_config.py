@@ -10,7 +10,6 @@ from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
@@ -112,8 +111,7 @@ class TestNpuMsprobeDumpConfig(CustomTestCase):
                 if f == "dump.json":
                     dump_files.append(os.path.join(root, f))
         self.assertTrue(
-            len(dump_files) > 0
-            and any(os.path.getsize(df) > 0 for df in dump_files),
+            len(dump_files) > 0 and any(os.path.getsize(df) > 0 for df in dump_files),
             f"Expected at least one non-empty dump.json under {self._dump_dir} "
             f"to exist and be non-empty, proving msProbe actually dumped tensor "
             f"statistics during inference. Found: {dump_files}",

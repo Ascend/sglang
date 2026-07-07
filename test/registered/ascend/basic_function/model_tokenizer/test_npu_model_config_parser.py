@@ -55,8 +55,12 @@ class TestNpuModelConfigParser(CustomTestCase):
                     },
                 },
             )
-            assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-            assert "Paris" in response.text, f"Expected 'Paris' in response, got: {response.text[:200]}"
+            assert (
+                response.status_code == 200
+            ), f"Expected 200, got {response.status_code}"
+            assert (
+                "Paris" in response.text
+            ), f"Expected 'Paris' in response, got: {response.text[:200]}"
         finally:
             kill_process_tree(process.pid)
 

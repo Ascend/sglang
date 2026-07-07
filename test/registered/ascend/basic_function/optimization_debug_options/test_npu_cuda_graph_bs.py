@@ -31,6 +31,7 @@ _MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
 # PD helpers
 # ══════════════════════════════════════════════════════════════
 
+
 def _pd_ports():
     p = urlparse(DEFAULT_URL_FOR_TEST)
     host = p.hostname
@@ -60,17 +61,28 @@ def _launch_pd_server(url, *, mode, bootstrap_port, extra_args, base_gpu_id="0")
     os.close(err_fd)
 
     cmd = [
-        "python3", "-m", "sglang.launch_server",
-        "--model-path", MODEL,
-        "--host", host,
-        "--port", port,
+        "python3",
+        "-m",
+        "sglang.launch_server",
+        "--model-path",
+        MODEL,
+        "--host",
+        host,
+        "--port",
+        port,
         "--trust-remote-code",
-        "--attention-backend", "ascend",
-        "--mem-fraction-static", "0.8",
-        "--disaggregation-mode", mode,
-        "--disaggregation-bootstrap-port", bootstrap_port,
-        "--base-gpu-id", base_gpu_id,
-        "--tp", "1",
+        "--attention-backend",
+        "ascend",
+        "--mem-fraction-static",
+        "0.8",
+        "--disaggregation-mode",
+        mode,
+        "--disaggregation-bootstrap-port",
+        bootstrap_port,
+        "--base-gpu-id",
+        base_gpu_id,
+        "--tp",
+        "1",
         *extra_args,
         *_pd_transport_args(),
     ]
@@ -80,7 +92,11 @@ def _launch_pd_server(url, *, mode, bootstrap_port, extra_args, base_gpu_id="0")
     }
     with open(err_path, "w") as err_file:
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.DEVNULL, stderr=err_file, text=True, env=env,
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=err_file,
+            text=True,
+            env=env,
         )
     wait_for_http_ready(url + "/health", timeout=_LAUNCH_TIMEOUT, process=proc)
     return proc, err_path
@@ -88,12 +104,18 @@ def _launch_pd_server(url, *, mode, bootstrap_port, extra_args, base_gpu_id="0")
 
 def _launch_router(prefill_url, decode_url, host, lb_port):
     cmd = [
-        "python3", "-m", "sglang_router.launch_router",
+        "python3",
+        "-m",
+        "sglang_router.launch_router",
         "--pd-disaggregation",
-        "--prefill", prefill_url,
-        "--decode", decode_url,
-        "--host", host,
-        "--port", lb_port,
+        "--prefill",
+        prefill_url,
+        "--decode",
+        decode_url,
+        "--host",
+        host,
+        "--port",
+        lb_port,
     ]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     lb_url = f"http://{host}:{lb_port}"
@@ -112,15 +134,20 @@ def _launch_pd(*, prefill_args=None, decode_args=None):
     os.environ["MC_TCP_ENABLE_CONNECTION_POOL"] = "true"
 
     pp, pe = _launch_pd_server(
-        prefill_url, mode="prefill", bootstrap_port=ports["bootstrap"],
-        extra_args=prefill_args or [], base_gpu_id="0",
+        prefill_url,
+        mode="prefill",
+        bootstrap_port=ports["bootstrap"],
+        extra_args=prefill_args or [],
+        base_gpu_id="0",
     )
     dp, de = _launch_pd_server(
-        decode_url, mode="decode", bootstrap_port=ports["bootstrap"],
-        extra_args=decode_args or [], base_gpu_id="1",
+        decode_url,
+        mode="decode",
+        bootstrap_port=ports["bootstrap"],
+        extra_args=decode_args or [],
+        base_gpu_id="1",
     )
-    lp, lb_url = _launch_router(prefill_url, decode_url,
-                                ports["host"], ports["lb"])
+    lp, lb_url = _launch_router(prefill_url, decode_url, ports["host"], ports["lb"])
     return pp, dp, lp, lb_url, pe, de
 
 
@@ -179,6 +206,7 @@ def _run_bench(base_url):
 # Tests
 # ══════════════════════════════════════════════════════════════
 
+
 class TestCudaGraphBsPD(CustomTestCase):
     """Testcase: verify per-phase CUDA-graph BS parameters in PD disaggregation.
 
@@ -212,8 +240,9 @@ class TestCudaGraphBsPD(CustomTestCase):
             _cleanup_pd(pp, dp, lp, pe, de)
 
         # Prefill: CG disabled by PD hook
-        self.assertFalse(_has_graph_begin(prefill_log),
-                         "Prefill CG must be disabled by PD hook")
+        self.assertFalse(
+            _has_graph_begin(prefill_log), "Prefill CG must be disabled by PD hook"
+        )
         # Decode: bs auto-generated, all ≤ 8
         decode_bs = _parse_capture_bs(decode_log)
         self.assertIsNotNone(decode_bs, "Expected capture bs in decode log")
@@ -243,8 +272,14 @@ class TestCudaGraphBsPD(CustomTestCase):
     # ── S3: both set → max_bs silently overwritten ─────────────
     def test_max_bs_overwritten_when_bs_set(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
-            decode_args=["--cuda-graph-max-bs-decode", "4",
-                         "--cuda-graph-bs-decode", "1", "2", "8"],
+            decode_args=[
+                "--cuda-graph-max-bs-decode",
+                "4",
+                "--cuda-graph-bs-decode",
+                "1",
+                "2",
+                "8",
+            ],
         )
         try:
             res = _run_bench(lb_url)
@@ -257,14 +292,16 @@ class TestCudaGraphBsPD(CustomTestCase):
         self.assertFalse(_has_graph_begin(prefill_log))
         decode_bs = _parse_capture_bs(decode_log)
         self.assertEqual(decode_bs, [1, 2, 8])
-        self.assertEqual(max(decode_bs), 8,
-                         "max_bs should be 8 (overwritten), not 4")
+        self.assertEqual(max(decode_bs), 8, "max_bs should be 8 (overwritten), not 4")
 
     # ── S4: padding disabled → sequential bs ───────────────────
     def test_disable_padding_sequential_bs(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
-            decode_args=["--cuda-graph-max-bs-decode", "8",
-                         "--disable-cuda-graph-padding"],
+            decode_args=[
+                "--cuda-graph-max-bs-decode",
+                "8",
+                "--disable-cuda-graph-padding",
+            ],
         )
         try:
             res = _run_bench(lb_url)
@@ -281,8 +318,7 @@ class TestCudaGraphBsPD(CustomTestCase):
     # ── S5: CG disabled → no graph, serving works ──────────────
     def test_disable_cuda_graph_serving_works(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
-            decode_args=["--cuda-graph-max-bs-decode", "8",
-                         "--disable-cuda-graph"],
+            decode_args=["--cuda-graph-max-bs-decode", "8", "--disable-cuda-graph"],
         )
         try:
             res = _run_bench(lb_url)
@@ -292,10 +328,13 @@ class TestCudaGraphBsPD(CustomTestCase):
         finally:
             _cleanup_pd(pp, dp, lp, pe, de)
 
-        self.assertFalse(_has_graph_begin(prefill_log),
-                         "Prefill CG must be disabled by PD hook")
-        self.assertFalse(_has_graph_begin(decode_log),
-                         "Decode CG must be disabled by --disable-cuda-graph")
+        self.assertFalse(
+            _has_graph_begin(prefill_log), "Prefill CG must be disabled by PD hook"
+        )
+        self.assertFalse(
+            _has_graph_begin(decode_log),
+            "Decode CG must be disabled by --disable-cuda-graph",
+        )
 
     # ── S6+S7 (integrated): every test above already verifies ──
     #     prefill CG disabled + decode CG behaviour.
