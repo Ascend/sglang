@@ -73,7 +73,7 @@ class Test01_NpuApi(CustomTestCase):
         self.assertFalse(response.json()["has_image_understanding"])
         self.assertFalse(response.json()["has_audio_understanding"])
         self.assertEqual(response.json()["model_type"], "qwen3")
-        self.assertEqual(response.json()["architectures"][0], "LlamaForCausalLM")
+        self.assertEqual(response.json()["architectures"][0], "Qwen3ForCausalLM")
 
     def test_api_server_info(self):
         response = requests.get(f"{self.base_url}/server_info")
