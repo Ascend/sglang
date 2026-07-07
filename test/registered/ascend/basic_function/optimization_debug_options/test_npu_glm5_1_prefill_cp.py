@@ -69,7 +69,7 @@ class TestGLM5_1PrefillCPInterleave(CustomTestCase):
             "--attention-backend", "ascend",
             "--max-running-requests", "256",
             "--page-size", "256",
-            "--mem-fraction-static", "0.90",
+            "--mem-fraction-static", "0.70",
             "--swa-full-tokens-ratio", "0.1",
             "--chunked-prefill-size", "8192",
             "--disable-shared-experts-fusion",
