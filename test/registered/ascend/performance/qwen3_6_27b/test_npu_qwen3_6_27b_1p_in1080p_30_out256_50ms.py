@@ -54,7 +54,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--mem-fraction-static",
     0.76,
     "--max-total-tokens",
-    100000,
+    110000,
     "--cuda-graph-bs",
     1,
     2,
@@ -117,7 +117,6 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     seed = 1
     tpot = 50
     output_token_throughput = 226
-    skip_warmup=True
 
     def test_npu_qwen3_6_27b_1p_in1080p_30_out256_50ms(self):
         """Run NPU performance test for Qwen3.6-27B in1080p 30 out256 50ms"""
