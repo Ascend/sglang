@@ -126,6 +126,7 @@ jobs:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-2
     strategy:
+      fail-fast: false
       matrix:
         part: [0, 1]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
@@ -198,6 +199,7 @@ jobs:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-2
     strategy:
+      fail-fast: false
       matrix:
         part: [0, 1]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
@@ -264,6 +266,7 @@ jobs:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-4
     strategy:
+      fail-fast: false
       matrix:
         part: [0, 1]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
@@ -330,6 +333,7 @@ jobs:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-8
     strategy:
+      fail-fast: false
       matrix:
         part: [0, 1]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
@@ -396,6 +400,7 @@ jobs:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-16
     strategy:
+      fail-fast: false
       matrix:
         part: [0, 1]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
