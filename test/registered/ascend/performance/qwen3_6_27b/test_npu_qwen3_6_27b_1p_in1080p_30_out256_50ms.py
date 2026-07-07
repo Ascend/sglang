@@ -53,6 +53,8 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     40,
     "--mem-fraction-static",
     0.76,
+    "--max-total-tokens",
+    100000,
     "--cuda-graph-bs",
     1,
     2,
