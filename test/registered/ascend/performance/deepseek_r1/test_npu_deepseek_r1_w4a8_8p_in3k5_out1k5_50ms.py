@@ -84,7 +84,7 @@ MODEL_OTHER_ARGS = [
     "--tool-call-parser",
     "deepseekv3",
     "--max-total-tokens",
-    112900,
+    130000,
 ]
 
 
