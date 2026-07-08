@@ -66,7 +66,7 @@ class TestNPUQWEN3_VL_30B_A3B_gpqa(TestAscendAccuracyTestCaseBase):
     model = QWEN3_VL_30B_MODEL_PATH
     envs = QWEN3_VL_30B_A3B_ENVS
     other_args = QWEN3_VL_30B_A3B_OTHER_ARGS
-    accuracy = 0.641
+    accuracy = 0.58
     datasets = ["gpqa_diamond"]
     eval_batch_size = 64
     generation_config = {

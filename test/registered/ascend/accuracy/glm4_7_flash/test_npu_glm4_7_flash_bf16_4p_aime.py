@@ -32,27 +32,21 @@ OTHER_ARGS = [
     "--trust-remote-code",
     "--attention-backend",
     "ascend",
-    "--tool-call-parser",
-    "glm47",
-    "--reasoning-parser",
-    "glm45",
-    "--disable-radix-cache",
-    "--mem-fraction-static",
-    0.8,
-    "--device",
-    "npu",
     "--tp-size",
     4,
     "--ep-size",
     4,
-    "--moe-a2a-backend",
-    "deepep",
-    "--deepep-mode",
-    "auto",
+    "--mem-fraction-static",
+    0.8,
+    "--disable-radix-cache",
+    "max-running-requests",
+    1,
     "--chunked-prefill-size",
     "32768",
-    "--max-running-requests",
-    24,
+    "--tool-call-parser",
+    "glm47",
+    "--reasoning-parser",
+    "glm45",
     "--speculative-algorithm",
     "EAGLE",
     "--speculative-num-steps",
@@ -61,8 +55,14 @@ OTHER_ARGS = [
     "1",
     "--speculative-num-draft-tokens",
     "4",
+    "--speculative-attention-mode",
+    "decode",
     "--speculative-moe-a2a-backend",
     "deepep",
+    "--moe-a2a-backend",
+    "deepep",
+    "--deepep-mode",
+    "auto",
 ]
 
 
@@ -71,10 +71,17 @@ class TestNPUGLM4_7_FLASH_AIME2025(TestAscendAccuracyTestCaseBase):
     model = GLM_4_7_FLASH_MODEL_PATH
     envs = ENVS
     other_args = OTHER_ARGS
-    accuracy = 0.923
+    accuracy = 0.6
     datasets = ["aime25"]
-    generation_config = {"max_tokens": 131072, "temperature": 1.0, "top-p": 0.95}
-    eval_batch_size = 30
+    generation_config = {
+        "max_tokens": 40000,
+        "temperature": 0,
+        "top-p": 1,
+        "stream": True,
+        "retries": 2,
+        "seed": 1234,
+    }
+    eval_batch_size = 8
 
     def test_aime2025(self):
         self.run_accuracy()

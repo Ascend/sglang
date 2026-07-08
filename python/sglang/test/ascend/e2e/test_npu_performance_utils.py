@@ -157,6 +157,7 @@ QWEN3_5_9B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-9B"
 QWEN3_5_397B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w8a8-mtp"
 )
+QWEN3_5_35B_A3B_MODEL_PATH = ("/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-35B-A3B")
 QWEN3_5_397B_W4A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
 )
