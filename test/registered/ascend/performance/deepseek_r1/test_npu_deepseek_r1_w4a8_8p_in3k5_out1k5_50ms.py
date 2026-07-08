@@ -58,7 +58,7 @@ MODEL_OTHER_ARGS = [
     8188,
     "--disable-radix-cache",
     "--chunked-prefill-size",
-    -1,
+    3000,
     "--max-prefill-tokens",
     3000,
     "--moe-a2a-backend",
