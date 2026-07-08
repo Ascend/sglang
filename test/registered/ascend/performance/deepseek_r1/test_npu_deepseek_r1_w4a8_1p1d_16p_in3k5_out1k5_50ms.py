@@ -57,7 +57,7 @@ MODEL_CONFIG = {
         "--tp-size",
         16,
         "--mem-fraction-static",
-        0.82,
+        0.8,
         "--quantization",
         "modelslim",
         "--max-running-requests",
@@ -92,7 +92,7 @@ MODEL_CONFIG = {
         "--tool-call-parser",
         "deepseekv3",
         "--max-total-tokens",
-        107520,
+        50000,
     ],
     "decode_args": [
         "--nnodes",
