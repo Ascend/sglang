@@ -33,11 +33,6 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "HCCL_BUFFSIZE": "1000",
-    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
     "FORCE_DRAFT_MODEL_NON_QUANT": "1",
@@ -50,6 +45,11 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "HCCL_BUFFSIZE": "1000",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
+    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
 }
 
 DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS = [
@@ -62,18 +62,18 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS = [
     "dsv4",
     "--watchdog-timeout",
     9000,
-    "--mem-fraction-static",
-    0.7,
-    "--prefill-max-requests",
+    "--dp-size",
     2,
+    "--enable-dp-attention",
+    "--mem-fraction-static",
+    0.5,
+    "--prefill-max-requests",
+    1,
     "--disable-radix-cache",
     "--chunked-prefill-size",
     -1,
     "--max-running-requests",
-    160,
-    "--dp-size",
-    16,
-    "--enable-dp-attention",
+    8,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -84,19 +84,7 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS = [
     "--kv-cache-dtype",
     "bfloat16",
     "--cuda-graph-bs",
-    1,
-    2,
-    4,
     8,
-    10,
-    "--speculative-algorithm",
-    "EAGLE",
-    "--speculative-num-steps",
-    "2",
-    "--speculative-eagle-topk",
-    "1",
-    "--speculative-num-draft-tokens",
-    "3",
     "--skip-server-warmup",
 ]
 
@@ -110,7 +98,7 @@ class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
     dataset_name = "random"
     max_concurrency = 1
     num_prompts = 1
-    input_len = 3584
+    input_len = 65536
     output_len = 1024
     random_range_ratio = 1
     out = open(f"./out_log.txt", "w+", encoding="utf-8")
