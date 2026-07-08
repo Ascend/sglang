@@ -740,15 +740,12 @@ def run_lora_multiple_batch_on_model_cases(
         disable_radix_cache: bool = True,  
         enable_lora_overlap_loading: Optional[bool] = None, 
 ):
-    # 检查NPU环境是否可用
     if not torch.npu.is_available():
         raise RuntimeError("NPU device not available. Please ensure NPU environment is properly configured.")
 
     for model_case in model_cases:
         for torch_dtype in TORCH_DTYPES:
-            # NPU不支持float64精度，自动降级为float32
             if torch_dtype == torch.float64:
-                print(f"Warning: NPU does not support float64, automatically converting to float32")
                 torch_dtype = torch.float32         
 
             max_new_tokens = 32 
@@ -760,11 +757,6 @@ def run_lora_multiple_batch_on_model_cases(
                 TEST_MULTIPLE_BATCH_PROMPTS, lora_adapter_paths 
             )
 
-            print(
-                f"\n========== Testing multiple batches on base '{base_path}', dtype={torch_dtype} ---"
-            )
-
-            # 初始化 runners，设置NPU相关配置
             ensure_reproducibility()   
             spec_args = (
                 {}
@@ -774,7 +766,6 @@ def run_lora_multiple_batch_on_model_cases(
                     "speculative_num_draft_tokens": 5,   
                 }
             )
-            # SRT Runner配置NPU设备(SRT（SGLang Runtime）Runner 配置说明)
             srt_runner = SRTRunner(
                 base_path,
                 torch_dtype=torch_dtype,  
@@ -791,8 +782,7 @@ def run_lora_multiple_batch_on_model_cases(
                 **spec_args,  
             )
 
-            ensure_reproducibility()  
-            # HF Runner配置NPU设备
+            ensure_reproducibility()
             hf_runner = HFRunner(   
                 base_path,
                 torch_dtype=torch_dtype,
@@ -801,33 +791,23 @@ def run_lora_multiple_batch_on_model_cases(
             )
 
             with srt_runner, hf_runner:   
-                for i, (prompts, lora_paths) in enumerate(batches):  
-                    print(
-                        f"\n--- Running Batch {i + 1} --- prompts: {prompts}, lora_paths: {lora_paths}"
-                    )
-                    # 调用SRT Runner 的 batch_forward 进行批量推理，同一个批次中不同 prompt 可以指定不同的 LoRA 适配器
+                for i, (prompts, lora_paths) in enumerate(batches):
                     srt_outputs = srt_runner.batch_forward(
                         prompts,
                         max_new_tokens=max_new_tokens,
                         lora_paths=lora_paths,   
                     )
-                    # 调用HF Runner 的 forward 进行同样的推理，作为基准参考
                     hf_outputs = hf_runner.forward(
                         prompts,
                         max_new_tokens=max_new_tokens,
                         lora_paths=lora_paths,
                     )
-                    # 打印两边的测试输出
-                    print("SRT outputs:", [s for s in srt_outputs.output_strs])
-                    print("HF outputs:", [s for s in hf_outputs.output_strs])
 
                     for srt_out, hf_out in zip(
                             srt_outputs.output_strs, hf_outputs.output_strs
                     ):
-                        # 去除首尾空白字符，避免空格差异影响比较
                         srt_str = srt_out.strip()
                         hf_str = hf_out.strip()
-                        # 新增判断
                         if isinstance(model_case, str): 
                             continue
                         rouge_tol = model_case.rouge_l_tolerance   
@@ -837,8 +817,6 @@ def run_lora_multiple_batch_on_model_cases(
                                 f"ROUGE-L score {rouge_score} below tolerance {rouge_tol} "
                                 f"for base '{base_path}', adaptor '{lora_paths}', prompt: '{prompts}...'"
                             )
-
-                    print(f"--- Batch {i + 1} Comparison Passed --- ")
 
 
 def run_lora_batch_splitting_equivalence_test(

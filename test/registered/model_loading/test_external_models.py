@@ -12,7 +12,6 @@ register_npu_ci(est_time=29, suite="full-1-npu-a3", nightly=True)
 
 class TestExternalModelsNPU(CustomTestCase):
     def test_external_model(self):
-        # 检查 NPU 环境是否可用
         if not torch.npu.is_available():
             self.skipTest("NPU device not available, skipping NPU external model test")
 
@@ -26,10 +25,9 @@ class TestExternalModelsNPU(CustomTestCase):
             cuda_graph_max_bs=1,
             max_total_tokens=64,
             enable_multimodal=True,
-            # NPU 专用配置
-            attention_backend="torch_native",  # NPU 不支持 flashinfer/triton，使用 torch_native
-            disable_cuda_graph=True,            # NPU 不需要 CUDA Graph
-            disable_radix_cache=True,           # 禁用 radix cache 避免 NPU 兼容性问题
+            attention_backend="torch_native",
+            disable_cuda_graph=True,
+            disable_radix_cache=True,
         )
         out = engine.generate(prompt)["text"]
         engine.shutdown()
