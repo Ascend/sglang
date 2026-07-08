@@ -98,8 +98,8 @@ class TestDEEPSEEKV4FLASHW8A8MTP(TestAscendPerformanceTestCaseBase):
     dataset_name = "random"
     max_concurrency = 1
     num_prompts = 1
-    input_len = 65536
-    output_len = 1024
+    input_len = 64000
+    output_len = 1000
     random_range_ratio = 1
     out = open(f"./out_log.txt", "w+", encoding="utf-8")
     err = open(f"./err_log.txt", "w+", encoding="utf-8")
