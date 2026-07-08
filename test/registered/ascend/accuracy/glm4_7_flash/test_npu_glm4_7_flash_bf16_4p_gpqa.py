@@ -39,7 +39,7 @@ OTHER_ARGS = [
     "--mem-fraction-static",
     0.8,
     "--disable-radix-cache",
-    "max-running-requests",
+    "--max-running-requests",
     1,
     "--chunked-prefill-size",
     "32768",
