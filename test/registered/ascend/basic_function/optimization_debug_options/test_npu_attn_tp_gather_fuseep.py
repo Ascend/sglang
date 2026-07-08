@@ -4,6 +4,8 @@ import unittest
 import requests
 import torch
 
+os.environ.setdefault("HCCL_BUFFSIZE", "600")
+
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
@@ -209,6 +211,9 @@ class TestAttnTpGatherA2ATp2(CustomTestCase):
         #   via "not get_moe_a2a_backend().is_none()" condition.
         "--moe-a2a-backend",
         "deepep",
+        "--enable-dp-attention",
+        "--dp-size",
+        "2",
         "--tp-size",
         "2",
     ]
@@ -220,8 +225,8 @@ class TestAttnTpGatherA2ATp2(CustomTestCase):
         Phase 2 (with flag): → Branch A → opt-out
 
         [Priority] P1
-        [Branch] C→F vs A→G (tp=2)
-        [Does NOT cover] DP attention scenarios
+        [Branch] C→F vs A→G (tp=2), B→F (dp-attn)
+        [Does NOT cover] dense_tp=1 path
         """
         prompts = [
             "The capital of France is",
