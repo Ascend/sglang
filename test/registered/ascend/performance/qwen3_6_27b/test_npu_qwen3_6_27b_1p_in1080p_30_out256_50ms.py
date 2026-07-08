@@ -53,6 +53,8 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     46,
     "--mem-fraction-static",
     0.70,
+    "--watchdog-timeout",
+    900,
     "--cuda-graph-bs",
     1,
     2,
