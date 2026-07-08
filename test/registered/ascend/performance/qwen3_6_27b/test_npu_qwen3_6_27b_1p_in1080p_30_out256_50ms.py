@@ -69,7 +69,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     28,
     30,
     35,
-    40
+    40,
     # 40,
     # "--enable-prefill-delayer",
     # "--prefill-delayer-queue-min-ratio",
