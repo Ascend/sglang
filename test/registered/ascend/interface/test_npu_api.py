@@ -100,7 +100,7 @@ class Test01_NpuApi(CustomTestCase):
         self.assertEqual(response.json()["data"][0]["object"], "model")
         self.assertEqual(response.json()["data"][0]["owned_by"], "sglang")
         self.assertEqual(response.json()["data"][0]["root"], self.model)
-        self.assertEqual(response.json()["data"][0]["max_model_len"], 131072)
+        self.assertEqual(response.json()["data"][0]["max_model_len"], 40960)
 
     def test_api_v1_models_path(self):
         response = requests.get(f"{self.base_url}/v1/models/{self.model}")
@@ -109,7 +109,7 @@ class Test01_NpuApi(CustomTestCase):
         self.assertEqual(response.json()["object"], "model")
         self.assertEqual(response.json()["owned_by"], "sglang")
         self.assertEqual(response.json()["root"], self.model)
-        self.assertEqual(response.json()["max_model_len"], 131072)
+        self.assertEqual(response.json()["max_model_len"], 40960)
 
     def test_api_generate_single_text(self):
         response = requests.post(
