@@ -23,9 +23,9 @@ QWEN3_6_35B_A3B_1080P_ENVS = {
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_VIT_ENABLE_CUDA_GRAPH": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "10",
 }
 
 QWEN3_6_35B_A3B_1080P_OTHER_ARGS = [
@@ -40,31 +40,27 @@ QWEN3_6_35B_A3B_1080P_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    16384,
+    150000,
+    "--max-prefill-tokens",
+    200000,
+    "--base-gpu-id",
+    2,
     "--disable-radix-cache",
     "--trust-remote-code",
-    "--enable-prefill-delayer",
     "--max-running-requests",
-    50,
+    80,
     "--max-mamba-cache-size",
-    55,
+    80,
     "--mem-fraction-static",
-    0.8,
+    0.75,
     "--cuda-graph-bs",
-    2,
     4,
     8,
-    12,
     16,
-    20,
     24,
-    28,
-    32,
-    36,
-    40,
-    44,
     48,
-    50,
+    64,
+    80,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -99,8 +95,9 @@ class TestNPUQwen3_6_35BA3B_1P_In1080p_30_Out256_50ms(
     envs = QWEN3_6_35B_A3B_1080P_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    max_concurrency = 50
-    num_prompts = 200
+    max_concurrency = 80
+    num_prompts = max_concurrency * 1
+    warmup_requests = max_concurrency
     input_len = 30
     output_len = 256
     random_range_ratio = 1
