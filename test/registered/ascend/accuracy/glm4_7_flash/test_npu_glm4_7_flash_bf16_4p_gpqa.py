@@ -81,7 +81,7 @@ class TestNPUGLM4_7_FLASH_GPQA(TestAscendAccuracyTestCaseBase):
         "retries": 2,
         "seed": 1234,
     }
-    eval_batch_size = 8
+    eval_batch_size = 30
 
     def test_aimegpqa(self):
         self.run_accuracy()
