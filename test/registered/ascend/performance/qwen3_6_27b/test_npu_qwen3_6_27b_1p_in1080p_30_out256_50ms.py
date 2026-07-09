@@ -57,7 +57,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     0.70,
     "--cuda-graph-bs",
     1,
-     2,
+    2,
      4,
      8,
      12,
