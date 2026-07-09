@@ -99,10 +99,12 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     output_len = 1000
     random_range_ratio = 1
     repeat_rate = 0.9
+    warmup_requests = max_concurrency
     seed = 1
     tpot = 50
     request_rate = float("inf")
     output_token_throughput = 308.2
+    pop_sglang_is_in_ci_for_gsp = True
 
     def test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in128k out1k prefix90 50ms"""
