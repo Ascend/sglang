@@ -38,6 +38,7 @@ class TestDeepseekV32IndexFreq(GSM8KAscendMixin, CustomTestCase):
         '{"enable_multithread_load": true, "num_threads": 64}',
         "--json-model-override-args",
         '{"index_topk_freq": 4}',
+        "--disable-overlap-schedule",
     ]
 
 
