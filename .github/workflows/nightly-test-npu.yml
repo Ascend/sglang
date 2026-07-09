@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - testcases
+      - testcases
     paths:
       - ".github/workflows/nightly-test-npu.yml"
   workflow_dispatch:
