@@ -53,7 +53,7 @@ OTHER_ARGS = [
     4,
     "--disable-radix-cache",
     "--mem-fraction-static",
-    0.78,
+    0.7,
     "--sampling-backend",
     "ascend",
 ]
@@ -70,7 +70,7 @@ class TestNPUQWEN3_VL_30B_A3B_mmmu(TestAscendAccuracyTestCaseBase):
         "temperature": 0.0,
         "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
-    eval_batch_size = 64
+    eval_batch_size = 32
 
     def test_mmmu(self):
         self.run_accuracy()

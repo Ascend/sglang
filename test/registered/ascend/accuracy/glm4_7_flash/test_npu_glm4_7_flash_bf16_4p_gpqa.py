@@ -40,7 +40,7 @@ OTHER_ARGS = [
     0.8,
     "--disable-radix-cache",
     "--max-running-requests",
-    1,
+    8,
     "--chunked-prefill-size",
     "32768",
     "--tool-call-parser",
@@ -81,7 +81,7 @@ class TestNPUGLM4_7_FLASH_GPQA(TestAscendAccuracyTestCaseBase):
         "retries": 2,
         "seed": 1234,
     }
-    eval_batch_size = 30
+    eval_batch_size = 8
 
     def test_aimegpqa(self):
         self.run_accuracy()
