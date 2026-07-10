@@ -2814,6 +2814,8 @@ class ModelRunner(ModelRunnerKVCacheMixin):
             f"Capture {graph_backend[self.device]} end. Time elapsed: {time.perf_counter() - tic:.2f} s. "
             f"mem usage={self.graph_mem_usage:.2f} GB. avail mem={after_mem:.2f} GB."
         )
+        if hasattr(self, "log_memory_layout_final"):
+            self.log_memory_layout_final()
 
     def init_piecewise_cuda_graphs(self, force_for_draft_worker: bool = False):
         """Initialize piecewise CUDA graph runner."""

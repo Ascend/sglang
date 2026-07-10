@@ -14,6 +14,7 @@ register_npu_ci(
     nightly=True,
     disabled="performance testcase",
 )
+# useless line
 
 QWEN3_6_35B_A3B_128K_1K_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -45,14 +46,16 @@ QWEN3_6_35B_A3B_128K_1K_OTHER_ARGS = [
     420000,
     "--max-prefill-tokens",
     128000,
+    "--max-total-tokens",
+    520960,
+    "--mem-fraction-static",
+    0.9,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
     3,
     "--max-mamba-cache-size",
     3,
-    "--mem-fraction-static",
-    0.9,
     "--cuda-graph-bs",
     1,
     2,

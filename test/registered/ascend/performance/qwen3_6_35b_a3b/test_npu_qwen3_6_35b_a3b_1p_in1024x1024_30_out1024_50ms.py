@@ -39,6 +39,8 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "npu",
     "--chunked-prefill-size",
     -1,
+    "--base-gpu-id",
+    6,
     "--max-prefill-tokens",
     9999999,
     "--max-total-tokens",
