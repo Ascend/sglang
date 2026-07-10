@@ -36,7 +36,7 @@ class TestAttnTpGatherA2APath(CustomTestCase):
     base_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.8",
+        "0.83",
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
@@ -125,7 +125,7 @@ class TestAttnTpGatherDense(CustomTestCase):
             other_args=[
                 "--trust-remote-code",
                 "--mem-fraction-static",
-                "0.8",
+                "0.83",
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
@@ -173,7 +173,7 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
         args = [
             "--trust-remote-code",
             "--mem-fraction-static",
-            "0.8",
+            "0.83",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
