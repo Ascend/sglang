@@ -77,14 +77,15 @@ class TestNPUQwen_3_5_35B_A3B_mmmu(TestAscendAccuracyTestCaseBase):
     accuracy = 0.773
     datasets = ["mmmu"]
     generation_config = {
-        "max_tokens": 60000,
+        "max_tokens": 40000,
         "temperature": 1.0,
         "top_p": 0.95,
         "top_k": 20,
+        "min_p": 0,
         "presence_penalty": 1.5,
         "repetition_penalty": 1.0,
     }
-    eval_batch_size = 30
+    eval_batch_size = 32
 
     def test_mmmu(self):
         self.run_accuracy()
