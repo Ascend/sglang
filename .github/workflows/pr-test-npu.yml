@@ -237,7 +237,7 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-stage-b-test-4-npu-a3/.coverage
+          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
         run: |
           cd test
           coverage run run_suite.py --hw npu --suite stage-b-test-4-npu-a3 --timeout-per-file 3600
@@ -405,7 +405,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-multimodal-gen-test-2-npu-a3/.coverage
+          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
         run: |
           export PATH="/usr/local/Ascend/8.3.RC1/compiler/bishengir/bin:${PATH}"
           cd python
@@ -467,7 +467,7 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-multimodal-gen-test-8-npu-a3/.coverage
+          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
         run: |
           cd python
           coverage run sglang/multimodal_gen/test/run_suite_npu.py --suite 8-npu
@@ -512,7 +512,7 @@ jobs:
       - name: Combine and generate report
         run: |
           pip install coverage
-          coverage combine /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-*/
+          coverage combine /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
           coverage report -m
 
   pr-test-npu-finish:
