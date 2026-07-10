@@ -103,7 +103,7 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     backend = "sglang-oai-chat"
     dataset_name = "image"
     warmup_requests = 38
-    max_concurrency = 38
+    max_concurrency = 42
     num_prompts = 152
     input_len = 30
     output_len = 256

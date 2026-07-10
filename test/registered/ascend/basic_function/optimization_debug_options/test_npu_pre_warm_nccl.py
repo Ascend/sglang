@@ -79,15 +79,15 @@ class TestPreWarmNccl(CustomTestCase):
         p99_w = res_warmup["p99_ttft_ms"]
         p99_nw = res_no_warmup["p99_ttft_ms"]
         print(
-            f"\n=== P99 TTFT Comparison: --pre-warm-nccl vs default ===\n"
+            f"\n=== TTFT Comparison: --pre-warm-nccl vs default ===\n"
             f"  P99 TTFT: {p99_w:.1f} ms (warmup) vs {p99_nw:.1f} ms (no-warmup)\n"
         )
         self.assertLessEqual(
             p99_w,
             p99_nw,
             f"Expected --pre-warm-nccl P99 TTFT ({p99_w:.1f} ms) <= "
-            f"no-warmup ({p99_nw:.1f} ms). "
-            f"NCCL warmup should reduce tail latency.",
+            f"no-warmup ({p99_nw:.1f} ms). NCCL warmup should prime all-reduce "
+            f"communication and reduce first-request tail latency.",
         )
 
 

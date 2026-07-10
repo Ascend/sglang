@@ -27,11 +27,6 @@ _BS_LOG_RE = re.compile(r"Capture cuda graph bs \[([^\]]+)\]")
 _MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
 
 
-# ══════════════════════════════════════════════════════════════
-# PD helpers
-# ══════════════════════════════════════════════════════════════
-
-
 def _pd_ports():
     p = urlparse(DEFAULT_URL_FOR_TEST)
     host = p.hostname
@@ -202,11 +197,6 @@ def _run_bench(base_url):
     return run_benchmark(bench_args)
 
 
-# ══════════════════════════════════════════════════════════════
-# Tests
-# ══════════════════════════════════════════════════════════════
-
-
 class TestCudaGraphBsPD(CustomTestCase):
     """Testcase: verify per-phase CUDA-graph BS parameters in PD disaggregation.
 
@@ -225,7 +215,7 @@ class TestCudaGraphBsPD(CustomTestCase):
                   --disaggregation-mode
     """
 
-    # ── S1: max_bs only → bs auto-generated (decode side) ─────
+    # max_bs only, bs auto-generated on decode side
     def test_max_bs_auto_generates_bs(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
             decode_args=["--cuda-graph-max-bs-decode", "8"],
@@ -249,7 +239,7 @@ class TestCudaGraphBsPD(CustomTestCase):
         self.assertEqual(max(decode_bs), 8)
         self.assertTrue(all(b <= 8 for b in decode_bs))
 
-    # ── S2: bs only → max_bs derived (decode side) ────────────
+    # explicit bs only, max_bs derived on decode side
     def test_explicit_bs_derives_max_bs(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
             decode_args=["--cuda-graph-bs-decode", "1", "2", "4", "8"],
@@ -269,7 +259,7 @@ class TestCudaGraphBsPD(CustomTestCase):
         self.assertIsNotNone(mem)
         self.assertGreater(mem, 0)
 
-    # ── S3: both set → max_bs silently overwritten ─────────────
+    # both max_bs and bs set, max_bs silently overwritten
     def test_max_bs_overwritten_when_bs_set(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
             decode_args=[
@@ -294,7 +284,7 @@ class TestCudaGraphBsPD(CustomTestCase):
         self.assertEqual(decode_bs, [1, 2, 8])
         self.assertEqual(max(decode_bs), 8, "max_bs should be 8 (overwritten), not 4")
 
-    # ── S4: padding disabled → sequential bs ───────────────────
+    # disable cuda graph padding, sequential bs generated
     def test_disable_padding_sequential_bs(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
             decode_args=[
@@ -315,7 +305,7 @@ class TestCudaGraphBsPD(CustomTestCase):
         decode_bs = _parse_capture_bs(decode_log)
         self.assertEqual(decode_bs, list(range(1, 9)))
 
-    # ── S5: CG disabled → no graph, serving works ──────────────
+    # cuda graph disabled, no graph capture, serving works
     def test_disable_cuda_graph_serving_works(self):
         pp, dp, lp, lb_url, pe, de = _launch_pd(
             decode_args=["--cuda-graph-max-bs-decode", "8", "--disable-cuda-graph"],
@@ -336,10 +326,9 @@ class TestCudaGraphBsPD(CustomTestCase):
             "Decode CG must be disabled by --disable-cuda-graph",
         )
 
-    # ── S6+S7 (integrated): every test above already verifies ──
-    #     prefill CG disabled + decode CG behaviour.
+    # prefill CG disabled + decode CG behaviour verified by tests above
 
-    # ── S8: TTFT comparison with different max_bs ──────────────
+    # TTFT comparison with different max_bs values
     def test_max_bs_ttft_comparison(self):
         # max_bs=1
         pp1, dp1, lp1, lb1, pe1, de1 = _launch_pd(
