@@ -12,7 +12,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=500, suite="debug-full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=500, suite="full-4-npu-a3", nightly=True)
 
 GQA_MODEL_PATH = QWEN3_30B_A3B_WEIGHTS_PATH
 
