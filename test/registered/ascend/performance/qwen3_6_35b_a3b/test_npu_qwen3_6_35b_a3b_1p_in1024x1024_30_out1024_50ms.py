@@ -44,15 +44,15 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "--max-prefill-tokens",
     9999999,
     "--max-total-tokens",
-    360000,
+    365000,
     "--prefill-max-requests",
     30,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    160,
+    165,
     "--max-mamba-cache-size",
-    160,
+    165,
     "--mem-fraction-static",
     0.85,
     "--cuda-graph-bs",
@@ -62,7 +62,7 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     48,
     64,
     110,
-    160,
+    165,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -97,8 +97,8 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     envs = QWEN3_6_35B_A3B_1024_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    max_concurrency = 160
-    num_prompts = max_concurrency
+    max_concurrency = 165
+    num_prompts = 165
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
