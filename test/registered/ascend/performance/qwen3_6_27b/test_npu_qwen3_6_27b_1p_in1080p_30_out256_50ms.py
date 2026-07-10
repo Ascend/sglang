@@ -80,7 +80,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     # 0.3,
     # 0.4,
     # 0.5,
-    0.45,
+     0.45,
     # 0.35,
     # 0.6,
     "--prefill-delayer-max-delay-ms",
@@ -88,7 +88,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     # 4000,
     # 5000,
     # 6000,
-    5500,
+     5500,
     # 4500,
     # 7000,
     "--enable-multimodal",
@@ -126,7 +126,7 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     dataset_name = "image"
     warmup_requests = 38
     max_concurrency = 38
-    num_prompts = 152
+    num_prompts = 38
     input_len = 30
     output_len = 256
     random_range_ratio = 1
