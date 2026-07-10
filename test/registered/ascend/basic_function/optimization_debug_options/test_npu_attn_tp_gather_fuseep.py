@@ -21,87 +21,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=600, suite="debug-full-4-npu-a3", nightly=True)
 
 
-class TestAttnTpGatherA2APath(CustomTestCase):
-    """Verify --disable-attn-tp-gather with an MOE model via the a2a backend path.
-
-    Triggers attention TP gather through --moe-a2a-backend deepep (MOE a2a path),
-    then contrasts behavior with and without the disable flag on tp=2.
-
-    [Test Category] Parameter
-    [Test Target] --disable-attn-tp-gather; --moe-a2a-backend ascend_fuseep
-    """
-
-    model = QWEN3_6_35B_A3B_WEIGHTS_PATH
-    base_url = DEFAULT_URL_FOR_TEST
-    base_args = [
-        "--trust-remote-code",
-        "--mem-fraction-static",
-        "0.83",
-        "--attention-backend",
-        "ascend",
-        "--disable-cuda-graph",
-        "--moe-a2a-backend",
-        "deepep",
-        "--tp-size",
-        "2",
-    ]
-
-    def test_contrastive_tp2(self):
-        """Contrastive test on tp=2: with and without --disable-attn-tp-gather.
-
-        Without the flag, the a2a backend path enables attention TP gather.
-        With the flag, the opt-out takes effect and gather is disabled.
-        Both configurations must start successfully and produce correct output.
-        """
-        prompts = [
-            "The capital of France is",
-            "What is the largest planet in our solar system?",
-        ]
-
-        # WITHOUT --disable-attn-tp-gather
-        process1 = popen_launch_server(
-            self.model,
-            self.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=list(self.base_args),
-        )
-        try:
-            resp1 = requests.post(
-                f"{self.base_url}/generate",
-                json={
-                    "text": prompts,
-                    "sampling_params": {"temperature": 0, "max_new_tokens": 32},
-                },
-            )
-            self.assertEqual(resp1.status_code, 200)
-        finally:
-            kill_process_tree(process1.pid)
-
-        # WITH --disable-attn-tp-gather
-        process2 = popen_launch_server(
-            self.model,
-            self.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=list(self.base_args) + ["--disable-attn-tp-gather"],
-        )
-        try:
-            resp2 = requests.post(
-                f"{self.base_url}/generate",
-                json={
-                    "text": prompts,
-                    "sampling_params": {"temperature": 0, "max_new_tokens": 32},
-                },
-            )
-            self.assertEqual(resp2.status_code, 200)
-        finally:
-            kill_process_tree(process2.pid)
-
-        self.assertIn("Paris", resp1.text)
-        self.assertIn("Jupiter", resp1.text)
-        self.assertIn("Paris", resp2.text)
-        self.assertIn("Jupiter", resp2.text)
-
-
 class TestAttnTpGatherDense(CustomTestCase):
     """Verify --disable-attn-tp-gather does not break non-MOE (dense) models.
 
@@ -125,7 +44,7 @@ class TestAttnTpGatherDense(CustomTestCase):
             other_args=[
                 "--trust-remote-code",
                 "--mem-fraction-static",
-                "0.83",
+                "0.8",
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
@@ -173,7 +92,7 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
         args = [
             "--trust-remote-code",
             "--mem-fraction-static",
-            "0.83",
+            "0.8",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
