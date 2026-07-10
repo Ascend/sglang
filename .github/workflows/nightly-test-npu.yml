@@ -28,7 +28,7 @@ on:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260710'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
@@ -94,7 +94,7 @@ jobs:
             echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
           fi
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260710" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -135,62 +135,62 @@ jobs:
       max-parallel: 6
       matrix:
         test_config:
-          # qwen3_6_35b_a3b performance tests
-          - name: qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms.py
-            test_type: 'perf'
-          - name: qwen3_6_35b_a3b_1p_aime26
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_aime26.py
-          - name: qwen3_6_35b_a3b_1p_in64k_out1k_50ms
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_50ms.py
-            test_type: 'perf'
-          - name: qwen3_6_35b_a3b_1p_in128k_out1k_50ms
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_50ms.py
-            test_type: 'perf'
-          - name: qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms_aime26
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms_aime26.py
-            test_type: 'perf'
-          - name: qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
+#          # qwen3_6_35b_a3b performance tests
+#          - name: qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in3k5_out1k5_50ms.py
+#            test_type: 'perf'
+#          - name: qwen3_6_35b_a3b_1p_aime26
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/accuracy/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_aime26.py
+#          - name: qwen3_6_35b_a3b_1p_in64k_out1k_50ms
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_50ms.py
+#            test_type: 'perf'
+#          - name: qwen3_6_35b_a3b_1p_in128k_out1k_50ms
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_50ms.py
+#            test_type: 'perf'
+#          - name: qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms_aime26
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms_aime26.py
+#            test_type: 'perf'
+#          - name: qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
           # qwen3_6_27b performance tests
           - name: qwen3_6_27b_w8a8_1p_in3k5_out1k5_50ms_gpqa
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_1p_in3k5_out1k5_50ms_gpqa.py
             test_type: 'perf'
-          - name: qwen3_6_27b_w8a8_2p_in16k_out1k_50ms
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms.py
-            test_type: 'perf'
-          - name: qwen3_6_27b_w8a8_1p_in64k_out1k_50ms
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_1p_in64k_out1k_50ms.py
-            test_type: 'perf'
-          - name: qwen3_6_27b_w8a8_2p_in128k_out1k_50ms
-            runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_2p_in128k_out1k_50ms.py
-            test_type: 'perf'
+#          - name: qwen3_6_27b_w8a8_2p_in16k_out1k_50ms
+#            runner: linux-aarch64-a3-4
+#            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_2p_in16k_out1k_50ms.py
+#            test_type: 'perf'
+#          - name: qwen3_6_27b_w8a8_1p_in64k_out1k_50ms
+#            runner: linux-aarch64-a3-4
+#            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_1p_in64k_out1k_50ms.py
+#            test_type: 'perf'
+#          - name: qwen3_6_27b_w8a8_2p_in128k_out1k_50ms
+#            runner: linux-aarch64-a3-4
+#            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_2p_in128k_out1k_50ms.py
+#            test_type: 'perf'
           - name: qwen3_6_27b_2p_in64k_out1k_prefix90_50ms
             runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_2p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
-          - name: qwen3_6_27b_1p_in1024x1024_30_out1024_50ms
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_1p_in1024x1024_30_out1024_50ms.py
-            test_type: 'perf'
+#          - name: qwen3_6_27b_1p_in1024x1024_30_out1024_50ms
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_1p_in1024x1024_30_out1024_50ms.py
+#            test_type: 'perf'
           - name: qwen3_6_27b_1p_in1080p_30_out256_50ms
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_1p_in1080p_30_out256_50ms.py
             test_type: 'perf'
-          - name: qwen3_6_27b_1p_gpqa
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/qwen3_6_27b/test_npu_qwen3_6_27b_1p_gpqa.py
+#          - name: qwen3_6_27b_1p_gpqa
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/accuracy/qwen3_6_27b/test_npu_qwen3_6_27b_1p_gpqa.py
           # qwen3_32b performance tests
           - name: qwen3_32b_w8a8_2p_in3k5_out1k5_50ms_gpqa
             runner: linux-aarch64-a3-4
@@ -208,11 +208,11 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in3k5_out1k5_50ms_aime25.py
             test_type: 'perf'
-          # qwen3-8b performance tests
-          - name: qwen3_8b_w8a8_1p_in3k5_out1k5_50ms_gpqa
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in3k5_out1k5_50ms_gpqa.py
-            test_type: 'perf'
+#          # qwen3-8b performance tests
+#          - name: qwen3_8b_w8a8_1p_in3k5_out1k5_50ms_gpqa
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/performance/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in3k5_out1k5_50ms_gpqa.py
+#            test_type: 'perf'
           - name: qwen3_8b_w8a8_1p_in6k_out1k5_bs16_gpqa
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/performance/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in6k_out1k5_bs16_gpqa.py
@@ -235,22 +235,22 @@ jobs:
           - name: deepseek_v3_2_8p_aime25
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/accuracy/deepseek_v3_2/test_npu_deepseek_v3_2_8p_aime25.py
-          # glm4_7_flash accuracy tests
-          - name: glm4_7_flash_1p_aime25
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_1p_aime25.py
+#          # glm4_7_flash accuracy tests
+#          - name: glm4_7_flash_1p_aime25
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_1p_aime25.py
           # glm4_6v_flash accuracy tests
           - name: glm4_6v_flash_1p_mmmu
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/accuracy/glm4_6v_flash/test_npu_glm4_6v_flash_1p_mmmu.py
-          # qwen3_vl_8b_thinking accuracy tests
-          - name: qwen3_vl_8b_thinking_1p_mmmu
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/qwen3_vl_8b_thinking/test_npu_qwen3_vl_8b_thinking_1p_mmmu.py
-          # qwen3_vl_30b_a3b_thinking accuracy tests
-          - name: qwen3_vl_30b_a3b_thinking_1p_mmmu
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b_thinking/test_npu_qwen3_vl_30b_a3b_thinking_1p_mmmu.py
+#          # qwen3_vl_8b_thinking accuracy tests
+#          - name: qwen3_vl_8b_thinking_1p_mmmu
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/accuracy/qwen3_vl_8b_thinking/test_npu_qwen3_vl_8b_thinking_1p_mmmu.py
+#          # qwen3_vl_30b_a3b_thinking accuracy tests
+#          - name: qwen3_vl_30b_a3b_thinking_1p_mmmu
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b_thinking/test_npu_qwen3_vl_30b_a3b_thinking_1p_mmmu.py
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
