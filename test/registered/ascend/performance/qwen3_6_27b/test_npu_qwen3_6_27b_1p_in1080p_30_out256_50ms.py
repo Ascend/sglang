@@ -29,6 +29,7 @@ QWEN3_6_27B_1080P_ENVS = {
     "ASCEND_USE_FIA": "1",
 }
 
+
 QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--tp-size",
     2,
