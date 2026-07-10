@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main, testcases ]
+    branches: [ main ]
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -112,7 +112,6 @@ jobs:
           pip config set global.trusted-host "${CACHING_URL}"
 
           bash scripts/ci/npu/npu_ci_install_dependency.sh 910b
-          pip install coverage
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
@@ -127,12 +126,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-stage-b-test-1-npu-a2/.coverage
         run: |
           cd test
-          coverage run run_suite.py --hw npu --suite stage-b-test-1-npu-a2 --auto-partition-id ${{ matrix.part }} --auto-partition-size 2
-
-
+          python3 run_suite.py --hw npu --suite stage-b-test-1-npu-a2 --auto-partition-id ${{ matrix.part }} --auto-partition-size 2
 
   stage-b-test-2-npu-a2:
     needs: [check-changes, pr-gate]
@@ -169,7 +165,6 @@ jobs:
           pip config set global.trusted-host "${CACHING_URL}"
 
           bash scripts/ci/npu/npu_ci_install_dependency.sh 910b
-          pip install coverage
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
@@ -184,12 +179,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-stage-b-test-2-npu-a2/.coverage
         run: |
           cd test
-          coverage run run_suite.py --hw npu --suite stage-b-test-2-npu-a2 --auto-partition-id ${{ matrix.part }} --auto-partition-size 2
-
-
+          python3 run_suite.py --hw npu --suite stage-b-test-2-npu-a2 --auto-partition-id ${{ matrix.part }} --auto-partition-size 2
 
   stage-b-test-4-npu-a3:
     needs: [check-changes, pr-gate]
@@ -222,7 +214,6 @@ jobs:
           pip config set global.trusted-host "${CACHING_URL}"
 
           bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-          pip install coverage
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
@@ -237,12 +228,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
         run: |
           cd test
-          coverage run run_suite.py --hw npu --suite stage-b-test-4-npu-a3 --timeout-per-file 3600
-
-
+          python3 run_suite.py --hw npu --suite stage-b-test-4-npu-a3 --timeout-per-file 3600
 
 
   stage-b-test-16-npu-a3:
@@ -276,7 +264,6 @@ jobs:
           pip config set global.trusted-host "${CACHING_URL}"
 
           bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-          pip install coverage
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
@@ -291,12 +278,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-stage-b-test-16-npu-a3/.coverage
         run: |
           cd test
-          coverage run run_suite.py --hw npu --suite stage-b-test-16-npu-a3 --timeout-per-file 3600
-
-
+          python3 run_suite.py --hw npu --suite stage-b-test-16-npu-a3 --timeout-per-file 3600
 
   multimodal-gen-test-1-npu-a3:
     needs: [check-changes, pr-gate]
@@ -327,7 +311,6 @@ jobs:
           pip config set global.trusted-host "${CACHING_URL}"
 
           bash scripts/ci/npu/npu_ci_install_dependency.sh a3 diffusion
-          pip install coverage
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
@@ -343,11 +326,10 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}-multimodal-gen-test-1-npu-a3/.coverage
         run: |
           export PATH="/usr/local/Ascend/8.3.RC1/compiler/bishengir/bin:${PATH}"
           cd python
-          coverage run sglang/multimodal_gen/test/run_suite_npu.py --suite 1-npu
+          python3 sglang/multimodal_gen/test/run_suite_npu.py --suite 1-npu
 
       - name: Upload diffusion failure artifacts
         if: always()
@@ -357,8 +339,6 @@ jobs:
           path: diffusion-failures/
           if-no-files-found: ignore
           retention-days: 7
-
-
 
   multimodal-gen-test-2-npu-a3:
     needs: [check-changes, pr-gate]
@@ -389,7 +369,6 @@ jobs:
           pip config set global.trusted-host "${CACHING_URL}"
 
           bash scripts/ci/npu/npu_ci_install_dependency.sh a3 diffusion
-          pip install coverage
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
@@ -405,11 +384,10 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
         run: |
           export PATH="/usr/local/Ascend/8.3.RC1/compiler/bishengir/bin:${PATH}"
           cd python
-          coverage run sglang/multimodal_gen/test/run_suite_npu.py --suite 2-npu
+          python3 sglang/multimodal_gen/test/run_suite_npu.py --suite 2-npu
 
       - name: Upload diffusion failure artifacts
         if: always()
@@ -419,8 +397,6 @@ jobs:
           path: diffusion-failures/
           if-no-files-found: ignore
           retention-days: 7
-
-
 
   multimodal-gen-test-8-npu-a3:
     needs: [check-changes, pr-gate]
@@ -451,7 +427,6 @@ jobs:
           pip config set global.trusted-host "${CACHING_URL}"
 
           bash scripts/ci/npu/npu_ci_install_dependency.sh a3 diffusion
-          pip install coverage
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
@@ -467,10 +442,9 @@ jobs:
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
         run: |
           cd python
-          coverage run sglang/multimodal_gen/test/run_suite_npu.py --suite 8-npu
+          python3 sglang/multimodal_gen/test/run_suite_npu.py --suite 8-npu
 
       - name: Upload diffusion failure artifacts
         if: always()
@@ -480,40 +454,6 @@ jobs:
           path: diffusion-failures/
           if-no-files-found: ignore
           retention-days: 7
-
-
-
-  coverage-report:
-    needs:
-      [
-        check-changes,
-
-        stage-b-test-1-npu-a2,
-        stage-b-test-2-npu-a2,
-        stage-b-test-4-npu-a3,
-        stage-b-test-16-npu-a3,
-
-        multimodal-gen-test-1-npu-a3,
-        multimodal-gen-test-2-npu-a3,
-        multimodal-gen-test-8-npu-a3,
-      ]
-    if: always()
-    runs-on: linux-aarch64-a2-1
-    container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-910b-ubuntu22.04-py3.11
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Mark repository safe
-        run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
-
-      - name: Combine and generate report
-        run: |
-          pip install coverage
-          coverage combine /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
-          coverage report -m
 
   pr-test-npu-finish:
     needs:
@@ -528,8 +468,6 @@ jobs:
         multimodal-gen-test-1-npu-a3,
         multimodal-gen-test-2-npu-a3,
         multimodal-gen-test-8-npu-a3,
-
-        coverage-report,
       ]
     if: always()
     runs-on: ubuntu-latest
