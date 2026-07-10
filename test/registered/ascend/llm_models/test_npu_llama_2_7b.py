@@ -16,6 +16,8 @@ class TestLlama(GSM8KAscendMixin, CustomTestCase):
     """
 
     model = LLAMA_2_7B_WEIGHTS_PATH
+
+    
     accuracy = 0.15
 
 
