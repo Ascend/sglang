@@ -50,7 +50,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--max-mamba-cache-size",
     38,
     "--mem-fraction-static",
-    0.70,
+    0.60,
     "--cuda-graph-bs",
     1,
     2,
