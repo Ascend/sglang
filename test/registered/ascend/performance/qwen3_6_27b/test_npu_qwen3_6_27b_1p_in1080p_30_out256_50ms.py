@@ -16,7 +16,6 @@ register_npu_ci(
 )
 
 QWEN3_6_27B_1080P_ENVS = {
-    # "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
@@ -27,8 +26,6 @@ QWEN3_6_27B_1080P_ENVS = {
     "SGLANG_NPU_PROFILING": "0",
     "SGLANG_NPU_PROFILING_STAGE": "prefill",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    # "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    # "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "150",
     "ASCEND_USE_FIA": "1",
 }
 
@@ -44,36 +41,35 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",
-    87040,
+    82688,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    40,
+    38,
     "--max-mamba-cache-size",
-    40,
+    38,
     "--mem-fraction-static",
-    0.76,
-    "--max-total-tokens",
-    110000,
+    0.70,
     "--cuda-graph-bs",
     1,
     2,
     4,
     8,
+    10,
     12,
     16,
     20,
     24,
     28,
     30,
+    32,
     35,
-    40,
-    # 40,
-    # "--enable-prefill-delayer",
-    # "--prefill-delayer-queue-min-ratio",
-    # 0.2,
-    # "--prefill-delayer-max-delay-ms",
-    # 1000,
+    38,
+    "--enable-prefill-delayer",
+    "--prefill-delayer-queue-min-ratio",
+    0.45,
+    "--prefill-delayer-max-delay-ms",
+    5500,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -89,7 +85,6 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
-    # "--mm-enable-dp-encoder",
     "--reasoning-parser",
     "qwen3",
     "--tool-call-parser",
@@ -107,8 +102,9 @@ class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCase
     envs = QWEN3_6_27B_1080P_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    max_concurrency = 40
-    num_prompts = 40
+    warmup_requests = 38
+    max_concurrency = 38
+    num_prompts = 152
     input_len = 30
     output_len = 256
     random_range_ratio = 1
