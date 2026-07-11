@@ -69,6 +69,6 @@ jobs:
           push: ${{ github.repository == 'Ascend/sglang' }}
           provenance: false
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=2026.7.0
+            SGLANG_KERNEL_NPU_TAG=2026.7.1
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
