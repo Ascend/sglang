@@ -61,6 +61,7 @@ class TestPPAccuracy(unittest.TestCase):
     def test_gsm8k(self):
         args = SimpleNamespace(
             num_shots=5,
+            eval_name="gsm8k",
             data_path=None,
             num_questions=200,
             max_new_tokens=512,
@@ -126,7 +127,7 @@ class TestDPAttentionDP2PP2(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--mem-fraction-static",
-                "0.6",
+                "0.85",
                 "--disable-cuda-graph",
             ],
         )
@@ -187,6 +188,7 @@ class TestQwenVLPPAccuracy(TestVLMModels):
     def test_gsm8k(self):
         args = SimpleNamespace(
             num_shots=5,
+            eval_name="gsm8k",
             data_path=None,
             num_questions=200,
             max_new_tokens=512,
@@ -241,6 +243,7 @@ class TestQwenPPAccuracy(unittest.TestCase):
         try:
             args = SimpleNamespace(
                 num_shots=5,
+                eval_name="gsm8k",
                 data_path=None,
                 num_questions=200,
                 max_new_tokens=512,
@@ -303,6 +306,7 @@ class TestQwenPPTieWeightsAccuracy(unittest.TestCase):
         try:
             args = SimpleNamespace(
                 num_shots=5,
+                eval_name="gsm8k",
                 data_path=None,
                 num_questions=200,
                 max_new_tokens=512,
@@ -367,6 +371,7 @@ class TestQwenMoePPAccuracy(unittest.TestCase):
         try:
             args = SimpleNamespace(
                 num_shots=5,
+                eval_name="gsm8k",
                 data_path=None,
                 num_questions=200,
                 max_new_tokens=512,
@@ -431,6 +436,7 @@ class TestQwen35PPAccuracy(unittest.TestCase):
         try:
             args = SimpleNamespace(
                 num_shots=5,
+                eval_name="gsm8k",
                 data_path=None,
                 num_questions=200,
                 max_new_tokens=512,

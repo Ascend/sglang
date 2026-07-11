@@ -93,6 +93,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
     def test_gsm8k(self):
         args = SimpleNamespace(
             num_shots=5,
+            eval_name="gsm8k",
             data_path=None,
             num_questions=200,
             max_new_tokens=512,
@@ -188,6 +189,7 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
     def test_gsm8k(self):
         args = SimpleNamespace(
             num_shots=5,
+            eval_name="gsm8k",
             data_path=None,
             num_questions=200,
             max_new_tokens=512,
@@ -288,6 +290,7 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
     def test_gsm8k(self):
         args = SimpleNamespace(
             num_shots=5,
+            eval_name="gsm8k",
             data_path=None,
             num_questions=200,
             max_new_tokens=512,
