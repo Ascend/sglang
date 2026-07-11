@@ -36,10 +36,14 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
         cls.wait_server_ready(cls.decode_url + "/health")
 
         cls.launch_lb()
+        os.environ["OPENAI_API_KEY"] = "sk-123456"
+        os.environ["OPENAI_API_BASE"] = f"http://{cls.base_host}:{cls.lb_port}/v1"
 
     @classmethod
     def tearDownClass(cls):
         os.environ.pop("ASCEND_MF_STORE_URL")
+        os.environ.pop("OPENAI_API_KEY", None)
+        os.environ.pop("OPENAI_API_BASE", None)
         super().tearDownClass()
 
     @classmethod
@@ -132,10 +136,14 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
         cls.wait_server_ready(cls.decode_url + "/health")
 
         cls.launch_lb()
+        os.environ["OPENAI_API_KEY"] = "sk-123456"
+        os.environ["OPENAI_API_BASE"] = f"http://{cls.base_host}:{cls.lb_port}/v1"
 
     @classmethod
     def tearDownClass(cls):
         os.environ.pop("ASCEND_MF_STORE_URL")
+        os.environ.pop("OPENAI_API_KEY", None)
+        os.environ.pop("OPENAI_API_BASE", None)
         super().tearDownClass()
 
     @classmethod
@@ -229,10 +237,14 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
         cls.wait_server_ready(cls.decode_url + "/health")
 
         cls.launch_lb()
+        os.environ["OPENAI_API_KEY"] = "sk-123456"
+        os.environ["OPENAI_API_BASE"] = f"http://{cls.base_host}:{cls.lb_port}/v1"
 
     @classmethod
     def tearDownClass(cls):
         os.environ.pop("ASCEND_MF_STORE_URL")
+        os.environ.pop("OPENAI_API_KEY", None)
+        os.environ.pop("OPENAI_API_BASE", None)
         super().tearDownClass()
 
     @classmethod
