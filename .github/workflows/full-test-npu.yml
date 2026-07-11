@@ -308,6 +308,7 @@ jobs:
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          cp ~/.cache/modelscope/hub/datasets/hellaswag_val.jsonl /tmp
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run debug test

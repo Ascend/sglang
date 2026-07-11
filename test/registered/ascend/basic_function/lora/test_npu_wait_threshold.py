@@ -57,8 +57,6 @@ class TestLoraDrainWaitThreshold(CustomTestCase):
             "1",
             "--lora-drain-wait-threshold",
             "3.0",
-            "--base-gpu-id",
-            "2",
         ]
         cls.out_log_file = tempfile.NamedTemporaryFile(
             mode="w+", delete=True, suffix="out.log"
