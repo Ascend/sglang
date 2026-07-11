@@ -115,6 +115,10 @@ def _launch_router(prefill_url, decode_url, host, lb_port):
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     lb_url = f"http://{host}:{lb_port}"
     wait_for_http_ready(lb_url + "/health", timeout=_LAUNCH_TIMEOUT, process=proc)
+    # /health only confirms the router process is alive; backends may not be
+    # fully registered yet. Wait for /v1/models to guarantee the router can
+    # actually proxy model requests before the benchmark runs.
+    wait_for_http_ready(lb_url + "/v1/models", timeout=_LAUNCH_TIMEOUT, process=proc)
     return proc, lb_url
 
 
