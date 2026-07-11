@@ -23,7 +23,9 @@ from typing import Dict, List
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import KIMI_K2_6_W4A8_MODEL_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -34,12 +36,12 @@ from sglang.test.test_utils import (
     write_github_step_summary,
 )
 
-register_npu_ci(est_time=3600, suite="debug-full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=500, suite="debug-full-2-npu-a3", nightly=True)
 
-MODEL_PATH = KIMI_K2_6_W4A8_MODEL_PATH
+MODEL_PATH = QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
 SERVER_LAUNCH_TIMEOUT = 3600
 GSM8K_NUM_QUESTIONS = int(os.environ.get("GSM8K_NUM_QUESTIONS", "200"))
-ACCURACY_THRESHOLD = 0.9121
+ACCURACY_THRESHOLD = 0.90
 
 
 @dataclass
@@ -52,15 +54,13 @@ class CaptureConfig:
     env_vars: Dict[str, str] = field(default_factory=dict)
 
 
-# Common args: TP16, ascend backend, modelslim quantization, 8192 chunked prefill.
+# Common args: TP2, ascend backend, 8192 chunked prefill.
 COMMON_ARGS: List[str] = [
     "--tensor-parallel-size",
-    "16",
+    "2",
     "--trust-remote-code",
     "--attention-backend",
     "ascend",
-    "--quantization",
-    "modelslim",
     "--mem-fraction-static",
     "0.765",
     "--disable-radix-cache",
