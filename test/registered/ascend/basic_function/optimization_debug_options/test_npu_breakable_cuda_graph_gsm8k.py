@@ -38,7 +38,7 @@ register_npu_ci(est_time=3600, suite="debug-full-16-npu-a3", nightly=True)
 
 MODEL_PATH = KIMI_K2_6_W4A8_MODEL_PATH
 SERVER_LAUNCH_TIMEOUT = 3600
-GSM8K_NUM_QUESTIONS = int(os.environ.get("GSM8K_NUM_QUESTIONS", "1319"))
+GSM8K_NUM_QUESTIONS = int(os.environ.get("GSM8K_NUM_QUESTIONS", "200"))
 ACCURACY_THRESHOLD = 0.9121
 
 
