@@ -97,7 +97,7 @@ class TestNpuBreakableCudaGraphGsm8k(CustomTestCase):
     """Testcase: Validate BCG prefill capture accuracy on NPU.
 
     [Test Category] Parameter
-    [Test Target] --cuda-graph-backend-prefill; --cuda-graph-backend-decode
+    [Test Target] --cuda-graph-backend-decode
     """
 
     @classmethod
