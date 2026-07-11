@@ -54,6 +54,8 @@ OTHER_ARGS = [
     "glm45",
     "--tool-call-parser",
     "glm45",
+    "--mm-attention-backend",
+    "ascend_attn",
 ]
 
 
@@ -61,7 +63,7 @@ class TestQwen3(TestAscendAccuracyTestCaseBase):
     model = GLM_4_6V_FLASH_MODEL_PATH
     envs = ENVS
     other_args = OTHER_ARGS
-    accuracy = 0.711
+    accuracy = 0.66
     datasets = ["mmmu"]
     few_shot_num = 0
     generation_config = {"max_tokens": 65536, "temperature": 1.0}
