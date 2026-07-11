@@ -727,7 +727,7 @@ jobs:
            export PYTHONPATH=$PYTHONPATH:$(pwd)
            cd ../
            cd test
-           python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+           python3 run_suite.py --hw npu --suite debug-full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
 #
 #   nightly-poc-single-node-tests:
 #     name: single-node-poc

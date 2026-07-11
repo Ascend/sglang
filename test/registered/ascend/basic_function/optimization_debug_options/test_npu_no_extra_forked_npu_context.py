@@ -116,13 +116,11 @@ class TestTPServerNPUProcesses(CustomTestCase):
 
         rows = []
         for line in result.stdout.splitlines():
-            # Only parse data rows: pipe-delimited lines that contain the
-            # memory usage pattern "used / total" (digits / digits).
-            if "/" not in line:
+            # Only parse data rows from pipe-delimited table; skip
+            # separators (+===), headers, and "No running processes".
+            if "|" not in line or "+" in line or "No running" in line:
                 continue
             parts = [p.strip() for p in line.split("|")]
-            # Process ID column: look for entries that are purely numeric
-            # and could be a PID (length 3–7 digits).
             for part in parts:
                 if part.isdigit() and 3 <= len(part) <= 7:
                     rows.append({"pid": int(part)})
