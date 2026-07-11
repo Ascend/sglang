@@ -85,7 +85,7 @@ def get_capture_configs() -> List[CaptureConfig]:
             variant="bcg",
             capture_args=[
                 "--cuda-graph-backend-prefill",
-                "breakable",
+                "disabled",
                 "--cuda-graph-backend-decode",
                 "full",
             ],
