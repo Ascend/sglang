@@ -25,7 +25,7 @@ import requests
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import KIMI_K2_6_W4A8_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.few_shot_gsm8k import run_eval as run_eval_few_shot_gsm8k
+from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
@@ -123,22 +123,22 @@ class TestNpuBreakableCudaGraphGsm8k(CustomTestCase):
         try:
             requests.get(self.base_url + "/flush_cache")
             args = SimpleNamespace(
+                model=self.model,
+                eval_name="gsm8k",
                 num_shots=8,
-                data_path=None,
-                num_questions=GSM8K_NUM_QUESTIONS,
-                parallel=GSM8K_NUM_QUESTIONS,
-                max_new_tokens=512,
-                host="http://127.0.0.1",
-                port=int(self.base_url.split(":")[-1]),
+                num_examples=GSM8K_NUM_QUESTIONS,
+                num_threads=128,
+                max_tokens=512,
+                base_url=self.base_url,
             )
-            metrics = run_eval_few_shot_gsm8k(args)
+            metrics = run_eval(args)
             print(f"[{config.variant}] {metrics=}")
-            return metrics["accuracy"]
+            return metrics["score"]
         finally:
             kill_process_tree(process.pid)
 
     def test_bcg_gsm8k(self):
-        summary = "### Kimi-K2.6-W4A8 BCG capture (NPU, TP4)\n\n"
+        summary = "### Kimi-K2.6-W4A8 (NPU, TP16)\n\n"
         summary += "| Capture backend | Accuracy | Threshold | Status |\n"
         summary += "| --------------- | -------- | --------- | ------ |\n"
 
