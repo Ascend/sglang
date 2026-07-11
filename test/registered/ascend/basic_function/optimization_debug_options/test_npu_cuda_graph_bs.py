@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
 )
 from sglang.utils import wait_for_http_ready
 
-register_npu_ci(est_time=1200, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=1200, suite="debug-full-2-npu-a3", nightly=True)
 
 MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
