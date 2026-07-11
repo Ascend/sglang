@@ -52,11 +52,15 @@ class CaptureConfig:
     env_vars: Dict[str, str] = field(default_factory=dict)
 
 
-# Common args: TP4, ascend prefill/decode, fp8 KV, allreduce fusion, 8192 chunked prefill.
+# Common args: TP16, ascend backend, modelslim quantization, 8192 chunked prefill.
 COMMON_ARGS: List[str] = [
     "--tensor-parallel-size",
     "16",
     "--trust-remote-code",
+    "--attention-backend",
+    "ascend",
+    "--quantization",
+    "modelslim",
     "--mem-fraction-static",
     "0.765",
     "--disable-radix-cache",
@@ -68,7 +72,6 @@ COMMON_ARGS: List[str] = [
     "auto",
     "--max-running-requests",
     "1024",
-    "--enable-aiter-allreduce-fusion",
     "--chunked-prefill-size",
     "8192",
     "--max-prefill-tokens",
@@ -108,7 +111,6 @@ class TestNpuBreakableCudaGraphGsm8k(CustomTestCase):
 
     def _run_variant(self, config: CaptureConfig) -> float:
         env = os.environ.copy()
-        env["SGLANG_AITER_MLA_PERSIST"] = "1"
         for key, value in config.env_vars.items():
             env[key] = value
 
