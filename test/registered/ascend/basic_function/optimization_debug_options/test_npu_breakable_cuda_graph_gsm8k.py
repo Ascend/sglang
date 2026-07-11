@@ -34,7 +34,7 @@ from sglang.test.test_utils import (
     write_github_step_summary,
 )
 
-register_npu_ci(est_time=3600, suite="debug-full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="debug-full-16-npu-a3", nightly=True)
 
 MODEL_PATH = KIMI_K2_6_W4A8_MODEL_PATH
 SERVER_LAUNCH_TIMEOUT = 3600
@@ -55,7 +55,7 @@ class CaptureConfig:
 # Common args: TP4, ascend prefill/decode, fp8 KV, allreduce fusion, 8192 chunked prefill.
 COMMON_ARGS: List[str] = [
     "--tensor-parallel-size",
-    "8",
+    "16",
     "--trust-remote-code",
     "--mem-fraction-static",
     "0.765",
