@@ -52,7 +52,7 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     10,
     "--chunked-prefill-size",
     67072,
-    "--max-prefill-token",
+    "--max-prefill-tokens",
     67000,
     "--cuda-graph-bs",
     2,
@@ -109,6 +109,7 @@ class TestNPUMiniMaxM2_5W8A8_4P_In64k_Out1k_Prefix90_50ms(
     output_len = 1024
     random_range_ratio = 1
     repeat_rate = 0.9
+    seed = 1
     tpot = 50
     output_token_throughput = 390.5859
     request_rate = float("inf")

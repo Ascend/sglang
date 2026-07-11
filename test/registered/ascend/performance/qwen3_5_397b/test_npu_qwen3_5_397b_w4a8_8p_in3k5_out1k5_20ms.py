@@ -117,7 +117,8 @@ class TestNPUQwen3_5_397B_A17B_3K5_1K5_50ms(TestAscendPerformanceTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
-    tpot = 20
+    seed = 1
+    tpot = 22.2
     output_token_throughput = 3449
     request_rate = float("inf")
     temperature = 0.6

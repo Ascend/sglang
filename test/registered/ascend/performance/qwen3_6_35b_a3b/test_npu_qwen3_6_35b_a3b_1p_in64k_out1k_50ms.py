@@ -91,10 +91,12 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_50ms(TestAscendPerformanceTestCaseBas
     envs = QWEN3_6_35B_A3B_64K_1K_ENVS
     dataset_name = "random"
     max_concurrency = 10
+    warmup_requests = max_concurrency
     num_prompts = 40
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 141.72
 

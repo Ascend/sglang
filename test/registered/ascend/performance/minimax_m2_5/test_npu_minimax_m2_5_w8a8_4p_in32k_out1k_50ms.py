@@ -111,6 +111,7 @@ class TestNPUMiniMaxM2_5_W8A8_4P_In32k_Out1k_HighThroughput(
     input_len = 32768
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 312.68
 

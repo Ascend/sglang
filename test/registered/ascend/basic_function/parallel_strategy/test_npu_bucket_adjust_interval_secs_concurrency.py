@@ -169,6 +169,7 @@ class TestNPUBucketAdjustIntervalSecsConcurrency(
     input_len = 300
     output_len = 20
     random_range_ratio = 1
+    seed = 1
 
     def test_throughput(self):
         self.run_throughput()
