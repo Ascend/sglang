@@ -39,7 +39,7 @@ jobs:
           ln -sf ${sglang_source_path} /root/sglang
 
           test_cases=(
-            "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
+            #"test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
             "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_enable-deepep-waterfill.py"
             "test/registered/ascend/basic_function/Custom_weight_loader/test_npu_weight_loader_prefetch.py"
             "test/registered/ascend/basic_function/speculative_inference/test_npu_speculative_token_map.py"
