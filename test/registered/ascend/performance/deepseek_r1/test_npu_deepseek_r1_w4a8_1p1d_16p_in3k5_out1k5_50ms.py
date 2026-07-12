@@ -66,7 +66,7 @@ MODEL_CONFIG = {
         8192,
         "--disable-radix-cache",
         "--chunked-prefill-size",
-        -1,
+        20480,
         "--max-prefill-tokens",
         20480,
         "--moe-a2a-backend",
@@ -92,7 +92,7 @@ MODEL_CONFIG = {
         "--tool-call-parser",
         "deepseekv3",
         "--max-total-tokens",
-        107520,
+        80000,
     ],
     "decode_args": [
         "--nnodes",

@@ -73,7 +73,7 @@ class Test01_NpuApi(CustomTestCase):
         self.assertFalse(response.json()["has_image_understanding"])
         self.assertFalse(response.json()["has_audio_understanding"])
         self.assertEqual(response.json()["model_type"], "qwen3")
-        self.assertEqual(response.json()["architectures"][0], "LlamaForCausalLM")
+        self.assertEqual(response.json()["architectures"][0], "Qwen3ForCausalLM")
 
     def test_api_server_info(self):
         response = requests.get(f"{self.base_url}/server_info")
@@ -100,7 +100,7 @@ class Test01_NpuApi(CustomTestCase):
         self.assertEqual(response.json()["data"][0]["object"], "model")
         self.assertEqual(response.json()["data"][0]["owned_by"], "sglang")
         self.assertEqual(response.json()["data"][0]["root"], self.model)
-        self.assertEqual(response.json()["data"][0]["max_model_len"], 131072)
+        self.assertEqual(response.json()["data"][0]["max_model_len"], 40960)
 
     def test_api_v1_models_path(self):
         response = requests.get(f"{self.base_url}/v1/models/{self.model}")
@@ -109,7 +109,7 @@ class Test01_NpuApi(CustomTestCase):
         self.assertEqual(response.json()["object"], "model")
         self.assertEqual(response.json()["owned_by"], "sglang")
         self.assertEqual(response.json()["root"], self.model)
-        self.assertEqual(response.json()["max_model_len"], 131072)
+        self.assertEqual(response.json()["max_model_len"], 40960)
 
     def test_api_generate_single_text(self):
         response = requests.post(
