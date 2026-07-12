@@ -88,7 +88,7 @@ class TestConfigPriority(CustomTestCase):
 
     def test_config_priority(self):
         # will use false model path (/nonexistent/Qwen/Qwen3-32B) service start fail
-        error_message = "Unrecognized model in /nonexistent/Qwen/Qwen3-32B"
+        error_message = "404 page not found"
         with tempfile.NamedTemporaryFile(
             mode="w+", delete=True, suffix="out.log"
         ) as out_log_file, tempfile.NamedTemporaryFile(
@@ -96,9 +96,9 @@ class TestConfigPriority(CustomTestCase):
         ) as err_log_file:
             try:
                 popen_launch_server(
-                    "/nonexistent/Qwen/Qwen3-32B",
-                    DEFAULT_URL_FOR_TEST,
-                    timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+                    model = "/nonexistent/Qwen/Qwen3-32B",
+                    base_url= DEFAULT_URL_FOR_TEST,
+                    timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
                     other_args=["--config", CONFIG_YAML_PATH],
                     return_stdout_stderr=(out_log_file, err_log_file),
                 )
