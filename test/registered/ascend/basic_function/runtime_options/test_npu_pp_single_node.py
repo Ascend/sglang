@@ -23,7 +23,7 @@ from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_P
     GLM_4_5V_WEIGHTS_PATH, QWEN3_0_6B_WEIGHTS_PATH, QWEN3_32B_WEIGHTS_PATH, \
     QWEN3_8B_WEIGHTS_PATH, QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH, QWEN3_30B_A3B_WEIGHTS_PATH
 
-register_npu_ci(est_time=400, suite="debug-full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=10800, suite="debug-full-16-npu-a3", nightly=True)
 
 
 class TestPPAccuracy(unittest.TestCase):
@@ -531,9 +531,9 @@ class TestGLM41VPPAccuracy(unittest.TestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
                 "--tp-size",
-                "1",
+                "4",
                 "--pp-size",
-                "8",
+                "4",
                 "--chunked-prefill-size",
                 "4096",
                 "--enable-multimodal",
@@ -542,7 +542,7 @@ class TestGLM41VPPAccuracy(unittest.TestCase):
                 "--attention-backend",
                 "ascend",
                 "--mem-fraction-static",
-                "0.8",
+                "0.5",
                 "--disable-cuda-graph",
             ],
         )
