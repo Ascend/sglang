@@ -407,7 +407,7 @@ jobs:
   debug-full-16-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-16
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
