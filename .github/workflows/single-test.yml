@@ -68,7 +68,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B140" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B150" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -118,9 +118,9 @@ jobs:
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/ascend/llm_models/test_npu_orion_14b_base.py
 #            test_type: 'function'
-          - name: test_npu_tele_flm
+          - name: test_npu_pd_disaggregation_ha_mixed_worker_failover
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/llm_models/test_npu_tele_flm.py
+            test_case: test/registered/ascend/basic_function/ha/test_npu_pd_disaggregation_ha_mixed_worker_failover.py
             test_type: 'function'
 #          - name: test_npu_ernie_4_5_vl_28b_a3b_pt
 #            runner: linux-aarch64-a3-2
@@ -136,7 +136,7 @@ jobs:
       test_type: ${{ matrix.test_config.test_type }}
       test_config_name: ${{ matrix.test_config.name }}
       test_case: ${{ matrix.test_config.test_case }}
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B140
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B150
       install_sglang_from_source: false
       transformers_version: ''
 
