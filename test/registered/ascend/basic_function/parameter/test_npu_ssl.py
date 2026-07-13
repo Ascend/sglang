@@ -395,11 +395,9 @@ class TestSSLParams(CustomTestCase):
             # End-to-end HTTPS inference with encrypted key
             _assert_https_generate(self, port, enc_cert, max_new_tokens=16)
 
-        except Exception:
+        finally:
             if process is not None:
                 kill_process_tree(process.pid)
-            raise
-        finally:
             for p in (enc_key, enc_cert):
                 try:
                     os.unlink(p)

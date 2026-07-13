@@ -33,6 +33,7 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--disable-radix-cache",
+        "--enforce-piecewise-cuda-graph",
     ]
     enable_args = [
         "--enable-torch-compile-debug-mode",
