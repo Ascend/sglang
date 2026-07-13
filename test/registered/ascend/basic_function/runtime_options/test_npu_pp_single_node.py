@@ -67,7 +67,7 @@ class TestPPAccuracy(unittest.TestCase):
             max_new_tokens=512,
             num_threads=128,
             parallel=128,
-            host="http://127.0.0.1",
+            host="127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
         metrics = run_eval(args)
@@ -199,7 +199,7 @@ class TestQwenVLPPAccuracy(TestVLMModels):
             max_new_tokens=512,
             num_threads=128,
             parallel=128,
-            host="http://127.0.0.1",
+            host="127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
         metrics = run_eval(args)
@@ -255,7 +255,7 @@ class TestQwenPPAccuracy(unittest.TestCase):
                 max_new_tokens=512,
                 num_threads=128,
                 parallel=128,
-                host="http://127.0.0.1",
+                host="127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
             metrics = run_eval(args)
@@ -319,7 +319,7 @@ class TestQwenPPTieWeightsAccuracy(unittest.TestCase):
                 max_new_tokens=512,
                 num_threads=128,
                 parallel=128,
-                host="http://127.0.0.1",
+                host="127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
             metrics = run_eval(args)
@@ -385,7 +385,7 @@ class TestQwenMoePPAccuracy(unittest.TestCase):
                 max_new_tokens=512,
                 num_threads=128,
                 parallel=128,
-                host="http://127.0.0.1",
+                host="127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
             metrics = run_eval(args)
@@ -451,7 +451,7 @@ class TestQwen35PPAccuracy(unittest.TestCase):
                 max_new_tokens=512,
                 num_threads=128,
                 parallel=128,
-                host="http://127.0.0.1",
+                host="127.0.0.1",
                 port=int(self.base_url.split(":")[-1]),
             )
             metrics = run_eval(args)
