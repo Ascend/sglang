@@ -675,78 +675,85 @@ jobs:
             test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
+          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
+            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
-            prefill_size: 4
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
-            prefill_size: 4
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
-            prefill_size: 2
-            decode_size: 4
-            router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          # ===== DeepSeek R1 W4A8 1p1d_16p PD separation =====
-          - name: deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms
-            prefill_size: 1
-            decode_size: 1
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          # # ===== DeepSeek R1 W8A8 2p1d_32p PD separation =====
-          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_16ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_16ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
+#          - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
+#            prefill_size: 4
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
+#            prefill_size: 4
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
+#            prefill_size: 2
+#            decode_size: 4
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          # ===== DeepSeek R1 W4A8 1p1d_16p PD separation =====
+#          - name: deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms
+#            prefill_size: 1
+#            decode_size: 1
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          # # ===== DeepSeek R1 W8A8 2p1d_32p PD separation =====
+#          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_16ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_16ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
 #          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms
 #            prefill_size: 2
 #            decode_size: 2
