@@ -110,7 +110,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
         metrics = run_eval(args)
         print(f"{metrics=}")
 
-        self.assertGreater(metrics["accuracy"], 0.24)
+        self.assertGreater(metrics["score"], 0.24)
         # Wait a little bit so that the memory check happens.
         time.sleep(5)
 
@@ -211,7 +211,7 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
         metrics = run_eval(args)
         print(f"{metrics=}")
 
-        self.assertGreater(metrics["accuracy"], 0.24)
+        self.assertGreater(metrics["score"], 0.24)
         # Wait a little bit so that the memory check happens.
         time.sleep(5)
 
@@ -317,7 +317,7 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
         metrics = run_eval(args)
         print(f"{metrics=}")
 
-        self.assertGreater(metrics["accuracy"], 0.24)
+        self.assertGreater(metrics["score"], 0.24)
         # Wait a little bit so that the memory check happens.
         time.sleep(5)
 
