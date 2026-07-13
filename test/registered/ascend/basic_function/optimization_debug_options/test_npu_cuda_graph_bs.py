@@ -307,6 +307,15 @@ class TestCudaGraphBsPD(CustomTestCase):
 
         self.assertFalse(_has_graph_begin(prefill_log))
         decode_bs = _parse_capture_bs(decode_log)
+        if decode_bs is None:
+            lines = decode_log.splitlines()
+            relevant = [
+                l for l in lines
+                if any(kw in l.lower() for kw in ("cuda", "graph", "capture", "bs ["))
+            ]
+            print(f"DEBUG decode_log ({len(lines)} lines, {len(relevant)} relevant):")
+            for l in relevant[-20:]:
+                print(f"  {l}")
         self.assertEqual(decode_bs, list(range(1, 9)))
 
     # cuda graph disabled, no graph capture, serving works
