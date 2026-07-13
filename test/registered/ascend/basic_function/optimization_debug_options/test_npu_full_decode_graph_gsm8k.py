@@ -1,8 +1,8 @@
 """Full decode CUDA-graph capture accuracy test on NPU.
 
 Exercises the ``--cuda-graph-backend-decode full`` path on
-Qwen3-30B-A3B to verify that full decode graph capture does not
-degrade accuracy on NPU.
+Kimi-K2.6-W4A8 with modelslim quantization to verify that full decode
+graph capture does not degrade accuracy on NPU.
 """
 
 import os
@@ -14,9 +14,7 @@ from typing import Dict, List
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
-)
+from sglang.test.ascend.test_ascend_utils import KIMI_K2_6_W4A8_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -27,12 +25,12 @@ from sglang.test.test_utils import (
     write_github_step_summary,
 )
 
-register_npu_ci(est_time=500, suite="debug-full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="debug-full-16-npu-a3", nightly=True)
 
-MODEL_PATH = QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
+MODEL_PATH = KIMI_K2_6_W4A8_MODEL_PATH
 SERVER_LAUNCH_TIMEOUT = 3600
 GSM8K_NUM_QUESTIONS = int(os.environ.get("GSM8K_NUM_QUESTIONS", "200"))
-ACCURACY_THRESHOLD = 0.90
+ACCURACY_THRESHOLD = 0.9121
 
 
 @dataclass
@@ -45,13 +43,15 @@ class CaptureConfig:
     env_vars: Dict[str, str] = field(default_factory=dict)
 
 
-# Common args: TP2, ascend backend, 8192 chunked prefill.
+# Common args: TP16, ascend backend, modelslim quantization, 8192 chunked prefill.
 COMMON_ARGS: List[str] = [
     "--tensor-parallel-size",
-    "2",
+    "16",
     "--trust-remote-code",
     "--attention-backend",
     "ascend",
+    "--quantization",
+    "modelslim",
     "--mem-fraction-static",
     "0.765",
     "--disable-radix-cache",
@@ -69,6 +69,8 @@ COMMON_ARGS: List[str] = [
     "8192",
     "--model-loader-extra-config",
     '{"enable_multithread_load": true}',
+    "--cuda-graph-bs-decode",
+    "1", "2", "4", "8",
 ]
 
 
@@ -131,7 +133,7 @@ class TestNpuFullDecodeGraphGsm8k(CustomTestCase):
             kill_process_tree(process.pid)
 
     def test_full_decode_graph_gsm8k(self):
-        summary = "### Qwen3-30B-A3B full decode graph (NPU, TP2)\n\n"
+        summary = "### Kimi-K2.6-W4A8 full decode graph (NPU, TP16)\n\n"
         summary += "| Capture backend | Accuracy | Threshold | Status |\n"
         summary += "| --------------- | -------- | --------- | ------ |\n"
 
