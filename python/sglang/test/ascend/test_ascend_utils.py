@@ -167,6 +167,7 @@ QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 )
 QWEN3_0_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-0.6B")
 QWEN3_5_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-27B")
+QWEN3_6_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-35B-A3B")
 QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-1.7B-GPTQ-Int8"
 )
@@ -188,6 +189,9 @@ QWEN3_30B_A3B_INSTRUCT_2507_INT4_AUTOROUND_WEIGHTS_PATH = os.path.join(
 QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B-Instruct-2507"
 )
+QWEN3_30B_A3B_INSTRUCT_2507_THEO_STYLE_LORA_PATH = os.path.join(
+    HF_MODEL_WEIGHTS_DIR, "Qwen3-30B-A3B-Instruct-2507-theo-style-lora"
+)
 QWEN3_4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-4B")
 QWEN3_4B_LORA_V2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-4B-lora-v2")
 QWEN3_4B_LORA_ZH_WEBNOVELTY_V0_0_WEIGHTS_PATH = os.path.join(
@@ -202,6 +206,9 @@ QWEN3_8B_INT4_AUTOROUND_WEIGHTS_PATH = os.path.join(
 QWEN3_8B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-8B")
 QWEN3_8B_EAGLE3_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-8B_eagle3")
 QWEN3_8B_DECRYPTED_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "YZY/Qwen3-8B")
+QWEN3_8B_DFLASH_B16_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "z-lab/Qwen3-8B-DFlash-b16"
+)
 QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "YZY/Qwen3-8B_eagle3"
 )
@@ -317,6 +324,9 @@ QWEN3_5_397B_W4A8_MODEL_PATH = os.path.join(
 QWEN3_5_397B_W8A8_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-397B-A17B-w8a8-mtp"
 )
+QWEN3_5_35B_W8A8_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-35B-A3B-w8a8-mtp"
+)
 QWEN3_5_9B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-9B")
 QWEN3_5_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-35B-A3B")
 QWEN3_5_35B_A3B_W8A8_MTP_WEIGHTS_PATH = os.path.join(
@@ -403,6 +413,9 @@ INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
 # Other
 DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/ascend/basic_function/parameter/deepseek_coder.json"
 FR_SPEC_TOKEN_MAP_PATH = "/root/.cache/sglang/FR-Spec/freq_32768.pt"
+HOT_MAP_PT = "/root/.cache/sglang/hot_map/expert_distribution_recorder.pt"
+HOT_MAP_JSON = "/root/.cache/sglang/hot_map/expert_distribution_recorder.json"
+HOT_MAP_STRING = "/root/.cache/sglang/hot_map/qwen3_30b_a3b_random_no_redundant.json"
 CONFIG_YAML_PATH = (
     "/__w/sglang/sglang/test/registered/ascend/basic_function/config/config.yaml"
 )
