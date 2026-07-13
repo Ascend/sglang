@@ -1,5 +1,4 @@
 import threading
-import time
 import unittest
 
 import requests
@@ -8,12 +7,6 @@ from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
-
-_GC_INFO = "LONG GARBAGE COLLECTION DETECTED"
-# Enough concurrency and token length to stress memory and trigger GC
-_CONCURRENT_REQUESTS = 2000
-# Maximum seconds to poll logs for the GC warning before failing
-_POLL_TIMEOUT_SECS = 120
 
 
 class TestNPUGCWarningThreshold(TestNPULoggingBase):
@@ -52,8 +45,7 @@ class TestNPUGCWarningThreshold(TestNPULoggingBase):
         Core Functionality:
             1. Generate high-concurrency requests with long sequences to create large temporary objects in SGLang service
             2. Trigger garbage collection (GC) by overwhelming the service with memory-intensive requests
-            3. Verify that when GC time exceeds the configured threshold, a specific GC warning log is recorded
-            4. Exit immediately after the GC warning is found — no need to drain all concurrent requests
+            3. Verify that when GC time exceeds the configured threshold, a specific GC warning log is recorded in the error log file
         """
         prompt_template = (
             "just return me a string with of 10000 characters: " + "A" * 10000
@@ -61,44 +53,29 @@ class TestNPUGCWarningThreshold(TestNPULoggingBase):
         max_token = 10000
 
         def send_request():
-            try:
-                requests.post(
-                    f"{self.base_url}/generate",
-                    json={
-                        "text": prompt_template,
-                        "sampling_params": {
-                            "temperature": 0,
-                            "max_new_tokens": max_token,
-                        },
-                    },
-                    timeout=10,
-                )
-            except Exception:
-                pass
+            requests.post(
+                f"{self.base_url}/generate",
+                json={
+                    "text": prompt_template,
+                    "sampling_params": {"temperature": 0, "max_new_tokens": max_token},
+                },
+            )
 
-        # Fire concurrent requests to stress memory and trigger GC
         threads = []
-        for _ in range(_CONCURRENT_REQUESTS):
-            t = threading.Thread(target=send_request, daemon=True)
+        for _ in range(2000):
+            t = threading.Thread(target=send_request)
             t.start()
             threads.append(t)
 
-        # Poll log files until GC warning appears or timeout is reached
-        deadline = time.monotonic() + _POLL_TIMEOUT_SECS
-        gc_warning_found = False
-        while time.monotonic() < deadline:
-            self.out_log_file.seek(0)
-            self.err_log_file.seek(0)
-            content = self.out_log_file.read() + self.err_log_file.read()
-            if _GC_INFO in content:
-                gc_warning_found = True
-                break
-            time.sleep(1)
+        for t in threads:
+            t.join()
 
-        self.assertTrue(
-            gc_warning_found,
-            f"GC warning '{_GC_INFO}' not found within {_POLL_TIMEOUT_SECS}s",
-        )
+        GC_info = "LONG GARBAGE COLLECTION DETECTED"
+        self.out_log_file.seek(0)
+        self.err_log_file.seek(0)
+        content = self.out_log_file.read() + self.err_log_file.read()
+        self.assertTrue(len(content) > 0)
+        self.assertIn(GC_info, content)
 
 
 if __name__ == "__main__":
