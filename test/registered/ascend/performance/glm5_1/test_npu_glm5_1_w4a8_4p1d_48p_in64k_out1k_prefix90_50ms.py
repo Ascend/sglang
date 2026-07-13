@@ -190,6 +190,7 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 4711
     repeat_rate = 0.9
