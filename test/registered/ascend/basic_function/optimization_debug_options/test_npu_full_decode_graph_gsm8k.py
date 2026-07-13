@@ -1,17 +1,8 @@
-"""Breakable CUDA-graph (BCG) prefill capture accuracy test on NPU.
+"""Full decode CUDA-graph capture accuracy test on NPU.
 
-Exercises the breakable (BCG) CUDA-graph prefill capture path on
-Kimi-K2.6-W4A8 so the BCG code runs in NPU CI:
-
-  * runner_backend/breakable_cuda_graph_backend.py
-        BCG must capture correctly with ascend backend.
-  * The prefill is routed through the BCG path
-        (is_in_breakable_cuda_graph()).
-
-These branches are gated and default-off, so the default full-cuda-graph CI
-tests never touch them. This test launches the server with
-``--cuda-graph-backend-prefill breakable`` and asserts GSM8K accuracy,
-turning "did the capture succeed and stay correct?" into a CI signal.
+Exercises the ``--cuda-graph-backend-decode full`` path on
+Qwen3-30B-A3B to verify that full decode graph capture does not
+degrade accuracy on NPU.
 """
 
 import os
@@ -83,7 +74,7 @@ COMMON_ARGS: List[str] = [
 
 def get_capture_configs() -> List[CaptureConfig]:
     return [
-        # BCG: breakable prefill capture.
+        # Full decode graph capture.
         CaptureConfig(
             variant="bcg",
             capture_args=[
@@ -96,8 +87,8 @@ def get_capture_configs() -> List[CaptureConfig]:
     ]
 
 
-class TestNpuBreakableCudaGraphGsm8k(CustomTestCase):
-    """Testcase: Validate BCG prefill capture accuracy on NPU.
+class TestNpuFullDecodeGraphGsm8k(CustomTestCase):
+    """Testcase: Validate full decode CUDA-graph accuracy on NPU.
 
     [Test Category] Parameter
     [Test Target] --cuda-graph-backend-decode
@@ -139,8 +130,8 @@ class TestNpuBreakableCudaGraphGsm8k(CustomTestCase):
         finally:
             kill_process_tree(process.pid)
 
-    def test_bcg_gsm8k(self):
-        summary = "### Kimi-K2.6-W4A8 (NPU, TP16)\n\n"
+    def test_full_decode_graph_gsm8k(self):
+        summary = "### Qwen3-30B-A3B full decode graph (NPU, TP2)\n\n"
         summary += "| Capture backend | Accuracy | Threshold | Status |\n"
         summary += "| --------------- | -------- | --------- | ------ |\n"
 
@@ -163,7 +154,7 @@ class TestNpuBreakableCudaGraphGsm8k(CustomTestCase):
         self.assertEqual(
             failures,
             [],
-            f"BCG accuracy below {ACCURACY_THRESHOLD}: {failures}",
+            f"Full decode graph accuracy below {ACCURACY_THRESHOLD}: {failures}",
         )
 
 
