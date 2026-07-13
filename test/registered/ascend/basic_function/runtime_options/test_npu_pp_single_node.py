@@ -531,9 +531,9 @@ class TestGLM41VPPAccuracy(unittest.TestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
                 "--tp-size",
-                "4",
+                "1",
                 "--pp-size",
-                "4",
+                "8",
                 "--chunked-prefill-size",
                 "4096",
                 "--enable-multimodal",
