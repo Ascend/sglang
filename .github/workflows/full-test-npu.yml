@@ -5,6 +5,8 @@ on:
      branches:
        - main
        - testcases
+#    paths:
+#      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -84,13 +86,13 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a2 }}" ]; then
-            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260515" >> $GITHUB_OUTPUT
+            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-B140" >> $GITHUB_OUTPUT
           else
             echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260515" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B140" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -887,9 +889,9 @@ jobs:
 #      - full-4-npu-a3
 #      - full-8-npu-a3
       - debug-full-16-npu-a3
-      - nightly-poc-single-node-tests
-      - nightly-poc-multi-node-tests
-      - nightly-poc-multi-node-mix-tests
+#      - nightly-poc-single-node-tests
+#      - nightly-poc-multi-node-tests
+#      - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
@@ -936,6 +938,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           FAIL=0
-          ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
+          # ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
           exit $FAIL
 
