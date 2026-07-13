@@ -57,9 +57,7 @@ class TestTPServerNPUProcesses(CustomTestCase):
         rows = self._wait_for_server_npu_processes()
         # On NPU the launcher parent may acquire a lightweight context
         # (e.g. HCCL init) — filter it out, only count TP worker processes.
-        worker_pids = {
-            row["pid"] for row in rows if row["pid"] != self.process.pid
-        }
+        worker_pids = {row["pid"] for row in rows if row["pid"] != self.process.pid}
 
         self.assertEqual(
             len(worker_pids),
@@ -76,9 +74,7 @@ class TestTPServerNPUProcesses(CustomTestCase):
         while time.monotonic() < deadline:
             tree_pids = self._server_process_tree_pids()
             rows = [
-                row
-                for row in self._query_npu_processes()
-                if row["pid"] in tree_pids
+                row for row in self._query_npu_processes() if row["pid"] in tree_pids
             ]
             last_rows = rows
 

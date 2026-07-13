@@ -70,7 +70,10 @@ COMMON_ARGS: List[str] = [
     "--model-loader-extra-config",
     '{"enable_multithread_load": true}',
     "--cuda-graph-bs-decode",
-    "1", "2", "4", "8",
+    "1",
+    "2",
+    "4",
+    "8",
 ]
 
 
