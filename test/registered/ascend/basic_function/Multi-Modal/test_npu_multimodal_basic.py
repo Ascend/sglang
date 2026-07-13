@@ -54,7 +54,7 @@ class TestMultimodalBasicFunction(CustomTestCase):
             extra_args=[
                 "--disable-cuda-graph",
                 "--mem-fraction-static",
-                "0.25",
+                "0.857",
                 "--tp-size",
                 "1",
                 "--enable-cache-report",
