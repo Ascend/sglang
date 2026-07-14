@@ -129,7 +129,7 @@ jobs:
       transformers_version: ''
 
   check-all-jobs:
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name != 'workflow_call' }}
     needs:
       - nightly-poc-single-node-tests
     runs-on: ubuntu-latest
@@ -211,4 +211,6 @@ jobs:
 
           FAIL=0
           if [ "${single_result}" != "success" ] && [ "${single_result}" != "skipped" ]; then FAIL=1; fi
+          if [ "${multi_result}" != "success" ] && [ "${multi_result}" != "skipped" ]; then FAIL=1; fi
+          if [ "${mix_result}" != "success" ] && [ "${mix_result}" != "skipped" ]; then FAIL=1; fi
           exit $FAIL
