@@ -94,42 +94,10 @@ jobs:
       max-parallel: 4
       matrix:
         test_config:
-#          - name: test_npu_llada2_0_flash
-#            runner: linux-aarch64-a3-8
-#            test_case: test/registered/ascend/dlm_models/test_npu_llada2_0_flash.py
-#            test_type: 'function'
-#          - name: test_npu_sdar_8b_chat
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/dlm_models/test_npu_sdar_8b_chat.py
-#            test_type: 'function'
-#          - name: test_npu_sdar_30b_a3b_chat
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/dlm_models/test_npu_sdar_30b_a3b_chat.py
-#            test_type: 'function'
-#          - name: test_npu_gpt_j_6b
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/llm_models/test_npu_gpt_j_6b.py
-#            test_type: 'function'
-#          - name: test_npu_kimi_liner_48b_a3b_instruct
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/llm_models/test_npu_kimi_liner_48b_a3b_instruct.py
-#            test_type: 'function'
           - name: test_npu_orion_14b_base
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/llm_models/test_npu_orion_14b_base.py
             test_type: 'function'
-#          - name: test_npu_tele_flm
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/llm_models/test_npu_tele_flm.py
-#            test_type: 'function'
-#          - name: test_npu_ernie_4_5_vl_28b_a3b_pt
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/vlm_models/test_npu_ernie_4_5_vl_28b_a3b_pt.py
-#            test_type: 'function'
-#          - name: test_npu_step3_vl_10b
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/vlm_models/test_npu_step3_vl_10b.py
-#            test_type: 'functions'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
