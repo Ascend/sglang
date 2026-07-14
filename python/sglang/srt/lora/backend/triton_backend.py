@@ -3,14 +3,12 @@ from typing import List, Optional, Tuple
 
 import torch
 
+from sglang.kernels.ops.gemm.embedding_lora_a import embedding_lora_a_fwd
+from sglang.kernels.ops.gemm.gate_up_lora_b import gate_up_lora_b_fwd
+from sglang.kernels.ops.gemm.qkv_lora_b import qkv_lora_b_fwd
+from sglang.kernels.ops.gemm.sgemm_lora_a import sgemm_lora_a_fwd
+from sglang.kernels.ops.gemm.sgemm_lora_b import sgemm_lora_b_fwd
 from sglang.srt.lora.backend.base_backend import BaseLoRABackend
-from sglang.srt.lora.triton_ops import (
-    embedding_lora_a_fwd,
-    gate_up_lora_b_fwd,
-    qkv_lora_b_fwd,
-    sgemm_lora_a_fwd,
-    sgemm_lora_b_fwd,
-)
 from sglang.srt.lora.utils import (
     LoRABatchInfo,
     get_lm_head_pruned_lens,
@@ -297,6 +295,7 @@ class TritonLoRABackend(BaseLoRABackend):
         )
         batch_info.weight_indices[:bs].copy_(weight_indices_tensor, non_blocking=True)
 
+        batch_info = self._add_moe_lora_info(forward_batch, batch_info)
         self.batch_info = batch_info
 
         # Biggest win is in decode.
