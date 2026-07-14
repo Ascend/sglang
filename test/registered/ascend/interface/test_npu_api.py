@@ -679,7 +679,7 @@ class TestStartProfile(CustomTestCase):
         cls.other_args = [
             "--attention-backend",
             "ascend",
-            "--enable-torch-profiler",
+            "--disable-cuda-graph",
             "--tp-size",
             "2",
         ]
