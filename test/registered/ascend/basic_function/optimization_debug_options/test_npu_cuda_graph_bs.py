@@ -310,7 +310,8 @@ class TestCudaGraphBsPD(CustomTestCase):
         if decode_bs is None:
             lines = decode_log.splitlines()
             relevant = [
-                l for l in lines
+                l
+                for l in lines
                 if any(kw in l.lower() for kw in ("cuda", "graph", "capture", "bs ["))
             ]
             print(f"DEBUG decode_log ({len(lines)} lines, {len(relevant)} relevant):")
