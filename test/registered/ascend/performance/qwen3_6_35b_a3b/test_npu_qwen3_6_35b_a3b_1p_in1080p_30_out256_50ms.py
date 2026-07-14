@@ -81,6 +81,7 @@ QWEN3_6_35B_A3B_1080P_OTHER_ARGS = [
 ]
 
 
+
 class TestNPUQwen3_6_35BA3B_1P_In1080p_30_Out256_50ms(
     TestAscendPerformanceTestCaseBase
 ):
