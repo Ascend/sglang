@@ -116,7 +116,7 @@ jobs:
         test_config:
           # qwen3_6_35b_a3b performance tests
           - name: deepep_auto_deepseek_R1_0528_w4a8_per_channel
-            runner: linux-aarch64-a3-2
+            runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_R1_0528_w4a8_per_channel.py
             test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
