@@ -83,7 +83,6 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
 ]
 
 
-
 class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     TestAscendPerformanceTestCaseBase
 ):
