@@ -51,7 +51,6 @@ BASE_DECODE_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_DP_ROUND_ROBIN": "1",
     "DP_ROUND_ROBIN": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "65536",
     "HCCL_BUFFSIZE": "800",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
@@ -153,11 +152,31 @@ BASE_DECODE_ARGS = [
 ]
 
 # ====================== Configurations ======================
+MODEL_CONFIG_FUSION_ENABLED = {
+    "model_path": QWEN3_235B_W8A8_MODEL_PATH,
+    "prefill_envs": BASE_PREFILL_ENVS,
+    "decode_envs": {
+        **BASE_DECODE_ENVS,
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "65536",
+    },
+    "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
+    "prefill_args": BASE_PREFILL_ARGS,
+    "decode_args": BASE_DECODE_ARGS
+    + [
+        "--moe-a2a-backend",
+        "ascend_fuseep",
+    ],
+    "router_args": ["--mini-lb"],
+}
+
 MODEL_CONFIG_FUSION_DISABLED = {
     "model_path": QWEN3_235B_W8A8_MODEL_PATH,
     "prefill_envs": BASE_PREFILL_ENVS,
-    "decode_envs": BASE_DECODE_ENVS,
-    "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1", "TRANSFORMERS_VERBOSITY": "error"},
+    "decode_envs": {
+        **BASE_DECODE_ENVS,
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "512",
+    },
+    "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
     "prefill_args": BASE_PREFILL_ARGS,
     "decode_args": BASE_DECODE_ARGS
     + [
@@ -165,20 +184,6 @@ MODEL_CONFIG_FUSION_DISABLED = {
         "deepep",
         "--deepep-mode",
         "low_latency",
-    ],
-    "router_args": ["--mini-lb"],
-}
-
-MODEL_CONFIG_FUSION_ENABLED = {
-    "model_path": QWEN3_235B_W8A8_MODEL_PATH,
-    "prefill_envs": BASE_PREFILL_ENVS,
-    "decode_envs": BASE_DECODE_ENVS,
-    "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
-    "prefill_args": BASE_PREFILL_ARGS,
-    "decode_args": BASE_DECODE_ARGS
-    + [
-        "--moe-a2a-backend",
-        "ascend_fuseep",
     ],
     "router_args": ["--mini-lb"],
 }
@@ -243,10 +248,10 @@ class TestQwen235bFusionEnable(TestAscendPerfMultiNodePdSepTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_235B_W8A8_MODEL_PATH
-    model_config = MODEL_CONFIG_FUSION_DISABLED  # baseline
+    model_config = MODEL_CONFIG_FUSION_ENABLED  # baseline
     dataset_name = "random"
     max_concurrency = 860
-    num_prompts = max_concurrency * 4
+    num_prompts = 860
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
@@ -271,10 +276,10 @@ class TestQwen235bFusionDisabled(TestAscendPerfMultiNodePdSepTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_235B_W8A8_MODEL_PATH
-    model_config = MODEL_CONFIG_FUSION_ENABLED
+    model_config = MODEL_CONFIG_FUSION_DISABLED
     dataset_name = "random"
     max_concurrency = 860
-    num_prompts = max_concurrency * 4
+    num_prompts = 860
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
