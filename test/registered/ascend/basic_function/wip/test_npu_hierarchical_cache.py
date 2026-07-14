@@ -4,21 +4,19 @@ from types import SimpleNamespace
 import requests
 from transformers import AutoTokenizer
 
-from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     NIC_NAME,
     check_role,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    BENCHMARK_TOOL_DEFAULT,
     TestAscendPerfMultiNodePdSepTestCaseBase,
-    run_aisbench,
+    logger,
 )
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.few_shot_gsm8k import run_eval as run_eval_gsm8k
+from sglang.test.run_eval import run_eval
 
 register_npu_ci(
     est_time=3600,
@@ -110,7 +108,7 @@ MODEL_CONFIG_DISABLE_HIERARCHICAL_CACHE = {
     "model_path": DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": BASE_DECODE_ENVS,
-    "prefill_args": BASE_PREFILL_ARGS,
+    "prefill_args": BASE_PREFILL_ARGS + ["--disable-radix-cache"],
     "decode_args": BASE_DECODE_ARGS,
     "router_args": [],
 }
@@ -126,152 +124,181 @@ MODEL_CONFIG_ENABLE_HIERARCHICAL_CACHE = {
 }
 
 
-# ====================== Test Case ======================
-class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBase):
-    benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    request_rate = 40
-    max_concurrency = 1
-    num_prompts = 1
-    input_len = 1000
-    output_len = 20
-    random_range_ratio = 1
-    seed = 1
+def run_gsm8k_accuracy(base_url: str, model_path: str) -> float:
+    """
+    Run GSM8K evaluation and return accuracy.
+
+    Used to verify no precision regression when enabling hierarchical cache.
+    """
+    args = SimpleNamespace(
+        max_tokens=512,
+        base_url=base_url,
+        model=model_path,
+        eval_name="gsm8k",
+        api="completion",
+        num_examples=200,
+        num_threads=128,
+        num_shots=8,
+    )
+    metrics = run_eval(args)
+    return metrics["accuracy"]
+
+
+# ====================== Cross-Test Shared Context ======================
+class HierarchicalCacheBenchmarkContext:
+    """
+    Shared context across test cases running in the same Python process.
+
+    Used to pass baseline accuracy from the 'cache disabled' test case
+    to the 'cache enabled' test case for precision regression checking.
+    """
+
+    def __init__(self):
+        self.baseline_accuracy_without_cache: float | None = None
+
+    def ensure_baseline_accuracy(self) -> float:
+        if self.baseline_accuracy_without_cache is None:
+            raise RuntimeError(
+                "Baseline accuracy not found. "
+                "Please ensure test order: "
+                "TestDeepSeekV32W8A8PdSepDisableHierarchicalCache.test_gsm8k_baseline_accuracy"
+            )
+        return self.baseline_accuracy_without_cache
+
+
+hierarchical_cache_ctx = HierarchicalCacheBenchmarkContext()
+
+
+# ====================== Test Case: Disable L1 & L2 Cache (Baseline) ======================
+class TestDeepSeekV32W8A8PdSepDisableHierarchicalCache(
+    TestAscendPerfMultiNodePdSepTestCaseBase
+):
+    """
+    Verify long-context inference works correctly with L1/L2 cache disabled
+
+    [Test Category] Functional
+    [Test Target] Long-Context Inference Correctness (Hierarchical Cache Disabled)
+    --disable-radix-cache
+    """
+
+    model_config = MODEL_CONFIG_DISABLE_HIERARCHICAL_CACHE
+
+    @check_role(allowed_roles=["router"])
+    def test_gsm8k_baseline_accuracy(self):
+        # Establish GSM8K accuracy baseline with hierarchical cache disabled
+        accuracy = run_gsm8k_accuracy(
+            self.base_url,
+            self.model_config.get("model_path"),
+        )
+        hierarchical_cache_ctx.baseline_accuracy_without_cache = accuracy
+
+
+# ====================== Test Case: Enable L1 & L2 Cache ======================
+class TestDeepSeekV32W8A8PdSepEnableHierarchicalCache(
+    TestAscendPerfMultiNodePdSepTestCaseBase
+):
+    """
+    Verify long-context inference works correctly with L1/L2 cache enabled
+
+    [Test Category] Functional
+    [Test Target] Hierarchical Cache Correctness & Performance (L1/L2 Enabled)
+    --enable-hierarchical-cache
+    """
+
+    model_config = MODEL_CONFIG_ENABLE_HIERARCHICAL_CACHE
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.tokenizer = AutoTokenizer.from_pretrained(
-            DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH, trust_remote_code=True
+            DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH,
+            trust_remote_code=True,
         )
+        prompt_text = "hello world " * (600 // 2 + 1)
+        prompt_ids = cls.tokenizer.encode(prompt_text, add_special_tokens=False)[:600]
+        cls.shared_prefix_prompt = cls.tokenizer.decode(prompt_ids)
 
     @check_role(allowed_roles=["router"])
-    def send_long_prompt_request(self, prompt_token_len=600, max_new_tokens=1):
-        prompt = "hello world " * (prompt_token_len // 2 + 1)
-        prompt = self.tokenizer.decode(
-            self.tokenizer.encode(prompt, add_special_tokens=False)[:prompt_token_len]
-        )
-
+    def _send_shared_prefix_request(
+        self,
+        max_new_tokens: int = 1,
+    ):
         response = requests.post(
             f"{self.base_url}/generate",
             json={
-                "text": prompt,
-                "sampling_params": {"temperature": 0, "max_new_tokens": max_new_tokens},
+                "text": self.shared_prefix_prompt,
+                "sampling_params": {
+                    "temperature": 0,
+                    "max_new_tokens": max_new_tokens,
+                },
             },
+            timeout=120,
         )
 
-        self.assertEqual(response.status_code, 200, "Failed to call generate API")
+        self.assertEqual(response.status_code, 200, "Generate API call failed")
         result = response.json()
-        cached_tokens = result.get("meta_info").get("cached_tokens", 0)
-        return cached_tokens
+        logger.info(f"Shared prefix response: {result}")
+        meta = result.get("meta_info", {})
+
+        cached_tokens = meta.get("cached_tokens", 0)
+        e2e_latency = meta.get("e2e_latency", 0)
+
+        return cached_tokens, e2e_latency
 
     @check_role(allowed_roles=["router"])
-    def run_gsm8k_test(
-        self,
-        expect_accuracy,
-        num_shots=8,
-        data_path=None,
-        num_questions=200,
-        max_new_tokens=512,
-        parallel=128,
-    ):
-        args = SimpleNamespace(
-            num_shots=num_shots,
-            data_path=data_path,
-            num_questions=num_questions,
-            max_new_tokens=max_new_tokens,
-            parallel=parallel,
-            host=f"http://{self.host}",
-            port=self.port,
+    def test_accuracy_no_regression_with_cache(self):
+        # Verify model accuracy does not regress after enabling hierarchical cache
+        baseline_accuracy = hierarchical_cache_ctx.ensure_baseline_accuracy()
+        current_accuracy = run_gsm8k_accuracy(
+            self.base_url,
+            self.model_config.get("model_path"),
         )
-        metrics = run_eval_gsm8k(args)
+
         self.assertGreaterEqual(
-            metrics["accuracy"],
-            expect_accuracy,
-            f'Accuracy is {str(metrics["accuracy"])}, is lower than {expect_accuracy}',
+            current_accuracy,
+            baseline_accuracy - 0.02,
+            msg="Accuracy regression detected after enabling hierarchical cache",
         )
 
-    def test_hierarchical_cache_hit_and_ttft_reduce(self):
-        self.__class__.model_config = MODEL_CONFIG_DISABLE_HIERARCHICAL_CACHE
-        try:
-            self.start_pd_server()
-            self.start_router_server()
+    @check_role(allowed_roles=["router"])
+    def test_hierarchical_cache_hit_and_latency_reduction(self):
+        # First request: expect no cache hit (cold run)
+        cached_tokens_1, e2e_latency_1 = self._send_shared_prefix_request()
+        self.assertEqual(
+            cached_tokens_1,
+            0,
+            "First request should have zero cached tokens",
+        )
 
-            cached_tokens_1 = self.send_long_prompt_request(
-                prompt_token_len=600, max_new_tokens=1
-            )
-            self.assertEqual(
-                cached_tokens_1, 0, msg="First request cached tokens should be 0"
-            )
-
-            cached_tokens_2 = self.send_long_prompt_request(
-                prompt_token_len=600, max_new_tokens=1
-            )
-            self.assertEqual(cached_tokens_2, 0, msg="Cache hit tokens should be 512")
-
-            metrics1 = run_aisbench(
-                host=self.host,
-                port=str(self.port),
-                model_path=self.model_config.get("model_path"),
-                dataset_type=self.dataset_type,
-                dataset_path=self.dataset_path,
-                input_len=self.input_len,
-                output_len=self.output_len,
-                max_concurrency=self.max_concurrency,
-                num_prompts=self.num_prompts,
-                image_resolution=self.image_resolution,
-                random_range_ratio=self.random_range_ratio,
-                dp=self.dp,
-                generation_kwargs=self.generation_kwargs,
-            )
-        finally:
-            if self.process:
-                kill_process_tree(self.process.pid)
-
-        self.__class__.model_config = MODEL_CONFIG_ENABLE_HIERARCHICAL_CACHE
-        try:
-            self.start_pd_server()
-            self.start_router_server()
-
-            cached_tokens_1 = self.send_long_prompt_request(
-                prompt_token_len=600, max_new_tokens=1
-            )
-            self.assertEqual(
-                cached_tokens_1, 0, msg="First request cached tokens should be 0"
-            )
-
-            cached_tokens_2 = self.send_long_prompt_request(
-                prompt_token_len=600, max_new_tokens=1
-            )
-            self.assertEqual(cached_tokens_2, 512, msg="Cache hit tokens should be 512")
-
-            metrics2 = run_aisbench(
-                host=self.host,
-                port=str(self.port),
-                model_path=self.model_config.get("model_path"),
-                dataset_type=self.dataset_type,
-                dataset_path=self.dataset_path,
-                input_len=self.input_len,
-                output_len=self.output_len,
-                max_concurrency=self.max_concurrency,
-                num_prompts=self.num_prompts,
-                image_resolution=self.image_resolution,
-                random_range_ratio=self.random_range_ratio,
-                dp=self.dp,
-                generation_kwargs=self.generation_kwargs,
-            )
-
-            self.assertLess(
-                metrics2["TTFT"],
-                metrics1["TTFT"],
-                msg="TTFT should be reduced after cache hit",
-            )
-
-            self.run_gsm8k_test(0.95, num_shots=5)
-
-        finally:
-            if self.process:
-                kill_process_tree(self.process.pid)
+        # Second request: expect deterministic cache hit and lower latency
+        cached_tokens_2, e2e_latency_2 = self._send_shared_prefix_request()
+        self.assertEqual(
+            cached_tokens_2,
+            512,
+            "Second request should hit hierarchical cache",
+        )
+        self.assertLess(
+            e2e_latency_2,
+            e2e_latency_1,
+            "E2E latency should decrease on cache hit",
+        )
 
 
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.TestSuite()
+    suite.addTest(
+        TestDeepSeekV32W8A8PdSepDisableHierarchicalCache("test_gsm8k_baseline_accuracy")
+    )
+    suite.addTest(
+        TestDeepSeekV32W8A8PdSepEnableHierarchicalCache(
+            "test_accuracy_no_regression_with_cache"
+        )
+    )
+    suite.addTest(
+        TestDeepSeekV32W8A8PdSepEnableHierarchicalCache(
+            "test_hierarchical_cache_hit_and_latency_reduction"
+        )
+    )
+
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)

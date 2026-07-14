@@ -174,7 +174,7 @@ MODEL_CONFIG_FUSION_DISABLED = {
     "prefill_envs": BASE_PREFILL_ENVS,
     "decode_envs": {
         **BASE_DECODE_ENVS,
-        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "512",
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "256",
     },
     "router_envs": {"SGLANG_DP_ROUND_ROBIN": "1"},
     "prefill_args": BASE_PREFILL_ARGS,
