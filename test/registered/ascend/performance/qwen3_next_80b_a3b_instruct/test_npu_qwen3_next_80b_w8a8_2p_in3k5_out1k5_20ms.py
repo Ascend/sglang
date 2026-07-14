@@ -52,7 +52,7 @@ QWEN3_NEXT_80B_A3B_2P_OTHER_ARGS = [
     "--page-size",
     128,
     "--tp-size",
-    2,
+    4,
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
