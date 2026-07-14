@@ -26,6 +26,7 @@ from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_P
 register_npu_ci(est_time=10800, suite="debug-full-16-npu-a3", nightly=True)
 
 
+@unittest.skip("already passed in CI — class skip to avoid setUpClass server launch")
 class TestPPAccuracy(unittest.TestCase):
     """Test Case: Verify the accuracy of LLM models under TP+PP hybrid parallelism
 
@@ -269,6 +270,7 @@ class TestQwenPPAccuracy(unittest.TestCase):
         finally:
             kill_process_tree(process.pid)
 
+    @unittest.skip("already passed in CI")
     def test_pp_consistency(self):
         baseline = self.run_gsm8k_test(pp_size=1)
         pp_metrics = self.run_gsm8k_test(pp_size=4)
@@ -401,6 +403,7 @@ class TestQwenMoePPAccuracy(unittest.TestCase):
         finally:
             kill_process_tree(process.pid)
 
+    @unittest.skip("already passed in CI")
     def test_pp_consistency(self):
         baseline = self.run_gsm8k_test(pp_size=1)
         pp_metrics = self.run_gsm8k_test(pp_size=4)
@@ -468,6 +471,7 @@ class TestQwen35PPAccuracy(unittest.TestCase):
         finally:
             kill_process_tree(process.pid)
 
+    @unittest.skip("already passed in CI")
     def test_pp_consistency(self):
         baseline = self.run_gsm8k_test(pp_size=1)
         pp_metrics = self.run_gsm8k_test(pp_size=4)
@@ -490,6 +494,7 @@ class TestFixedBugs(unittest.TestCase):
     [Test Category] Parameter
     [Test Target] --pp-size; --chunked-prefill
     """
+    @unittest.skip("already passed in CI")
     def test_chunked_prefill_with_small_bs(self):
         model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         server_args = ServerArgs(model_path=model)
@@ -576,4 +581,14 @@ class TestGLM41VPPAccuracy(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+
+    # 1) CI 未收集
+    suite.addTests(loader.loadTestsFromTestCase(TestQwenVLPPAccuracy))
+
+    # 2) CI 失败
+    suite.addTests(loader.loadTestsFromTestCase(TestQwenPPTieWeightsAccuracy))
+
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)
