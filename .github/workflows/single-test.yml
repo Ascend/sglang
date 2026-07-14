@@ -114,14 +114,14 @@ jobs:
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/ascend/llm_models/test_npu_kimi_liner_48b_a3b_instruct.py
 #            test_type: 'function'
-#          - name: test_npu_orion_14b_base
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/llm_models/test_npu_orion_14b_base.py
-#            test_type: 'function'
-          - name: test_npu_tele_flm
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/llm_models/test_npu_tele_flm.py
+          - name: test_npu_orion_14b_base
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/llm_models/test_npu_orion_14b_base.py
             test_type: 'function'
+#          - name: test_npu_tele_flm
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/ascend/llm_models/test_npu_tele_flm.py
+#            test_type: 'function'
 #          - name: test_npu_ernie_4_5_vl_28b_a3b_pt
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/ascend/vlm_models/test_npu_ernie_4_5_vl_28b_a3b_pt.py
