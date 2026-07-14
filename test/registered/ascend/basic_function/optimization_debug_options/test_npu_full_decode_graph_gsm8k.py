@@ -74,6 +74,13 @@ COMMON_ARGS: List[str] = [
     "2",
     "4",
     "8",
+    "--enable-dp-attention",
+    "--dp-size",
+    "2",
+    "--moe-a2a-backend",
+    "deepep",
+    "--deepep-mode",
+    "auto",
 ]
 
 
@@ -88,6 +95,12 @@ def get_capture_configs() -> List[CaptureConfig]:
                 "--cuda-graph-backend-decode",
                 "full",
             ],
+            env_vars={
+                "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+                "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
+                "HCCL_BUFFSIZE": "1200",
+                "HCCL_OP_EXPANSION_MODE": "AIV",
+            },
         ),
     ]
 
@@ -123,6 +136,7 @@ class TestNpuFullDecodeGraphGsm8k(CustomTestCase):
             args = SimpleNamespace(
                 model=self.model,
                 eval_name="gsm8k",
+                api="completion",
                 num_shots=8,
                 num_examples=GSM8K_NUM_QUESTIONS,
                 num_threads=128,
