@@ -12,7 +12,7 @@ from sglang.test.test_utils import (
 from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 
-register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="debug-full-16-npu-a3", nightly=True)
 
 
 class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
@@ -32,8 +32,8 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
         cls.start_decode()
 
         # Block until both
-        cls.wait_server_ready(cls.prefill_url + "/health")
-        cls.wait_server_ready(cls.decode_url + "/health")
+        cls.wait_server_ready(cls.prefill_url + "/health", process=cls.process_prefill)
+        cls.wait_server_ready(cls.decode_url + "/health", process=cls.process_decode)
 
         cls.launch_lb()
         os.environ["OPENAI_API_KEY"] = "sk-123456"
@@ -96,16 +96,13 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
-            num_shots=5,
+            base_url=self.base_url,
+            model=self.model,
             eval_name="gsm8k",
-            data_path=None,
+            api="completion",
+            max_tokens=512,
             num_examples=200,
-            max_new_tokens=512,
             num_threads=128,
-            parallel=128,
-            base_url=None,
-            host=self.base_host,
-            port=int(self.lb_port),
         )
         metrics = run_eval(args)
         print(f"{metrics=}")
@@ -132,8 +129,8 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
         cls.start_decode()
 
         # Block until both
-        cls.wait_server_ready(cls.prefill_url + "/health")
-        cls.wait_server_ready(cls.decode_url + "/health")
+        cls.wait_server_ready(cls.prefill_url + "/health", process=cls.process_prefill)
+        cls.wait_server_ready(cls.decode_url + "/health", process=cls.process_decode)
 
         cls.launch_lb()
         os.environ["OPENAI_API_KEY"] = "sk-123456"
@@ -197,16 +194,13 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
-            num_shots=5,
+            base_url=self.base_url,
+            model=self.model,
             eval_name="gsm8k",
-            data_path=None,
+            api="completion",
+            max_tokens=512,
             num_examples=200,
-            max_new_tokens=512,
             num_threads=128,
-            parallel=128,
-            base_url=None,
-            host=self.base_host,
-            port=int(self.lb_port),
         )
         metrics = run_eval(args)
         print(f"{metrics=}")
@@ -220,7 +214,7 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
     """Test Case: Verify the accuracy of base model when both prefill and decode enable PP parallelism in PD disaggregation scenario
 
     [Test Category] Parameter
-    [Test Target] --pp-size; --pp-max-micro-batch-size; --pp-max-micro-batch-size
+    [Test Target] --pp-size; --pp-async-batch-depth; --pp-max-micro-batch-size
     """
     @classmethod
     def setUpClass(cls):
@@ -233,8 +227,8 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
         cls.start_decode()
 
         # Block until both
-        cls.wait_server_ready(cls.prefill_url + "/health")
-        cls.wait_server_ready(cls.decode_url + "/health")
+        cls.wait_server_ready(cls.prefill_url + "/health", process=cls.process_prefill)
+        cls.wait_server_ready(cls.decode_url + "/health", process=cls.process_decode)
 
         cls.launch_lb()
         os.environ["OPENAI_API_KEY"] = "sk-123456"
@@ -303,16 +297,13 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
-            num_shots=5,
+            base_url=self.base_url,
+            model=self.model,
             eval_name="gsm8k",
-            data_path=None,
+            api="completion",
+            max_tokens=512,
             num_examples=200,
-            max_new_tokens=512,
             num_threads=128,
-            parallel=128,
-            base_url=None,
-            host=self.base_host,
-            port=int(self.lb_port),
         )
         metrics = run_eval(args)
         print(f"{metrics=}")
