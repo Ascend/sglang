@@ -45,8 +45,6 @@ KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS = [
     "ascend",
     "--tp-size",
     16,
-    "--base-gpu-id",
-    0,
     "--mem-fraction-static",
     0.852,
     "--max-running-requests",

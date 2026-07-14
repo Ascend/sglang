@@ -43,8 +43,6 @@ QWEN3_6_35B_A3B_1080P_OTHER_ARGS = [
     150000,
     "--max-prefill-tokens",
     200000,
-    "--base-gpu-id",
-    2,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
