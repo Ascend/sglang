@@ -245,6 +245,15 @@ benchmark_ctx = BenchmarkContext()
 
 
 class TestQwen235bFusionEnable(TestAscendPerfMultiNodePdSepTestCaseBase):
+    """
+    Verify fused MoE operator reduces per-layer inference latency by ~50us
+
+    [Test Category] Performance
+    [Test Target] Per-layer Latency Optimization (MoE Fusion Enabled)
+    --moe-a2a-backend ascend_fuseep
+    --speculative-algorithm EAGLE3
+    """
+
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_235B_W8A8_MODEL_PATH
@@ -258,6 +267,7 @@ class TestQwen235bFusionEnable(TestAscendPerfMultiNodePdSepTestCaseBase):
 
     @check_role(allowed_roles=["router"])
     def test_fusion_enable(self):
+        # Establish baseline TPOT with MoE fusion enabled as reference for regression comparison
         metrics = _run_benchmark(self)
 
         tpot = float(metrics["mean_tpot"])
@@ -273,6 +283,15 @@ class TestQwen235bFusionEnable(TestAscendPerfMultiNodePdSepTestCaseBase):
 
 
 class TestQwen235bFusionDisabled(TestAscendPerfMultiNodePdSepTestCaseBase):
+    """
+    Verify per-layer latency overhead remains within 50us when fused MoE is disabled
+
+    [Test Category] Performance
+    [Test Target] Per-layer Latency Regression Check (MoE Fusion Disabled)
+    --moe-a2a-backend deepep
+    --deepep-mode low_latency
+    """
+
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_235B_W8A8_MODEL_PATH
@@ -289,6 +308,7 @@ class TestQwen235bFusionDisabled(TestAscendPerfMultiNodePdSepTestCaseBase):
 
     @check_role(allowed_roles=["router"])
     def test_fusion_disable(self):
+        # Verify per-layer latency overhead stays within 50us when MoE fusion is disabled
         benchmark_ctx.ensure_tpot_fusion_enabled()
 
         metrics = _run_benchmark(self)
