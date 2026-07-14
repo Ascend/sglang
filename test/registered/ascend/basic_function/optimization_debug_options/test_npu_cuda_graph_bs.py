@@ -23,7 +23,7 @@ register_npu_ci(est_time=1200, suite="full-2-npu-a3", nightly=True)
 MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
-_BS_LOG_RE = re.compile(r"Capture cuda graph bs \[([^\]]+)\]")
+_BS_LOG_RE = re.compile(r"Capture.*graph.*bs[= ]\[([^\]]+)\]")
 _MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
 
 
@@ -115,6 +115,10 @@ def _launch_router(prefill_url, decode_url, host, lb_port):
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     lb_url = f"http://{host}:{lb_port}"
     wait_for_http_ready(lb_url + "/health", timeout=_LAUNCH_TIMEOUT, process=proc)
+    # /health only confirms the router process is alive; backends may not be
+    # fully registered yet. Wait for /v1/models to guarantee the router can
+    # actually proxy model requests before the benchmark runs.
+    wait_for_http_ready(lb_url + "/v1/models", timeout=_LAUNCH_TIMEOUT, process=proc)
     return proc, lb_url
 
 
@@ -303,6 +307,15 @@ class TestCudaGraphBsPD(CustomTestCase):
 
         self.assertFalse(_has_graph_begin(prefill_log))
         decode_bs = _parse_capture_bs(decode_log)
+        if decode_bs is None:
+            lines = decode_log.splitlines()
+            relevant = [
+                l for l in lines
+                if any(kw in l.lower() for kw in ("cuda", "graph", "capture", "bs ["))
+            ]
+            print(f"DEBUG decode_log ({len(lines)} lines, {len(relevant)} relevant):")
+            for l in relevant[-20:]:
+                print(f"  {l}")
         self.assertEqual(decode_bs, list(range(1, 9)))
 
     # cuda graph disabled, no graph capture, serving works

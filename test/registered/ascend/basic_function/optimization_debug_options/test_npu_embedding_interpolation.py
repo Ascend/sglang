@@ -5,7 +5,10 @@ import unittest
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    IMAGES_MAN_PATH,
+    QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -13,14 +16,15 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
-from sglang.test.vlm_utils import IMAGE_MAN_IRONING_URL
+
+IMAGE_MAN_IRONING_URL = IMAGES_MAN_PATH
 
 register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 class TestPreciseEmbeddingInterpolation(CustomTestCase):
     """Testcase: verify --enable-precise-embedding-interpolation changes ViT
-    position-embedding interpolation on Qwen3-VL, producing different outputs
+    position-embedding interpolation on Qwen3-VL, producing different logprobs
     for the same image at temperature=0
 
     [Test Category] Parameter
@@ -85,15 +89,19 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
                     },
                 ],
                 "temperature": 0,
-                # Limit output to keep inference predictable;
-                # a single-sentence description is well under 128 tokens.
                 "max_tokens": 128,
+                "logprobs": True,
+                "top_logprobs": 5,
             },
         )
 
+    @staticmethod
+    def _extract_logprobs(resp):
+        """Extract logprob of the top-1 token at each generation position."""
+        content = resp.json()["choices"][0]["logprobs"]["content"]
+        return [entry["top_logprobs"][0]["logprob"] for entry in content]
+
     def test_precise_embedding_interpolation_contrastive(self):
-        # Port for the second launch (first uses DEFAULT_URL_FOR_TEST).
-        # Sequential launch/teardown on the same port risks TIME_WAIT.
         alt_url = "http://127.0.0.1:23001"
 
         # ---- Launch WITH --enable-precise-embedding-interpolation ----
@@ -110,12 +118,10 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
                 f"— check whether {IMAGE_MAN_IRONING_URL} is reachable",
             )
             text_enabled = resp_enabled.json()["choices"][0]["message"]["content"]
+            logprobs_enabled = self._extract_logprobs(resp_enabled)
         finally:
             self._cleanup()
 
-        # Brief pause so the OS releases the first port before binding
-        # the second one.  Together with using a different port this
-        # eliminates any TIME_WAIT race.
         time.sleep(2)
 
         # ---- Launch WITHOUT the flag (default: False) ----
@@ -129,6 +135,7 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
                 f"— check whether {IMAGE_MAN_IRONING_URL} is reachable",
             )
             text_default = resp_default.json()["choices"][0]["message"]["content"]
+            logprobs_default = self._extract_logprobs(resp_default)
         finally:
             self._cleanup()
 
@@ -144,18 +151,31 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
                 f"Expected vehicle-related word in: {text}",
             )
 
-        # Core assertion: outputs differ, proving the flag changes interpolation.
-        # If this fails with identical outputs it may indicate the ViT graph path
-        # is not active (silent fallback to eager, which hardcodes align_corners=True
-        # regardless of the flag) or the flag is no longer read at model init.
-        self.assertNotEqual(
-            text_enabled,
-            text_default,
-            "Outputs should differ because --enable-precise-embedding-interpolation "
+        # Core assertion: logprobs differ, proving the flag changes interpolation.
+        # Comparing logprobs is more sensitive than comparing decoded text —
+        # the interpolation difference may shift token probabilities without
+        # changing the argmax (top-1) token at temperature=0.
+        self.assertEqual(
+            len(logprobs_enabled),
+            len(logprobs_default),
+            "Token counts should match since both runs use the same image and max_tokens",
+        )
+
+        diffs = [
+            i
+            for i, (lp_en, lp_def) in enumerate(
+                zip(logprobs_enabled, logprobs_default)
+            )
+            if abs(lp_en - lp_def) > 1e-6
+        ]
+
+        self.assertTrue(
+            len(diffs) > 0,
+            "Logprobs should differ because --enable-precise-embedding-interpolation "
             "changes _get_interpolation_indices (align_corners=True vs False). "
-            "Identical outputs may mean the ViT graph path is not active "
-            "(SGLANG_VIT_ENABLE_CUDA_GRAPH fallback to eager) or the flag is "
-            "not being read at model init time.",
+            "If no logprob differences are found, the flag may not be active on this "
+            "backend (fallback to eager, which hardcodes torch.linspace) or the flag "
+            "is not being read at model init time.",
         )
 
 
