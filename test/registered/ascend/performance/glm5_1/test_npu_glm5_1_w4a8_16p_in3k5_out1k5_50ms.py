@@ -50,7 +50,7 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     0.65,
     "--served-model-name",
     "glm-5",
-    "--cuda-graph-max-bs",
+    "--cuda-graph-max-bs-decode",
     16,
     "--max-running-requests",
     256,
