@@ -15,6 +15,7 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
+
 QWEN3_6_35B_A3B_1024_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
@@ -42,25 +43,29 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "--max-prefill-tokens",
     9999999,
     "--max-total-tokens",
-    365000,
+    370000,
     "--prefill-max-requests",
     30,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    165,
+    167,
     "--max-mamba-cache-size",
-    165,
+    167,
     "--mem-fraction-static",
-    0.85,
+    0.88,
     "--cuda-graph-bs",
+    1,
+    2,
     4,
     16,
     32,
     48,
     64,
+    80,
     110,
-    165,
+    166,
+    167,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -90,13 +95,14 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_MM_CUSTOM_GEN
+    base_url = "http://127.0.0.1:0809"
     model = QWEN3_6_35B_A3B_MODEL_PATH
     other_args = QWEN3_6_35B_A3B_1024_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_1024_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    max_concurrency = 165
-    num_prompts = 165
+    max_concurrency = 167
+    num_prompts = 167
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
