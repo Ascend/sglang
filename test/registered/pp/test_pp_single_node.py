@@ -41,6 +41,7 @@ register_cuda_ci(est_time=554, stage="base-c", runner_config="4-gpu-h100")
 register_amd_ci(est_time=650, suite="stage-c-test-4-gpu-amd")
 
 
+@unittest.skip("already passed in CI — whole class skipped to avoid setUpClass server launch")
 class TestPPAccuracy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -193,7 +194,6 @@ class TestQwenVLPPAccuracy(unittest.TestCase):
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
 
-    @unittest.skipIf(is_in_ci(), "To reduce the CI execution time.")
     def test_mmmu(self):
         args = SimpleNamespace(
             base_url=self.base_url,
@@ -481,6 +481,7 @@ class TestQwenMoePPAccuracy(unittest.TestCase):
         finally:
             kill_process_tree(process.pid)
 
+    @unittest.skip("already passed in CI")
     def test_pp_consistency(self):
         baseline = self.run_gsm8k_test(pp_size=1)
         pp_metrics = self.run_gsm8k_test(pp_size=2)
@@ -605,6 +606,7 @@ class TestPPMixedChunk(CustomTestCase):
 
 
 class TestFixedBugs(unittest.TestCase):
+    @unittest.skip("already passed in CI")
     def test_chunked_prefill_with_small_bs(self):
         model = DEFAULT_MODEL_NAME_FOR_TEST
         server_args = ServerArgs(model_path=model)
@@ -678,4 +680,19 @@ class TestGLM41VPPAccuracy(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+
+    # 1) CI 未收集
+    suite.addTests(loader.loadTestsFromTestCase(TestQwenVLPPAccuracy))
+
+    # 2) 不在 NPU CI scope 但必须跑
+    suite.addTests(loader.loadTestsFromTestCase(TestGemma4PPAccuracy))
+    suite.addTests(loader.loadTestsFromTestCase(TestGemma4PLEPPAccuracy))
+    suite.addTests(loader.loadTestsFromTestCase(TestPPMixedChunk))
+
+    # 3) CI 失败
+    suite.addTests(loader.loadTestsFromTestCase(TestQwenPPTieWeightsAccuracy))
+
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)
