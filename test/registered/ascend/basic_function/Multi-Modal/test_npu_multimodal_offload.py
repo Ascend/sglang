@@ -76,7 +76,7 @@ class TestMultimodalOffload(CustomTestCase):
             cls._model,
             extra_args=[
                 "--mem-fraction-static",
-                "0.4",
+                "0.45",
                 "--chunked-prefill-size",
                 "512",
                 "--cpu-offload-gb",
