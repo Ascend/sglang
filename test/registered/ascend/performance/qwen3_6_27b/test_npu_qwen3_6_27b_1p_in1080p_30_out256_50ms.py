@@ -91,6 +91,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "qwen3_coder",
 ]
 
+
 class TestNPUQwen3_6_27B_1P_In1080p_30_Out256_50ms(TestAscendPerformanceTestCaseBase):
     """Test NPU performance for Qwen3.6-27B 1p in1080p 30 out256 50ms"""
 
