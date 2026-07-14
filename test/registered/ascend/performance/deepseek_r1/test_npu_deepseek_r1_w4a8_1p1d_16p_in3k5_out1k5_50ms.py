@@ -26,7 +26,7 @@ MODEL_CONFIG = {
         "SGLANG_NPU_USE_MLAPO": "1",
         "SGLANG_USE_FIA_NZ": "1",
         "ENABLE_MOE_NZ": "1",
-        "HCCL_BUFFSIZE": "4000",
+        "DEEPEP_HCCL_BUFFSIZE": "4000",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
         "TASK_QUEUE_ENABLE": "2",
         "HCCL_SOCKET_IFNAME": NIC_NAME,
@@ -41,7 +41,7 @@ MODEL_CONFIG = {
         "ENABLE_MOE_NZ": "1",
         "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
         "SGLANG_ENABLE_SPEC_V2": "1",
-        "HCCL_BUFFSIZE": "800",
+        "DEEPEP_HCCL_BUFFSIZE": "800",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "78",
         "TASK_QUEUE_ENABLE": "1",
         "HCCL_SOCKET_IFNAME": NIC_NAME,
@@ -154,7 +154,7 @@ MODEL_CONFIG = {
         "--tool-call-parser",
         "deepseekv3",
         "--max-total-tokens",
-        145792,
+        130000,
     ],
     "router_args": [],
 }
@@ -171,8 +171,8 @@ class TestDeepSeekR1W4A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 3584
     output_len = 1536
     random_range_ratio = 1
-    seed = 1
     tpot = 50
+    seed = 1
     output_token_throughput = 7947.95
 
     def test_throughput(self):
