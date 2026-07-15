@@ -8,9 +8,9 @@ from sglang.test.ascend.test_ascend_utils import (
     QWEN3_4B_LORA_V2_WEIGHTS_PATH,
     QWEN3_4B_LORA_ZH_WEBNOVELTY_V0_0_WEIGHTS_PATH,
     QWEN3_4B_WEIGHTS_PATH,
-    QWEN3_5_4B_WEIGHTS_PATH,
     QWEN3_5_4B_MCAT_LORA_PATH,
     QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH,
+    QWEN3_5_4B_WEIGHTS_PATH,
 )
 from sglang.test.runners import HFRunner, SRTRunner
 from sglang.test.test_utils import calculate_rouge_l
@@ -152,7 +152,7 @@ def ensure_reproducibility():
 def run_lora_multiple_batch_on_model_cases(
     model_cases: List[LoRAModelCase],
     use_spec_decoding: bool = False,
-    attention_backend: str = "torch_native",
+    attention_backend: str = "ascend",
     disable_cuda_graph: bool = True,
     enable_deterministic_inference: bool = False,
     disable_radix_cache: bool = True,
@@ -234,6 +234,7 @@ def run_lora_multiple_batch_on_model_cases(
                                 f"ROUGE-L score {rouge_score} below tolerance {rouge_tol} "
                                 f"for base '{base_path}', adaptor '{lora_paths}', prompt: '{prompts}...'"
                             )
+
 
 def run_lora_batch_splitting_equivalence_test(
     model_cases: List[LoRAModelCase],
@@ -355,6 +356,7 @@ def run_lora_batch_splitting_equivalence_test(
         for torch_dtype in TORCH_DTYPES:
             _run_test(model_case, torch_dtype)
 
+
 def run_lora_test_one_by_one(
     prompts: List[str],
     model_case: LoRAModelCase,
@@ -366,7 +368,7 @@ def run_lora_test_one_by_one(
     disable_radix_cache: bool = False,
     mem_fraction_static: float = 0.88,
     test_tag: str = "",
-    attention_backend: Optional[str] = None,
+    attention_backend: Optional[str] = "ascend",
 ):
     """
     Input a batch of prompts, and run lora tests one by one with several generate requests

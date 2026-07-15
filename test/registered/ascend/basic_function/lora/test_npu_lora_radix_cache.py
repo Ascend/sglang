@@ -3,11 +3,9 @@ import unittest
 
 import torch
 
-from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.ascend.lora_utils import CI_MULTI_LORA_MODELS, run_lora_test_one_by_one
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
-
-
 
 PROMPTS = [
     "AI is a field of computer science focused on",

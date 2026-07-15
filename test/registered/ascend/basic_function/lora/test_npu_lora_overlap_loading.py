@@ -1,10 +1,11 @@
 import multiprocessing as mp
 import unittest
-from sglang.test.ci.ci_register import register_npu_ci
+
 from sglang.test.ascend.lora_utils import (
     CI_MULTI_LORA_MODELS,
     run_lora_batch_splitting_equivalence_test,
 )
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
