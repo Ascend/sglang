@@ -30,6 +30,7 @@ class TestDisaggregationBase(CustomTestCase):
         cls.prefill_url = f"http://{cls.base_host}:{cls.prefill_port}"
         cls.decode_url = f"http://{cls.base_host}:{cls.decode_port}"
         cls.lb_url = f"http://{cls.base_host}:{cls.lb_port}"
+        cls.base_url = cls.lb_url
         print(f"{cls.base_host=} {cls.lb_port=} {cls.prefill_port=} {cls.decode_port=}")
         cls.process_lb, cls.process_decode, cls.process_prefill = None, None, None
 

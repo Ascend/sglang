@@ -24,7 +24,6 @@ from sglang.test.ascend.test_ascend_utils import (
 register_npu_ci(est_time=10800, suite="debug-full-16-npu-a3", nightly=True)
 
 
-@unittest.skip("already passed in CI — class skip to avoid setUpClass server launch")
 class TestPPAccuracy(unittest.TestCase):
     """Test Case: Verify the accuracy of LLM models under TP+PP hybrid parallelism
 
@@ -75,7 +74,6 @@ class TestPPAccuracy(unittest.TestCase):
         # Wait a little bit so that the memory check happens.
         time.sleep(4)
 
-    @unittest.skip("already verified in previous CI run")
     def test_logprob(self):
         # Test the format correctness of logprob returned under TP+PP hybrid parallelism
         response = requests.post(
@@ -101,7 +99,6 @@ class TestPPAccuracy(unittest.TestCase):
         assert len(output_top_logprobs) == 16
 
 
-@unittest.skip("already verified in previous CI run")
 class TestDPAttentionDP2PP2(CustomTestCase):
     """Test Case: Verify the accuracy of MLA models under TP+DP+PP hybrid parallelism
 
@@ -212,7 +209,6 @@ class TestFixedBugs(unittest.TestCase):
     [Test Category] Parameter
     [Test Target] --pp-size; --chunked-prefill-size
     """
-    @unittest.skip("already passed in CI")
     def test_chunked_prefill_with_small_bs(self):
         model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         server_args = ServerArgs(model_path=model)
