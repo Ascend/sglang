@@ -36,6 +36,7 @@ COMMON_ARGS = [
     "ascend",
     "--disable-cuda-graph",
     "--disable-radix-cache",
+    "--skip-server-warmup",
 ]
 
 PROMPT_TEXT = "The capital of France is"
@@ -269,7 +270,7 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
         3. All prefill nodes receive requests after load rebalancing takes effect.
         """
         with ThreadPoolExecutor(max_workers=30) as ex:
-            futures = [ex.submit(send_request, self.base_url) for _ in range(12)]
+            futures = [ex.submit(send_request, self.base_url) for _ in range(30)]
             for f in futures:
                 resp = f.result()
                 self.assertEqual(resp.status_code, 200)
@@ -285,9 +286,9 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
         logger.info(
             f'prefill_2 processed requests: {self.count_generate_requests("prefill_2")}'
         )
-        self.assertGreaterEqual(self.count_generate_requests("prefill_0"), 1)
-        self.assertGreaterEqual(self.count_generate_requests("prefill_1"), 1)
-        self.assertGreaterEqual(self.count_generate_requests("prefill_2"), 1)
+        self.assertGreaterEqual(self.count_generate_requests("prefill_0"), 8)
+        self.assertGreaterEqual(self.count_generate_requests("prefill_1"), 8)
+        self.assertGreaterEqual(self.count_generate_requests("prefill_2"), 8)
 
 
 if __name__ == "__main__":
