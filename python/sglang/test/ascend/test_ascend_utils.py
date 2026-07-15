@@ -328,7 +328,7 @@ QWEN3_5_35B_W8A8_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-35B-A3B-w8a8-mtp"
 )
 QWEN3_5_9B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-9B")
-QWEN3_5_4B_WEIGHTS_PATH=os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-4B")
+QWEN3_5_4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-4B")
 QWEN3_5_4B_MCAT_LORA_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "jamezoon/qwen3.5-4b-mcat-lora"
 )
