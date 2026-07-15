@@ -181,3 +181,7 @@ __all__ = [
     "TestNPUStreamingSessionEagle3Retract",
     "TestNPUStreamingSessionEagle3RetractLargePage",
 ]
+
+
+if __name__ == "__main__":
+    unittest.main()

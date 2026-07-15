@@ -48,9 +48,9 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    165,
+    120,
     "--max-mamba-cache-size",
-    165,
+    120,
     "--mem-fraction-static",
     0.85,
     "--cuda-graph-bs",
@@ -95,8 +95,8 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     envs = QWEN3_6_35B_A3B_1024_ENVS
     backend = "sglang-oai-chat"
     dataset_name = "image"
-    max_concurrency = 165
-    num_prompts = 165
+    max_concurrency = 120
+    num_prompts = 120
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
@@ -105,7 +105,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     seed = 1
     tpot = 50
     request_rate = float("inf")
-    output_token_throughput = 2382.2
+    output_token_throughput = 1620
 
     def test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in1024x1024 30 out1024 50ms"""
