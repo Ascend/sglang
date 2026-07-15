@@ -25,7 +25,7 @@ from sglang.test.test_utils import (
     write_github_step_summary,
 )
 
-register_npu_ci(est_time=3600, suite="debug-full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="full-16-npu-a3", nightly=True)
 
 MODEL_PATH = KIMI_K2_6_W4A8_MODEL_PATH
 SERVER_LAUNCH_TIMEOUT = 3600
