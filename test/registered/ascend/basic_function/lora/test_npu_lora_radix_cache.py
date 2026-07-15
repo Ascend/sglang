@@ -3,7 +3,7 @@ import unittest
 
 import torch
 
-from sglang.test.ascend.lora_utils import CI_MULTI_LORA_MODELS, run_lora_test_one_by_one
+from sglang.test.ascend.lora_utils import LORA_MODELS_QWEN3, run_lora_test_one_by_one
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
@@ -26,7 +26,7 @@ class TestLoRARadixCache(CustomTestCase):
 
     def test_lora_radix_cache(self):
         # Here we need a model case with multiple adaptors for testing correctness of radix cache
-        model_case = CI_MULTI_LORA_MODELS[0]
+        model_case = LORA_MODELS_QWEN3[0]
 
         torch_dtype = torch.bfloat16
         max_new_tokens = 32
