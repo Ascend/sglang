@@ -196,11 +196,11 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
             "--prefill-policy",
             "bucket",
             "--balance-rel-threshold",
-            1.0001,
+            "1.0001",
             "--balance-abs-threshold",
-            32,
+            "32",
             "--bucket-adjust-interval-secs",
-            5,
+            "5",
         ]
 
         cls.processes["router"] = popen_with_error_check(
