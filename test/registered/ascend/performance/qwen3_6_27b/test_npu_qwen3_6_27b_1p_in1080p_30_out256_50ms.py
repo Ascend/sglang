@@ -15,7 +15,6 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
-
 QWEN3_6_27B_1080P_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
