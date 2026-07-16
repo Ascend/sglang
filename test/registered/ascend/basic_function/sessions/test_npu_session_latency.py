@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 import requests
-from tabulate import tabulate
 
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
@@ -232,28 +231,16 @@ def _print_mode_table(result: ModeResult, label: str = ""):
     else:
         indices = list(range(SAMPLE_TURNS)) + [-1] + list(range(n - SAMPLE_TURNS, n))
 
-    rows = []
+    print("    Turn  Context  Cached  Client Lat   E2E Lat")
     for idx in indices:
         if idx == -1:
-            rows.append(["..."] * 5)
+            print("    ...")
             continue
         t = result.turns[idx]
-        rows.append(
-            [
-                t.turn,
-                t.context_len,
-                t.cached_tokens,
-                f"{t.client_latency_ms:.1f}ms",
-                f"{t.e2e_latency_ms:.1f}ms",
-            ]
+        print(
+            f"    {t.turn:<5} {t.context_len:<8} {t.cached_tokens:<7} "
+            f"{t.client_latency_ms:>8.1f}ms  {t.e2e_latency_ms:>8.1f}ms"
         )
-    print(
-        tabulate(
-            rows,
-            headers=["Turn", "Context", "Cached", "Client Lat", "E2E Lat"],
-            colalign=("right",) * 5,
-        )
-    )
 
 
 class TestSessionLatency(CustomTestCase):
