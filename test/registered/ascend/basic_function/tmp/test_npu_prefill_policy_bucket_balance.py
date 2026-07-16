@@ -57,13 +57,10 @@ def send_request(url):
 
 
 class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
-    """Verify PD disaggregation with variable-length scheduling and fallback to load balancing
+    """Verify PD disaggregation: bucket scheduling under balance, fallback to load-aware routing on prefill imbalance.
 
     [Test Category] Functional
-    [Test Target] Variable-length (bucket) scheduling with load imbalance fallback
-    Verify that requests are scheduled based on variable-length buckets under normal conditions,
-    and fall back to load-based balancing when prefill nodes become imbalanced.
-    --prefill-policy bucket, --balance-rel-threshold, --balance-abs-threshold, --bucket-adjust-interval-secs
+    [Test Target] --prefill-policy bucket, --balance-rel-threshold, --balance-abs-threshold, --bucket-adjust-interval-secs
     """
 
     @classmethod
@@ -262,13 +259,7 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
         return out.read().count("POST /generate HTTP/1.1")
 
     def test_variable_length_schedule_fallback_to_load_balance(self):
-        """Verify variable-length scheduling with fallback to load balancing
-
-        Send concurrent requests to validate:
-        1. Requests are initially scheduled according to variable-length buckets.
-        2. When prefill nodes become imbalanced, the router falls back to load-based balancing.
-        3. All prefill nodes receive requests after load rebalancing takes effect.
-        """
+        # 60 requests → prefill load balanced via bucket fallback (≥18 each)
         with ThreadPoolExecutor(max_workers=60) as ex:
             futures = [ex.submit(send_request, self.base_url) for _ in range(60)]
             for f in futures:
