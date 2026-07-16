@@ -19,7 +19,7 @@ from sglang.test.test_utils import (
 
 IMAGE_MAN_IRONING_URL = IMAGES_MAN_PATH
 
-register_npu_ci(est_time=600, suite="debug-full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 class TestPreciseEmbeddingInterpolation(CustomTestCase):

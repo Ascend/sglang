@@ -21,7 +21,7 @@ from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
 )
 
-register_npu_ci(est_time=10800, suite="debug-full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=10800, suite="full-16-npu-a3", nightly=True)
 
 
 class TestPPAccuracy(unittest.TestCase):

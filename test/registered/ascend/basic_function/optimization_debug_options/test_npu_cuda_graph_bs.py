@@ -24,8 +24,7 @@ register_npu_ci(est_time=600, suite="debug-full-1-npu-a3", nightly=True)
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
-_BS_LOG_RE = re.compile(r"Capture.*graph.*bs[= ]\[([^\]]+)\]")
-_PREFILL_BS_LOG_RE = re.compile(r"Capture.*graph.*num tokens\s+\[([^\]]+)\]")
+_BS_LOG_RE = re.compile(r"Capture.*graph.*(?:bs|num tokens)[= ]\[([^\]]+)\]")
 _MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
 
 
@@ -34,20 +33,31 @@ def _read_log(path):
         return f.read()
 
 
-def _parse_decode_capture_bs(log_text: str) -> Optional[List[int]]:
+def _parse_cg_capture(log_text: str):
+    """Return (decode_bs, prefill_bs) from CUDA graph capture log lines.
+
+    Both phases use the same ``bs=[...]`` / ``num tokens [...]`` format
+    emitted by the CG runner.  Lines are assigned to decode/prefill by
+    the presence of ``decode`` / ``prefill`` / ``piecewise`` keywords.
+    """
+    decode_bs = None
+    prefill_bs = None
     for line in log_text.splitlines():
         m = _BS_LOG_RE.search(line)
-        if m:
-            return [int(x.strip()) for x in m.group(1).split(",")]
-    return None
-
-
-def _parse_prefill_capture_bs(log_text: str) -> Optional[List[int]]:
-    for line in log_text.splitlines():
-        m = _PREFILL_BS_LOG_RE.search(line)
-        if m:
-            return [int(x.strip()) for x in m.group(1).split(",")]
-    return None
+        if not m:
+            continue
+        bs_list = [int(x.strip()) for x in m.group(1).split(",")]
+        if "decode" in line:
+            decode_bs = bs_list
+        elif "prefill" in line or "piecewise" in line:
+            prefill_bs = bs_list
+        else:
+            # Generic fallback: first match is decode, later is prefill.
+            if decode_bs is None:
+                decode_bs = bs_list
+            elif prefill_bs is None:
+                prefill_bs = bs_list
+    return decode_bs, prefill_bs
 
 
 def _parse_graph_memory_gb(log_text: str) -> Optional[float]:
@@ -127,7 +137,7 @@ class TestCudaGraphBs(CustomTestCase):
         proc, err_path = _launch_server(
             extra_args=[
                 "--cuda-graph-max-bs-decode", "8",
-                "--cuda-graph-backend-prefill", "tc_piecewise",
+                "--enforce-piecewise-cuda-graph",
                 "--cuda-graph-max-bs-prefill", "256",
             ],
         )
@@ -142,12 +152,11 @@ class TestCudaGraphBs(CustomTestCase):
             except OSError:
                 pass
 
-        decode_bs = _parse_decode_capture_bs(log_text)
+        decode_bs, prefill_bs = _parse_cg_capture(log_text)
         self.assertIsNotNone(decode_bs, "Expected decode CG capture in log")
         self.assertEqual(max(decode_bs), 8)
         self.assertTrue(all(b <= 8 for b in decode_bs))
 
-        prefill_bs = _parse_prefill_capture_bs(log_text)
         self.assertIsNotNone(prefill_bs, "Expected prefill CG capture in log")
         self.assertEqual(max(prefill_bs), 256)
         self.assertTrue(all(b <= 256 for b in prefill_bs))
@@ -157,7 +166,7 @@ class TestCudaGraphBs(CustomTestCase):
         proc, err_path = _launch_server(
             extra_args=[
                 "--cuda-graph-bs-decode", "1", "2", "4", "8",
-                "--cuda-graph-backend-prefill", "tc_piecewise",
+                "--enforce-piecewise-cuda-graph",
                 "--cuda-graph-bs-prefill", "64", "128", "256",
             ],
         )
@@ -172,10 +181,8 @@ class TestCudaGraphBs(CustomTestCase):
             except OSError:
                 pass
 
-        decode_bs = _parse_decode_capture_bs(log_text)
+        decode_bs, prefill_bs = _parse_cg_capture(log_text)
         self.assertEqual(decode_bs, [1, 2, 4, 8])
-
-        prefill_bs = _parse_prefill_capture_bs(log_text)
         self.assertEqual(prefill_bs, [64, 128, 256])
 
         mem = _parse_graph_memory_gb(log_text)
@@ -201,7 +208,7 @@ class TestCudaGraphBs(CustomTestCase):
             except OSError:
                 pass
 
-        decode_bs = _parse_decode_capture_bs(log_text)
+        decode_bs, _ = _parse_cg_capture(log_text)
         self.assertEqual(decode_bs, [1, 2, 8])
         self.assertEqual(max(decode_bs), 8, "max_bs should be 8 (overwritten), not 4")
 
@@ -224,7 +231,7 @@ class TestCudaGraphBs(CustomTestCase):
             except OSError:
                 pass
 
-        decode_bs = _parse_decode_capture_bs(log_text)
+        decode_bs, _ = _parse_cg_capture(log_text)
         self.assertEqual(decode_bs, list(range(1, 9)))
 
     # ---- TTFT comparison with different max_bs values ----
