@@ -113,6 +113,12 @@ LLAMA_2_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "LLM-Research/Llama-2-
 LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "AI-ModelScope/Llama-3.1-8B-Instruct"
 )
+VALADAPT_LLAMA_3_1_8B_CHINESE_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "faridlazuarda/valadapt-llama-3.1-8B-it-chinese"
+)
+CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "philschmid/code-llama-3-1-8b-text-to-sql-lora"
+)
 LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "codelion/Llama-3.2-1B-Instruct-tool-calling-lora"
 )

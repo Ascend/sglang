@@ -196,6 +196,7 @@ def run_lora_multiple_batch_on_model_cases(
                 enable_deterministic_inference=enable_deterministic_inference,
                 disable_cuda_graph=disable_cuda_graph,
                 disable_radix_cache=disable_radix_cache,
+                lora_backend="ascend",
                 **spec_args,
             )
 
