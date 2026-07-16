@@ -269,13 +269,12 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
         2. When prefill nodes become imbalanced, the router falls back to load-based balancing.
         3. All prefill nodes receive requests after load rebalancing takes effect.
         """
-        with ThreadPoolExecutor(max_workers=30) as ex:
-            futures = [ex.submit(send_request, self.base_url) for _ in range(30)]
+        with ThreadPoolExecutor(max_workers=60) as ex:
+            futures = [ex.submit(send_request, self.base_url) for _ in range(60)]
             for f in futures:
                 resp = f.result()
                 self.assertEqual(resp.status_code, 200)
                 self.assertIn(EXPECTED_ANSWER, resp.text)
-                logger.info(resp.json())
 
         logger.info(
             f'prefill_0 processed requests: {self.count_generate_requests("prefill_0")}'
@@ -286,9 +285,9 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
         logger.info(
             f'prefill_2 processed requests: {self.count_generate_requests("prefill_2")}'
         )
-        self.assertGreaterEqual(self.count_generate_requests("prefill_0"), 8)
-        self.assertGreaterEqual(self.count_generate_requests("prefill_1"), 8)
-        self.assertGreaterEqual(self.count_generate_requests("prefill_2"), 8)
+        self.assertGreaterEqual(self.count_generate_requests("prefill_0"), 18)
+        self.assertGreaterEqual(self.count_generate_requests("prefill_1"), 18)
+        self.assertGreaterEqual(self.count_generate_requests("prefill_2"), 18)
 
 
 if __name__ == "__main__":

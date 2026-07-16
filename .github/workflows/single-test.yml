@@ -95,7 +95,7 @@ jobs:
       matrix:
         test_config:
           - name: test_npu_prefill_policy_bucket_balance
-            runner: linux-aarch64-a3-16
+            runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/basic_function/tmp/test_npu_prefill_policy_bucket_balance.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
