@@ -328,6 +328,7 @@ def run_lora_batch_splitting_equivalence_test(
             disable_cuda_graph=disable_cuda_graph,
             disable_radix_cache=disable_radix_cache,
             lora_drain_wait_threshold=lora_drain_wait_threshold,
+            lora_backend="ascend",
         ) as srt_runner:
             for batch_idx, (batch_prompts, lora_paths) in enumerate(test_cases):
                 print(f"\n--- Batch {batch_idx + 1} ---")
@@ -432,6 +433,7 @@ def run_lora_test_one_by_one(
         tp_size=model_case.tp_size,
         mem_fraction_static=mem_fraction_static,
         attention_backend=attention_backend,
+        lora_backend="ascend",
     ) as srt_runner:
         srt_no_lora_outputs = srt_runner.forward(prompts, max_new_tokens=max_new_tokens)
 
