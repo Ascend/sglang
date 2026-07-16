@@ -1,9 +1,3 @@
-"""EAGLE3 spec-decoding core: overlap (spec v2) x no-overlap (spec v1) matrix,
-same standard config (topk=1, page_size=1), only ``disable_overlap`` differs.
-flashinfer is pinned (the 5090 default) so a default-selection change can't
-silently alter what this exercises.
-"""
-
 import unittest
 
 from sglang.srt.environ import envs
@@ -43,13 +37,21 @@ class _Core(Eagle3Base):
 
 
 class TestEagle3Overlap(_Core, *_KITS):
-    """Spec v2 (overlap scheduler on)."""
+    """Test Case: Verify EAGLE3 speculative decoding correctness with overlap scheduler enabled.
+
+    [Test Category] Parameter
+    [Test Target] --disable-overlap-schedule
+    """
 
     disable_overlap = False
 
 
 class TestEagle3NoOverlap(_Core, *_KITS):
-    """Spec v1 (overlap scheduler off)."""
+    """Test Case: Verify EAGLE3 speculative decoding correctness with overlap scheduler disabled.
+
+    [Test Category] Parameter
+    [Test Target] --disable-overlap-schedule
+    """
 
     disable_overlap = True
 
