@@ -6,8 +6,8 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    QWEN3_8B_EAGLE3_WEIGHTS_PATH,
-    QWEN3_8B_WEIGHTS_PATH,
+    QWEN3_30B_A3B_EAGLE3_WEIGHTS_PATH,
+    QWEN3_30B_A3B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
@@ -40,24 +40,25 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
     [Test Category] Speculative Decoding
     [Test Target] --speculative-algorithm=EAGLE3; --speculative-draft-model-path;
     --speculative-num-steps; --speculative-eagle-topk; --speculative-num-draft-tokens;
-    --tp-size 2; --dp-size 2; --enable-dp-attention; --enable-dp-lm-head
+    --tp-size 2; --dp-size 2; --enable-dp-attention; --enable-dp-lm-head;
+    --moe-dense-tp-size 1
     """
 
     @classmethod
     def setUpClass(cls):
-        cls.model = QWEN3_8B_WEIGHTS_PATH
-        cls.draft_model = QWEN3_8B_EAGLE3_WEIGHTS_PATH
+        cls.model = QWEN3_30B_A3B_WEIGHTS_PATH
+        cls.draft_model = QWEN3_30B_A3B_EAGLE3_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         other_args = [
             "--trust-remote-code",
             "--speculative-algorithm",
             "EAGLE3",
             "--speculative-num-steps",
-            "3",
+            "6",
             "--speculative-eagle-topk",
             "1",
             "--speculative-num-draft-tokens",
-            "4",
+            "32",
             "--speculative-draft-model-path",
             cls.draft_model,
             "--tp-size",
@@ -66,6 +67,8 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
             "2",
             "--enable-dp-attention",
             "--enable-dp-lm-head",
+            "--moe-dense-tp-size",
+            "1",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",

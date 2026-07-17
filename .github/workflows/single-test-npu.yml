@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 13: isolate moe-dense-tp-size var; drop 2 passing cases to save CI resources
+# test round 14: Plan B - use MoE model Qwen3-30B-A3B + its eagle3 draft (Tengyunw/qwen3_30b_moe_eagle3)
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-4
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B140
     steps:
@@ -38,9 +38,10 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - round 13: only run eagle_dp_attention to isolate the
-          # moe-dense-tp-size variable (constrained_decoding and infer_beta_dp_attention
-          # already passed in round 11/12, dropped to save CI resources and time).
+          # Test cases - round 14: Plan B - switch to MoE model Qwen3-30B-A3B + its
+          # eagle3 draft (Tengyunw/qwen3_30b_moe_eagle3), restore --moe-dense-tp-size 1
+          # (semantically correct on MoE). Plan A (round 13) proved that moe-dense-tp-size
+          # 1 on a Dense model (Qwen3-8B) was the root cause of the HCCL timeout.
           test_cases=(
             "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_dp_attention.py"
           )
