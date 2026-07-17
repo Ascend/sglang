@@ -1,12 +1,12 @@
 name: Full Test (NPU)
 
 on:
-# pull_request:
-#    branches:
-#      - main
-#      - testcases
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - main
+      - testcases
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -104,7 +104,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.test_scope }}" ]; then
-            echo "test_scope=poc" >> $GITHUB_OUTPUT
+            echo "test_scope=func" >> $GITHUB_OUTPUT
           else
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
@@ -159,6 +159,8 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+            mv ${sglang_pkg_path}/sglang/test/ci/ci_utils.py ${sglang_pkg_path}/sglang/test/ci/ci_utils_bak.py
+            cp  ${sglang_source_path}/python/sglang/test/ci/ci_utils.py ${sglang_pkg_path}/sglang/test/ci/ci_utils.py
           fi
 
           # copy required file from our daily cache
