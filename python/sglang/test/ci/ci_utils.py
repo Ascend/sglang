@@ -177,7 +177,10 @@ def run_unittest_files(
             )
             file_tic = time.perf_counter()
 
-            cmd = ["python3", full_path, "-f"]
+            if os.environ.get("COVERAGE_RCFILE"):
+                cmd = ["python3", "-m", "coverage", "run", "--rcfile", os.environ["COVERAGE_RCFILE"], full_path, "-f"]
+            else:
+                cmd = ["python3", full_path, "-f"]
 
             if capture_output:
                 # Capture output for retry decision
