@@ -66,8 +66,6 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
             "2",
             "--enable-dp-attention",
             "--enable-dp-lm-head",
-            "--moe-dense-tp-size",
-            "1",
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",

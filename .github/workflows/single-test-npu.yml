@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 12: lower eagle_dp_attention num-steps 6->3 to reduce HCCL comm pressure
+# test round 13: isolate moe-dense-tp-size var; drop 2 passing cases to save CI resources
 
 on:
   pull_request:
@@ -38,13 +38,10 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 3 NPU speculative decoding test cases (round 11).
-          # Run constrained_decoding first (the most-mature, golden reference),
-          # then infer_beta_dp_attention, then eagle_dp_attention (most aggressive,
-          # run last to avoid blocking the other two on a potential NPU driver bug).
+          # Test cases - round 13: only run eagle_dp_attention to isolate the
+          # moe-dense-tp-size variable (constrained_decoding and infer_beta_dp_attention
+          # already passed in round 11/12, dropped to save CI resources and time).
           test_cases=(
-            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_constrained_decoding_spec_reasoning.py"
-            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_infer_beta_dp_attention.py"
             "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_dp_attention.py"
           )
 
