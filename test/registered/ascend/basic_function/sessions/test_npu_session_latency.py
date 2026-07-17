@@ -21,7 +21,9 @@ from tabulate import tabulate
 
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
-from sglang.test.ascend.test_ascend_utils import GPT_OSS_20B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -265,7 +267,9 @@ class TestSessionLatency(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = GPT_OSS_20B_WEIGHTS_PATH
+        # NPU adaptation: use Llama-3.1-8B-Instruct instead of gpt-oss-20b
+        # (avoids mxfp4 quantization compatibility issues on NPU)
+        cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         # NOTE: Overlap scheduling commits KV cache one step ahead,
         # so the last decode token is cached (unlike non-overlap).
@@ -282,12 +286,6 @@ class TestSessionLatency(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
-                # NPU adapter: page_size must be 128 on NPU; 4 (CUDA default) is invalid
-                "--page-size",
-                "128",
-                # NPU adapter: mxfp4 quant method not registered on NPU, use quark instead
-                "--quantization",
-                "quark",
             ],
         )
         cls.tokenizer = get_tokenizer(cls.model)

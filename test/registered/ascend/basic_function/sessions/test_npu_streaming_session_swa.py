@@ -11,7 +11,7 @@ NPU adaptations:
 
 import unittest
 
-from sglang.test.ascend.test_ascend_utils import GPT_OSS_20B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_BF16_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.streaming_session_kit import (
     AbortLeakReproKitMixin,
@@ -23,22 +23,33 @@ from sglang.test.server_fixtures.streaming_session_fixture import (
     StreamingSessionServerBase,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 
-SWA_MODEL = GPT_OSS_20B_WEIGHTS_PATH
+SWA_MODEL = GPT_OSS_120B_BF16_WEIGHTS_PATH
 
-# NPU adaptation: replace --cuda-graph-backend-prefill=disabled with
-# --disable-cuda-graph and add --attention-backend ascend.
-# Use --quantization quark because mxfp4 quant method is not registered on NPU.
+# NPU adaptation: use bf16 gpt-oss-120b instead of mxfp4 gpt-oss-20b to avoid
+# quantization compatibility issues. Parameters referenced from
+# test_npu_gpt_oss_120b_bf16.py.
 SWA_COMMON_ARGS = [
+    "--trust-remote-code",
     "--mem-fraction-static",
-    "0.70",
+    "0.7",
     "--attention-backend",
     "ascend",
+    "--nnodes",
+    "1",
+    "--node-rank",
+    "0",
+    "--max-running-requests",
+    "32",
+    "--watchdog-timeout",
+    "9000",
+    "--tp-size",
+    "8",
+    "--sampling-backend",
+    "ascend",
     "--disable-cuda-graph",
-    "--quantization",
-    "quark",
 ]
 
 
