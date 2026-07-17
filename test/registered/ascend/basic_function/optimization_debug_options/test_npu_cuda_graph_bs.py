@@ -19,7 +19,7 @@ from sglang.test.test_utils import (
 )
 from sglang.utils import wait_for_http_ready
 
-register_npu_ci(est_time=600, suite="debug-full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
