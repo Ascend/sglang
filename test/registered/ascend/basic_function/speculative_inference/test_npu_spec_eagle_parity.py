@@ -20,7 +20,7 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class _Eagle3ParityBase(Eagle3Base):
-    """Shared knobs for EAGLE3 parity variants; no test methods."""
+    """Shared configuration for EAGLE3 parity tests; no test logic."""
 
     env_overrides = ((envs.SGLANG_ENABLE_STRICT_MEM_CHECK_DURING_BUSY, 1),)
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
@@ -40,13 +40,14 @@ def _greedy(url, text, max_new_tokens=48):
 
 
 class SpecParityKitNPU:
-    """Lossless output parity vs a non-spec reference on NPU.
+    """Lossless output parity between speculative and non-speculative decoding.
 
-    Sequential (NOT concurrent): launch a non-spec reference server on the
-    standard port, capture greedy outputs, tear it down, THEN let the fixture
-    launch the spec server. Only one model is resident at a time -- two 8B
-    servers don't fit on one NPU. Mix this kit FIRST in the bases so its
-    setUpClass runs before the fixture's:  ``class T(SpecParityKit, Eagle3Base)``.
+    Launches a non-speculative reference server first, captures greedy outputs,
+    shuts it down, then launches an EAGLE3 speculative server on the same port.
+    This sequential setup avoids running two large models concurrently.
+
+    Mix this kit first in the base list so its setUpClass runs before the
+    server fixture: ``class T(SpecParityKitNPU, Eagle3Base)``.
     """
 
     parity_prompts = [
@@ -64,10 +65,8 @@ class SpecParityKitNPU:
             ref_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
-                "--base-gpu-id",
-                1,
                 "--mem-fraction-static",
-                "0.8",  # ref alone -> full GPU available
+                "0.8",
                 "--attention-backend",
                 cls.attention_backend,
                 "--page-size",
@@ -83,11 +82,11 @@ class SpecParityKitNPU:
             }
         finally:
             kill_process_tree(ref_proc.pid, wait_timeout=60)
-        # Now the spec server (same port; ref is gone).
+
         super().setUpClass()
 
     def test_parity_vs_reference(self):
-        """Spec decode greedy output must equal the non-spec reference."""
+        """Greedy outputs from EAGLE3 speculative decoding match the non-speculative reference."""
         for prompt in self.parity_prompts:
             spec_out = _greedy(self.base_url, prompt)
             self.assertEqual(
@@ -98,10 +97,10 @@ class SpecParityKitNPU:
 
 
 class TestEagle3ParityNPU(SpecParityKitNPU, _Eagle3ParityBase):
-    """Test Case: Verify EAGLE3 speculative decoding greedy output matches non-speculative reference on NPU.
+    """Test Case: Verify EAGLE3 speculative decoding greedy output matches non-speculative reference.
 
-    [Test Category] Functional
-    [Test Target] --speculative-algorithm
+    [Test Category] Functionality
+    [Test Target] EAGLE3 speculative decoding (lossless output parity)
     """
 
     disable_overlap = False

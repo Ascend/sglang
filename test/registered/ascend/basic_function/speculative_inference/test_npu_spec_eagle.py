@@ -1,3 +1,9 @@
+"""EAGLE3 spec-decoding core test.
+
+Validates Overlap (Spec v2) and No-overlap (Spec v1) independently against
+the same correctness baseline: output, logprobs, penalties, and stop behavior.
+"""
+
 import unittest
 
 from sglang.srt.environ import envs
@@ -37,20 +43,24 @@ class _Core(Eagle3Base):
 
 
 class TestEagle3Overlap(_Core, *_KITS):
-    """Test Case: Verify EAGLE3 speculative decoding correctness with overlap scheduler enabled.
+    """Testcase: EAGLE3 spec-decoding core test.
+    Validates correctness with overlap scheduling enabled (Spec v2).
+    Covers output, logprobs, penalties, and stop behavior.
 
-    [Test Category] Parameter
-    [Test Target] --disable-overlap-schedule
+    [Test Category] Functionality
+    [Test Target] EAGLE3 spec-decoding with overlap scheduling (Spec v2)
     """
 
     disable_overlap = False
 
 
 class TestEagle3NoOverlap(_Core, *_KITS):
-    """Test Case: Verify EAGLE3 speculative decoding correctness with overlap scheduler disabled.
+    """Testcase: EAGLE3 spec-decoding core test.
+    Validates correctness with overlap scheduling disabled (Spec v1).
+    Covers output, logprobs, penalties, and stop behavior.
 
-    [Test Category] Parameter
-    [Test Target] --disable-overlap-schedule
+    [Test Category] Functionality
+    [Test Target] EAGLE3 spec-decoding with overlap disabled (Spec v1)
     """
 
     disable_overlap = True
