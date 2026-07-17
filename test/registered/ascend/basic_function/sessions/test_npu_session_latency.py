@@ -285,6 +285,9 @@ class TestSessionLatency(CustomTestCase):
                 # NPU adapter: page_size must be 128 on NPU; 4 (CUDA default) is invalid
                 "--page-size",
                 "128",
+                # NPU adapter: mxfp4 quant method not registered on NPU, use quark instead
+                "--quantization",
+                "quark",
             ],
         )
         cls.tokenizer = get_tokenizer(cls.model)

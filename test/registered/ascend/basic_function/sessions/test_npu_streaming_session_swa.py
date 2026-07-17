@@ -30,12 +30,15 @@ SWA_MODEL = GPT_OSS_20B_WEIGHTS_PATH
 
 # NPU adaptation: replace --cuda-graph-backend-prefill=disabled with
 # --disable-cuda-graph and add --attention-backend ascend.
+# Use --quantization quark because mxfp4 quant method is not registered on NPU.
 SWA_COMMON_ARGS = [
     "--mem-fraction-static",
     "0.70",
     "--attention-backend",
     "ascend",
     "--disable-cuda-graph",
+    "--quantization",
+    "quark",
 ]
 
 
