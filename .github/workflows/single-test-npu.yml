@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 14: Plan B - use MoE model Qwen3-30B-A3B + its eagle3 draft (Tengyunw/qwen3_30b_moe_eagle3)
+# test round 15: fix draft model path - use HF_MODEL_WEIGHTS_DIR (huggingface cache format)
 
 on:
   pull_request:
@@ -38,10 +38,11 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - round 14: Plan B - switch to MoE model Qwen3-30B-A3B + its
-          # eagle3 draft (Tengyunw/qwen3_30b_moe_eagle3), restore --moe-dense-tp-size 1
-          # (semantically correct on MoE). Plan A (round 13) proved that moe-dense-tp-size
-          # 1 on a Dense model (Qwen3-8B) was the root cause of the HCCL timeout.
+          # Test cases - round 15: fix draft model path. Round 14 failed because
+          # the huggingface-downloaded model went to ~/.cache/huggingface/ (HF cache
+          # format: models--Tengyunw--qwen3_30b_moe_eagle3/snapshots/<hash>/) but
+          # QWEN3_30B_A3B_EAGLE3_WEIGHTS_PATH pointed to modelscope cache. Now using
+          # HF_MODEL_WEIGHTS_DIR per the SKYWORK_REWARD_LLAMA_3_1_8B_V0_2 precedent.
           test_cases=(
             "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_dp_attention.py"
           )
