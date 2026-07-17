@@ -40,6 +40,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
+            "test/registered/ascend/basic_function/speculative_inference/test_npu_spec_eagle_stress_bak.py"
             "test/registered/ascend/basic_function/speculative_inference/test_npu_spec_eagle_stress.py"
           )
 

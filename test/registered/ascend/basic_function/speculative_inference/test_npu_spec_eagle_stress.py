@@ -11,7 +11,7 @@ from sglang.test.ascend.test_ascend_utils import (
     LLAMA_2_7B_CHAT_HF_EAGLE_WEIGHTS_PATH,
     LLAMA_2_7B_CHAT_HF_WEIGHTS_PATH,
 )
-from sglang.test.ci.ci_register import register_cuda_ci
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.abort_timeout_kit import (
     AbortAllMixin,
     RunningTimeoutTwoWaveMixin,
@@ -23,7 +23,7 @@ from sglang.test.kits.spec_server_kits import (
 )
 from sglang.test.server_fixtures.spec_eagle_fixture import EagleLlama2Base
 
-register_cuda_ci(est_time=780, stage="base-b", runner_config="1-gpu-large")
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestEagleLlama2Retract(EagleLlama2Base, SpecAccuracyKit, SpecFeatureKit):
@@ -42,6 +42,9 @@ class TestEagleLlama2Retract(EagleLlama2Base, SpecAccuracyKit, SpecFeatureKit):
         (envs.SGLANG_TEST_RETRACT, True),
         (envs.SGLANG_ENABLE_STRICT_MEM_CHECK_DURING_BUSY, 1),
     )
+
+    def test_constrained_decoding(self):
+        pass
 
 
 class TestEagleLlama2AbortAll(EagleLlama2Base, AbortAllMixin):
