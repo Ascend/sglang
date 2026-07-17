@@ -3,7 +3,7 @@ import re
 import subprocess
 import tempfile
 import unittest
-from typing import List, Optional
+from typing import Optional
 
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
@@ -136,9 +136,12 @@ class TestCudaGraphBs(CustomTestCase):
     def test_max_bs_auto_generates_bs(self):
         proc, err_path = _launch_server(
             extra_args=[
-                "--cuda-graph-max-bs-decode", "8",
-                "--cuda-graph-backend-prefill", "tc_piecewise",
-                "--cuda-graph-max-bs-prefill", "256",
+                "--cuda-graph-max-bs-decode",
+                "8",
+                "--cuda-graph-backend-prefill",
+                "tc_piecewise",
+                "--cuda-graph-max-bs-prefill",
+                "256",
             ],
         )
         try:
@@ -165,9 +168,17 @@ class TestCudaGraphBs(CustomTestCase):
     def test_explicit_bs_used_exactly(self):
         proc, err_path = _launch_server(
             extra_args=[
-                "--cuda-graph-bs-decode", "1", "2", "4", "8",
-                "--cuda-graph-backend-prefill", "tc_piecewise",
-                "--cuda-graph-bs-prefill", "64", "128", "256",
+                "--cuda-graph-bs-decode",
+                "1",
+                "2",
+                "4",
+                "8",
+                "--cuda-graph-backend-prefill",
+                "tc_piecewise",
+                "--cuda-graph-bs-prefill",
+                "64",
+                "128",
+                "256",
             ],
         )
         try:
@@ -193,8 +204,12 @@ class TestCudaGraphBs(CustomTestCase):
     def test_decode_max_bs_overwritten_when_bs_set(self):
         proc, err_path = _launch_server(
             extra_args=[
-                "--cuda-graph-max-bs-decode", "4",
-                "--cuda-graph-bs-decode", "1", "2", "8",
+                "--cuda-graph-max-bs-decode",
+                "4",
+                "--cuda-graph-bs-decode",
+                "1",
+                "2",
+                "8",
             ],
         )
         try:
@@ -216,7 +231,8 @@ class TestCudaGraphBs(CustomTestCase):
     def test_decode_disable_padding_sequential_bs(self):
         proc, err_path = _launch_server(
             extra_args=[
-                "--cuda-graph-max-bs-decode", "8",
+                "--cuda-graph-max-bs-decode",
+                "8",
                 "--disable-cuda-graph-padding",
             ],
         )
