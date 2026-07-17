@@ -24,7 +24,7 @@ register_npu_ci(est_time=600, suite="debug-full-1-npu-a3", nightly=True)
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
-_BS_LOG_RE = re.compile(r"Capture.*graph.*(?:bs|num tokens)[= ]\[([^\]]+)\]")
+_BS_LOG_RE = re.compile(r"Capture.*graph.*(?:bs|num[_ ]tokens)[= ]\[([^\]]+)\]")
 _MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
 
 
@@ -137,7 +137,7 @@ class TestCudaGraphBs(CustomTestCase):
         proc, err_path = _launch_server(
             extra_args=[
                 "--cuda-graph-max-bs-decode", "8",
-                "--enforce-piecewise-cuda-graph",
+                "--cuda-graph-backend-prefill", "tc_piecewise",
                 "--cuda-graph-max-bs-prefill", "256",
             ],
         )
@@ -166,7 +166,7 @@ class TestCudaGraphBs(CustomTestCase):
         proc, err_path = _launch_server(
             extra_args=[
                 "--cuda-graph-bs-decode", "1", "2", "4", "8",
-                "--enforce-piecewise-cuda-graph",
+                "--cuda-graph-backend-prefill", "tc_piecewise",
                 "--cuda-graph-bs-prefill", "64", "128", "256",
             ],
         )
