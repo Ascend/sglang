@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 11: 3 NPU speculative decoding tests (EAGLE3 constrained-decoding + EAGLE3 DP-attention x2)
+# test round 12: lower eagle_dp_attention num-steps 6->3 to reduce HCCL comm pressure
 
 on:
   pull_request:
