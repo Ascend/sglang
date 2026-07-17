@@ -59,8 +59,11 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     12,
     16,
     20,
+    23,
     24,
+    25,
     26,
+    27,
     28,
     # 29,
     # 30,
@@ -73,11 +76,11 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
-    3,
+    4,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    5,
     "--reasoning-parser",
     "qwen3",
     "--tool-call-parser",
@@ -95,6 +98,7 @@ class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     envs = QWEN3_6_27B_16K_1k_ENVS
     dataset_name = "random"
     max_concurrency = 28
+    warmup_requests = 28
     num_prompts = 112
     input_len = 16000
     output_len = 1000
