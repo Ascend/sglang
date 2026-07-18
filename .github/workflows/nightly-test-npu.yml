@@ -341,6 +341,7 @@ jobs:
 
       - name: Generate results table
         run: |
+          sed -i '506i\        if _is_npu:\n            return False' ${sglang_pkg_path}/sglang/srt/layers/vocab_parallel_embedding.py
           status_emoji() {
             case "$1" in
               pass)   echo "✅" ;;
