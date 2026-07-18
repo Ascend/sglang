@@ -24,7 +24,7 @@ QWEN3_6_27B_16K_1k_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
     "GDN_ATTN_BACKEND_TRITON": "1",
     "ASCEND_USE_FIA": "1",
 }
@@ -49,7 +49,7 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     "--max-mamba-cache-size",
     56,
     "--mem-fraction-static",
-    0.7,
+    0.66,
     "--cuda-graph-bs",
     1,
     2,
@@ -98,7 +98,7 @@ class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     envs = QWEN3_6_27B_16K_1k_ENVS
     dataset_name = "random"
     max_concurrency = 28
-    warmup_requests = 4
+    # warmup_requests = 4
     num_prompts = 112
     input_len = 16000
     output_len = 1000
