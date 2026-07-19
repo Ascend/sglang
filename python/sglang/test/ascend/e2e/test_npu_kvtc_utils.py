@@ -1,5 +1,6 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
+_HF_BASE = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
 from pathlib import Path
 
 import pandas as pd
@@ -22,14 +23,14 @@ OPENMATH_PARTS = 10
 KVTC_DATASET_CONFIG = {
     "openmath": {
         "urls": [
-            f"https://huggingface.co/datasets/open-r1/OpenR1-Math-220k/resolve/main/data/train-00{i:03d}-of-00{OPENMATH_PARTS:03d}.parquet"
+            f"{_HF_BASE}/datasets/open-r1/OpenR1-Math-220k/resolve/main/data/train-{i:03d}-of-{OPENMATH_PARTS:03d}.parquet"
             for i in range(OPENMATH_PARTS)
         ],
         "prompt_column": "problem",
     },
     "fineweb": {
         "urls": [
-            "https://huggingface.co/datasets/HuggingFaceFW/fineweb/resolve/main/data/CC-MAIN-2025-26/000_00000.parquet"
+            f"{_HF_BASE}/datasets/HuggingFaceFW/fineweb/resolve/main/data/CC-MAIN-2025-26/000_00000.parquet"
         ],
         "prompt_column": "text",
     },
