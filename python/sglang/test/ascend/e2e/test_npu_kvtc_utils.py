@@ -23,7 +23,7 @@ OPENMATH_PARTS = 10
 KVTC_DATASET_CONFIG = {
     "openmath": {
         "urls": [
-            f"{_HF_BASE}/datasets/open-r1/OpenR1-Math-220k/resolve/main/data/train-{i:03d}-of-{OPENMATH_PARTS:03d}.parquet"
+            f"{_HF_BASE}/datasets/open-r1/OpenR1-Math-220k/resolve/main/data/train-00{i:03d}-of-00{OPENMATH_PARTS:03d}.parquet"
             for i in range(OPENMATH_PARTS)
         ],
         "prompt_column": "problem",
