@@ -120,7 +120,6 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "glm-5",
     "--moe-a2a-backend",
     "deepep",
-    "--enable-dp-attention",
     "--deepep-mode",
     "low_latency",
     "--enable-dp-lm-head",

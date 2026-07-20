@@ -103,12 +103,12 @@ class TestWeightLoaderPrefetchTp4(CustomTestCase):
         )
         # Prefetch percentage progress: confirms the process ran to completion
         self.assertIn(
-            "Rank 0: prefetching checkpoint files: 20% (2/2)",
+            "Rank 0: prefetching checkpoint files: 100% (2/2)",
             log_content,
-            "Rank 0 prefetch completion (2/2) not found",
+            "Rank 0 prefetch completion not found",
         )
         self.assertIn(
-            "Rank 1: prefetching checkpoint files: 10% (1/1)",
+            "Rank 1: prefetching checkpoint files: 100% (1/1)",
             log_content,
             "Rank 1 prefetch completion (1/1) not found",
         )
