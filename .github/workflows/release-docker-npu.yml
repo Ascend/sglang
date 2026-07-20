@@ -9,9 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04-arm
-    env:
-      BUILDX_NO_DEFAULT_ATTESTATIONS: '1'
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         cann_version: ["9.0.0"]
@@ -69,7 +67,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           push: ${{ github.repository == 'Ascend/sglang' }}
           provenance: false
-          sbom: false
           build-args: |
             SGLANG_KERNEL_NPU_TAG=2026.7.2
             CANN_VERSION=${{ matrix.cann_version }}
