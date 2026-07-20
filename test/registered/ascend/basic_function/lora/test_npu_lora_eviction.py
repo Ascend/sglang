@@ -5,14 +5,14 @@ from typing import Dict, List, Tuple
 
 import torch
 
-from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.runners import SRTRunner
-from sglang.test.test_utils import CustomTestCase
 from sglang.test.ascend.test_ascend_utils import (
     CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
     VALADAPT_LLAMA_3_1_8B_CHINESE_LORA_PATH,
 )
+from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.runners import SRTRunner
+from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
