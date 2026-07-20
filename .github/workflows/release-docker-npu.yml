@@ -67,6 +67,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           push: ${{ github.repository == 'Ascend/sglang' }}
           provenance: false
+          sbom: false
           build-args: |
             SGLANG_KERNEL_NPU_TAG=2026.7.2
             CANN_VERSION=${{ matrix.cann_version }}
