@@ -66,7 +66,7 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     26,
     27,
     28,
-    # 29,
+    29,
     # 30,
     "--quantization",
     "modelslim",
