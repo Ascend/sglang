@@ -120,6 +120,7 @@ jobs:
       image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
       skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-1-npu-a3:
