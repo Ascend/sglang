@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 15: fix draft model path - use HF_MODEL_WEIGHTS_DIR (huggingface cache format)
+# test round 1: <测试用例描述>
 
 on:
   pull_request:
@@ -15,9 +15,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-4
+    runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B140
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,13 +38,9 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - round 15: fix draft model path. Round 14 failed because
-          # the huggingface-downloaded model went to ~/.cache/huggingface/ (HF cache
-          # format: models--Tengyunw--qwen3_30b_moe_eagle3/snapshots/<hash>/) but
-          # QWEN3_30B_A3B_EAGLE3_WEIGHTS_PATH pointed to modelscope cache. Now using
-          # HF_MODEL_WEIGHTS_DIR per the SKYWORK_REWARD_LLAMA_3_1_8B_V0_2 precedent.
+          # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_dp_attention.py"
+            "test/registered/ascend/llm_models/test_npu_deepseek_v3_2_w8a8.py"
           )
 
           for test_case in "${test_cases[@]}"; do
