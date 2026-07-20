@@ -118,6 +118,10 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/interface/test_npu_penalty.py
             test_type: 'function'
+          - name: test_npu_speculative_draft_attention_backend
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/basic_function/speculative_inference/test_npu_speculative_draft_attention_backend.py
+            test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
