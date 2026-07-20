@@ -38,6 +38,8 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         "--enable-torch-compile-debug-mode",
         "--cuda-graph-backend-prefill",
         "disabled",
+        "--cuda-graph-bs-prefill",
+        "64",
     ]
 
     def setUp(self):
