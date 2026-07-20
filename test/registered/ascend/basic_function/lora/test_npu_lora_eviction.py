@@ -9,8 +9,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.runners import SRTRunner
 from sglang.test.test_utils import CustomTestCase
 from sglang.test.ascend.test_ascend_utils import (
-    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
     CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
     VALADAPT_LLAMA_3_1_8B_CHINESE_LORA_PATH,
 )
 
@@ -66,12 +66,12 @@ class TestLoRAEviction(CustomTestCase):
         self._run_test(ADAPTERS, output_history, reuse_lora_name=False, repeat=1)
 
     def _run_test(
-            self,
-            lora_paths: List[str],
-            output_history: Dict[Tuple[str, str], str],
-            reverse: bool = False,
-            repeat: int = 2,
-            reuse_lora_name: bool = False,
+        self,
+        lora_paths: List[str],
+        output_history: Dict[Tuple[str, str], str],
+        reverse: bool = False,
+        repeat: int = 2,
+        reuse_lora_name: bool = False,
     ):
         REUSED_LORA_NAME = "lora"
         max_new_tokens = 256
@@ -82,15 +82,15 @@ class TestLoRAEviction(CustomTestCase):
         initial_lora_paths = lora_paths if not reuse_lora_name else None
         # Initialize runners
         with SRTRunner(
-                base_path,
-                torch_dtype=torch_dtype,
-                model_type="generation",
-                lora_paths=initial_lora_paths,
-                max_loras_per_batch=1,
-                enable_lora=True,
-                max_lora_rank=256,
-                lora_target_modules=["all"],
-                attention_backend="ascend",
+            base_path,
+            torch_dtype=torch_dtype,
+            model_type="generation",
+            lora_paths=initial_lora_paths,
+            max_loras_per_batch=1,
+            enable_lora=True,
+            max_lora_rank=256,
+            lora_target_modules=["all"],
+            attention_backend="ascend",
         ) as srt_runner:
             adapter_sequence = lora_paths if not reverse else lora_paths[::-1]
 
