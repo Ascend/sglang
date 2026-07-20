@@ -577,7 +577,7 @@ def run_npu_e2e_test_case(
     final_kube_job_name = f"{kube_job_name_prefix}-{random_str}"
 
     coverage_file = (
-        f"/root/.cache/coverage_data/{coverage_run_id}/.coverage"
+        f"/data/ascend-ci-share-pkking-sglang/coverage_data/{coverage_run_id}/.coverage"
         if coverage_run_id
         else ""
     )

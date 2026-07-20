@@ -181,9 +181,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
-          COVERAGE_RCFILE: /root/.cache/coverage_data/.coveragerc
-          COVERAGE_PROCESS_START: /root/.cache/coverage_data/.coveragerc
+          COVERAGE_FILE: /data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
+          COVERAGE_RCFILE: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
         run: |
           # speed up by using infra cache services
           pip install sglang_router
@@ -259,9 +259,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
-          COVERAGE_RCFILE: /root/.cache/coverage_data/.coveragerc
-          COVERAGE_PROCESS_START: /root/.cache/coverage_data/.coveragerc
+          COVERAGE_FILE: /data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
+          COVERAGE_RCFILE: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -334,9 +334,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
-          COVERAGE_RCFILE: /root/.cache/coverage_data/.coveragerc
-          COVERAGE_PROCESS_START: /root/.cache/coverage_data/.coveragerc
+          COVERAGE_FILE: /data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
+          COVERAGE_RCFILE: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -406,9 +406,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
-          COVERAGE_RCFILE: /root/.cache/coverage_data/.coveragerc
-          COVERAGE_PROCESS_START: /root/.cache/coverage_data/.coveragerc
+          COVERAGE_FILE: /data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
+          COVERAGE_RCFILE: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -478,9 +478,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
-          COVERAGE_FILE: /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
-          COVERAGE_RCFILE: /root/.cache/coverage_data/.coveragerc
-          COVERAGE_PROCESS_START: /root/.cache/coverage_data/.coveragerc
+          COVERAGE_FILE: /data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}/.coverage
+          COVERAGE_RCFILE: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -527,7 +527,7 @@ jobs:
       - name: Combine and generate report
         run: |
           python -c "import coverage" 2>/dev/null || pip install coverage
-          coverage combine /root/.cache/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
+          coverage combine /data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
           coverage report -m
           coverage html
 

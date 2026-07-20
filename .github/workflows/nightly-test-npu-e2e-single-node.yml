@@ -74,9 +74,9 @@ jobs:
           GDN_ATTN_BACKEND_TRITON: 1
           SGLANG_TEST_METRICS_OUTPUT: /root/.cache/tests/output/metrics/metrics
           PYTHONUNBUFFERED: "1"
-          COVERAGE_FILE: ${{ inputs.coverage_run_id && format('/root/.cache/coverage_data/{0}/.coverage', inputs.coverage_run_id) || '' }}
-          COVERAGE_RCFILE: ${{ inputs.coverage_run_id && '/root/.cache/coverage_data/.coveragerc' || '' }}
-          COVERAGE_PROCESS_START: ${{ inputs.coverage_run_id && '/root/.cache/coverage_data/.coveragerc' || '' }}
+          COVERAGE_FILE: ${{ inputs.coverage_run_id && format('/data/ascend-ci-share-pkking-sglang/coverage_data/{0}/.coverage', inputs.coverage_run_id) || '' }}
+          COVERAGE_RCFILE: ${{ inputs.coverage_run_id && '/data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc' || '' }}
+          COVERAGE_PROCESS_START: ${{ inputs.coverage_run_id && '/data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc' || '' }}
         shell: bash
         run: |
           sglang_source_path=$(pwd)
