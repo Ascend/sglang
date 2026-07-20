@@ -107,6 +107,17 @@ else
     cp -r ${sglang_source_path}/python/sglang/test/ascend "${ascend_test_util_path}"
 fi
 
+# install coverage if COVERAGE_FILE is set
+if [ -n "${COVERAGE_FILE}" ]; then
+    echo "Installing coverage..."
+    python -c "import coverage" 2>/dev/null || pip install coverage
+    # Enable subprocess coverage tracking via .pth file and COVERAGE_PROCESS_START
+    SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+    echo "import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
+    export COVERAGE_RCFILE="/root/.cache/coverage_data/.coveragerc"
+    export COVERAGE_PROCESS_START="/root/.cache/coverage_data/.coveragerc"
+fi
+
 # set environment of cann
 . /usr/local/Ascend/cann/set_env.sh
 . /usr/local/Ascend/nnal/atb/set_env.sh
