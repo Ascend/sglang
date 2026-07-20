@@ -91,7 +91,6 @@ class TestLoRAEviction(CustomTestCase):
                 max_lora_rank=256,
                 lora_target_modules=["all"],
                 attention_backend="ascend",
-                lora_backend="ascend",
         ) as srt_runner:
             adapter_sequence = lora_paths if not reverse else lora_paths[::-1]
 

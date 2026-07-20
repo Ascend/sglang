@@ -196,7 +196,6 @@ def run_lora_multiple_batch_on_model_cases(
                 enable_deterministic_inference=enable_deterministic_inference,
                 disable_cuda_graph=disable_cuda_graph,
                 disable_radix_cache=disable_radix_cache,
-                lora_backend="ascend",
                 **spec_args,
             )
 
@@ -328,7 +327,6 @@ def run_lora_batch_splitting_equivalence_test(
             disable_cuda_graph=disable_cuda_graph,
             disable_radix_cache=disable_radix_cache,
             lora_drain_wait_threshold=lora_drain_wait_threshold,
-            lora_backend="ascend",
         ) as srt_runner:
             for batch_idx, (batch_prompts, lora_paths) in enumerate(test_cases):
                 print(f"\n--- Batch {batch_idx + 1} ---")
@@ -364,7 +362,7 @@ def run_lora_test_one_by_one(
     model_case: LoRAModelCase,
     torch_dtype: torch.dtype,
     max_new_tokens: int,
-    backend: str = "ascend",
+    backend: str = "csgmv",
     enable_lora_overlap_loading: Optional[bool] = None,
     disable_cuda_graph: bool = False,
     disable_radix_cache: bool = False,
@@ -433,7 +431,6 @@ def run_lora_test_one_by_one(
         tp_size=model_case.tp_size,
         mem_fraction_static=mem_fraction_static,
         attention_backend=attention_backend,
-        lora_backend="ascend",
     ) as srt_runner:
         srt_no_lora_outputs = srt_runner.forward(prompts, max_new_tokens=max_new_tokens)
 
