@@ -42,13 +42,13 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     -1,
     "--max-prefill-tokens",
     # 80000,
-    80000,
+    58000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    28,
+    29,
     "--max-mamba-cache-size",
-    56,
+    58,
     "--mem-fraction-static",
     0.70,
     "--cuda-graph-bs",
@@ -98,9 +98,9 @@ class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_6_27B_16K_1k_OTHER_ARGS
     envs = QWEN3_6_27B_16K_1k_ENVS
     dataset_name = "random"
-    max_concurrency = 28
+    max_concurrency = 29
     # warmup_requests = 4
-    num_prompts = 112
+    num_prompts = 116
     input_len = 16000
     output_len = 1000
     random_range_ratio = 1
