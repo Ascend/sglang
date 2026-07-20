@@ -31,15 +31,13 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         "0.7",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
         "--disable-radix-cache",
         "--enforce-piecewise-cuda-graph",
     ]
     enable_args = [
         "--enable-torch-compile-debug-mode",
-        "--enforce-piecewise-cuda-graph",
-        "--piecewise-cuda-graph-max-tokens",
-        "64",
+        "--cuda-graph-backend-prefill",
+        "disabled",
     ]
 
     def setUp(self):
