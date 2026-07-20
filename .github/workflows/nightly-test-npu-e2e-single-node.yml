@@ -62,7 +62,7 @@ jobs:
       - name: Install coverage
         run: |
           python -c "import coverage" 2>/dev/null || pip install coverage
-          echo "import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          echo "import numpy; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
 
       - name: Run test
         timeout-minutes: 300

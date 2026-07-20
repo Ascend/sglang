@@ -113,7 +113,7 @@ if [ -n "${COVERAGE_FILE}" ]; then
     python -c "import coverage" 2>/dev/null || pip install coverage
     # Enable subprocess coverage tracking via .pth file and COVERAGE_PROCESS_START
     SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
-    echo "import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
+    echo "import numpy; import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
     export COVERAGE_RCFILE="/root/.cache/coverage_data/.coveragerc"
     export COVERAGE_PROCESS_START="/root/.cache/coverage_data/.coveragerc"
 fi
