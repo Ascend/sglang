@@ -63,6 +63,9 @@ jobs:
         run: |
           python -c "import coverage" 2>/dev/null || pip install coverage
           echo "import numpy; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
 
       - name: Run test
         timeout-minutes: 300

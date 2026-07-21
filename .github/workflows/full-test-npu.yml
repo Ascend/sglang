@@ -168,6 +168,9 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/hellaswag_val.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
           echo "import numpy; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -246,6 +249,9 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
           echo "import numpy; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -321,6 +327,9 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
           echo "import numpy; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -393,6 +402,9 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
           echo "import numpy; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -465,6 +477,9 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
           echo "import numpy; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -526,10 +541,16 @@ jobs:
 
       - name: Combine and generate report
         run: |
-          python -c "import coverage" 2>/dev/null || pip install coverage
-          coverage combine /data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
-          coverage report -m
-          coverage html
+          DATA_DIR=/data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
+          if [ -d "$DATA_DIR" ] && ls "$DATA_DIR"/.coverage* 1>/dev/null 2>&1; then
+            python -c "import coverage" 2>/dev/null || pip install coverage
+            coverage combine "$DATA_DIR"
+            coverage report -m
+            coverage html
+          else
+            echo "No coverage data found at $DATA_DIR, skipping report generation."
+            mkdir -p htmlcov
+          fi
 
       - name: Upload coverage report
         if: always()
