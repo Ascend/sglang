@@ -84,7 +84,7 @@ class TestEnableDeepepWaterFill(CustomTestCase):
         self.assertGreater(metrics["score"], 0.72)
         self.err_log_file.seek(0)
         content = self.err_log_file.read()
-        error_message = "DeepEP Waterfill is enabled"
+        error_message = "Waterfill is enabled"
         self.assertIn(error_message, content)
 
 

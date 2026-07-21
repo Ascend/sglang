@@ -227,6 +227,9 @@ QWEN3_32B_EAGLE3_WEIGHTS_PATH = os.path.join(
 QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "aleoyang/Qwen3-32B-w8a8-MindIE"
 )
+QWEN2_1_5B_INSTRUCT_GTE_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/gte-Qwen2-1.5B-instruct"
+)
 QWQ_32B_W8A8_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "vllm-ascend/QWQ-32B-W8A8")
 SMOLLM_1_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "HuggingFaceTB/SmolLM-1.7B")
 SOLAR_10_7B_INSTRUCT_V1_0_WEIGHTS_PATH = os.path.join(
