@@ -3,11 +3,8 @@ Benchmark: Streaming Session Inter-Turn Latency on NPU.
 
 Tests:
   1. Stability (bs=8):  streaming only, assert tail_avg / head_avg <= 1.15
-  2. Random lengths (bs=8): streaming only, random input/output lens, no crash
-
-Note: correctness test (regular vs streaming output equality) is skipped on NPU
-because streaming session KV cache reuse has severe numerical divergence issues
-on the ascend attention backend (outputs become garbage after ~10 turns).
+  2. Correctness (bs=1): regular vs streaming, assert output equal
+  3. Random lengths (bs=8): streaming only, random input/output lens, no crash
 
 Ported from test/sessions/test_session_latency.py.
 """
@@ -363,6 +360,28 @@ class TestSessionLatency(CustomTestCase):
             1.15,
             f"streaming latency should stay flat across turns "
             f"(head={head_avg:.1f}ms, tail={tail_avg:.1f}ms, ratio={ratio:.2f} > 1.15)",
+        )
+
+    def test_streaming_session_correctness(self):
+        """Correctness test: bs=1, assert regular and streaming outputs match."""
+        correctness_turns = 30
+        reg = self._run_concurrent_session(
+            streaming=False, num_concurrent=1, num_turns=correctness_turns
+        )
+        stm = self._run_concurrent_session(
+            streaming=True, num_concurrent=1, num_turns=correctness_turns
+        )
+
+        _print_mode_table(reg[0], label="correctness regular")
+        _print_mode_table(stm[0], label="correctness streaming")
+
+        reg_out = reg[0].outputs
+        stm_out = stm[0].outputs
+        mismatches = sum(1 for a, b in zip(reg_out, stm_out) if a != b)
+        self.assertEqual(
+            mismatches,
+            0,
+            f"regular vs streaming (bs=1): {mismatches}/{len(reg_out)} turns differ",
         )
 
     def test_streaming_session_random_lengths(self):
