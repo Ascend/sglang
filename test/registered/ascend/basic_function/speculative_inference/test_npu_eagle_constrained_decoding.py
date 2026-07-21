@@ -22,6 +22,14 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 class TestEagleConstrainedDecoding(
     CustomTestCase, RegexConstrainedMixin, JSONConstrainedMixin
 ):
+    """Testcase: EAGLE3 spec-decoding constrained decoding test (non-overlap).
+    Validates correctness of speculative decoding with grammar-based constraints
+    under non-overlapped scheduling. Covers regex and JSON constrained generation.
+
+    [Test Category] Functionality
+    [Test Target] EAGLE3 spec-decoding with xgrammar backend (non-overlap schedule)
+    """
+
     max_running_requests = 8
     attention_backend = "ascend"
     spec_steps = 5
@@ -84,6 +92,14 @@ class TestEagleConstrainedDecoding(
 
 
 class TestEagleConstrainedDecodingV2(TestEagleConstrainedDecoding):
+    """Testcase: EAGLE3 spec-decoding constrained decoding test (overlap).
+    Validates correctness of speculative decoding with grammar-based constraints
+    under overlapped scheduling (Spec v2). Covers regex and JSON constrained generation.
+
+    [Test Category] Functionality
+    [Test Target] EAGLE3 spec-decoding with xgrammar backend (overlap schedule)
+    """
+
     disable_overlap = False
 
 

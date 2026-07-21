@@ -27,7 +27,13 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestEagleLlama2Retract(Eagle3Base, SpecAccuracyKit, SpecFeatureKit):
-    """Retract under a small KV budget; must not leak."""
+    """Testcase: EAGLE3 retract under tight KV cache budget.
+    Validates memory safety when requests are retracted due to limited KV space.
+    Ensures no memory leaks or corruption under high memory pressure.
+
+    [Test Category] Stability
+    [Test Target] EAGLE3 KV cache retract with strict memory checking
+    """
 
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
     draft_model = EAGLE3_LLAMA3_1_INSTRUCT_8B_WEIGHTS_PATH
@@ -45,6 +51,14 @@ class TestEagleLlama2Retract(Eagle3Base, SpecAccuracyKit, SpecFeatureKit):
 
 
 class TestEagleLlama2AbortAll(Eagle3Base, AbortAllMixin):
+    """Testcase: EAGLE3 abort-all storm under heavy speculation load.
+    Stresses request cancellation paths while speculative decoding is active.
+    Verifies clean shutdown and resource cleanup during abort storms.
+
+    [Test Category] Stability
+    [Test Target] EAGLE3 abort-all handling with strict memory checking
+    """
+
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
     draft_model = EAGLE3_LLAMA3_1_INSTRUCT_8B_WEIGHTS_PATH
     attention_backend = "ascend"
@@ -57,6 +71,14 @@ class TestEagleLlama2AbortAll(Eagle3Base, AbortAllMixin):
 
 
 class TestEagleLlama2WaitingTimeout(Eagle3Base, WaitingTimeoutMixin):
+    """Testcase: EAGLE3 waiting queue timeout with minimal concurrency.
+    Validates request timeout behavior while waiting in the scheduling queue.
+    Ensures timed-out requests are safely discarded without affecting others.
+
+    [Test Category] Robustness
+    [Test Target] EAGLE3 waiting-timeout handling under single-request load
+    """
+
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
     draft_model = EAGLE3_LLAMA3_1_INSTRUCT_8B_WEIGHTS_PATH
     attention_backend = "ascend"
@@ -72,7 +94,15 @@ class TestEagleLlama2WaitingTimeout(Eagle3Base, WaitingTimeoutMixin):
 
 
 class TestEagleLlama2RunningTimeout(Eagle3Base, RunningTimeoutTwoWaveMixin):
-    # Regression: https://github.com/sgl-project/sglang/pull/18760
+    """Testcase: EAGLE3 running-timeout regression (two-wave pattern).
+    Regression test for https://github.com/sgl-project/sglang/pull/18760.
+    Validates correct timeout handling for long-running speculative requests
+    under concurrent load with strict memory checks enabled.
+
+    [Test Category] Regression
+    [Test Target] EAGLE3 running-timeout handling (multi-wave execution)
+    """
+
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
     draft_model = EAGLE3_LLAMA3_1_INSTRUCT_8B_WEIGHTS_PATH
     attention_backend = "ascend"
