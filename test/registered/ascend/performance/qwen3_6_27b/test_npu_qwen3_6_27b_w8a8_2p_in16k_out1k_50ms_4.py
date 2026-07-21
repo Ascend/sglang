@@ -48,7 +48,7 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     "--max-running-requests",
     36,
     "--max-mamba-cache-size",
-    36,
+    72,
     "--mem-fraction-static",
     0.70,
     "--cuda-graph-bs",
