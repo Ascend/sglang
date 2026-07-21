@@ -116,7 +116,9 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
                 f'{metrics["score"]=:.3f}\n'
                 f"{avg_spec_accept_length=:.2f}\n"
             )
-            self.assertGreater(metrics["score"], 0.69)
+            # CI observed (round 15, Qwen3-30B-A3B + Tengyunw eagle3 draft):
+            # score=0.925. Threshold set with ~8% safety margin below observed floor.
+            self.assertGreater(metrics["score"], 0.85)
             if avg_spec_accept_length is not None:
                 # NPU speculative-eagle-topk is fixed to 1 (NPU ascend has fixed page_size),
                 # so avg_spec_accept_length is lower than GPU; only require > 1.0.
