@@ -113,7 +113,7 @@ if [ -n "${COVERAGE_FILE}" ]; then
     python -c "import coverage" 2>/dev/null || pip install coverage
     # Enable subprocess coverage tracking via .pth file and COVERAGE_PROCESS_START
     SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
-    echo "import numpy; import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
+    echo "import numpy; import torch; import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
     rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
     export COVERAGE_RCFILE="/data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc"
     export COVERAGE_PROCESS_START="/data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc"
