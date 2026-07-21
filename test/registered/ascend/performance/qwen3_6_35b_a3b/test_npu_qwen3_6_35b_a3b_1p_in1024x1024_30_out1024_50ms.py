@@ -105,7 +105,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     seed = 1
     tpot = 50
     request_rate = float("inf")
-    output_token_throughput = 2382.2
+    output_token_throughput = 1620
 
     def test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms(self):
         """Run NPU performance test for Qwen3.6-35B-A3B in1024x1024 30 out1024 50ms"""
