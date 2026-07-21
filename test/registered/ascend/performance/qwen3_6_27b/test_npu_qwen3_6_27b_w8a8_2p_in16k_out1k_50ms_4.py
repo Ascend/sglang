@@ -46,9 +46,9 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    36,
+    33,
     "--max-mamba-cache-size",
-    72,
+    66,
     "--mem-fraction-static",
     0.70,
     "--cuda-graph-bs",
@@ -65,6 +65,7 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     18,
     20,
     21,
+    22,
     23,
     24,
     25,
@@ -73,9 +74,10 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     28,
     29,
     30,
+    31,
     32,
-    34,
-    36,
+    33,
+    # 36,
     # 38,
     "--quantization",
     "modelslim",
@@ -107,9 +109,9 @@ class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     other_args = QWEN3_6_27B_16K_1k_OTHER_ARGS
     envs = QWEN3_6_27B_16K_1k_ENVS
     dataset_name = "random"
-    max_concurrency = 36
+    max_concurrency = 33
     warmup_requests = 4
-    num_prompts = 36
+    num_prompts = 33
     input_len = 16000
     output_len = 1000
     random_range_ratio = 1
