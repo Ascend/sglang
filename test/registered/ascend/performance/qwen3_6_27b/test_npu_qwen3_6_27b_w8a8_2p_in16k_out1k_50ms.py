@@ -54,12 +54,17 @@ QWEN3_6_27B_16K_1k_OTHER_ARGS = [
     "--cuda-graph-bs",
     1,
     2,
+    3,
     4,
     6,
     8,
+    10,
     12,
+    14,
     16,
+    18,
     20,
+    21,
     23,
     24,
     25,
@@ -99,7 +104,7 @@ class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     envs = QWEN3_6_27B_16K_1k_ENVS
     dataset_name = "random"
     max_concurrency = 29
-    # warmup_requests = 4
+    warmup_requests = 4
     num_prompts = 116
     input_len = 16000
     output_len = 1000
