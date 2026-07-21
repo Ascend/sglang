@@ -527,8 +527,6 @@ jobs:
       ]
     if: always()
     runs-on: linux-aarch64-a3-2
-    container:
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
