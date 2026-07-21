@@ -216,27 +216,6 @@ class TestGLM46VMultimodalCurl(CustomTestCase):
         self.assertGreater(len(content), 0, "Empty response for multi-image")
         print(f"  [multi_image] response: {content}")
 
-    # def test_text_only_chat_completion(self):
-    #     """Verify text-only request still works (no image)."""
-    #     payload = {
-    #         "model": "default",
-    #         "messages": [{"role": "user", "content": "Say hello in one word."}],
-    #         "max_tokens": 128,
-    #         "temperature": 0,
-    #     }
-    #
-    #     result = _curl_post(self.base_url, "/v1/chat/completions", payload)
-    #     output = result.stdout.strip()
-    #
-    #     lines = output.rsplit("\n", 1)
-    #     self.assertEqual(lines[-1], "200", f"Expected 200, got response:\n{output}")
-    #
-    #     data = json.loads(lines[0])
-    #     self.assertIn("choices", data)
-    #     content = data["choices"][0]["message"]["content"]
-    #     self.assertGreater(len(content), 0, "Empty response for text-only")
-    #     print(f"  [text_only] response: {content}")
-
     def test_streaming_chat_completion(self):
         """Verify streaming multimodal request via curl."""
         image_b64 = _create_test_image_b64(320, 240, "green")
