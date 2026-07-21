@@ -167,7 +167,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           cp ~/.cache/modelscope/hub/datasets/hellaswag_val.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
-          echo "import numpy; import torch; import torchvision; import triton; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
           rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
           mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
           cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
@@ -248,7 +248,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
-          echo "import numpy; import torch; import torchvision; import triton; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
           rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
           mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
           cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
@@ -326,7 +326,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
-          echo "import numpy; import torch; import torchvision; import triton; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
           rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
           mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
           cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
@@ -401,7 +401,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
-          echo "import numpy; import torch; import torchvision; import triton; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
           rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
           mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
           cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
@@ -476,7 +476,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           python -c "import coverage" 2>/dev/null || pip install coverage
-          echo "import numpy; import torch; import torchvision; import triton; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
           rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
           mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
           cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
