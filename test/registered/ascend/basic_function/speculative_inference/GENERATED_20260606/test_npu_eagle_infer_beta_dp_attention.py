@@ -100,11 +100,7 @@ class TestNpuEagleDPAttnServerSmall(CustomTestCase):
 
     def test_a_gsm8k(self):
         metrics, avg_spec_accept_length = _run_gsm8k(self.base_url, self.model)
-        # NPU speculative-eagle-topk is fixed to 1 (NPU ascend has fixed page_size),
-        # so accuracy and avg_spec_accept_length are lower than GPU.
-        # CI observed (rounds 10/11/12): score=0.945-0.955, avg_spec_accept_length=1.98.
-        # Thresholds set with ~10% safety margin below observed floor to catch regressions.
-        self.assertGreater(metrics["score"], 0.85)
+        self.assertGreater(metrics["score"], 0.94)
         self.assertGreater(avg_spec_accept_length, 1.9)
 
 
