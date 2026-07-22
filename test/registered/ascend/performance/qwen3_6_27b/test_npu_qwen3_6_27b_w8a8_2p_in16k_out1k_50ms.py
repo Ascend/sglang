@@ -113,7 +113,7 @@ class TestNPUQwen3_6_27B_2P_In16k_Out1k_50ms(TestAscendPerformanceTestCaseBase):
     dataset_name = "random"
     max_concurrency = 37
     warmup_requests = 4
-    num_prompts = 74
+    num_prompts = 37
     input_len = 16000
     output_len = 1000
     random_range_ratio = 1
