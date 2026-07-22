@@ -26,7 +26,7 @@ class TestAFM(GSM8KAscendMixin, CustomTestCase):
         "--kv-cache-dtype",
         "auto",
         "--dllm-algorithm",
-        "JointThreshold",
+        "LowConfidence",
         "--tp-size",
         8,
         "--max-running-requests",
