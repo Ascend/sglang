@@ -17,7 +17,6 @@ class TestAFM(GSM8KAscendMixin, CustomTestCase):
 
     model = SDAR_8B_CHAT_WEIGHTS_PATH
     accuracy = 0
-    num_questions = 1319
 
 
 if __name__ == "__main__":

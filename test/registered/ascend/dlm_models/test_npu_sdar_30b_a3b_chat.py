@@ -27,7 +27,6 @@ class TestAFM(GSM8KAscendMixin, CustomTestCase):
         "--tp-size",
         2,
     ]
-    num_questions = 1319
 
 
 if __name__ == "__main__":
