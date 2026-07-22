@@ -40,7 +40,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/ascend/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/ascend/basic_function/api_related/test_npu_api_related_asr_max.py"
           )
 
           for test_case in "${test_cases[@]}"; do
@@ -49,7 +49,8 @@ jobs:
               exit 1
             fi
           done
-
+          
+          pip install websocket-client websockets uvicorn==0.49.0
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
