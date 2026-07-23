@@ -83,7 +83,7 @@ class TestNPUGLM4_7_FLASH_GPQA(TestAscendAccuracyTestCaseBase):
     }
     eval_batch_size = 8
 
-    def test_aimegpqa(self):
+    def test_gpqa(self):
         self.run_accuracy()
 
 
