@@ -9,14 +9,14 @@ register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 
 class TestAFM(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the inclusionAI/LLaDA2.0-flash model on the GSM8K dataset is no less than 0.
+    """Testcase: Verify that the inference accuracy of the inclusionAI/LLaDA2.0-flash model on the GSM8K dataset is no less than 0.95.
 
     [Test Category] Model
     [Test Target] inclusionAI/LLaDA2.0-flash
     """
 
     model = LLADA2_0_FLASH_WEIGHTS_PATH
-    accuracy = 0
+    accuracy = 0.95
     timeout_for_server_launch = 3000
     other_args = [
         "--attention-backend",

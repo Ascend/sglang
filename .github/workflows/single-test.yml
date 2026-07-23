@@ -98,14 +98,14 @@ jobs:
             runner: linux-aarch64-a3-8
             test_case: test/registered/ascend/dlm_models/test_npu_llada2_0_flash.py
             test_type: 'function'
-#          - name: test_npu_sdar_8b_chat
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/dlm_models/test_npu_sdar_8b_chat.py
-#            test_type: 'function'
-#          - name: test_npu_sdar_30b_a3b_chat
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/dlm_models/test_npu_sdar_30b_a3b_chat.py
-#            test_type: 'function'
+          - name: test_npu_sdar_8b_chat
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/dlm_models/test_npu_sdar_8b_chat.py
+            test_type: 'function'
+          - name: test_npu_sdar_30b_a3b_chat
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/dlm_models/test_npu_sdar_30b_a3b_chat.py
+            test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
