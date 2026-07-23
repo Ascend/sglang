@@ -23,7 +23,7 @@ on:
         description: 'The a2 running docker image of the test task.'
         required: false
         type: string
-        default: ''
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260723'
       image_a3:
         description: 'The a3 running docker image of the test task.'
         required: false
@@ -86,7 +86,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a2 }}" ]; then
-            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260515" >> $GITHUB_OUTPUT
+            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260723" >> $GITHUB_OUTPUT
           else
             echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
           fi
