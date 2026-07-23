@@ -72,7 +72,7 @@ MODEL_OTHER_ARGS = [
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
-    3,
+    2,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
