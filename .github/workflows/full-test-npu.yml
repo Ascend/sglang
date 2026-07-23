@@ -934,3 +934,4 @@ jobs:
           FAIL=0
           ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
           exit $FAIL
+
