@@ -16,7 +16,7 @@ ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
 ARG PTA_URL_ARM64="https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl"
 ARG PTA_URL_AMD64="https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_x86_64.whl"
-ARG SGLANG_TAG=kvtc-rfc
+ARG SGLANG_TAG=kvtc-rfc-dev
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=2026.7.2
 
@@ -75,9 +75,7 @@ ENV LC_ALL=en_US.UTF-8
 RUN ${PIP_INSTALL} memfabric-hybrid==1.0.8
 
 ### Install memfabric-zbal
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      ${PIP_INSTALL} memfabric-zbal==1.1.1; \
-    fi
+RUN ${PIP_INSTALL} memfabric-zbal==1.2.0
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
 
@@ -94,7 +92,7 @@ RUN . /etc/environment_new && \
     (${PIP_INSTALL} triton-ascend==3.2.1.dev20260530 --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly --trusted-host triton-ascend.osinfra.cn)
 
 # Install SGLang
-RUN git clone https://github.com/michal-mielewczyk-huawei/sglang.git --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/jfckm/sglang-kvtc.git --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
