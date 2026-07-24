@@ -1,0 +1,6 @@
+{
+    "model_path": "/path/to/model",
+    "model_name": "<ModelName>",
+    "target_device": "npu",
+    "workspace_dir": "/path/to/workspace"
+}

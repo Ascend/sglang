@@ -1,0 +1,55 @@
+{
+    "status": "fix_available",
+    "diagnosis": {
+        "error_type": "parallel_config",
+        "error_category": "constraint_violation",
+        "root_cause": "TP=2, EP=4 doesn't satisfy tp_size % ep_size == 0 constraint",
+        "related_constraints": [
+            "tp_size % ep_size == 0",
+            "n_routed_experts % ep_size == 0"
+        ],
+        "context_analysis": {
+            "model_type": "MoE",
+            "n_experts": 64,
+            "current_tp": 2,
+            "current_ep": 4,
+            "device_count": 8
+        }
+    },
+    "fix": {
+        "type": "config_change",
+        "description": "Adjust parallel configuration to meet constraints",
+        "steps": [
+            {
+                "step": 1,
+                "action": "modify_launch_config",
+                "params": {
+                    "tp_size": 4,
+                    "ep_size": 4
+                },
+                "reason": "TP=4, EP=4 satisfies TP % EP == 0, and 64 experts can be divided by 4"
+            },
+            {
+                "step": 2,
+                "action": "verify_config",
+                "params": {
+                    "checks": ["tp_ep_divisible", "expert_distribution", "device_count"]
+                }
+            }
+        ],
+        "expected_outcome": "Service starts successfully with no parallel configuration errors"
+    },
+    "alternative_fixes": [
+        {
+            "type": "config_change",
+            "description": "Use TP=8, EP=8",
+            "steps": []
+        }
+    ],
+    "verification": {
+        "method": "dummy_validation",
+        "command": "python -m sglang.launch_server --model-path ... --tp 4 --ep 4 --load-format dummy",
+        "success_criteria": "Service starts successfully with no errors"
+    },
+    "next_action": "retry_deploy"
+}
