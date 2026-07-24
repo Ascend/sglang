@@ -1,0 +1,22 @@
+{
+  "$schema_version": "2.0",
+  "$description": "Input schema for precision-rca sub-agent (sglang-npu-adapter skill, Step 6.5). Filled by user/upstream before precision-rca P1 runs.",
+
+  "model_path": "/path/to/hf-format-model",
+  "server_endpoint": "http://localhost:8000",
+  "failing_prompts": [
+    "<prompt 1: a real prompt that produced wrong output on SGLang NPU>",
+    "<prompt 2>"
+  ],
+  "failing_evidence": {
+    "type": "lm_eval_diff | sample_diff | score_gap | other",
+    "details": "<natural language: what's wrong — score gap, sample bad outputs, trigger condition, etc>"
+  },
+  "failure_class": null,
+  "tolerance": {
+    "rtol": 1e-3,
+    "atol": 1e-3
+  },
+  "dtype": "bf16",
+  "allow_code_fix": true
+}
