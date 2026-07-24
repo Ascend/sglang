@@ -95,7 +95,7 @@ jobs:
 
       - name: Mark repository safe
         run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Install dependencies
         env:
@@ -148,7 +148,7 @@ jobs:
 
       - name: Mark repository safe
         run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Install dependencies
         env:
@@ -197,7 +197,7 @@ jobs:
 
       - name: Mark repository safe
         run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Install dependencies
         env:
@@ -247,7 +247,7 @@ jobs:
 
       - name: Mark repository safe
         run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Install dependencies
         env:
@@ -294,7 +294,7 @@ jobs:
 
       - name: Mark repository safe
         run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Install dependencies
         env:
@@ -352,7 +352,7 @@ jobs:
 
       - name: Mark repository safe
         run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Install dependencies
         env:
@@ -410,7 +410,7 @@ jobs:
 
       - name: Mark repository safe
         run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Install dependencies
         env:
