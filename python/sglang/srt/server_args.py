@@ -2628,6 +2628,9 @@ class ServerArgs:
             "Qwen3MoeForCausalLM",
             "Qwen3VLMoeForConditionalGeneration",
             "Qwen3NextForCausalLM",
+            "Qwen3_5ForCausalLM",
+            "Qwen3_5ForCausalLMMTP",
+            "Qwen3_5MoeForCausalLM",
             "Qwen3_5MoeForConditionalGeneration",
             "InternS2PreviewForConditionalGeneration",
             "Qwen3_5ForConditionalGeneration",
@@ -2656,6 +2659,9 @@ class ServerArgs:
 
             if model_arch in [
                 "Qwen3NextForCausalLM",
+                "Qwen3_5ForCausalLM",
+                "Qwen3_5ForCausalLMMTP",
+                "Qwen3_5MoeForCausalLM",
                 "Qwen3_5MoeForConditionalGeneration",
                 "InternS2PreviewForConditionalGeneration",
                 "Qwen3_5ForConditionalGeneration",
@@ -2796,6 +2802,8 @@ class ServerArgs:
                 "Qwen3MoeForCausalLM",
                 "Qwen3NextForCausalLM",
                 "KimiK25ForConditionalGeneration",
+                "Qwen3_5ForCausalLMMTP",
+                "Qwen3_5MoeForCausalLM",
                 "Qwen3_5MoeForConditionalGeneration",
                 "InternS2PreviewForConditionalGeneration",
                 "Qwen3_5ForConditionalGeneration",
@@ -2850,6 +2858,23 @@ class ServerArgs:
             assert (
                 not self.enable_mamba_extra_buffer()
             ), f"mamba extra_buffer is not supported for {model_arch} model"
+
+        if (
+            is_npu()
+            and self.attention_backend == "ascend"
+            and support_mamba_cache_extra_buffer
+            and not self.disable_radix_cache
+            and self.mamba_scheduler_strategy == "no_buffer"
+            and self.page_size is not None
+            and self.page_size != 1
+        ):
+            logger.warning(
+                f"{model_arch} with Ascend attention uses page_size={self.page_size}, "
+                "while the mamba no_buffer radix cache requires page_size=1. "
+                "Automatically using --mamba-scheduler-strategy extra_buffer "
+                "to keep prefix cache enabled."
+            )
+            self.mamba_scheduler_strategy = "extra_buffer"
 
         if self.enable_mamba_extra_buffer():  # extra_buffer
             if self.disable_radix_cache:
