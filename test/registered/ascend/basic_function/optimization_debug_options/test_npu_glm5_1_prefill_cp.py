@@ -23,9 +23,7 @@ from sglang.test.test_utils import (
     write_github_step_summary,
 )
 
-register_npu_ci(
-    est_time=3600, suite="full-8-npu-a3", nightly=True
-)
+register_npu_ci(est_time=3600, suite="full-8-npu-a3", nightly=True)
 
 GLM5_1_MODEL = GLM_5_1_W4A8_MODEL_PATH
 SERVER_LAUNCH_TIMEOUT = 3600
@@ -58,24 +56,37 @@ class TestGLM5_1PrefillCPInterleave(CustomTestCase):
 
         other_args = [
             "--trust-remote-code",
-            "--tp", "8",
-            "--dp", "1",
+            "--tp",
+            "8",
+            "--dp",
+            "1",
             # "--enable-prefill-cp",
             # "--cp-strategy", "interleave",
             "--enable-nsa-prefill-context-parallel",
-            "--nsa-prefill-cp-mode", "in-seq-split",
-            "--attn-cp-size", "8",
+            "--nsa-prefill-cp-mode",
+            "in-seq-split",
+            "--attn-cp-size",
+            "8",
             "--disable-radix-cache",
-            "--attention-backend", "ascend",
-            "--max-running-requests", "256",
-            "--page-size", "256",
-            "--mem-fraction-static", "0.70",
-            "--swa-full-tokens-ratio", "0.1",
-            "--chunked-prefill-size", "8192",
+            "--attention-backend",
+            "ascend",
+            "--max-running-requests",
+            "256",
+            "--page-size",
+            "256",
+            "--mem-fraction-static",
+            "0.70",
+            "--swa-full-tokens-ratio",
+            "0.1",
+            "--chunked-prefill-size",
+            "8192",
             "--disable-shared-experts-fusion",
-            "--tool-call-parser", "glm47",
-            "--reasoning-parser", "glm45",
-            "--quantization", "modelslim",
+            "--tool-call-parser",
+            "glm47",
+            "--reasoning-parser",
+            "glm45",
+            "--quantization",
+            "modelslim",
         ]
 
         cls.process = popen_launch_server(

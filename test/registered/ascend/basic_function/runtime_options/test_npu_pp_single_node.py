@@ -7,6 +7,10 @@ import requests
 from sglang.bench_one_batch_server import BenchArgs as OneBatchBenchArgs
 from sglang.srt.server_args import ServerArgs
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.test_ascend_utils import (
+    DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -15,10 +19,6 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
     run_bench_one_batch_server,
-)
-from sglang.test.ascend.test_ascend_utils import (
-    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
-    DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
 )
 
 register_npu_ci(est_time=10800, suite="full-16-npu-a3", nightly=True)
@@ -30,6 +30,7 @@ class TestPPAccuracy(unittest.TestCase):
     [Test Category] Parameter
     [Test Target] --pp-size; --tp-size
     """
+
     @classmethod
     def setUpClass(cls):
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
@@ -105,6 +106,7 @@ class TestDPAttentionDP2PP2(CustomTestCase):
     [Test Category] Parameter
     [Test Target] --pp-size; --tp-size; --dp
     """
+
     @classmethod
     def setUpClass(cls):
         cls.model = DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH
@@ -158,6 +160,7 @@ class TestPPMixedChunk(CustomTestCase):
     [Test Category] Parameter
     [Test Target] --pp-size; --enable-mixed-chunk
     """
+
     @classmethod
     def setUpClass(cls):
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
@@ -209,6 +212,7 @@ class TestFixedBugs(unittest.TestCase):
     [Test Category] Parameter
     [Test Target] --pp-size; --chunked-prefill-size
     """
+
     def test_chunked_prefill_with_small_bs(self):
         model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         server_args = ServerArgs(model_path=model)

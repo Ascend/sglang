@@ -163,9 +163,7 @@ class TestPreciseEmbeddingInterpolation(CustomTestCase):
 
         diffs = [
             i
-            for i, (lp_en, lp_def) in enumerate(
-                zip(logprobs_enabled, logprobs_default)
-            )
+            for i, (lp_en, lp_def) in enumerate(zip(logprobs_enabled, logprobs_default))
             if abs(lp_en - lp_def) > 1e-6
         ]
 

@@ -70,7 +70,9 @@ class TestDisaggregationBase(CustomTestCase):
         cls.wait_server_ready(cls.lb_url + "/health")
 
     @classmethod
-    def wait_server_ready(cls, url, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH, process=None):
+    def wait_server_ready(
+        cls, url, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH, process=None
+    ):
         start_time = time.perf_counter()
         while True:
             if process is not None and process.poll() is not None:
