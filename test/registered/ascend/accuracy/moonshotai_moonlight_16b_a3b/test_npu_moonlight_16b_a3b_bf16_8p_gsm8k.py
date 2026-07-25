@@ -41,8 +41,6 @@ MODEL_OTHER_ARGS = [
     "ascend",
     "--device",
     "npu",
-    "--quantization",
-    "modelslim",
     "--watchdog-timeout",
     "9000",
     "--cuda-graph-bs",

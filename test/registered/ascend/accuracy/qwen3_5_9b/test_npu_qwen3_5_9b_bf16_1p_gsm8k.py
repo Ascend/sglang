@@ -45,7 +45,7 @@ QWEN3_5_9B_OTHER_ARGS = [
     "--chunked-prefill-size",
     4096,
     "--max-prefill-tokens",
-    280000,
+    40000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--mem-fraction-static",
