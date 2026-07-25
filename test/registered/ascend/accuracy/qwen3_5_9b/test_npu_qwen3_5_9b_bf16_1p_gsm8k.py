@@ -68,7 +68,7 @@ class TestNPUQwen3_5_9B_GSM8K(TestAscendAccuracyTestCaseBase):
     datasets = ["gsm8k"]
     few_shot_num = 5
     generation_config = {
-        "max_tokens": 40000,
+        "max_tokens": 8192,
         "temperature": 0.0,
     }
     eval_batch_size = 64
