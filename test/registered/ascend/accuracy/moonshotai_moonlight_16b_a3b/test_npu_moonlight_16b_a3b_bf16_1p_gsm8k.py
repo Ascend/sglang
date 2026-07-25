@@ -62,7 +62,7 @@ class TestNPUMoonlight16B_A3B_GSM8K(TestAscendAccuracyTestCaseBase):
     accuracy = 0.8
     datasets = ["gsm8k"]
     few_shot_num = 5
-    generation_config = {"max_tokens": 4096, "temperature": 1.0}
+    generation_config = {"max_tokens": 7168, "temperature": 1.0}
     eval_batch_size = 64
 
     def test_gsm8k(self):
