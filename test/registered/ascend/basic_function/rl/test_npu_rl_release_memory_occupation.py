@@ -38,13 +38,13 @@ register_npu_ci(
     disabled="Depends on the NPU-customized version of torch_memory_saver.",
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-    force=True,
-)
+_LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+_handler = logging.StreamHandler()
+_handler.setFormatter(logging.Formatter(_LOG_FMT))
+logger.addHandler(_handler)
+logger.propagate = False
 
 # Work around Python 3.11 forkserver × aarch64 × torch_npu signal handler
 multiprocessing.set_start_method("spawn", force=True)
@@ -491,7 +491,13 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             logger.info(f"[GDN] release: {mem_before:.0f}→{mem_after:.0f} MB")
 
             engine.resume_memory_occupation()
-            logger.info(f"[GDN] resume: {_npu_mem_used_all_mb():.0f} MB")
+            mem_resume = _wait_mem_increased(
+                mem_after, _npu_mem_used_all_mb, _MIN_DELTA_MB_GDN
+            )
+            _assert_mem_increased(
+                mem_after, mem_resume, "gdn-resume", _MIN_DELTA_MB_GDN
+            )
+            logger.info(f"[GDN] resume: {mem_resume:.0f} MB")
 
             engine.update_weights_from_disk(QWEN3_5_9B_WEIGHTS_PATH)
             torch.npu.empty_cache()
