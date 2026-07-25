@@ -36,11 +36,11 @@ OPENMATH_PARTS = 10
 KVTC_DATASET_CONFIG = {
     "openmath": {
         "paths": KVTC_DATASETS_PATH / "openmath_selected_problems.parquet",
-        "prompt_column": "problem",
+        "prompt_columns": ["problem", "solution"],
     },
     "fineweb": {
         "paths": KVTC_DATASETS_PATH / "fineweb_selected_problems.parquet",
-        "prompt_column": "text",
+        "prompt_columns": ["text"],
     },
 }
 
@@ -52,7 +52,7 @@ KVTC_CALIBRATION_PARAMS = {
 
 class _AscendKvtcTestCaseBase:
     kvtc_dataset_config = KVTC_DATASET_CONFIG
-    kvtc_client_concurrency = 16
+    kvtc_client_concurrency = 4
     kvtc_limit_calibration = 0
 
     kvtc_calibration_params = KVTC_CALIBRATION_PARAMS
@@ -168,6 +168,7 @@ class _AscendKvtcTestCaseBase:
                         model=str(cls.model),
                         messages=[{"role": "user", "content": prompt}],
                         temperature=0,
+                        max_completion_tokens=16*1024,
                     )
                 except Exception:
                     logger.error(
@@ -305,6 +306,8 @@ class _AscendKvtcTestCaseBase:
                     str(cls.kvtc_calibration_params["N"]),
                     "--niter",
                     str(cls.kvtc_calibration_params["niter"]),
+                    "--sampling-policy",
+                    "relaxed",
                 ],
                 check=True,
                 capture_output=True,
@@ -393,21 +396,17 @@ class _AscendKvtcTestCaseBase:
     def load_kvtc_dataset(cls, dataset_name: str):
         logger.info(f"Loading KVTC calibration dataset: {dataset_name}...")
 
-        return pd.read_parquet(cls.kvtc_dataset_config[dataset_name]["paths"])
+        return pd.read_parquet(
+                cls.kvtc_dataset_config[dataset_name]["paths"],
+                columns=cls.kvtc_dataset_config[dataset_name]["prompt_columns"],
+                )
 
 
     @classmethod
     def get_kvtc_prompts(cls, dataset_name: str):
-        prompt_column = cls.kvtc_dataset_config[dataset_name]["prompt_column"]
         dataset = cls.load_kvtc_dataset(dataset_name)
 
-        if prompt_column not in dataset.columns:
-            raise ValueError(
-                f"Dataset {dataset_name} does not contain prompt column "
-                f"{prompt_column!r}; available columns: {list(dataset.columns)}"
-            )
-
-        prompts = dataset[prompt_column]
+        prompts = dataset.astype(str).agg(" ".join, axis=1)
 
         logger.info(f"Found {len(prompts)} calibration prompts for {dataset_name}")
 
