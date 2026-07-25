@@ -41,20 +41,20 @@ QWEN3_5_9B_OTHER_ARGS = [
     "ascend",
     "--device",
     "npu",
+    "--enable-dp-attention",
     "--chunked-prefill-size",
     4096,
     "--max-prefill-tokens",
-    40000,
+    280000,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--mem-fraction-static",
-    0.8,
+    0.7,
     "--cuda-graph-bs",
-    1,
-    2,
-    4,
-    8,
     16,
+    "--enable-multimodal",
+    "--mm-attention-backend",
+    "ascend_attn",
     "--dtype",
     "bfloat16",
 ]
@@ -69,7 +69,7 @@ class TestNPUQwen3_5_9B_GSM8K(TestAscendAccuracyTestCaseBase):
     few_shot_num = 5
     generation_config = {
         "max_tokens": 8192,
-        "temperature": 0.0,
+        "temperature": 0.6,
     }
     eval_batch_size = 64
 
