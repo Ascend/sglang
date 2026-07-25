@@ -70,7 +70,15 @@ class TestNPUQwen3_VL_8B_GSM8K(TestAscendAccuracyTestCaseBase):
     accuracy = 0.77
     datasets = ["gsm8k"]
     few_shot_num = 5
-    generation_config = {"max_tokens": 512, "temperature": 0.0}
+    generation_config = {
+        "max_tokens": 32768,
+        "temperature": 1.0,
+        "top_p": 1.0,
+        "top_k": 40,
+        "repetition_penalty": 1.0,
+        "presence_penalty": 2.0,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
+    }
     eval_batch_size = 64
 
     def test_gsm8k(self):

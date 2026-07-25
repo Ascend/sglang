@@ -62,7 +62,7 @@ class TestNPUQwen3VL_30B_A3B_Thinking_1P_GSM8K(TestAscendAccuracyTestCaseBase):
     accuracy = 0.84
     datasets = ["gsm8k"]
     few_shot_num = 5
-    generation_config = {"max_tokens": 512, "temperature": 0.0}
+    generation_config = {"max_tokens": 65536}
     eval_batch_size = 64
 
     def test_gsm8k(self):
