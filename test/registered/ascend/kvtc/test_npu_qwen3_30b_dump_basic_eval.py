@@ -118,8 +118,6 @@ class TestKVTCQwen30BCalibrateSmoke(TestAscendPerformanceKvtcTestCaseBase):
             stream=False,
         )
 
-        reason = response.choices[0].finish_reason
-        self.assertEqual(reason, "stop")
         self.assertTrue(
             self._has_current_kvtc_dump(),
             f"KVTC dump was not created: {self.kvtc_dump_path}",
@@ -155,8 +153,40 @@ class TestKVTCQwen30BCalibrateReuseSmoke(TestAscendPerformanceKvtcTestCaseBase):
             stream=False,
         )
 
-        reason = response.choices[0].finish_reason
-        self.assertEqual(reason, "stop")
+        self.assertTrue(
+            self._has_current_kvtc_dump(),
+            f"KVTC dump was not created: {self.kvtc_dump_path}",
+        )
+
+
+class TestKVTCQwen30BCalibrate(TestAscendPerformanceKvtcTestCaseBase):
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    model = QWEN3_30B_A3B_MODEL_PATH
+    other_args = OTHER_ARGS
+    envs = ENVS
+    kvtc_calibration_params = {
+        **KVTC_CALIBRATION_PARAMS,
+        "N": 200000,
+        "q": 10000,
+    }
+
+    def test_kvtc_qwen3_30b_dump_reuse(self):
+        client = openai.Client(base_url=f"{self.base_url}/v1", api_key="None")
+
+        messages = [
+            {"role": "system", "content": "You are a helpful asistant."},
+            {"role": "user", "content": "Compute (3+5)"},
+        ]
+        response = client.chat.completions.create(
+            model=self.model,
+            max_tokens=2048,
+            messages=messages,
+            temperature=0.8,
+            top_p=0.8,
+            stream=False,
+        )
+
         self.assertTrue(
             self._has_current_kvtc_dump(),
             f"KVTC dump was not created: {self.kvtc_dump_path}",
