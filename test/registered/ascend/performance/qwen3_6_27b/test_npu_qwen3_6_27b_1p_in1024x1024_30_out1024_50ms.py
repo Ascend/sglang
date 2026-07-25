@@ -80,7 +80,7 @@ QWEN3_6_27B_1024_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
-    "--mm-enable-dp-encoder",
+    # "--mm-enable-dp-encoder",
     "--reasoning-parser",
     "qwen3",
     "--tool-call-parser",
