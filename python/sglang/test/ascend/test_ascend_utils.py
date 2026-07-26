@@ -47,6 +47,8 @@ HF_MODEL_WEIGHTS_DIR = "/root/.cache/huggingface/hub/"
 IMAGES_DIR = "/root/.cache/modelscope/hub/datasets/images/"
 VIDEO_DIR = "/root/.cache/modelscope/hub/datasets/video/"
 WAV_PATH = "/root/.cache/modelscope/hub/datasets/wav/asr_en.wav"
+AUDIOS_DIR = "/root/.cache/modelscope/hub/datasets/audios/"
+DATASETS_DIR = "/root/.cache/modelscope/hub/datasets/"
 
 # LLM model weights path
 AFM_4_5B_BASE_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "arcee-ai/AFM-4.5B-Base")
@@ -166,7 +168,6 @@ QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen2.5-7B-Instruct"
 )
 QWEN3_0_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-0.6B")
-QWEN3_0_6B_ASR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-0.6B")
 QWEN3_5_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-27B")
 QWEN3_6_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-35B-A3B")
 QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PATH = os.path.join(
@@ -403,16 +404,36 @@ QWEN3_VL_30B_A3B_THINKING_MODEL_PATH = os.path.join(
 QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Thinking"
 )
+
+GLM_4_6V_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/GLM-4.6V")
+QWEN3_RERANKER_8B_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Reranker-8B"
+)
+QWEN3_VL_RERANKER_2B_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-Reranker-2B"
+)
+QWEN3_ASR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-1.7B")
+QWEN3_OMNI_30B_A3B_INSTRUCT_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct"
+)
+
 # Images path
 IMAGES_EXAMPLE_PATH = os.path.join(IMAGES_DIR, "example_image.png")
 IMAGES_023_PATH = os.path.join(IMAGES_DIR, "023.jpg")
 IMAGES_MAN_PATH = os.path.join(IMAGES_DIR, "man.png")
 IMAGES_LOGO_PATH = os.path.join(IMAGES_DIR, "logo.png")
 VIDEO_JOBS_PATH = os.path.join(VIDEO_DIR, "jobs.mp4")
+AUDIOS_BIRD_PATH = os.path.join(AUDIOS_DIR, "bird.mp3")
+AUDIOS_TRUMP_PATH = os.path.join(AUDIOS_DIR, "trump.mp3")
 INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
     IMAGES_DIR, "invoice_with_barcode_logo.jpeg"
 )
 # fmt: on
+
+# audio datasets
+AUDIO_DATASETS_LIBRISPEECH_ASR_PATH = os.path.join(
+    DATASETS_DIR, "openslr/librispeech_asr"
+)
 
 # Other
 DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/ascend/basic_function/parameter/deepseek_coder.json"
