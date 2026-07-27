@@ -55,6 +55,8 @@ spec:
           value: "{{ metrics_data_file }}"
         - name: RUN_ID
           value: "{{ run_id }}"
+        - name: WORKFLOW_TYPE
+          value: "{{ workflow_type }}"
         - name: SGLANG_IS_IN_CI
           value: "{{ sglang_is_in_ci }}"
         command: ["/bin/bash", "-c"]
@@ -158,6 +160,8 @@ spec:
           value: "{{ metrics_data_file }}"
         - name: RUN_ID
           value: "{{ run_id }}"
+        - name: WORKFLOW_TYPE
+          value: "{{ workflow_type }}"
         - name: SGLANG_IS_IN_CI
           value: "{{ sglang_is_in_ci }}"
         command: ["/bin/bash", "-c"]
@@ -260,6 +264,8 @@ spec:
           value: "{{ metrics_data_file }}"
         - name: RUN_ID
           value: "{{ run_id }}"
+        - name: WORKFLOW_TYPE
+          value: "{{ workflow_type }}"
         - name: SGLANG_IS_IN_CI
           value: "{{ sglang_is_in_ci }}"
         command: ["/bin/bash", "-c"]

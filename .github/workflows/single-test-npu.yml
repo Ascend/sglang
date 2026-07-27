@@ -75,8 +75,9 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
 
-          current_date=$(date +%Y%m%d)
-          log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
+          workflow_type="single"
+          run_id=${RUN_ID:-${{ github.run_id }}}
+          log_path="/root/.cache/tests/logs/log/${workflow_type}/${run_id}/${HOSTNAME}"
           rm -rf ${log_path}
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"

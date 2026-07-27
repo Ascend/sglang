@@ -62,6 +62,8 @@ spec:
             value: "{{ sglang_is_in_ci }}"
           - name: RUN_ID
             value: "{{ run_id }}"
+          - name: WORKFLOW_TYPE
+            value: "{{ workflow_type }}"
           - name: TRANSFORMERS_VERSION_FOR_SGLANG
             value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]
@@ -176,6 +178,8 @@ spec:
             value: "{{ sglang_is_in_ci }}"
           - name: RUN_ID
             value: "{{ run_id }}"
+          - name: WORKFLOW_TYPE
+            value: "{{ workflow_type }}"
           - name: TRANSFORMERS_VERSION_FOR_SGLANG
             value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]
@@ -280,6 +284,8 @@ spec:
             value: "{{ metrics_data_file }}"
           - name: RUN_ID
             value: "{{ run_id }}"
+          - name: WORKFLOW_TYPE
+            value: "{{ workflow_type }}"
           - name: KUBECONFIG
             value: "{{ kube_config }}"
           - name: NAMESPACE
