@@ -139,11 +139,15 @@ class TestCudaGraphBs(CustomTestCase):
                 pass
 
         decode_bs, prefill_bs = _parse_cg_capture(log_text)
-        self.assertIsNotNone(decode_bs, "Log should contain decode phase CG capture info")
+        self.assertIsNotNone(
+            decode_bs, "Log should contain decode phase CG capture info"
+        )
         self.assertEqual(max(decode_bs), 8)
         self.assertTrue(all(b <= 8 for b in decode_bs))
 
-        self.assertIsNotNone(prefill_bs, "Log should contain prefill phase CG capture info")
+        self.assertIsNotNone(
+            prefill_bs, "Log should contain prefill phase CG capture info"
+        )
         self.assertEqual(max(prefill_bs), 256)
         self.assertTrue(all(b <= 256 for b in prefill_bs))
 
@@ -200,7 +204,9 @@ class TestCudaGraphBs(CustomTestCase):
 
         decode_bs, _ = _parse_cg_capture(log_text)
         self.assertEqual(decode_bs, [1, 2, 8])
-        self.assertEqual(max(decode_bs), 8, "Max batch size shall be overridden to 8 instead of 4")
+        self.assertEqual(
+            max(decode_bs), 8, "Max batch size shall be overridden to 8 instead of 4"
+        )
 
     # ---- Decode only: Sequential batch sizes generated when padding disabled ----
     def test_decode_disable_padding_sequential_bs(self):
