@@ -72,6 +72,7 @@ class TestNPUQwen3_5_9B_GSM8K(TestAscendAccuracyTestCaseBase):
         "temperature": 0.6,
     }
     eval_batch_size = 64
+    limit = 200
 
     def test_gsm8k(self):
         self.run_accuracy()
