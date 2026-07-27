@@ -43,9 +43,12 @@ def _parse_cg_capture(log_text: str):
     for line in log_text.splitlines():
         if m := _DECODE_RE.search(line):
             decode_bs = [int(x.strip()) for x in m.group(1).split(",")]
+            print(f"[CG parse] decode  | {line.strip()}")
         if m := _PREFILL_RE.search(line):
             prefill_bs = [int(x.strip()) for x in m.group(1).split(",")]
-    print(f"decode_bs={decode_bs} prefill_bs={prefill_bs}")
+            print(f"[CG parse] prefill | {line.strip()}")
+    if decode_bs is None and prefill_bs is None:
+        print("[CG parse] WARNING: no matching CG begin line found in log")
     return decode_bs, prefill_bs
 
 
