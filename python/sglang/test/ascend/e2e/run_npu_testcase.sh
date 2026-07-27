@@ -114,10 +114,10 @@ fi
 echo "Running test case ${test_case}"
 tc_name=${test_case##*/}
 tc_name=${tc_name%.*}
-current_date=$(date +%Y%m%d)
-log_path="/root/sglang/debug/logs/log/${current_date}/${tc_name}/${HOSTNAME}"
+run_id="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
+log_path="/root/sglang/debug/logs/log/${run_id}/${tc_name}/${HOSTNAME}"
 if [ "${SGLANG_IS_IN_CI}" = "true" ] || [ "${SGLANG_IS_IN_CI}" = "True" ];then
-    log_path="/root/.cache/tests/logs/log/${current_date}/${tc_name}/${HOSTNAME}"
+    log_path="/root/.cache/tests/logs/log/${run_id}/${tc_name}/${HOSTNAME}"
 fi
 rm -rf "${log_path}"
 mkdir -p "${log_path}"
