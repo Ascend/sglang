@@ -98,6 +98,10 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/basic_function/lora/test_npu_lora_qwen3.py
             test_type: 'function'
+          - name: test_npu_lora_qwen3_bak
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/basic_function/lora/test_npu_lora_qwen3_bak.py
+            test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
