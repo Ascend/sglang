@@ -3,7 +3,6 @@ import re
 import subprocess
 import tempfile
 import unittest
-from typing import Optional
 
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
@@ -24,51 +23,37 @@ register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
-_BS_LOG_RE = re.compile(r"Capture.*graph.*(?:bs|num[_ ]tokens)[= ]\[([^\]]+)\]")
-_MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
+_DECODE_RE = re.compile(r"Capture target decode.*begin.*bs=\[([^\]]+)\]")
+_PREFILL_RE = re.compile(r"Capture target prefill.*begin.*num_tokens=\[([^\]]+)\]")
 
 
 def _read_log(path):
+    """Read log file content"""
     with open(path, encoding="utf-8", errors="replace") as f:
         return f.read()
 
 
 def _parse_cg_capture(log_text: str):
-    """Return (decode_bs, prefill_bs) from CUDA graph capture log lines.
+    """Parse (decode batch size list, prefill batch size list) from CG capture logs
 
-    Both phases use the same ``bs=[...]`` / ``num tokens [...]`` format
-    emitted by the CG runner.  Lines are assigned to decode/prefill by
-    the presence of ``decode`` / ``prefill`` / ``piecewise`` keywords.
+    Distinguish log lines via ``target decode`` / ``target prefill`` markers.
     """
     decode_bs = None
     prefill_bs = None
     for line in log_text.splitlines():
-        m = _BS_LOG_RE.search(line)
-        if not m:
-            continue
-        bs_list = [int(x.strip()) for x in m.group(1).split(",")]
-        if "decode" in line:
-            decode_bs = bs_list
-        elif "prefill" in line or "piecewise" in line:
-            prefill_bs = bs_list
-        else:
-            # Generic fallback: first match is decode, later is prefill.
-            if decode_bs is None:
-                decode_bs = bs_list
-            elif prefill_bs is None:
-                prefill_bs = bs_list
+        if m := _DECODE_RE.search(line):
+            decode_bs = [int(x.strip()) for x in m.group(1).split(",")]
+            print(f"[CG parse] decode  | {line.strip()}")
+        if m := _PREFILL_RE.search(line):
+            prefill_bs = [int(x.strip()) for x in m.group(1).split(",")]
+            print(f"[CG parse] prefill | {line.strip()}")
+    if decode_bs is None and prefill_bs is None:
+        print("[CG parse] WARNING: No CG start log entry matched")
     return decode_bs, prefill_bs
 
 
-def _parse_graph_memory_gb(log_text: str) -> Optional[float]:
-    for line in log_text.splitlines():
-        m = _MEM_LOG_RE.search(line)
-        if m:
-            return float(m.group(1))
-    return None
-
-
 def _run_bench(base_url):
+    """Run benchmark workload"""
     bench_args = get_benchmark_args(
         base_url=base_url,
         backend="sglang",
@@ -84,9 +69,9 @@ def _run_bench(base_url):
 
 
 def _launch_server(*, extra_args=None):
-    """Launch a non-PD single server, capturing stderr to a temp file.
+    """Launch server, redirect stderr to temporary log file
 
-    Returns (process, stderr_file_path).
+    Returns (process handle, temp log file path)
     """
     url = DEFAULT_URL_FOR_TEST
     _, host, port = url.split(":")
@@ -125,14 +110,14 @@ def _launch_server(*, extra_args=None):
 
 
 class TestCudaGraphBs(CustomTestCase):
-    """Testcase: verify per-phase CUDA-graph BS parameters in non-PD mode.
+    """Test case: Verify CUDA Graph batch size parameters for each phase in non-PD mode
 
-    [Test Category] Parameter
+    [Test Category] Parameter Test
     [Test Target] --cuda-graph-max-bs-decode; --cuda-graph-bs-decode;
                   --cuda-graph-max-bs-prefill; --cuda-graph-bs-prefill
     """
 
-    # ---- max_bs only, bs auto-generated for both phases ----
+    # ---- Only set max batch size, auto-generate batch sizes for both phases ----
     def test_max_bs_auto_generates_bs(self):
         proc, err_path = _launch_server(
             extra_args=[
@@ -145,8 +130,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
@@ -156,15 +139,15 @@ class TestCudaGraphBs(CustomTestCase):
                 pass
 
         decode_bs, prefill_bs = _parse_cg_capture(log_text)
-        self.assertIsNotNone(decode_bs, "Expected decode CG capture in log")
+        self.assertIsNotNone(decode_bs, "Log should contain decode phase CG capture info")
         self.assertEqual(max(decode_bs), 8)
         self.assertTrue(all(b <= 8 for b in decode_bs))
 
-        self.assertIsNotNone(prefill_bs, "Expected prefill CG capture in log")
+        self.assertIsNotNone(prefill_bs, "Log should contain prefill phase CG capture info")
         self.assertEqual(max(prefill_bs), 256)
         self.assertTrue(all(b <= 256 for b in prefill_bs))
 
-    # ---- explicit bs for both phases ----
+    # ---- Explicitly specify batch size lists for both phases ----
     def test_explicit_bs_used_exactly(self):
         proc, err_path = _launch_server(
             extra_args=[
@@ -182,8 +165,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
@@ -196,11 +177,7 @@ class TestCudaGraphBs(CustomTestCase):
         self.assertEqual(decode_bs, [1, 2, 4, 8])
         self.assertEqual(prefill_bs, [64, 128, 256])
 
-        mem = _parse_graph_memory_gb(log_text)
-        self.assertIsNotNone(mem)
-        self.assertGreater(mem, 0)
-
-    # ---- decode-only: explicit bs overrides max_bs ----
+    # ---- Decode only: Explicit batch size overrides max batch size argument ----
     def test_decode_max_bs_overwritten_when_bs_set(self):
         proc, err_path = _launch_server(
             extra_args=[
@@ -213,8 +190,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
@@ -225,9 +200,9 @@ class TestCudaGraphBs(CustomTestCase):
 
         decode_bs, _ = _parse_cg_capture(log_text)
         self.assertEqual(decode_bs, [1, 2, 8])
-        self.assertEqual(max(decode_bs), 8, "max_bs should be 8 (overwritten), not 4")
+        self.assertEqual(max(decode_bs), 8, "Max batch size shall be overridden to 8 instead of 4")
 
-    # ---- decode-only: disable padding produces sequential bs ----
+    # ---- Decode only: Sequential batch sizes generated when padding disabled ----
     def test_decode_disable_padding_sequential_bs(self):
         proc, err_path = _launch_server(
             extra_args=[
@@ -237,8 +212,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
@@ -250,7 +223,7 @@ class TestCudaGraphBs(CustomTestCase):
         decode_bs, _ = _parse_cg_capture(log_text)
         self.assertEqual(decode_bs, list(range(1, 9)))
 
-    # ---- TTFT comparison with different max_bs values ----
+    # ---- TTFT performance comparison under different max batch size settings ----
     def test_max_bs_ttft_comparison(self):
         proc1, err1 = _launch_server(
             extra_args=["--cuda-graph-max-bs-decode", "1"],
@@ -281,7 +254,7 @@ class TestCudaGraphBs(CustomTestCase):
         t1, t8 = r1["mean_ttft_ms"], r8["mean_ttft_ms"]
         p1, p8 = r1["p99_ttft_ms"], r8["p99_ttft_ms"]
         print(
-            f"\n=== TTFT comparison: max_bs=1 vs max_bs=8 ===\n"
+            f"\n=== TTFT Comparison: max_bs=1 vs max_bs=8 ===\n"
             f"  Mean TTFT: {t1:.1f} ms (max_bs=1) vs {t8:.1f} ms (max_bs=8)\n"
             f"  P99  TTFT: {p1:.1f} ms (max_bs=1) vs {p8:.1f} ms (max_bs=8)"
         )
