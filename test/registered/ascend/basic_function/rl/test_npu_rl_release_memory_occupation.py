@@ -55,6 +55,8 @@ _MIN_DELTA_MB_MOE = 10000  # for ~60 GB MoE
 _MIN_DELTA_MB_GDN = 10000  # for ~9 GB GDN model
 _MIN_DELTA_SMI_KV_MB = 1000  # npu-smi kv_cache release (1B model, 60% static pool)
 _MIN_DELTA_SMI_W_MB = 500  # npu-smi weights release (~2 GB model)
+_MAX_RETRIES = 10
+_INTERVAL_S = 5
 
 
 # NPU memory
@@ -128,50 +130,64 @@ def _npu_smi_mem_mb() -> float:
     return total
 
 
-def _assert_mem_decreased(before, after, tag, min_delta):
-    delta = before - after
-    assert delta > min_delta, (
-        f"[{tag}] Expected mem decrease > {min_delta} MB, "
-        f"got {delta:.0f} MB ({before:.0f} → {after:.0f})"
-    )
-
-
-def _assert_mem_increased(before, after, tag, min_delta):
-    delta = after - before
-    assert delta > min_delta, (
-        f"[{tag}] Expected mem increase > {min_delta} MB, "
-        f"got {delta:.0f} MB ({before:.0f} → {after:.0f})"
-    )
-
-
-def _wait_mem_decreased(mem_before, mem_func, min_delta, max_retries=10, interval=5):
-    """Loop-wait for memory to decrease by min_delta, checking every interval seconds.
+def _assert_mem_decreased(mem_before, mem_func, min_delta, tag):
+    """Poll-wait for memory to decrease by min_delta, then assert.
 
     Memory may not be released immediately on NPU, so poll up to max_retries times.
     Returns the final memory reading.
     """
-    for i in range(max_retries):
+    for i in range(_MAX_RETRIES):
         mem_after = mem_func()
         if mem_before - mem_after > min_delta:
             return mem_after
-        if i < max_retries - 1:
-            time.sleep(interval)
-    return mem_func()
+        if i < _MAX_RETRIES - 1:
+            logger.info(
+                "[%s] retry %d/%d: mem %.0f MB (need decrease > %d MB, current delta %.0f MB)",
+                tag,
+                i + 1,
+                _MAX_RETRIES,
+                mem_after,
+                min_delta,
+                mem_before - mem_after,
+            )
+            time.sleep(_INTERVAL_S)
+    mem_after = mem_func()
+    delta = mem_before - mem_after
+    assert delta > min_delta, (
+        f"[{tag}] Expected mem decrease > {min_delta} MB, "
+        f"got {delta:.0f} MB ({mem_before:.0f} → {mem_after:.0f})"
+    )
+    return mem_after
 
 
-def _wait_mem_increased(mem_before, mem_func, min_delta, max_retries=10, interval=5):
-    """Loop-wait for memory to increase by min_delta, checking every interval seconds.
+def _assert_mem_increased(mem_before, mem_func, min_delta, tag):
+    """Poll-wait for memory to increase by min_delta, then assert.
 
     Memory may not be re-allocated immediately on NPU, so poll up to max_retries times.
     Returns the final memory reading.
     """
-    for i in range(max_retries):
+    for i in range(_MAX_RETRIES):
         mem_after = mem_func()
         if mem_after - mem_before > min_delta:
             return mem_after
-        if i < max_retries - 1:
-            time.sleep(interval)
-    return mem_func()
+        if i < _MAX_RETRIES - 1:
+            logger.info(
+                "[%s] retry %d/%d: mem %.0f MB (need increase > %d MB, current delta %.0f MB)",
+                tag,
+                i + 1,
+                _MAX_RETRIES,
+                mem_after,
+                min_delta,
+                mem_after - mem_before,
+            )
+            time.sleep(_INTERVAL_S)
+    mem_after = mem_func()
+    delta = mem_after - mem_before
+    assert delta > min_delta, (
+        f"[{tag}] Expected mem increase > {min_delta} MB, "
+        f"got {delta:.0f} MB ({mem_before:.0f} → {mem_after:.0f})"
+    )
+    return mem_after
 
 
 class TestReleaseMemoryOccupationNPU(CustomTestCase):
@@ -194,6 +210,10 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         cls._auto_set_rt_visible = False
         if "ASCEND_RT_VISIBLE_DEVICES" not in os.environ:
             if "ASCEND_VISIBLE_DEVICES" in os.environ:
+                logger.info(
+                    "Setting ASCEND_RT_VISIBLE_DEVICES from ASCEND_VISIBLE_DEVICES: %s",
+                    os.environ["ASCEND_VISIBLE_DEVICES"],
+                )
                 devices = sorted(
                     int(x)
                     for x in os.environ["ASCEND_VISIBLE_DEVICES"].split(",")
@@ -201,6 +221,10 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 )
                 os.environ["ASCEND_RT_VISIBLE_DEVICES"] = ",".join(
                     str(d) for d in devices
+                )
+                logger.info(
+                    "Setting ASCEND_RT_VISIBLE_DEVICES: %s",
+                    os.environ["ASCEND_RT_VISIBLE_DEVICES"],
                 )
                 cls._auto_set_rt_visible = True
             else:
@@ -276,11 +300,11 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 mem_before = _npu_mem_used_all_mb()
                 t0 = time.perf_counter()
                 engine.release_memory_occupation()
-                mem_after = _wait_mem_decreased(
-                    mem_before, _npu_mem_used_all_mb, _MIN_DELTA_MB_SMALL
-                )
-                _assert_mem_decreased(
-                    mem_before, mem_after, f"{tag}-release", _MIN_DELTA_MB_SMALL
+                mem_after = _assert_mem_decreased(
+                    mem_before,
+                    _npu_mem_used_all_mb,
+                    _MIN_DELTA_MB_SMALL,
+                    f"{tag}-release",
                 )
                 logger.info(
                     f"[{tag}] release: {time.perf_counter()-t0:.1f}s, {mem_before:.0f}→{mem_after:.0f} MB"
@@ -322,11 +346,8 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
 
             mem_before = _npu_mem_used_all_mb()
             engine.release_memory_occupation()
-            mem_after = _wait_mem_decreased(
-                mem_before, _npu_mem_used_all_mb, _MIN_DELTA_MB_SMALL
-            )
-            _assert_mem_decreased(
-                mem_before, mem_after, "cpu-backup", _MIN_DELTA_MB_SMALL
+            mem_after = _assert_mem_decreased(
+                mem_before, _npu_mem_used_all_mb, _MIN_DELTA_MB_SMALL, "cpu-backup"
             )
             logger.info(f"[CB] release: {mem_before:.0f}→{mem_after:.0f} MB")
 
@@ -373,8 +394,9 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 logger.info(f"[{tag}] Stage 1: releasing kv_cache...")
                 t1 = time.perf_counter()
                 engine.release_memory_occupation(tags=[GPU_MEMORY_TYPE_KV_CACHE])
-                mem1 = _wait_mem_decreased(mem0, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB)
-                _assert_mem_decreased(mem0, mem1, f"{tag}-kv", _MIN_DELTA_SMI_KV_MB)
+                mem1 = _assert_mem_decreased(
+                    mem0, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB, f"{tag}-kv"
+                )
                 logger.info(
                     f"[{tag}] Stage 1 done: {mem0:.0f}→{mem1:.0f} MB, {time.perf_counter()-t1:.1f}s"
                 )
@@ -383,8 +405,9 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 logger.info(f"[{tag}] Stage 2: releasing weights...")
                 t2 = time.perf_counter()
                 engine.release_memory_occupation(tags=[GPU_MEMORY_TYPE_WEIGHTS])
-                mem2 = _wait_mem_decreased(mem1, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB)
-                _assert_mem_decreased(mem1, mem2, f"{tag}-w", _MIN_DELTA_SMI_W_MB)
+                mem2 = _assert_mem_decreased(
+                    mem1, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB, f"{tag}-w"
+                )
                 logger.info(
                     f"[{tag}] Stage 2 done: {mem1:.0f}→{mem2:.0f} MB, {time.perf_counter()-t2:.1f}s"
                 )
@@ -397,9 +420,8 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 logger.info(f"[{tag}] Stage 3: resuming weights...")
                 t0 = time.perf_counter()
                 engine.resume_memory_occupation(tags=[GPU_MEMORY_TYPE_WEIGHTS])
-                mem3 = _wait_mem_increased(mem2, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB)
-                _assert_mem_increased(
-                    mem2, mem3, f"{tag}-resume-w", _MIN_DELTA_SMI_W_MB
+                mem3 = _assert_mem_increased(
+                    mem2, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB, f"{tag}-resume-w"
                 )
                 logger.info(
                     f"[{tag}] Stage 3 done: {mem2:.0f}→{mem3:.0f} MB, {time.perf_counter()-t0:.1f}s"
@@ -420,9 +442,8 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 logger.info(f"[{tag}] Stage 5: resuming kv_cache...")
                 t5 = time.perf_counter()
                 engine.resume_memory_occupation(tags=[GPU_MEMORY_TYPE_KV_CACHE])
-                mem4 = _wait_mem_increased(mem3, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB)
-                _assert_mem_increased(
-                    mem3, mem4, f"{tag}-resume-kv", _MIN_DELTA_SMI_KV_MB
+                mem4 = _assert_mem_increased(
+                    mem3, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB, f"{tag}-resume-kv"
                 )
                 logger.info(
                     f"[{tag}] Stage 5 done: {mem3:.0f}→{mem4:.0f} MB, {time.perf_counter()-t5:.1f}s"
@@ -474,20 +495,14 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
 
             mem_before = _npu_mem_used_all_mb()
             engine.release_memory_occupation()
-            mem_after = _wait_mem_decreased(
-                mem_before, _npu_mem_used_all_mb, _MIN_DELTA_MB_MOE
-            )
-            _assert_mem_decreased(
-                mem_before, mem_after, "moe-release", _MIN_DELTA_MB_MOE
+            mem_after = _assert_mem_decreased(
+                mem_before, _npu_mem_used_all_mb, _MIN_DELTA_MB_MOE, "moe-release"
             )
             logger.info(f"[MoE] release: {mem_before:.0f}→{mem_after:.0f} MB")
 
             engine.resume_memory_occupation()
-            mem_resume = _wait_mem_increased(
-                mem_after, _npu_mem_used_all_mb, _MIN_DELTA_MB_MOE
-            )
-            _assert_mem_increased(
-                mem_after, mem_resume, "moe-resume", _MIN_DELTA_MB_MOE
+            mem_resume = _assert_mem_increased(
+                mem_after, _npu_mem_used_all_mb, _MIN_DELTA_MB_MOE, "moe-resume"
             )
             logger.info(f"[MoE] resume: {mem_resume:.0f} MB")
 
@@ -515,11 +530,20 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
 
         import sglang as sgl
 
+        logger.info(
+            "ASCEND_RT_VISIBLE_DEVICES: %s",
+            os.environ["ASCEND_RT_VISIBLE_DEVICES"],
+        )
+
+        for i in range(torch.npu.device_count()):
+            logger.info("NPU Device ID: %s", i)
+
         engine = sgl.Engine(
             model_path=QWEN3_5_9B_WEIGHTS_PATH,
             random_seed=42,
             enable_memory_saver=True,
             mem_fraction_static=0.5,
+            tp_size=1,
             disable_cuda_graph=True,
         )
         try:
@@ -535,20 +559,14 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
 
             mem_before = _npu_mem_used_all_mb()
             engine.release_memory_occupation()
-            mem_after = _wait_mem_decreased(
-                mem_before, _npu_mem_used_all_mb, _MIN_DELTA_MB_GDN
-            )
-            _assert_mem_decreased(
-                mem_before, mem_after, "disk-release", _MIN_DELTA_MB_GDN
+            mem_after = _assert_mem_decreased(
+                mem_before, _npu_mem_used_all_mb, _MIN_DELTA_MB_GDN, "gdn-release"
             )
             logger.info(f"[GDN] release: {mem_before:.0f}→{mem_after:.0f} MB")
 
             engine.resume_memory_occupation()
-            mem_resume = _wait_mem_increased(
-                mem_after, _npu_mem_used_all_mb, _MIN_DELTA_MB_GDN
-            )
-            _assert_mem_increased(
-                mem_after, mem_resume, "gdn-resume", _MIN_DELTA_MB_GDN
+            mem_resume = _assert_mem_increased(
+                mem_after, _npu_mem_used_all_mb, _MIN_DELTA_MB_GDN, "gdn-resume"
             )
             logger.info(f"[GDN] resume: {mem_resume:.0f} MB")
 
