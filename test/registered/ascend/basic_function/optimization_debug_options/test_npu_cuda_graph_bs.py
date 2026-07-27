@@ -45,6 +45,7 @@ def _parse_cg_capture(log_text: str):
             decode_bs = [int(x.strip()) for x in m.group(1).split(",")]
         if m := _PREFILL_RE.search(line):
             prefill_bs = [int(x.strip()) for x in m.group(1).split(",")]
+    print(f"decode_bs={decode_bs} prefill_bs={prefill_bs}")
     return decode_bs, prefill_bs
 
 
