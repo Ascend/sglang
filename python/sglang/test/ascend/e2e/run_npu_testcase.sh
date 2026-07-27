@@ -110,7 +110,7 @@ fi
 # install coverage if COVERAGE_FILE is set
 if [ -n "${COVERAGE_FILE}" ]; then
     echo "Installing coverage..."
-    python -c "import coverage" 2>/dev/null || pip install coverage
+    python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
     # Enable subprocess coverage tracking via .pth file and COVERAGE_PROCESS_START
     SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
     echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
