@@ -94,33 +94,9 @@ jobs:
       max-parallel: 3
       matrix:
         test_config:
-          - name: test_npu_eagle_constrained_decoding
+          - name: test_npu_lora_qwen3
             runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/basic_function/speculative_inference/test_npu_eagle_constrained_decoding.py
-            test_type: 'function'
-          - name: test_npu_spec_eagle_stress
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/basic_function/speculative_inference/test_npu_spec_eagle_stress.py
-            test_type: 'function'
-#          - name: test_npu_spec_eagle_stress_bak
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/basic_function/speculative_inference/test_npu_spec_eagle_stress_bak.py
-#            test_type: 'function'
-          - name: test_npu_spec_eagle
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/basic_function/speculative_inference/test_npu_spec_eagle.py
-            test_type: 'function'
-          - name: test_npu_eagle_constrained_detest_npu_spec_eagle_paritycoding
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/basic_function/speculative_inference/test_npu_spec_eagle_parity.py
-            test_type: 'function'
-          - name: test_npu_penalty
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/interface/test_npu_penalty.py
-            test_type: 'function'
-          - name: test_npu_speculative_draft_attention_backend
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/basic_function/speculative_inference/test_npu_speculative_draft_attention_backend.py
+            test_case: test/registered/ascend/basic_function/lora/test_npu_lora_qwen3.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
