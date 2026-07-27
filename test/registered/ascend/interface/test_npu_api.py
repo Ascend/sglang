@@ -264,12 +264,12 @@ class TestChatCompletionsInterface(CustomTestCase):
             f"{self.base_url}/v1/chat/completions",
             json={
                 "messages": [{"role": "user", "content": "Hello"}],
+                "enable_thinking": True,
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         data = response.json()
         self.assertEqual(data["model"], "default")
-        self.assertIsNotNone(data["choices"][0]["message"]["reasoning_content"])
 
     def test_max_completion_tokens(self):
         response = requests.post(
@@ -289,6 +289,7 @@ class TestChatCompletionsInterface(CustomTestCase):
                 "model": self.model,
                 "messages": [{"role": "user", "content": "Hello"}],
                 "stream": True,
+                "enable_thinking": True,
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")

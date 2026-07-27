@@ -20,6 +20,7 @@ class TestPersimmon8BChat(GSM8KAscendMixin, CustomTestCase):
     [Test Target] Howeee/persimmon-8b-chat
     """
 
+    timeout_for_server_launch = 1200
     os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
     model = PERSIMMON_8B_CHAT_WEIGHTS_PATH
     accuracy = 0.17

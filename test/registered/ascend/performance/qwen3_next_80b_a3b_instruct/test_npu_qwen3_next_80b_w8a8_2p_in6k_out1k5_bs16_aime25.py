@@ -34,7 +34,7 @@ QWEN3_NEXT_80B_A3B_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "FORCE_DRAFT_MODEL_NON_QUANT": "1",
-    "HCCL_BUFFSIZE": "2000",
+    "DEEPEP_HCCL_BUFFSIZE": "2000",
     "ZBCCL_LOCAL_MEM_SIZE": "60416",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "ZBCCL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
@@ -91,6 +91,10 @@ QWEN3_NEXT_80B_A3B_OTHER_ARGS = [
     "bfloat16",
     "--speculative-draft-model-path",
     QWEN3_NEXT_80B_A3B_MODEL_PATH,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -123,7 +127,7 @@ class TestQwen3Next80BA3B_aime25(TestAscendAccuracyTestCaseBase):
         "temperature": 0.7,
         "top_p": 0.8,
         "top_k": 20,
-        "extra_body": {"chat_template_kwargs": {"enable_thinking": True}},
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
     max_concurrency = 16
 

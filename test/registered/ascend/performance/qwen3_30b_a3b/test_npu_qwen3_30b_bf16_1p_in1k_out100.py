@@ -94,6 +94,10 @@ OTHER_ARGS = [
     84,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 
@@ -109,6 +113,7 @@ class TestQwen32B(TestAscendPerformanceTestCaseBase):
     input_len = 1000
     output_len = 100
     random_range_ratio = 1
+    seed = 1
     mean_e2e_latency = 10000
     output_token_throughput = 2047.81
     max_attempts = 4

@@ -24,7 +24,7 @@ KIMI_K2_6_IN1080P_30_OUT256_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
-    "HCCL_BUFFSIZE": "2400",
+    "DEEPEP_HCCL_BUFFSIZE": "1024",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "HCCL_OP_EXPANSION_MODE": "AIV",
@@ -45,10 +45,8 @@ KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS = [
     "ascend",
     "--tp-size",
     16,
-    "--base-gpu-id",
-    0,
     "--mem-fraction-static",
-    0.74,
+    0.852,
     "--max-running-requests",
     64,
     "--chunked-prefill-size",
@@ -90,6 +88,10 @@ KIMI_K2_6_IN1080P_30_OUT256_OTHER_ARGS = [
     "--prefill-delayer-max-delay-passes",
     200,
     "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 
@@ -112,6 +114,7 @@ class TestNPUKimiK2_6_W4A8_8P_IN1080P_30_OUT256_50ms(TestAscendPerformanceTestCa
     output_len = 256
     random_range_ratio = 1
     warmup_requests = 16
+    seed = 1
     tpot = 50
     output_token_throughput = 568.11
 

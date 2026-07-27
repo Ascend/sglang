@@ -88,6 +88,10 @@ MINIMAX_M2_5_4P_32K_OTHER_ARGS = [
     "--trust-remote-code",
     "--tokenizer-worker-num",
     4,
+    "--reasoning-parser",
+    "minimax-append-think",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 
@@ -107,6 +111,7 @@ class TestNPUMiniMaxM2_5_W8A8_4P_In32k_Out1k_HighThroughput(
     input_len = 32768
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 312.68
 

@@ -18,7 +18,7 @@ QWEN3_30B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
-    "HCCL_BUFFSIZE": "400",
+    "DEEPEP_HCCL_BUFFSIZE": "400",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
@@ -81,6 +81,10 @@ QWEN3_30B_OTHER_ARGS = [
     16,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 
