@@ -128,17 +128,12 @@ def ensure_reproducibility():
 def run_lora_multiple_batch_on_model_cases(
     model_cases: List[LoRAModelCase],
     use_spec_decoding: bool = False,
-    attention_backend: str = "torch_native",
+    attention_backend: str = "ascend",
     disable_cuda_graph: bool = True,
     enable_deterministic_inference: bool = False,
     disable_radix_cache: bool = True,
     enable_lora_overlap_loading: Optional[bool] = None,
 ):
-    if not torch.npu.is_available():
-        raise RuntimeError(
-            "NPU device not available. Please ensure NPU environment is properly configured."
-        )
-
     for model_case in model_cases:
         for torch_dtype in TORCH_DTYPES:
             max_new_tokens = 32
@@ -150,6 +145,11 @@ def run_lora_multiple_batch_on_model_cases(
                 TEST_MULTIPLE_BATCH_PROMPTS, lora_adapter_paths
             )
 
+            print(
+                f"\n========== Testing multiple batches on base '{base_path}', dtype={torch_dtype} ---"
+            )
+
+            # Initialize runners
             ensure_reproducibility()
             spec_args = (
                 {}
@@ -167,7 +167,7 @@ def run_lora_multiple_batch_on_model_cases(
                 enable_lora_overlap_loading=enable_lora_overlap_loading,
                 max_loras_per_batch=len(lora_adapter_paths) + 1,
                 max_loaded_loras=model_case.max_loaded_loras,
-                sleep_on_idle=True,
+                sleep_on_idle=True,  # Eliminate non-determinism by forcing all requests to be processed in one batch.
                 attention_backend=attention_backend,
                 enable_deterministic_inference=enable_deterministic_inference,
                 disable_cuda_graph=disable_cuda_graph,
@@ -185,24 +185,30 @@ def run_lora_multiple_batch_on_model_cases(
 
             with srt_runner, hf_runner:
                 for i, (prompts, lora_paths) in enumerate(batches):
+                    print(
+                        f"\n--- Running Batch {i + 1} --- prompts: {prompts}, lora_paths: {lora_paths}"
+                    )
+
                     srt_outputs = srt_runner.batch_forward(
                         prompts,
                         max_new_tokens=max_new_tokens,
                         lora_paths=lora_paths,
                     )
+
                     hf_outputs = hf_runner.forward(
                         prompts,
                         max_new_tokens=max_new_tokens,
                         lora_paths=lora_paths,
                     )
 
+                    print("SRT outputs:", [s for s in srt_outputs.output_strs])
+                    print("HF outputs:", [s for s in hf_outputs.output_strs])
+
                     for srt_out, hf_out in zip(
                         srt_outputs.output_strs, hf_outputs.output_strs
                     ):
                         srt_str = srt_out.strip()
                         hf_str = hf_out.strip()
-                        if isinstance(model_case, str):
-                            continue
                         rouge_tol = model_case.rouge_l_tolerance
                         rouge_score = calculate_rouge_l([srt_str], [hf_str])[0]
                         if rouge_score < rouge_tol:
@@ -211,10 +217,12 @@ def run_lora_multiple_batch_on_model_cases(
                                 f"for base '{base_path}', adaptor '{lora_paths}', prompt: '{prompts}...'"
                             )
 
+                    print(f"--- Batch {i + 1} Comparison Passed --- ")
+
 
 def run_lora_batch_splitting_equivalence_test(
     model_cases: List[LoRAModelCase],
-    attention_backend: str = "torch_native",
+    attention_backend: str = "ascend",
     disable_cuda_graph: bool = True,
     disable_radix_cache: bool = True,
     enable_lora_overlap_loading: Optional[bool] = None,

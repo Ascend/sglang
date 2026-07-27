@@ -65,6 +65,7 @@ jobs:
           SGLANG_TEST_METRICS_OUTPUT: /root/.cache/tests/output/metrics/metrics
         shell: bash
         run: |
+          pip install peft>=0.2.0
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
