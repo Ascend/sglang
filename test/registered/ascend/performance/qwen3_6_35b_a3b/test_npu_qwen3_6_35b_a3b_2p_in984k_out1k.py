@@ -68,6 +68,10 @@ QWEN3_6_35B_A3B_984K_1K_OTHER_ARGS = [
     4,
     "--context-length",
     1010000,
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -81,10 +85,12 @@ class TestNPUQwen3_6_35BA3B_2P_In984k_Out1k_50ms(TestAscendPerformanceTestCaseBa
     envs = QWEN3_6_35B_A3B_984K_1K_ENVS
     dataset_name = "random"
     max_concurrency = 1
+    warmup_requests = max_concurrency
     num_prompts = 1
     input_len = 984000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     tpot = 40.91
     output_token_throughput = 3.83
 

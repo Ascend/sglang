@@ -28,7 +28,7 @@ QWEN3_6_27B_1024_ENVS = {
     "SGLANG_NPU_PROFILING_STAGE": "prefill",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "150",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "300",
     "ASCEND_USE_FIA": "1",
 }
 
@@ -48,22 +48,30 @@ QWEN3_6_27B_1024_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--max-running-requests",
-    50,
+    60,
     "--max-mamba-cache-size",
     60,
     "--mem-fraction-static",
-    0.76,
+    0.74,
     "--cuda-graph-bs",
     2,
     4,
     8,
+    14,
     16,
     24,
+    26,
     32,
+    36,
+    37,
     40,
     42,
+    44,
     45,
+    46,
     50,
+    52,
+    60,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -80,6 +88,10 @@ QWEN3_6_27B_1024_OTHER_ARGS = [
     "--speculative-num-draft-tokens",
     4,
     "--mm-enable-dp-encoder",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -93,14 +105,16 @@ class TestNPUQwen3_6_27B_1P_In1024x1024_30_Out1024_50ms(
     model = QWEN3_6_27B_MODEL_PATH
     other_args = QWEN3_6_27B_1024_OTHER_ARGS
     envs = QWEN3_6_27B_1024_ENVS
-    dataset_name = "random"
-    max_concurrency = 48
-    num_prompts = 48
+    backend = "sglang-oai-chat"
+    dataset_name = "image"
+    max_concurrency = 60
+    num_prompts = 240
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
     image_resolution = "1024x1024"
     image_count = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 800.8
 

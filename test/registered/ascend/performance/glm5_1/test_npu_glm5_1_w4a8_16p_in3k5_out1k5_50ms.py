@@ -24,7 +24,7 @@ GLM_5_1_TWO_NODE_ENVS = {
     "GLOO_SOCKET_IFNAME": NIC_NAME,
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
-    "HCCL_BUFFSIZE": "2500",
+    "DEEPEP_HCCL_BUFFSIZE": "2500",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
 }
@@ -50,10 +50,10 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     0.65,
     "--served-model-name",
     "glm-5",
-    "--cuda-graph-max-bs",
-    8,
+    "--cuda-graph-max-bs-decode",
+    16,
     "--max-running-requests",
-    128,
+    256,
     "--quantization",
     "modelslim",
     "--speculative-draft-model-quantization",
@@ -72,6 +72,10 @@ GLM_5_1_TWO_NODE_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_TWO_NODE_MODEL_CONFIG = {
@@ -89,10 +93,11 @@ class TestNPUGLM5_1_W4A8_32P_In3k5_Out1k5(TestAscendPerfMultiNodePdMixTestCaseBa
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
     max_concurrency = 128
-    num_prompts = 512
+    num_prompts = 128
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 1712
 

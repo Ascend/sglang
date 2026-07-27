@@ -65,6 +65,10 @@ QWEN3_6_27B_128K_OTHER_ARGS = [
     "bfloat16",
     "--mamba-ssm-dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -82,6 +86,7 @@ class TestNPUQwen3_6_27B_2P_In128k_Out1k_50ms(TestAscendPerformanceTestCaseBase)
     input_len = 128000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 41.39
 

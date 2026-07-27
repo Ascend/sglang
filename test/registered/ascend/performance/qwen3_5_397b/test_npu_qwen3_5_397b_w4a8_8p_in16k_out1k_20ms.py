@@ -93,6 +93,10 @@ QWEN3_5_397B_16K_OTHER_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
 ]
 
 
@@ -111,6 +115,7 @@ class TestNPUQwen3_5_397B_16K_1k_20ms(TestAscendPerformanceTestCaseBase):
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 20
     request_rate = float("inf")
     temperature = 0.6

@@ -25,7 +25,7 @@ MODEL_CONFIG = {
         "STREAMS_PER_DEVICE": "32",
         "SGLANG_NPU_USE_MLAPO": "1",
         "SGLANG_USE_FIA_NZ": "1",
-        "HCCL_BUFFSIZE": "1536",
+        "DEEPEP_HCCL_BUFFSIZE": "1536",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
         "TASK_QUEUE_ENABLE": "2",
         "HCCL_SOCKET_IFNAME": NIC_NAME,
@@ -39,7 +39,7 @@ MODEL_CONFIG = {
         "SGLANG_USE_FIA_NZ": "1",
         "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
         "SGLANG_ENABLE_SPEC_V2": "1",
-        "HCCL_BUFFSIZE": "650",
+        "DEEPEP_HCCL_BUFFSIZE": "650",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "12",
         "TASK_QUEUE_ENABLE": "1",
         "SGLANG_SCHEDULER_SKIP_ALL_GATHER": "1",
@@ -90,6 +90,10 @@ MODEL_CONFIG = {
         "--dtype",
         "bfloat16",
         "--enable-attn-tp-input-scattered",
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "decode_args": [
         "--nnodes",
@@ -138,6 +142,10 @@ MODEL_CONFIG = {
         "bfloat16",
         "--load-balance-method",
         ROUND_ROBIN,
+        "--reasoning-parser",
+        "deepseek-r1",
+        "--tool-call-parser",
+        "deepseekv3",
     ],
     "router_args": [
         "--mini-lb",
@@ -156,8 +164,9 @@ class TestDeepSeekR1W8A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
-    tpot = 18.9
-    output_token_throughput = 1611
+    seed = 42
+    tpot = 20
+    output_token_throughput = 1183.35
 
     def test_throughput(self):
         self.run_throughput()

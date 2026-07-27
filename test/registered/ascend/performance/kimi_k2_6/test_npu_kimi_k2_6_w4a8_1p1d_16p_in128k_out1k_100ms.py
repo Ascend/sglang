@@ -39,7 +39,7 @@ DECODE_ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "HCCL_BUFFSIZE": "1200",
+    "DEEPEP_HCCL_BUFFSIZE": "1200",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
@@ -68,11 +68,10 @@ PREFILL_ARGS = [
     "--tp-size",
     16,
     "--disable-radix-cache",
-    "--disable-cuda-graph",
     "--mem-fraction-static",
     0.78,
     "--max-running-requests",
-    1,
+    2,
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -80,9 +79,9 @@ PREFILL_ARGS = [
     "--chunked-prefill-size",
     16384,
     "--prefill-max-requests",
-    1,
+    2,
     "--max-prefill-tokens",
-    131072,
+    65536,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -109,9 +108,9 @@ DECODE_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.73,
+    0.82,
     "--max-running-requests",
-    1,
+    2,
     "--enable-dp-attention",
     "--dp-size",
     1,
@@ -145,6 +144,10 @@ DECODE_ARGS = [
     4,
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 MODEL_CONFIG = {
@@ -173,6 +176,7 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In128k_Out1k_100ms(
     input_len = 128000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     tpot = 100
     output_token_throughput = 21.41
 

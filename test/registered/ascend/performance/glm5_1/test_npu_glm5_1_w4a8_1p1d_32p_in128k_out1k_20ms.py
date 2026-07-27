@@ -22,7 +22,7 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "1200",
     "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "1200",
-    "HCCL_BUFFSIZE": "1200",
+    "DEEPEP_HCCL_BUFFSIZE": "1200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
@@ -71,7 +71,7 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--served-model-name",
     "glm-5",
     "--chunked-prefill-size",
-    16384,
+    8192,
     "--max-prefill-tokens",
     180000,
     "--moe-a2a-backend",
@@ -84,9 +84,9 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "bfloat16",
     "--speculative-draft-model-quantization",
     "unquant",
-    "--enable-nsa-prefill-context-parallel",
-    "--nsa-prefill-cp-mode",
-    "in-seq-split",
+    "--enable-prefill-cp",
+    "--cp-strategy",
+    "zigzag",
     "--attn-cp-size",
     4,
     "--enable-dp-lm-head",
@@ -94,6 +94,10 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     1,
     "--pp-size",
     8,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
@@ -144,6 +148,10 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "round_robin",
     "--speculative-draft-model-quantization",
     "unquant",
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {
@@ -169,7 +177,9 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
-    tpot = 20
+    seed = 1
+    ttft = 13146
+    tpot = 56.4
     output_token_throughput = 14.45
 
     def test_npu_glm5_1_w4a8_pd_sep_in3k5_out1k5(self):

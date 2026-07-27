@@ -19,7 +19,7 @@ register_npu_ci(
 QWEN3_235B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
-    "HCCL_BUFFSIZE": "1600",
+    "DEEPEP_HCCL_BUFFSIZE": "1600",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
@@ -65,6 +65,10 @@ QWEN3_235B_OTHER_ARGS = [
     "0.78",
     "--cuda-graph-bs",
     "1",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen25",
 ]
 
 
@@ -80,6 +84,7 @@ class TestQwen235B(TestAscendPerformanceTestCaseBase):
     input_len = 11000
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 8
     output_token_throughput = 118.67
 

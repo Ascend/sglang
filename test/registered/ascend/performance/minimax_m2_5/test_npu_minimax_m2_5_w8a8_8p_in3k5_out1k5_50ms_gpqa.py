@@ -26,7 +26,7 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "TASK_QUEUE_ENABLE": "1",
-    "HCCL_BUFFSIZE": "1024",
+    "DEEPEP_HCCL_BUFFSIZE": "1024",
     "ASCEND_USE_FIA": "1",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
@@ -56,8 +56,8 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [
     500,
     "--enable-prefill-delayer",
     "--chunked-prefill-size",
-    -1,
-    "--max-prefill-token",
+    196608,
+    "--max-prefill-tokens",
     8192,
     "--cuda-graph-bs",
     1,
@@ -87,6 +87,10 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [
     "unquant",
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "minimax-append-think",
+    "--tool-call-parser",
+    "minimax-m2",
 ]
 
 
@@ -106,6 +110,7 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_HighThroughput(
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 5717.58
 
@@ -122,7 +127,7 @@ class TestNPUMiniMaxM2_5_W8A8_8P_In3k5_Out1k5_GPQA(TestAscendAccuracyTestCaseBas
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     generation_config = {"max_tokens": 65536, "temperature": 1.0}
-    max_concurrency = 64
+    eval_batch_size = 64
 
     def test_accuracy(self):
         self.run_accuracy()

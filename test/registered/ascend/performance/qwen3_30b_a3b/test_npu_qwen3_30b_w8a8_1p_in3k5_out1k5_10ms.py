@@ -27,7 +27,7 @@ ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
     "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
-    "HCCL_BUFFSIZE": "400",
+    "DEEPEP_HCCL_BUFFSIZE": "400",
 }
 
 OTHER_ARGS = [
@@ -84,6 +84,10 @@ OTHER_ARGS = [
     162,
     "--dtype",
     "bfloat16",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen",
 ]
 
 
@@ -99,6 +103,7 @@ class TestQwen30B(TestAscendPerformanceTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 10
     output_token_throughput = 177.49
 

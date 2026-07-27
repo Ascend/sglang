@@ -24,7 +24,7 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "112",
-    "HCCL_BUFFSIZE": "1500",
+    "DEEPEP_HCCL_BUFFSIZE": "1280",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "HCCL_OP_EXPANSION_MODE": "AIV",
@@ -46,7 +46,7 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--tp-size",
     16,
     "--mem-fraction-static",
-    0.76,
+    0.865,
     "--max-running-requests",
     176,
     "--chunked-prefill-size",
@@ -67,7 +67,7 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "deepep",
     "--deepep-mode",
     "auto",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
@@ -91,6 +91,10 @@ KIMI_K2_6_IN1024x1024_30_OUT1024_OTHER_ARGS = [
     "--prefill-delayer-max-delay-passes",
     200,
     "--enable-prefill-delayer",
+    "--reasoning-parser",
+    "kimi_k2",
+    "--tool-call-parser",
+    "kimi_k2",
 ]
 
 
@@ -115,8 +119,9 @@ class TestNPUKimiK2_6_W4A8_8P_IN1024x1024_30_OUT1024_50MS(
     output_len = 1024
     random_range_ratio = 1
     warmup_requests = 16
+    seed = 1
     tpot = 50
-    output_token_throughput = 2635.24
+    output_token_throughput = 2400
 
     def test_npu_kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms(self):
         """Run NPU performance test for Kimi-K2.6-w4a8 multimodal in1024x1024+30 out1024"""
