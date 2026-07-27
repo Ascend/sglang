@@ -2,8 +2,8 @@
 NPU RL Memory-Aware Sleep/Wake Tests
 
 Note:
-  - The ENV var ASCEND_RT_VISIBLE_DEVICES is needed.
-  - the NPU-customized version of torch_memory_saver is needed.
+  - the NPU-customized torch_memory_saver is required.
+    pip install torch_memory_saver-xxx.whl
 """
 
 import logging
@@ -36,7 +36,7 @@ from sglang.test.test_utils import (
 register_npu_ci(
     est_time=600,
     suite="full-2-npu-a3",
-    disabled="Depends on the NPU-customized version of torch_memory_saver.",
+    nightly=True,
 )
 
 _LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
@@ -478,14 +478,6 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         )
 
         params = self._common_test_params()
-
-        logger.info(
-            "ASCEND_RT_VISIBLE_DEVICES: %s",
-            os.environ["ASCEND_RT_VISIBLE_DEVICES"],
-        )
-
-        for i in range(torch.npu.device_count()):
-            logger.info("NPU Device ID: %s", i)
 
         engine = self._setup_engine(
             model=QWEN3_5_9B_WEIGHTS_PATH,
