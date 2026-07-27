@@ -49,6 +49,18 @@ logger.propagate = False
 # Work around Python 3.11 forkserver × aarch64 × torch_npu signal handler
 multiprocessing.set_start_method("spawn", force=True)
 
+# Ensure ASCEND_RT_VISIBLE_DEVICES is set before running any tests
+if "ASCEND_RT_VISIBLE_DEVICES" not in os.environ:
+    if "ASCEND_VISIBLE_DEVICES" in os.environ:
+        devices = sorted(
+            int(x) for x in os.environ["ASCEND_VISIBLE_DEVICES"].split(",") if x.strip()
+        )
+        os.environ["ASCEND_RT_VISIBLE_DEVICES"] = ",".join(str(d) for d in devices)
+    else:
+        raise RuntimeError(
+            "Neither ASCEND_RT_VISIBLE_DEVICES nor ASCEND_VISIBLE_DEVICES is set"
+        )
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -72,22 +84,20 @@ def _npu_mem_used_all_mb() -> float:
 
 
 def _npu_smi_mem_mb() -> float:
-    """Sum of HBM-Usage(MB) for chips in ASCEND_RT_VISIBLE_DEVICES or ASCEND_VISIBLE_DEVICES only.
+    """Sum of HBM-Usage(MB) for chips in ASCEND_RT_VISIBLE_DEVICES.
 
     Queries ``npu-smi info -t usages -i <npu_id>`` per NPU card, which
     provides HBM Capacity(MB) and HBM Usage Rate(%).  Only sums chips
-    whose physical ID is listed in ASCEND_RT_VISIBLE_DEVICES or ASCEND_VISIBLE_DEVICES.
+    whose physical ID is listed in ASCEND_RT_VISIBLE_DEVICES.
 
     Used for staged release tests where torch.npu.mem_get_info is blind
     to sglang's static memory pool.
     """
-    visible = os.environ.get("ASCEND_RT_VISIBLE_DEVICES") or os.environ.get(
-        "ASCEND_VISIBLE_DEVICES", ""
-    )
+    visible = os.environ.get("ASCEND_RT_VISIBLE_DEVICES")
     target_chips = set(int(x.strip()) for x in visible.split(",") if x.strip())
     if not target_chips:
         raise RuntimeError(
-            "ASCEND_RT_VISIBLE_DEVICES or ASCEND_VISIBLE_DEVICES must be set for npu-smi memory tracking"
+            "ASCEND_RT_VISIBLE_DEVICES must be set for npu-smi memory tracking"
         )
 
     logger.info("Tracking chips: %s", target_chips)
@@ -345,42 +355,66 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 mem0 = _npu_smi_mem_mb()
 
                 # Stage 1: release kv_cache
+                logger.info(f"[{tag}] Stage 1: releasing kv_cache...")
+                t1 = time.perf_counter()
                 engine.release_memory_occupation(tags=[GPU_MEMORY_TYPE_KV_CACHE])
                 mem1 = _wait_mem_decreased(mem0, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB)
                 _assert_mem_decreased(mem0, mem1, f"{tag}-kv", _MIN_DELTA_SMI_KV_MB)
+                logger.info(
+                    f"[{tag}] Stage 1 done: {mem0:.0f}→{mem1:.0f} MB, {time.perf_counter()-t1:.1f}s"
+                )
 
                 # Stage 2: release weights
+                logger.info(f"[{tag}] Stage 2: releasing weights...")
+                t2 = time.perf_counter()
                 engine.release_memory_occupation(tags=[GPU_MEMORY_TYPE_WEIGHTS])
                 mem2 = _wait_mem_decreased(mem1, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB)
                 _assert_mem_decreased(mem1, mem2, f"{tag}-w", _MIN_DELTA_SMI_W_MB)
-
                 logger.info(
-                    f"[{tag}] release: {mem0:.0f}→{mem1:.0f}→{mem2:.0f} MB, {time.perf_counter()-t0:.1f}s"
+                    f"[{tag}] Stage 2 done: {mem1:.0f}→{mem2:.0f} MB, {time.perf_counter()-t2:.1f}s"
                 )
 
-                # Resume weights
+                logger.info(
+                    f"[{tag}] release all: {mem0:.0f}→{mem1:.0f}→{mem2:.0f} MB, {time.perf_counter()-t0:.1f}s"
+                )
+
+                # Stage 3: resume weights
+                logger.info(f"[{tag}] Stage 3: resuming weights...")
                 t0 = time.perf_counter()
                 engine.resume_memory_occupation(tags=[GPU_MEMORY_TYPE_WEIGHTS])
                 mem3 = _wait_mem_increased(mem2, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB)
                 _assert_mem_increased(
                     mem2, mem3, f"{tag}-resume-w", _MIN_DELTA_SMI_W_MB
                 )
+                logger.info(
+                    f"[{tag}] Stage 3 done: {mem2:.0f}→{mem3:.0f} MB, {time.perf_counter()-t0:.1f}s"
+                )
 
-                # Load training model, update weights, then destroy it
+                # Stage 4: load training model and update weights
+                logger.info(
+                    f"[{tag}] Stage 4: loading training model and updating weights..."
+                )
+                t4 = time.perf_counter()
                 hf = self._make_hf_model(LLAMA_3_2_1B_WEIGHTS_PATH)
                 engine.update_weights_from_tensor(list(hf.named_parameters()))
                 del hf
                 torch.npu.empty_cache()
+                logger.info(f"[{tag}] Stage 4 done: {time.perf_counter()-t4:.1f}s")
 
-                # Resume kv_cache
+                # Stage 5: resume kv_cache
+                logger.info(f"[{tag}] Stage 5: resuming kv_cache...")
+                t5 = time.perf_counter()
                 engine.resume_memory_occupation(tags=[GPU_MEMORY_TYPE_KV_CACHE])
                 mem4 = _wait_mem_increased(mem3, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB)
                 _assert_mem_increased(
                     mem3, mem4, f"{tag}-resume-kv", _MIN_DELTA_SMI_KV_MB
                 )
+                logger.info(
+                    f"[{tag}] Stage 5 done: {mem3:.0f}→{mem4:.0f} MB, {time.perf_counter()-t5:.1f}s"
+                )
 
                 logger.info(
-                    f"[{tag}] resume+update: {mem2:.0f}→{mem3:.0f}→{mem4:.0f} MB, {time.perf_counter()-t0:.1f}s"
+                    f"[{tag}] resume+update total: {mem2:.0f}→{mem3:.0f}→{mem4:.0f} MB, {time.perf_counter()-t0:.1f}s"
                 )
 
                 out = engine.generate(params["prompt"], params["sampling_params"])[
