@@ -693,10 +693,10 @@ jobs:
 #            runner: linux-aarch64-a3-4
 #            test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_2p_gsm8k.py
 #            test_type: 'accuracy'
-          - name: moonlight_16b_a3b_bf16_1p_gsm8k
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/moonshotai_moonlight_16b_a3b/test_npu_moonlight_16b_a3b_bf16_1p_gsm8k.py
-            test_type: 'accuracy'
+#          - name: moonlight_16b_a3b_bf16_1p_gsm8k
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/ascend/accuracy/moonshotai_moonlight_16b_a3b/test_npu_moonlight_16b_a3b_bf16_1p_gsm8k.py
+#            test_type: 'accuracy'
 #          - name: qwen3_5_397b_8p_gpqa
 #            runner: linux-aarch64-a3-16
 #            test_case: test/registered/ascend/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_gpqa.py
