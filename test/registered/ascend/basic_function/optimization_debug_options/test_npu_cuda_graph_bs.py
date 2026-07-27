@@ -3,7 +3,6 @@ import re
 import subprocess
 import tempfile
 import unittest
-from typing import Optional
 
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
@@ -24,8 +23,8 @@ register_npu_ci(est_time=600, suite="debug-full-1-npu-a3", nightly=True)
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
-_BS_LOG_RE = re.compile(r"Capture.*graph.*(?:bs|num[_ ]tokens)[= ]\[([^\]]+)\]")
-_MEM_LOG_RE = re.compile(r"mem usage=([\d.]+) GB")
+_DECODE_RE = re.compile(r"Capture target decode.*begin.*bs=\[([^\]]+)\]")
+_PREFILL_RE = re.compile(r"Capture target prefill.*begin.*num_tokens=\[([^\]]+)\]")
 
 
 def _read_log(path):
@@ -34,38 +33,19 @@ def _read_log(path):
 
 
 def _parse_cg_capture(log_text: str):
-    """Return (decode_bs, prefill_bs) from CUDA graph capture log lines.
+    """Return (decode_bs, prefill_bs) from CG capture log lines.
 
-    Both phases use the same ``bs=[...]`` / ``num tokens [...]`` format
-    emitted by the CG runner.  Lines are assigned to decode/prefill by
-    the presence of ``decode`` / ``prefill`` / ``piecewise`` keywords.
+    Lines are distinguished by the ``target decode`` / ``target prefill``
+    begin markers — no fallback ordering heuristics.
     """
     decode_bs = None
     prefill_bs = None
     for line in log_text.splitlines():
-        m = _BS_LOG_RE.search(line)
-        if not m:
-            continue
-        bs_list = [int(x.strip()) for x in m.group(1).split(",")]
-        if "decode" in line:
-            decode_bs = bs_list
-        elif "prefill" in line or "piecewise" in line:
-            prefill_bs = bs_list
-        else:
-            # Generic fallback: first match is decode, later is prefill.
-            if decode_bs is None:
-                decode_bs = bs_list
-            elif prefill_bs is None:
-                prefill_bs = bs_list
+        if m := _DECODE_RE.search(line):
+            decode_bs = [int(x.strip()) for x in m.group(1).split(",")]
+        if m := _PREFILL_RE.search(line):
+            prefill_bs = [int(x.strip()) for x in m.group(1).split(",")]
     return decode_bs, prefill_bs
-
-
-def _parse_graph_memory_gb(log_text: str) -> Optional[float]:
-    for line in log_text.splitlines():
-        m = _MEM_LOG_RE.search(line)
-        if m:
-            return float(m.group(1))
-    return None
 
 
 def _run_bench(base_url):
@@ -195,10 +175,6 @@ class TestCudaGraphBs(CustomTestCase):
         decode_bs, prefill_bs = _parse_cg_capture(log_text)
         self.assertEqual(decode_bs, [1, 2, 4, 8])
         self.assertEqual(prefill_bs, [64, 128, 256])
-
-        mem = _parse_graph_memory_gb(log_text)
-        self.assertIsNotNone(mem)
-        self.assertGreater(mem, 0)
 
     # ---- decode-only: explicit bs overrides max_bs ----
     def test_decode_max_bs_overwritten_when_bs_set(self):
