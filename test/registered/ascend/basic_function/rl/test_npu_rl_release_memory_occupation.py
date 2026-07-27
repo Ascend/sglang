@@ -50,22 +50,12 @@ logger.propagate = False
 # Helpers
 # ---------------------------------------------------------------------------
 
-_MIN_DELTA_MB_RELEASE_ALL = 10000  # release all (weights + KV cache pool)
+_MIN_DELTA_SMI_RELEASE_ALL_MB = 10000  # npu-smi release all (weights + KV cache pool)
 _MIN_DELTA_SMI_KV_MB = 1000  # npu-smi kv_cache release (1B model, 60% static pool)
 _MIN_DELTA_SMI_W_MB = 500  # npu-smi weights release (~2 GB model)
 
 
 # NPU memory
-def _npu_mem_used_all_mb() -> float:
-    """Sum of used memory across all visible NPU devices (for TP>1 tests)."""
-    total = 0.0
-    for d in range(torch.npu.device_count()):
-        torch.npu.synchronize(d)
-        free, t = torch.npu.mem_get_info(d)
-        total += (t - free) / (1024**2)
-    return total
-
-
 def _npu_smi_mem_mb() -> float:
     """Sum of HBM-Usage(MB) for chips in ASCEND_RT_VISIBLE_DEVICES.
 
@@ -73,15 +63,18 @@ def _npu_smi_mem_mb() -> float:
     provides HBM Capacity(MB) and HBM Usage Rate(%).  Only sums chips
     whose physical ID is listed in ASCEND_RT_VISIBLE_DEVICES.
 
-    Used for staged release tests where torch.npu.mem_get_info is blind
-    to sglang's static memory pool.
+    Falls back to ASCEND_VISIBLE_DEVICES if ASCEND_RT_VISIBLE_DEVICES is not set.
     """
-    visible = os.environ.get("ASCEND_RT_VISIBLE_DEVICES")
+    visible = os.environ.get("ASCEND_RT_VISIBLE_DEVICES") or os.environ.get(
+        "ASCEND_VISIBLE_DEVICES"
+    )
+    if not visible:
+        raise RuntimeError(
+            "Neither ASCEND_RT_VISIBLE_DEVICES nor ASCEND_VISIBLE_DEVICES is set"
+        )
     target_chips = set(int(x.strip()) for x in visible.split(",") if x.strip())
     if not target_chips:
-        raise RuntimeError(
-            "ASCEND_RT_VISIBLE_DEVICES must be set for npu-smi memory tracking"
-        )
+        raise RuntimeError("No valid chip IDs found in %s" % visible)
 
     logger.info("Tracking chips: %s", target_chips)
 
@@ -164,32 +157,6 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
 
         cls._saved_npu_alloc_conf = os.environ.pop("PYTORCH_NPU_ALLOC_CONF", None)
 
-        # Ensure ASCEND_RT_VISIBLE_DEVICES is set
-        cls._auto_set_rt_visible = False
-        if "ASCEND_RT_VISIBLE_DEVICES" not in os.environ:
-            if "ASCEND_VISIBLE_DEVICES" in os.environ:
-                logger.info(
-                    "Setting ASCEND_RT_VISIBLE_DEVICES from ASCEND_VISIBLE_DEVICES: %s",
-                    os.environ["ASCEND_VISIBLE_DEVICES"],
-                )
-                devices = sorted(
-                    int(x)
-                    for x in os.environ["ASCEND_VISIBLE_DEVICES"].split(",")
-                    if x.strip()
-                )
-                os.environ["ASCEND_RT_VISIBLE_DEVICES"] = ",".join(
-                    str(d) for d in devices
-                )
-                logger.info(
-                    "Setting ASCEND_RT_VISIBLE_DEVICES: %s",
-                    os.environ["ASCEND_RT_VISIBLE_DEVICES"],
-                )
-                cls._auto_set_rt_visible = True
-            else:
-                raise RuntimeError(
-                    "Neither ASCEND_RT_VISIBLE_DEVICES nor ASCEND_VISIBLE_DEVICES is set"
-                )
-
         cls._engine_model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         assert os.path.isdir(cls._engine_model), f"Model not found: {cls._engine_model}"
 
@@ -197,8 +164,6 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
     def tearDownClass(cls):
         if cls._saved_npu_alloc_conf is not None:
             os.environ["PYTORCH_NPU_ALLOC_CONF"] = cls._saved_npu_alloc_conf
-        if cls._auto_set_rt_visible:
-            del os.environ["ASCEND_RT_VISIBLE_DEVICES"]
 
     def _common_test_params(self):
         """Common test parameters."""
@@ -216,6 +181,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         mem_fraction_static=0.6,
         tp_size=1,
         enable_weights_cpu_backup=False,
+        disable_cuda_graph=False,
     ):
         import sglang as sgl
 
@@ -226,6 +192,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             mem_fraction_static=mem_fraction_static,
             tp_size=tp_size,
             enable_weights_cpu_backup=enable_weights_cpu_backup,
+            disable_cuda_graph=disable_cuda_graph,
         )
 
     def _make_hf_model(self, model_path):
@@ -255,13 +222,13 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 self.assertGreater(len(out), 0)
                 logger.info(f"[{tag}] baseline: {out}")
 
-                mem_before = _npu_mem_used_all_mb()
+                mem_before = _npu_smi_mem_mb()
                 t0 = time.perf_counter()
                 engine.release_memory_occupation()
                 mem_release = _assert_mem_decreased(
                     mem_before,
-                    _npu_mem_used_all_mb,
-                    _MIN_DELTA_MB_RELEASE_ALL,
+                    _npu_smi_mem_mb,
+                    _MIN_DELTA_SMI_RELEASE_ALL_MB,
                     f"{tag}-release",
                 )
                 logger.info(
@@ -271,8 +238,8 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 engine.resume_memory_occupation()
                 mem_resume = _assert_mem_increased(
                     mem_release,
-                    _npu_mem_used_all_mb,
-                    _MIN_DELTA_MB_RELEASE_ALL,
+                    _npu_smi_mem_mb,
+                    _MIN_DELTA_SMI_RELEASE_ALL_MB,
                     f"{tag}-resume",
                 )
                 logger.info(
@@ -308,12 +275,12 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             self.assertGreater(len(baseline), 0)
             logger.info(f"[CB] baseline: {baseline}")
 
-            mem_before = _npu_mem_used_all_mb()
+            mem_before = _npu_smi_mem_mb()
             engine.release_memory_occupation()
             mem_release = _assert_mem_decreased(
                 mem_before,
-                _npu_mem_used_all_mb,
-                _MIN_DELTA_MB_RELEASE_ALL,
+                _npu_smi_mem_mb,
+                _MIN_DELTA_SMI_RELEASE_ALL_MB,
                 "cpu-backup",
             )
             logger.info(f"[CB] release: {mem_before:.0f}→{mem_release:.0f} MB")
@@ -321,8 +288,8 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             engine.resume_memory_occupation()
             mem_resume = _assert_mem_increased(
                 mem_release,
-                _npu_mem_used_all_mb,
-                _MIN_DELTA_MB_RELEASE_ALL,
+                _npu_smi_mem_mb,
+                _MIN_DELTA_SMI_RELEASE_ALL_MB,
                 "cb-resume",
             )
             logger.info(f"[CB] resume: {mem_release:.0f}→{mem_resume:.0f} MB")
@@ -337,11 +304,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             engine.shutdown()
 
     def test_npu_rl_multi_stage_release_and_resume(self):
-        """TP=1,2: staged release kv→w, resume w→update→resume kv.
-
-        Uses npu-smi for memory tracking because torch.npu.mem_get_info
-        cannot see into sglang's static memory pool on NPU.
-        """
+        """TP=1,2: staged release kv→w, resume w→update→resume kv."""
         params = self._common_test_params()
         self.assertTrue(
             os.path.isdir(LLAMA_3_2_1B_WEIGHTS_PATH),
@@ -446,12 +409,9 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         )
 
         os.environ.setdefault("SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT", "1")
-        import sglang as sgl
 
-        engine = sgl.Engine(
-            model_path=QWEN3_30B_A3B_WEIGHTS_PATH,
-            random_seed=42,
-            enable_memory_saver=True,
+        engine = self._setup_engine(
+            model=QWEN3_30B_A3B_WEIGHTS_PATH,
             mem_fraction_static=0.5,
             tp_size=2,
             disable_cuda_graph=True,
@@ -467,12 +427,12 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             # Wait for the scheduler to become fully idle
             time.sleep(3)
 
-            mem_before = _npu_mem_used_all_mb()
+            mem_before = _npu_smi_mem_mb()
             engine.release_memory_occupation()
             mem_release = _assert_mem_decreased(
                 mem_before,
-                _npu_mem_used_all_mb,
-                _MIN_DELTA_MB_RELEASE_ALL,
+                _npu_smi_mem_mb,
+                _MIN_DELTA_SMI_RELEASE_ALL_MB,
                 "moe-release",
             )
             logger.info(f"[MoE] release: {mem_before:.0f}→{mem_release:.0f} MB")
@@ -480,8 +440,8 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             engine.resume_memory_occupation()
             mem_resume = _assert_mem_increased(
                 mem_release,
-                _npu_mem_used_all_mb,
-                _MIN_DELTA_MB_RELEASE_ALL,
+                _npu_smi_mem_mb,
+                _MIN_DELTA_SMI_RELEASE_ALL_MB,
                 "moe-resume",
             )
             logger.info(f"[MoE] resume: {mem_release:.0f}→{mem_resume:.0f} MB")
@@ -508,8 +468,6 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
 
         params = self._common_test_params()
 
-        import sglang as sgl
-
         logger.info(
             "ASCEND_RT_VISIBLE_DEVICES: %s",
             os.environ["ASCEND_RT_VISIBLE_DEVICES"],
@@ -518,10 +476,8 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         for i in range(torch.npu.device_count()):
             logger.info("NPU Device ID: %s", i)
 
-        engine = sgl.Engine(
-            model_path=QWEN3_5_9B_WEIGHTS_PATH,
-            random_seed=42,
-            enable_memory_saver=True,
+        engine = self._setup_engine(
+            model=QWEN3_5_9B_WEIGHTS_PATH,
             mem_fraction_static=0.5,
             tp_size=1,
             disable_cuda_graph=True,
@@ -537,19 +493,19 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             # Wait for the scheduler to become fully idle after generate().
             time.sleep(2)
 
-            mem_before = _npu_mem_used_all_mb()
+            mem_before = _npu_smi_mem_mb()
             engine.release_memory_occupation()
             mem_after = _assert_mem_decreased(
                 mem_before,
-                _npu_mem_used_all_mb,
-                _MIN_DELTA_MB_RELEASE_ALL,
+                _npu_smi_mem_mb,
+                _MIN_DELTA_SMI_RELEASE_ALL_MB,
                 "gdn-release",
             )
             logger.info(f"[GDN] release: {mem_before:.0f}→{mem_after:.0f} MB")
 
             engine.resume_memory_occupation()
             mem_resume = _assert_mem_increased(
-                mem_after, _npu_mem_used_all_mb, _MIN_DELTA_MB_RELEASE_ALL, "gdn-resume"
+                mem_after, _npu_smi_mem_mb, _MIN_DELTA_SMI_RELEASE_ALL_MB, "gdn-resume"
             )
             logger.info(f"[GDN] resume: {mem_resume:.0f} MB")
 
