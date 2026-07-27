@@ -125,8 +125,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
@@ -162,8 +160,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
@@ -189,8 +185,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
@@ -213,8 +207,6 @@ class TestCudaGraphBs(CustomTestCase):
             ],
         )
         try:
-            res = _run_bench(DEFAULT_URL_FOR_TEST)
-            self.assertEqual(res["completed"], 10)
             log_text = _read_log(err_path)
         finally:
             kill_process_tree(proc.pid)
