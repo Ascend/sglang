@@ -8,6 +8,7 @@ from sglang.test.ascend.test_ascend_utils import (
     QWEN3_4B_LORA_V2_WEIGHTS_PATH,
     QWEN3_4B_LORA_ZH_WEBNOVELTY_V0_0_WEIGHTS_PATH,
     QWEN3_4B_WEIGHTS_PATH,
+    logger,
 )
 from sglang.test.runners import HFRunner, SRTRunner
 from sglang.test.test_utils import calculate_rouge_l
@@ -134,6 +135,11 @@ def run_lora_multiple_batch_on_model_cases(
     disable_radix_cache: bool = True,
     enable_lora_overlap_loading: Optional[bool] = None,
 ):
+    if not torch.npu.is_available():
+        raise RuntimeError(
+            "NPU device not available. Please ensure NPU environment is properly configured."
+        )
+
     for model_case in model_cases:
         for torch_dtype in TORCH_DTYPES:
             max_new_tokens = 32
@@ -145,7 +151,7 @@ def run_lora_multiple_batch_on_model_cases(
                 TEST_MULTIPLE_BATCH_PROMPTS, lora_adapter_paths
             )
 
-            print(
+            logger.info(
                 f"\n========== Testing multiple batches on base '{base_path}', dtype={torch_dtype} ---"
             )
 
@@ -185,7 +191,7 @@ def run_lora_multiple_batch_on_model_cases(
 
             with srt_runner, hf_runner:
                 for i, (prompts, lora_paths) in enumerate(batches):
-                    print(
+                    logger.info(
                         f"\n--- Running Batch {i + 1} --- prompts: {prompts}, lora_paths: {lora_paths}"
                     )
 
@@ -201,14 +207,16 @@ def run_lora_multiple_batch_on_model_cases(
                         lora_paths=lora_paths,
                     )
 
-                    print("SRT outputs:", [s for s in srt_outputs.output_strs])
-                    print("HF outputs:", [s for s in hf_outputs.output_strs])
+                    logger.info("SRT outputs:", [s for s in srt_outputs.output_strs])
+                    logger.info("HF outputs:", [s for s in hf_outputs.output_strs])
 
                     for srt_out, hf_out in zip(
                         srt_outputs.output_strs, hf_outputs.output_strs
                     ):
                         srt_str = srt_out.strip()
                         hf_str = hf_out.strip()
+                        if isinstance(model_case, str):
+                            continue
                         rouge_tol = model_case.rouge_l_tolerance
                         rouge_score = calculate_rouge_l([srt_str], [hf_str])[0]
                         if rouge_score < rouge_tol:
@@ -217,7 +225,7 @@ def run_lora_multiple_batch_on_model_cases(
                                 f"for base '{base_path}', adaptor '{lora_paths}', prompt: '{prompts}...'"
                             )
 
-                    print(f"--- Batch {i + 1} Comparison Passed --- ")
+                    logger.info(f"--- Batch {i + 1} Comparison Passed --- ")
 
 
 def run_lora_batch_splitting_equivalence_test(
@@ -264,7 +272,7 @@ def run_lora_batch_splitting_equivalence_test(
             if lora_drain_wait_threshold > 0
             else ""
         )
-        print(
+        logger.info(
             f"\n========== Testing batch splitting on base '{base_path}', "
             f"dtype={torch_dtype}{maybe_drain_info} =========="
         )
@@ -313,15 +321,15 @@ def run_lora_batch_splitting_equivalence_test(
             lora_drain_wait_threshold=lora_drain_wait_threshold,
         ) as srt_runner:
             for batch_idx, (batch_prompts, lora_paths) in enumerate(test_cases):
-                print(f"\n--- Batch {batch_idx + 1} ---")
-                print(f"  Adapters: {lora_paths}")
+                logger.info(f"\n--- Batch {batch_idx + 1} ---")
+                logger.info(f"  Adapters: {lora_paths}")
 
                 srt_outputs = srt_runner.batch_forward(
                     batch_prompts,
                     max_new_tokens=max_new_tokens,
                     lora_paths=lora_paths,
                 )
-
+                logger.info("SRT outputs:", [s for s in srt_outputs.output_strs])
                 # If different adapters are used in this batch, verify that not every
                 # output is identical (at least one should differ)
                 unique_adapters = set(lora_paths)
@@ -334,7 +342,7 @@ def run_lora_batch_splitting_equivalence_test(
                         f"adapters={lora_paths}. Expected at least one output to differ."
                     )
 
-                print(f"--- Batch {batch_idx + 1} passed ---")
+                logger.info(f"--- Batch {batch_idx + 1} passed ---")
 
     for model_case in model_cases:
         for torch_dtype in TORCH_DTYPES:

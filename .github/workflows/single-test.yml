@@ -91,7 +91,7 @@ jobs:
     if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') }}
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 6
       matrix:
         test_config:
           - name: test_npu_lora_qwen3
@@ -101,6 +101,22 @@ jobs:
           - name: test_npu_lora_qwen3_bak
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/basic_function/lora/test_npu_lora_qwen3_bak.py
+            test_type: 'function'
+          - name: test_npu_pooled_hidden_states
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states.py
+            test_type: 'function'
+          - name: test_npu_pooled_hidden_states_2
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states_2.py
+            test_type: 'function'
+          - name: test_npu_pooled_hidden_states_3
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states_3.py
+            test_type: 'function'
+          - name: test_npu_pooled_hidden_states_4
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states_4.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
