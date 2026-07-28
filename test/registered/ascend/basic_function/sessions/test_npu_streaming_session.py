@@ -10,7 +10,10 @@ Tests:
 """
 
 import os
+import time
 import unittest
+
+import requests
 
 from sglang.srt.environ import envs
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
@@ -74,6 +77,89 @@ class TestNPUStreamingSession(NPUStreamingSessionServerBase, StreamingSessionKit
         "4",
     ]
     kv_inherit_offsets = (0,)
+
+    def test_first_mid_abort_recovery(self) -> None:
+        """NPU override: Qwen3-8B context ~40K, max_new_tokens reduced to 30000."""
+        requests.post(self.base_url + "/flush_cache")
+
+        resp = requests.post(
+            self.base_url + "/open_session",
+            json={"capacity_of_str_len": 50000, "streaming": True},
+        )
+        self.assertEqual(resp.status_code, 200)
+        session_id = resp.json()
+
+        try:
+            ids_1 = self.tokenizer.encode("Tell me a very long story about a wizard.")
+
+            import threading
+
+            result = [None]
+
+            def do_generate():
+                r = requests.post(
+                    self.base_url + "/generate",
+                    json={
+                        "input_ids": ids_1,
+                        "sampling_params": {
+                            "temperature": 0,
+                            "max_new_tokens": 30000,
+                        },
+                        "session_params": {"id": session_id, "rid": None},
+                    },
+                    timeout=60,
+                )
+                result[0] = r
+
+            t = threading.Thread(target=do_generate)
+            t.start()
+            time.sleep(0.5)
+            abort_resp = requests.post(
+                self.base_url + "/abort_request",
+                json={"rid": "", "abort_all": True},
+                timeout=10,
+            )
+            self.assertEqual(abort_resp.status_code, 200, abort_resp.text)
+            t.join(timeout=30)
+
+            self.assertIsNotNone(result[0], "Turn 1 should have returned")
+            data_1 = result[0].json()
+            self.assertEqual(
+                data_1["meta_info"]["finish_reason"]["type"],
+                "abort",
+                "Turn 1 should be aborted, not finished normally",
+            )
+
+            ids_2 = self.tokenizer.encode("Tell me a short joke.")
+            for attempt in range(20):
+                resp_2 = requests.post(
+                    self.base_url + "/generate",
+                    json={
+                        "input_ids": ids_2,
+                        "sampling_params": {"temperature": 0, "max_new_tokens": 8},
+                        "session_params": {"id": session_id, "rid": None},
+                    },
+                    timeout=30,
+                )
+                if resp_2.status_code == 200:
+                    break
+                time.sleep(0.5)
+            self.assertEqual(resp_2.status_code, 200, resp_2.text)
+            data_2 = resp_2.json()
+            self.assertEqual(
+                data_2["meta_info"]["prompt_tokens"],
+                len(ids_2),
+                "prompt_tokens must equal turn 2 input only (no inherited context)",
+            )
+        finally:
+            requests.post(
+                self.base_url + "/close_session",
+                json={"session_id": session_id},
+                timeout=10,
+            )
+
+        health = requests.get(self.base_url + "/health", timeout=10)
+        self.assertEqual(health.status_code, 200)
 
 
 class TestNPUStreamingSessionLargePage(TestNPUStreamingSession):

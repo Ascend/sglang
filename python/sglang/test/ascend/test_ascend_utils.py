@@ -109,7 +109,6 @@ KIMI_K2_5_EAGLE3_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "lightseekorg/kimi-k2.5-eagle3"
 )
 LING_LITE_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "inclusionAI/Ling-lite")
-LLAMA_2_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "LLM-Research/Llama-2-7B")
 LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "AI-ModelScope/Llama-3.1-8B-Instruct"
 )
@@ -168,7 +167,10 @@ QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 QWEN3_0_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-0.6B")
 QWEN3_0_6B_ASR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-0.6B")
 QWEN3_5_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-27B")
-QWEN3_6_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-35B-A3B")
+QWEN3_6_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-27B")
+QWEN3_6_27B_CYBERSECURITY_LORA_MODEL_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "hotdogs/qwen3.6-27b-cybersecurity-lora"
+)
 QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-1.7B-GPTQ-Int8"
 )
@@ -225,6 +227,9 @@ QWEN3_32B_EAGLE3_WEIGHTS_PATH = os.path.join(
 )
 QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "aleoyang/Qwen3-32B-w8a8-MindIE"
+)
+QWEN2_1_5B_INSTRUCT_GTE_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/gte-Qwen2-1.5B-instruct"
 )
 QWQ_32B_W8A8_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "vllm-ascend/QWQ-32B-W8A8")
 SMOLLM_1_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "HuggingFaceTB/SmolLM-1.7B")
@@ -298,6 +303,10 @@ QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen2-0.5B-Instruct"
 )
 STEP3_VL_10B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "stepfun-ai/Step3-VL-10B")
+
+OPENAI_WHISPER_LARGE_V3_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "openai/whisper-large-v3"
+)
 
 QWEN3_30B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B")
 QWEN3_30B_A3B_W8A8_WEIGHTS_PATH = os.path.join(
@@ -405,7 +414,9 @@ IMAGES_EXAMPLE_PATH = os.path.join(IMAGES_DIR, "example_image.png")
 IMAGES_023_PATH = os.path.join(IMAGES_DIR, "023.jpg")
 IMAGES_MAN_PATH = os.path.join(IMAGES_DIR, "man.png")
 IMAGES_LOGO_PATH = os.path.join(IMAGES_DIR, "logo.png")
+IMAGES_1_1_PATH = os.path.join(IMAGES_DIR, "1x1.png")
 VIDEO_JOBS_PATH = os.path.join(VIDEO_DIR, "jobs.mp4")
+AUDIO_TRUMP_WEF_PATH = os.path.join(VIDEO_DIR, "audios_Trump_WEF_2018_10s.mp3")
 INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
     IMAGES_DIR, "invoice_with_barcode_logo.jpeg"
 )
