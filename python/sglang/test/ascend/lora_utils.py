@@ -276,7 +276,7 @@ def run_lora_batch_splitting_equivalence_test(
             f"dtype={torch_dtype}{maybe_drain_info} =========="
         )
 
-        prompts = [TEST_MULTIPLE_BATCH_PROMPTS[1]] * 3
+        prompts = [TEST_MULTIPLE_BATCH_PROMPTS[0]] * 3
         test_cases = [
             (
                 prompts,
@@ -292,7 +292,7 @@ def run_lora_batch_splitting_equivalence_test(
             ),
             (
                 prompts,
-                [None, lora_adapter_paths[1], None],
+                [None, lora_adapter_paths[0], None],
             ),
             (
                 prompts,
