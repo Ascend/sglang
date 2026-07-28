@@ -61,7 +61,7 @@ class TestNPUGLM5_Top64_Pruned_GSM8K(TestAscendAccuracyTestCaseBase):
         "temperature": 0.01,
     }
     eval_batch_size = 16
-    limit = 100
+    limit = 101
 
     def test_gsm8k(self):
         self.run_accuracy()
