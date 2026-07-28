@@ -64,6 +64,8 @@ spec:
             value: "{{ run_id }}"
           - name: RUN_LABEL
             value: "{{ run_label }}"
+          - name: TROUBLE_SHOTTING
+            value: "{{ trouble_shotting }}"
           - name: TRANSFORMERS_VERSION_FOR_SGLANG
             value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]
@@ -180,6 +182,8 @@ spec:
             value: "{{ run_id }}"
           - name: RUN_LABEL
             value: "{{ run_label }}"
+          - name: TROUBLE_SHOTTING
+            value: "{{ trouble_shotting }}"
           - name: TRANSFORMERS_VERSION_FOR_SGLANG
             value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]
@@ -296,6 +300,8 @@ spec:
             value: "https://hf-mirror.com"
           - name: SGLANG_IS_IN_CI
             value: "{{ sglang_is_in_ci }}"
+          - name: TROUBLE_SHOTTING
+            value: "{{ trouble_shotting }}"
           - name: TRANSFORMERS_VERSION_FOR_SGLANG
             value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]

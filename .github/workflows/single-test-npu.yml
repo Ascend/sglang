@@ -84,12 +84,31 @@ jobs:
 
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
+
+            # prepare for output data
+            test_data_output_path=/root/.cache/tests/output/${branch}-${run_id}/${workflow_type}/single/${tc_name}-${timestamp}
+            mkdir -p ${test_data_output_path}
+            export METRICS_DATA_FILE=${test_data_output_path}
+            echo "Metrics file path: ${METRICS_DATA_FILE}"
+
+            # prepare for log data
             log_path="${log_path_base}/${tc_name}/${HOSTNAME}"
             rm -rf ${log_path}
             mkdir -p ${log_path}
             echo "Running test case ${test_case}, log path: ${log_path}"
-            python -u ${sglang_source_path}/${test_case}
-            echo "Finished test case ${test_case}"
+
+            test_exit_code=0
+            set -o pipefail
+            python -u ${sglang_source_path}/${test_case} 2>&1 | tee /tmp/test_output.log "${log_path}/${tc_name}.log" || test_exit_code=$?
+            set +o pipefail
+            echo "Finished test case ${test_case}, exit code: ${test_exit_code}"
+
+            # Save test log to METRICS_DATA_FILE
+            if [ -n "${METRICS_DATA_FILE}" ]; then
+              mkdir -p "${METRICS_DATA_FILE}"
+              cp /tmp/test_output.log "${METRICS_DATA_FILE}/test_output.log"
+              echo "Metrics log saved to ${METRICS_DATA_FILE}/test_output.log"
+            fi
           done
 
           plog_path="/root/ascend/log/debug/plog"

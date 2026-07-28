@@ -156,7 +156,9 @@ jobs:
 
           echo "Running test case ${test_case}"
           test_exit_code=0
-          ${PYTHON_FOR_SGLANG} -u ${test_case} 2>&1 | tee /tmp/test_output.log || test_exit_code=$?
+          set -o pipefail
+          ${PYTHON_FOR_SGLANG} -u ${test_case} 2>&1 | tee /tmp/test_output.log "${log_path}/${tc_name}.log" || test_exit_code=$?
+          set +o pipefail
           echo "Finished test case ${test_case}"
 
           if [ "${test_exit_code}" = "0" ]; then

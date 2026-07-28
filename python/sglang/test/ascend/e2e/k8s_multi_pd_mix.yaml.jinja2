@@ -64,6 +64,10 @@ spec:
             value: "{{ run_id }}"
           - name: RUN_LABEL
             value: "{{ run_label }}"
+          - name: TROUBLE_SHOTTING
+            value: "{{ trouble_shotting }}"
+          - name: TRANSFORMERS_VERSION_FOR_SGLANG
+            value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]
           args:
             - |
