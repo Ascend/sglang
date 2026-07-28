@@ -3,26 +3,30 @@
 Covers both Engine-level (Python API) and HTTP-level (/v1/score) integration:
 
   TestPooledHiddenStatesEngine     — SeqCls model, single-item scoring
-  TestPooledHiddenStatesMISEngine  — SeqCls model, MIS delimiter mode
   TestPooledHiddenStatesHTTP       — HTTP layer serialization round-trip
   TestPooledHiddenStatesCausalLMRejection — CausalLM must reject the flag
 
-Each test class spins up its own Engine or server so GPU memory is isolated.
+Each test class spins up its own Engine or server so NPU memory is isolated.
 """
 
 import json
 import unittest
 
+import requests
 import torch
 
 from sglang.srt.entrypoints.engine import Engine
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
     QWEN3_0_6B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    popen_launch_server,
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
@@ -33,15 +37,17 @@ _NUM_LABELS = 4
 
 
 # ---------------------------------------------------------------------------
-# Engine — single-item scoring (no MIS)
+# Engine — SeqCls pooled hidden states on NPU
 # ---------------------------------------------------------------------------
 
 
 class TestPooledHiddenStatesEngine(CustomTestCase):
-    """Validates return_pooled_hidden_states through the Engine Python API.
+    """Testcase: Pooled hidden states via Engine Python API on NPU.
+    Validates return_pooled_hidden_states on SeqCls models using Ascend NPU.
+    Covers presence, shape, count, device, determinism, and score consistency.
 
-    Uses Qwen3ForSequenceClassification with a random head so we only care
-    about shape and pipeline plumbing, not numerical accuracy.
+    [Test Category] Functionality
+    [Test Target] return_pooled_hidden_states on SeqCls (Engine API, NPU)
     """
 
     @classmethod
@@ -65,7 +71,7 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
         torch.cuda.empty_cache()
 
     def test_phs_returned_when_requested(self):
-        """Pooled hidden states are present and shaped correctly."""
+        """PHS returned and shaped correctly when flag is True."""
         result = self.engine.score(
             query="Rate each:",
             items=["Good", "Bad"],
@@ -79,7 +85,7 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
             self.assertGreater(phs.shape[0], 0)
 
     def test_phs_none_when_not_requested(self):
-        """Without the flag, pooled_hidden_states must be None."""
+        """PHS is None when return_pooled_hidden_states=False."""
         result = self.engine.score(
             query="Rate each:",
             items=["Good", "Bad"],
@@ -88,7 +94,7 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
         self.assertIsNone(result.pooled_hidden_states)
 
     def test_phs_shape_is_consistent(self):
-        """PHS tensors for different items share the same hidden dimension."""
+        """All PHS tensors share the same hidden dimension."""
         result = self.engine.score(
             query="Evaluate:",
             items=["Alpha", "Beta", "Gamma"],
@@ -112,7 +118,7 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
                 self.assertEqual(len(result.pooled_hidden_states), n)
 
     def test_phs_on_cpu(self):
-        """Returned tensors live on CPU (no GPU references leak to caller)."""
+        """Returned tensors live on CPU (no NPU references leak to caller)."""
         result = self.engine.score(
             query="Check device:",
             items=["Test"],
@@ -122,7 +128,7 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
             self.assertEqual(str(phs.device), "cpu")
 
     def test_phs_deterministic(self):
-        """Identical requests produce identical PHS tensors."""
+        """Identical requests produce identical PHS tensors on NPU."""
         kwargs = dict(
             query="Evaluate:", items=["A", "B"], return_pooled_hidden_states=True
         )
@@ -135,7 +141,7 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
             )
 
     def test_scores_unaffected_by_phs_flag(self):
-        """The phs flag must not change the scores themselves (fp16 tolerance)."""
+        """PHS flag does not alter the classification scores."""
         kwargs = dict(query="Rate:", items=["X", "Y", "Z"], apply_softmax=True)
         scores_without = self.engine.score(
             **kwargs, return_pooled_hidden_states=False
@@ -149,7 +155,7 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
                 self.assertAlmostEqual(a, b, places=2)
 
     def test_phs_with_tokenized_inputs(self):
-        """Pre-tokenized inputs also return PHS correctly."""
+        """Pre-tokenized inputs also return PHS correctly on NPU."""
         from transformers import AutoTokenizer
 
         tok = AutoTokenizer.from_pretrained(_SEQCLS_MODEL)
@@ -164,252 +170,145 @@ class TestPooledHiddenStatesEngine(CustomTestCase):
 
 
 # ---------------------------------------------------------------------------
-# Engine — MIS delimiter mode
+# CausalLM rejection on NPU
 # ---------------------------------------------------------------------------
 
 
-# @unittest.skipIf(
-#     is_hip(),
-#     "Multi-Item Scoring (enable_mis) requires the flashinfer prefill/decode "
-#     "backend, which is NVIDIA-only.",
-# )
-# class TestPooledHiddenStatesMISEngine(CustomTestCase):
-#     """Validates return_pooled_hidden_states in MIS (delimiter) scoring mode.
-#
-#     MIS packs all items into one sequence; the PHS at each delimiter position
-#     should be returned per-item.
-#     """
-#
-#     @classmethod
-#     def setUpClass(cls):
-#         cls.engine = Engine(
-#             model_path=_SEQCLS_MODEL,
-#             disable_radix_cache=True,
-#             chunked_prefill_size=-1,
-#             enable_mis=True,
-#             json_model_override_args=json.dumps(
-#                 {
-#                     "architectures": ["Qwen3ForSequenceClassification"],
-#                     "num_labels": _NUM_LABELS,
-#                 }
-#             ),
-#             mem_fraction_static=0.15,
-#         )
-#
-#     @classmethod
-#     def tearDownClass(cls):
-#         if hasattr(cls, "engine") and cls.engine:
-#             cls.engine.shutdown()
-#         torch.cuda.empty_cache()
-#
-#     def test_mis_phs_count_matches_items(self):
-#         """MIS must return one PHS tensor per item."""
-#         items = ["Option A", "Option B", "Option C"]
-#         result = self.engine.score(
-#             query="Rate each:", items=items, return_pooled_hidden_states=True
-#         )
-#         self.assertIsNotNone(result.pooled_hidden_states)
-#         self.assertEqual(len(result.pooled_hidden_states), len(items))
-#
-#     def test_mis_phs_none_when_not_requested(self):
-#         result = self.engine.score(
-#             query="Rate each:",
-#             items=["A", "B"],
-#             return_pooled_hidden_states=False,
-#         )
-#         self.assertIsNone(result.pooled_hidden_states)
-#
-#     def test_mis_phs_are_tensors_on_cpu(self):
-#         result = self.engine.score(
-#             query="Classify:", items=["X", "Y"], return_pooled_hidden_states=True
-#         )
-#         for phs in result.pooled_hidden_states:
-#             self.assertIsInstance(phs, torch.Tensor)
-#             self.assertEqual(str(phs.device), "cpu")
-#
-#     def test_mis_phs_different_items_different_hidden_states(self):
-#         """Different items should produce distinct PHS vectors."""
-#         items = [
-#             "Option A is about cats",
-#             "Option B is about dogs",
-#             "Option C is about fish",
-#         ]
-#         result = self.engine.score(
-#             query="Classify:", items=items, return_pooled_hidden_states=True
-#         )
-#         phs = result.pooled_hidden_states
-#         self.assertFalse(
-#             all(torch.allclose(phs[0], p, atol=1e-6) for p in phs[1:]),
-#             "All MIS items returned identical hidden states",
-#         )
-#
-#     def test_mis_single_item(self):
-#         """Single item through MIS path still returns one PHS tensor."""
-#         result = self.engine.score(
-#             query="Evaluate:", items=["Only one"], return_pooled_hidden_states=True
-#         )
-#         self.assertIsNotNone(result.pooled_hidden_states)
-#         self.assertEqual(len(result.pooled_hidden_states), 1)
-#
-#     def test_mis_many_items(self):
-#         """10 items all produce PHS tensors of consistent shape."""
-#         items = [f"Item {i}" for i in range(10)]
-#         result = self.engine.score(
-#             query="Classify:", items=items, return_pooled_hidden_states=True
-#         )
-#         self.assertIsNotNone(result.pooled_hidden_states)
-#         self.assertEqual(len(result.pooled_hidden_states), len(items))
-#         shapes = {phs.shape for phs in result.pooled_hidden_states}
-#         self.assertEqual(len(shapes), 1, "MIS PHS shapes should be uniform")
-#
-#     def test_mis_scores_unaffected_by_phs_flag(self):
-#         """Enabling PHS does not alter the returned scores (fp16 tolerance)."""
-#         kwargs = dict(
-#             query="Rate:", items=["Alpha", "Beta", "Gamma"], apply_softmax=True
-#         )
-#         scores_without = self.engine.score(
-#             **kwargs, return_pooled_hidden_states=False
-#         ).scores
-#         scores_with = self.engine.score(
-#             **kwargs, return_pooled_hidden_states=True
-#         ).scores
-#         for row_a, row_b in zip(scores_without, scores_with):
-#             for a, b in zip(row_a, row_b):
-#                 self.assertAlmostEqual(a, b, places=2)
-#
-#
-# # ---------------------------------------------------------------------------
-# # CausalLM rejection
-# # ---------------------------------------------------------------------------
-#
-#
-# class TestPooledHiddenStatesCausalLMRejection(CustomTestCase):
-#     """CausalLM models must reject return_pooled_hidden_states=True."""
-#
-#     @classmethod
-#     def setUpClass(cls):
-#         cls.engine = Engine(model_path=_CAUSAL_LM_MODEL)
-#
-#     @classmethod
-#     def tearDownClass(cls):
-#         if hasattr(cls, "engine") and cls.engine:
-#             cls.engine.shutdown()
-#         torch.cuda.empty_cache()
-#
-#     def test_causal_lm_rejects_phs(self):
-#         """ValueError raised when requesting PHS from a CausalLM."""
-#         with self.assertRaises(ValueError) as ctx:
-#             self.engine.score(
-#                 query="Test",
-#                 items=["Item"],
-#                 label_token_ids=[1, 2],
-#                 return_pooled_hidden_states=True,
-#             )
-#         self.assertIn("CausalLM", str(ctx.exception))
-#
-#     def test_causal_lm_without_phs_still_works(self):
-#         """Baseline: CausalLM scoring without the flag works fine."""
-#         result = self.engine.score(
-#             query="Test",
-#             items=["Item"],
-#             label_token_ids=[1, 2],
-#             apply_softmax=True,
-#             return_pooled_hidden_states=False,
-#         )
-#         self.assertEqual(len(result.scores), 1)
-#         self.assertIsNone(result.pooled_hidden_states)
-#
-#
-# # ---------------------------------------------------------------------------
-# # HTTP layer
-# # ---------------------------------------------------------------------------
-#
-#
-# class TestPooledHiddenStatesHTTP(CustomTestCase):
-#     """HTTP integration: /v1/score with return_pooled_hidden_states.
-#
-#     Validates that the Pydantic schema, JSON serialization, and ORJSONResponse
-#     round-trip preserves the pooled hidden states as nested lists.
-#     """
-#
-#     @classmethod
-#     def setUpClass(cls):
-#         cls.model = _SEQCLS_MODEL
-#         cls.base_url = DEFAULT_URL_FOR_TEST
-#         cls.process = popen_launch_server(
-#             cls.model,
-#             cls.base_url,
-#             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-#             other_args=[
-#                 "--disable-radix-cache",
-#                 "--json-model-override-args",
-#                 json.dumps(
-#                     {
-#                         "architectures": ["Qwen3ForSequenceClassification"],
-#                         "num_labels": _NUM_LABELS,
-#                     }
-#                 ),
-#                 "--mem-fraction-static",
-#                 "0.15",
-#             ],
-#         )
-#
-#     @classmethod
-#     def tearDownClass(cls):
-#         if hasattr(cls, "process") and cls.process:
-#             kill_process_tree(cls.process.pid)
-#
-#     def _post(self, payload):
-#         return requests.post(self.base_url + "/v1/score", json=payload)
-#
-#     def test_phs_in_response_json(self):
-#         """Response includes pooled_hidden_states as nested float lists."""
-#         resp = self._post(
-#             {
-#                 "query": "Rate each:",
-#                 "items": ["Good", "Bad"],
-#                 "return_pooled_hidden_states": True,
-#                 "model": self.model,
-#             }
-#         )
-#         self.assertEqual(resp.status_code, 200)
-#         body = resp.json()
-#         phs = body.get("pooled_hidden_states")
-#         self.assertIsNotNone(phs)
-#         self.assertEqual(len(phs), 2)
-#         for item_phs in phs:
-#             self.assertIsInstance(item_phs, list)
-#             self.assertGreater(len(item_phs), 0)
-#             for v in item_phs:
-#                 self.assertIsInstance(v, float)
-#
-#     def test_phs_absent_when_not_requested(self):
-#         """Without the flag, pooled_hidden_states is null in JSON."""
-#         resp = self._post(
-#             {
-#                 "query": "Rate each:",
-#                 "items": ["Good"],
-#                 "model": self.model,
-#             }
-#         )
-#         self.assertEqual(resp.status_code, 200)
-#         body = resp.json()
-#         self.assertIsNone(body.get("pooled_hidden_states"))
-#
-#     def test_phs_matches_item_count(self):
-#         """Number of PHS vectors equals number of items."""
-#         items = ["A", "B", "C", "D"]
-#         resp = self._post(
-#             {
-#                 "query": "Classify:",
-#                 "items": items,
-#                 "return_pooled_hidden_states": True,
-#                 "model": self.model,
-#             }
-#         )
-#         self.assertEqual(resp.status_code, 200)
-#         phs = resp.json()["pooled_hidden_states"]
-#         self.assertEqual(len(phs), len(items))
+class TestPooledHiddenStatesCausalLMRejection(CustomTestCase):
+    """Testcase: CausalLM rejects return_pooled_hidden_states on NPU.
+    Validates that CausalLM models raise ValueError when the flag is set.
+    Covers rejection behavior and baseline scoring without the flag.
+
+    [Test Category] Functionality
+    [Test Target] return_pooled_hidden_states rejection on CausalLM (NPU)
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.engine = Engine(model_path=_CAUSAL_LM_MODEL)
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, "engine") and cls.engine:
+            cls.engine.shutdown()
+        torch.cuda.empty_cache()
+
+    def test_causal_lm_rejects_phs(self):
+        """ValueError raised when requesting PHS from a CausalLM on NPU."""
+        with self.assertRaises(ValueError) as ctx:
+            self.engine.score(
+                query="Test",
+                items=["Item"],
+                label_token_ids=[1, 2],
+                return_pooled_hidden_states=True,
+            )
+        self.assertIn("CausalLM", str(ctx.exception))
+
+    def test_causal_lm_without_phs_still_works(self):
+        """CausalLM scoring without PHS flag works fine on NPU."""
+        result = self.engine.score(
+            query="Test",
+            items=["Item"],
+            label_token_ids=[1, 2],
+            apply_softmax=True,
+            return_pooled_hidden_states=False,
+        )
+        self.assertEqual(len(result.scores), 1)
+        self.assertIsNone(result.pooled_hidden_states)
+
+
+# ---------------------------------------------------------------------------
+# HTTP layer on NPU
+# ---------------------------------------------------------------------------
+
+
+class TestPooledHiddenStatesHTTP(CustomTestCase):
+    """Testcase: Pooled hidden states via HTTP /v1/score endpoint on NPU.
+    Validates JSON serialization round-trip for return_pooled_hidden_states.
+    Covers response structure, null handling, and item count matching.
+
+    [Test Category] Integration
+    [Test Target] return_pooled_hidden_states via HTTP /v1/score (NPU)
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = _SEQCLS_MODEL
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=[
+                "--disable-radix-cache",
+                "--json-model-override-args",
+                json.dumps(
+                    {
+                        "architectures": ["Qwen3ForSequenceClassification"],
+                        "num_labels": _NUM_LABELS,
+                    }
+                ),
+                "--mem-fraction-static",
+                "0.15",
+            ],
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, "process") and cls.process:
+            kill_process_tree(cls.process.pid)
+
+    def _post(self, payload):
+        return requests.post(self.base_url + "/v1/score", json=payload)
+
+    def test_phs_in_response_json(self):
+        """Response includes pooled_hidden_states as nested float lists."""
+        resp = self._post(
+            {
+                "query": "Rate each:",
+                "items": ["Good", "Bad"],
+                "return_pooled_hidden_states": True,
+                "model": self.model,
+            }
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        phs = body.get("pooled_hidden_states")
+        self.assertIsNotNone(phs)
+        self.assertEqual(len(phs), 2)
+        for item_phs in phs:
+            self.assertIsInstance(item_phs, list)
+            self.assertGreater(len(item_phs), 0)
+            for v in item_phs:
+                self.assertIsInstance(v, float)
+
+    def test_phs_absent_when_not_requested(self):
+        """Without the flag, pooled_hidden_states is null in JSON."""
+        resp = self._post(
+            {
+                "query": "Rate each:",
+                "items": ["Good"],
+                "model": self.model,
+            }
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertIsNone(body.get("pooled_hidden_states"))
+
+    def test_phs_matches_item_count(self):
+        """Number of PHS vectors equals number of items."""
+        items = ["A", "B", "C", "D"]
+        resp = self._post(
+            {
+                "query": "Classify:",
+                "items": items,
+                "return_pooled_hidden_states": True,
+                "model": self.model,
+            }
+        )
+        self.assertEqual(resp.status_code, 200)
+        phs = resp.json()["pooled_hidden_states"]
+        self.assertEqual(len(phs), len(items))
 
 
 if __name__ == "__main__":

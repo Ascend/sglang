@@ -106,18 +106,6 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states.py
             test_type: 'function'
-          - name: test_npu_pooled_hidden_states_2
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states_2.py
-            test_type: 'function'
-          - name: test_npu_pooled_hidden_states_3
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states_3.py
-            test_type: 'function'
-          - name: test_npu_pooled_hidden_states_4
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/basic_function/prefill_only/test_npu_pooled_hidden_states_4.py
-            test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
