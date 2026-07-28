@@ -488,6 +488,7 @@ jobs:
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
+      workflow_type: fulltest
       test_type: ${{ matrix.test_config.test_type }}
       test_config_name: ${{ matrix.test_config.name }}
       test_case: ${{ matrix.test_config.test_case }}
@@ -528,6 +529,7 @@ jobs:
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-amd64-cpu-8
+      workflow_type: fulltest
       test_type: ${{ matrix.test_config.test_type }}
       test_config_name: ${{ matrix.test_config.name }}
       prefill_size: ${{ matrix.test_config.prefill_size }}
@@ -555,6 +557,7 @@ jobs:
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-amd64-cpu-8
+      workflow_type: fulltest
       test_type: 'perf'
       test_config_name: ${{ matrix.test_config.name }}
       node_size: ${{ matrix.test_config.node_size }}

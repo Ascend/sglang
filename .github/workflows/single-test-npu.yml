@@ -79,14 +79,15 @@ jobs:
           run_id=${RUN_ID:-${{ github.run_id }}}
           branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
           timestamp=$(date +%H%M%S)
-          log_path="/root/.cache/tests/logs/log/${branch}-${run_id}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
-          rm -rf ${log_path}
-          mkdir -p ${log_path}
-          echo "Log path: ${log_path}"
+          log_path_base="/root/.cache/tests/logs/log/${branch}-${run_id}/${workflow_type}/${timestamp}"
+          echo "Log base path: ${log_path_base}"
 
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
-            echo "Running test case ${test_case}"
+            log_path="${log_path_base}/${tc_name}/${HOSTNAME}"
+            rm -rf ${log_path}
+            mkdir -p ${log_path}
+            echo "Running test case ${test_case}, log path: ${log_path}"
             python -u ${sglang_source_path}/${test_case}
             echo "Finished test case ${test_case}"
           done
