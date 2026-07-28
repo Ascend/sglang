@@ -39,7 +39,7 @@ jobs:
           ln -sf ${sglang_source_path} /root/sglang
 
           test_cases=(
-            "test/registered/ascend/llm_models/test_npu_olmoe_1b_7b.py"
+            "test/registered/ascend/basic_function/api_related/test_npu_api_related_tool_call.py"
           )
 
           for test_case in "${test_cases[@]}"; do
