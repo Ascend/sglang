@@ -54,7 +54,7 @@ def _start_prefill_with_capture(cls):
         "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
         "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "3600",
         "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "3600",
-        "SLANG_TEST_FORCE_OPTIMISTIC_PREFILL_RETRY_PROB": "0.1",
+        "SGLANG_TEST_FORCE_OPTIMISTIC_PREFILL_RETRY_PROB": "1.0",
     }
 
     _, host, port = cls.prefill_url.split(":")
