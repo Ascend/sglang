@@ -140,13 +140,13 @@ jobs:
           fi
 
           # prepare for output data
-          run_id=${RUN_ID:-${{ github.run_id }}}
-          workflow_type=${{ inputs.workflow_type }}
-          test_data_output_path=/root/.cache/tests/output/${workflow_type}/${{ inputs.test_type }}/${run_id}
-          mkdir -p ${test_data_output_path}
           tc_name=${test_case##*/}
           tc_name=${tc_name%.*}
-          metrics_data_path=${test_data_output_path}/${tc_name}
+          run_id=${RUN_ID:-${{ github.run_id }}}
+          workflow_type=${{ inputs.workflow_type }}
+          branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          run_label="${workflow_type}-${branch}-${run_id}"
+          metrics_data_path=/root/.cache/tests/output/${run_label}/${{ inputs.test_type }}/${tc_name}
           mkdir -p ${metrics_data_path}
           echo "Metrics file path: ${metrics_data_path}"
 
@@ -195,7 +195,7 @@ jobs:
             echo "Install sglang from source."
             CMD="${CMD} --install-sglang-from-source"
             commit_id=${{ github.sha }}
-            echo "commit id: ${commit_id}" > ${test_data_output_path}/commit_id
+            echo "commit id: ${commit_id}" > "$(dirname "${metrics_data_path}")/commit_id"
           else
             echo "Use sglang from image: ${{ inputs.image }}"
           fi

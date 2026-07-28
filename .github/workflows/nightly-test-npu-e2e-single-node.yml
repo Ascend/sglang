@@ -81,12 +81,14 @@ jobs:
           fi
 
           # prepare for output data
-          run_id=${RUN_ID:-${{ github.run_id }}}
-          workflow_type=${{ inputs.workflow_type }}
-          test_data_output_path=/root/.cache/tests/output/${workflow_type}/${{ inputs.test_type }}/${run_id}
-          mkdir -p ${test_data_output_path}
           tc_name=${test_case##*/}
           tc_name=${tc_name%.*}
+          run_id=${RUN_ID:-${{ github.run_id }}}
+          workflow_type=${{ inputs.workflow_type }}
+          branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          run_label="${workflow_type}-${branch}-${run_id}"
+          test_data_output_path=/root/.cache/tests/output/${run_label}/${{ inputs.test_type }}/${tc_name}
+          mkdir -p ${test_data_output_path}
           export METRICS_DATA_FILE=${test_data_output_path}/${tc_name}
           mkdir -p ${METRICS_DATA_FILE}
           echo "Metrics file path: ${METRICS_DATA_FILE}"
@@ -148,7 +150,7 @@ jobs:
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
           # Set environment of cann
-          log_path="/root/.cache/tests/logs/log/${workflow_type}/${run_id}/${tc_name}/${HOSTNAME}"
+          log_path="/root/.cache/tests/logs/log/${run_label}/${tc_name}/${HOSTNAME}"
           rm -rf ${log_path}
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"
@@ -209,6 +211,15 @@ jobs:
           echo "with open('/tmp/metrics.json', 'w') as f:" >> /tmp/dump_metrics.py
           echo "    json.dump({'test_case': tc, 'test_type': tp, 'status': st, 'metrics': metrics, 'baselines': baselines}, f)" >> /tmp/dump_metrics.py
           python3 /tmp/dump_metrics.py
+
+          # Save metrics and test log to METRICS_DATA_FILE
+          if [ -n "${METRICS_DATA_FILE}" ]; then
+            mkdir -p "${METRICS_DATA_FILE}"
+            cp /tmp/test_output.log "${METRICS_DATA_FILE}/test_output.log"
+            cp /tmp/metrics.json "${METRICS_DATA_FILE}/metrics.json"
+            echo "Metrics saved to ${METRICS_DATA_FILE}"
+          fi
+
           exit ${test_exit_code}
 
       - name: Upload metrics
