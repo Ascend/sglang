@@ -154,7 +154,7 @@ MOONLIGHT_16B_A3B_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/moonshotai/Moonlight-16B-A3B-Instruct"
 )
 GLM5_TOP64_PRUNED_GSM8K_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/yzgjhdxf/GLM-5-top64-pruned-gsm8k"
+    "/root/.cache/modelscope/hub/models/yzgjhdxf_bak/GLM-5-top64-pruned-gsm8k"
 )
 GLM_4_7_FLASH_MODEL_PATH = "/root/.cache/modelscope/hub/models/ZhipuAI/GLM-4.7-Flash"
 GLM_5_1_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.1-w4a8"
