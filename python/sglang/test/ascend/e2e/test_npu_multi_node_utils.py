@@ -394,12 +394,7 @@ def check_role(allowed_roles: Union[str, Iterable[str]]):
 def launch_pd_mix_node(model_config):
     logger.info(f"Launch pd mix node start ......")
     host_name = get_host_name()
-    last_part = host_name.rsplit("-", 1)[-1]
-    if not last_part.isdigit():
-        raise RuntimeError(
-            f"Unexpected hostname format, expected numeric suffix: {host_name}"
-        )
-    pod_index = int(last_part)
+    pod_index = int(host_name.rsplit("-", 1)[-1])
 
     # Monitor ConfigMap to generate dist-init-addr and node-rank
     is_ready = False
@@ -470,12 +465,7 @@ def launch_pd_mix_node(model_config):
 def launch_pd_separation_node(model_config):
     logger.info(f"Launch pd separation node start ......")
     host_name = get_host_name()
-    last_part = host_name.rsplit("-", 1)[-1]
-    if not last_part.isdigit():
-        raise RuntimeError(
-            f"Unexpected hostname format, expected numeric suffix: {host_name}"
-        )
-    pod_index = int(last_part)
+    pod_index = int(host_name.rsplit("-", 1)[-1])
     role = "prefill" if "prefill" in host_name else "decode"
 
     bootstrap_init_port = BOOTSTRAP_INIT_PORT
@@ -697,9 +687,6 @@ def launch_router(model_config):
         for pod_name, pod_ip in configmap.data.items():
             last_part = pod_name.rsplit("-", 1)[-1]
             if not last_part.isdigit():
-                logger.info(
-                    "Skipping ConfigMap entry with non-numeric suffix: %s", pod_name
-                )
                 continue
             pod_index = int(last_part)
 

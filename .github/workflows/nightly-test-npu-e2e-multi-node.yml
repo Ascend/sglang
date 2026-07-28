@@ -7,11 +7,6 @@ on:
         required: false
         type: string
         default: linux-amd64-cpu-8
-      workflow_type:
-        required: false
-        type: string
-        default: 'unknown'
-        description: workflow type (nightly, fulltest, single, prtest)
       test_type:
         required: false
         type: string
@@ -140,13 +135,12 @@ jobs:
           fi
 
           # prepare for output data
+          current_date=$(date +%Y%m%d)
+          test_data_output_path=/root/.cache/tests/output/${{ inputs.test_type }}/${current_date}
+          mkdir -p ${test_data_output_path}
           tc_name=${test_case##*/}
           tc_name=${tc_name%.*}
-          run_id=${RUN_ID:-${{ github.run_id }}}
-          workflow_type=${{ inputs.workflow_type }}
-          branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
-          timestamp=$(date +%H%M%S)
-          metrics_data_path=/root/.cache/tests/output/${branch}-${run_id}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
+          metrics_data_path=${test_data_output_path}/${tc_name}
           mkdir -p ${metrics_data_path}
           echo "Metrics file path: ${metrics_data_path}"
 
@@ -195,7 +189,7 @@ jobs:
             echo "Install sglang from source."
             CMD="${CMD} --install-sglang-from-source"
             commit_id=${{ github.sha }}
-            echo "commit id: ${commit_id}" > "$(dirname "${metrics_data_path}")/commit_id"
+            echo "commit id: ${commit_id}" > ${test_data_output_path}/commit_id
           else
             echo "Use sglang from image: ${{ inputs.image }}"
           fi

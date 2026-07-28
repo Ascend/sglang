@@ -60,10 +60,6 @@ spec:
             value: "https://hf-mirror.com"
           - name: SGLANG_IS_IN_CI
             value: "{{ sglang_is_in_ci }}"
-          - name: RUN_ID
-            value: "{{ run_id }}"
-          - name: RUN_LABEL
-            value: "{{ run_label }}"
           command: ["/bin/bash", "-c"]
           args:
             - |
