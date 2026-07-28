@@ -56,7 +56,7 @@ spec:
         - name: RUN_ID
           value: "{{ run_id }}"
         - name: RUN_LABEL
-          value: "{{ workflow_type }}"
+          value: "{{ run_label }}"
         - name: SGLANG_IS_IN_CI
           value: "{{ sglang_is_in_ci }}"
         command: ["/bin/bash", "-c"]
@@ -161,7 +161,7 @@ spec:
         - name: RUN_ID
           value: "{{ run_id }}"
         - name: RUN_LABEL
-          value: "{{ workflow_type }}"
+          value: "{{ run_label }}"
         - name: SGLANG_IS_IN_CI
           value: "{{ sglang_is_in_ci }}"
         command: ["/bin/bash", "-c"]
@@ -265,7 +265,7 @@ spec:
         - name: RUN_ID
           value: "{{ run_id }}"
         - name: RUN_LABEL
-          value: "{{ workflow_type }}"
+          value: "{{ run_label }}"
         - name: SGLANG_IS_IN_CI
           value: "{{ sglang_is_in_ci }}"
         command: ["/bin/bash", "-c"]

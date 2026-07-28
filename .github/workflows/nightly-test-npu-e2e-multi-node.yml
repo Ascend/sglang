@@ -145,8 +145,8 @@ jobs:
           run_id=${RUN_ID:-${{ github.run_id }}}
           workflow_type=${{ inputs.workflow_type }}
           branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
-          run_label="${workflow_type}-${branch}-${run_id}"
-          metrics_data_path=/root/.cache/tests/output/${run_label}/${{ inputs.test_type }}/${tc_name}
+          timestamp=$(date +%H%M%S)
+          metrics_data_path=/root/.cache/tests/output/${branch}-${run_id}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
           mkdir -p ${metrics_data_path}
           echo "Metrics file path: ${metrics_data_path}"
 

@@ -63,7 +63,7 @@ spec:
           - name: RUN_ID
             value: "{{ run_id }}"
           - name: RUN_LABEL
-            value: "{{ workflow_type }}"
+            value: "{{ run_label }}"
           - name: TRANSFORMERS_VERSION_FOR_SGLANG
             value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]
@@ -179,7 +179,7 @@ spec:
           - name: RUN_ID
             value: "{{ run_id }}"
           - name: RUN_LABEL
-            value: "{{ workflow_type }}"
+            value: "{{ run_label }}"
           - name: TRANSFORMERS_VERSION_FOR_SGLANG
             value: "{{ transformers_version }}"
           command: ["/bin/bash", "-c"]
@@ -285,7 +285,7 @@ spec:
           - name: RUN_ID
             value: "{{ run_id }}"
           - name: RUN_LABEL
-            value: "{{ workflow_type }}"
+            value: "{{ run_label }}"
           - name: KUBECONFIG
             value: "{{ kube_config }}"
           - name: NAMESPACE

@@ -520,8 +520,8 @@ def generate_metrics_json(metrics_data_file, test_case, status):
     test_type = "unknown"
     parts = metrics_data_file.split("/")
     for i, part in enumerate(parts):
-        if part == "output" and i + 1 < len(parts):
-            test_type = parts[i + 1]
+        if part == "output" and i + 3 < len(parts):
+            test_type = parts[i + 3]
             break
 
     output = {
@@ -577,7 +577,11 @@ def run_npu_e2e_test_case(
     kube_config_map = f"sglang-configmap-{random_str}"
     final_kube_job_name = f"{kube_job_name_prefix}-{random_str}"
     run_id = final_kube_job_name
-    run_label = metrics_data_file.split("/output/")[-1].split("/")[0] if "/output/" in metrics_data_file else "unknown"
+    parts = metrics_data_file.split("/output/")[-1] if "/output/" in metrics_data_file else ""
+    if parts:
+        run_label = "/".join(parts.split("/")[:2])
+    else:
+        run_label = "unknown"
 
     kube_yaml_file_dict = {
         KUBE_JOB_SINGLE: f"k8s_single_{random_str}.yaml",

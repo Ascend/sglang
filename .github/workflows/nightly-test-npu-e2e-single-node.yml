@@ -86,11 +86,10 @@ jobs:
           run_id=${RUN_ID:-${{ github.run_id }}}
           workflow_type=${{ inputs.workflow_type }}
           branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
-          run_label="${workflow_type}-${branch}-${run_id}"
-          test_data_output_path=/root/.cache/tests/output/${run_label}/${{ inputs.test_type }}/${tc_name}
+          timestamp=$(date +%H%M%S)
+          test_data_output_path=/root/.cache/tests/output/${branch}-${run_id}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
           mkdir -p ${test_data_output_path}
-          export METRICS_DATA_FILE=${test_data_output_path}/${tc_name}
-          mkdir -p ${METRICS_DATA_FILE}
+          export METRICS_DATA_FILE=${test_data_output_path}
           echo "Metrics file path: ${METRICS_DATA_FILE}"
 
           # copy required file from our daily cache
@@ -150,7 +149,7 @@ jobs:
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
           # Set environment of cann
-          log_path="/root/.cache/tests/logs/log/${run_label}/${tc_name}/${HOSTNAME}"
+          log_path="/root/.cache/tests/logs/log/${branch}-${run_id}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
           rm -rf ${log_path}
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"

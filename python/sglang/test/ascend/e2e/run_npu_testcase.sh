@@ -116,9 +116,10 @@ tc_name=${test_case##*/}
 tc_name=${tc_name%.*}
 run_id="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 run_label="${RUN_LABEL:-unknown}"
-log_path="/root/sglang/debug/logs/log/${run_label}/${tc_name}/${HOSTNAME}"
+timestamp=$(date +%H%M%S)
+log_path="/root/sglang/debug/logs/log/${run_label}/${tc_name}-${timestamp}/${HOSTNAME}"
 if [ "${SGLANG_IS_IN_CI}" = "true" ] || [ "${SGLANG_IS_IN_CI}" = "True" ];then
-    log_path="/root/.cache/tests/logs/log/${run_label}/${tc_name}/${HOSTNAME}"
+    log_path="/root/.cache/tests/logs/log/${run_label}/${tc_name}-${timestamp}/${HOSTNAME}"
 fi
 rm -rf "${log_path}"
 mkdir -p "${log_path}"
