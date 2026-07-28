@@ -310,7 +310,9 @@ def create_or_update_configmap(cm_name: str, data: dict, namespace: str):
 
 def prepare_cm_data(namespace, pod_string):
     """Prepare a configmap data: {pod_name: pod_ip} by the running pod's information."""
-    pods = core_api.list_namespaced_pod(namespace=namespace)
+    pods = core_api.list_namespaced_pod(
+        namespace=namespace, label_selector="app=sgl-ascend"
+    )
     data = {}
     for pod in pods.items:
         pod_name = pod.metadata.name
@@ -518,8 +520,8 @@ def generate_metrics_json(metrics_data_file, test_case, status):
     test_type = "unknown"
     parts = metrics_data_file.split("/")
     for i, part in enumerate(parts):
-        if part == "output" and i + 1 < len(parts):
-            test_type = parts[i + 1]
+        if part == "output" and i + 3 < len(parts):
+            test_type = parts[i + 3]
             break
 
     output = {
@@ -574,6 +576,12 @@ def run_npu_e2e_test_case(
 
     kube_config_map = f"sglang-configmap-{random_str}"
     final_kube_job_name = f"{kube_job_name_prefix}-{random_str}"
+    run_id = final_kube_job_name
+    parts = metrics_data_file.split("/output/")[-1] if "/output/" in metrics_data_file else ""
+    if parts:
+        run_label = "/".join(parts.split("/")[:2])
+    else:
+        run_label = "unknown"
 
     kube_yaml_file_dict = {
         KUBE_JOB_SINGLE: f"k8s_single_{random_str}.yaml",
@@ -603,6 +611,8 @@ def run_npu_e2e_test_case(
                 "env": env,
                 "trouble_shotting": trouble_shotting,
                 "transformers_version": transformers_version,
+                "run_id": run_id,
+                "run_label": run_label,
             }
             create_kube_yaml(
                 kube_yaml_template=KUBE_YAML_TEMPLATE.get(kube_job_type),
@@ -625,6 +635,8 @@ def run_npu_e2e_test_case(
                 "env": env,
                 "trouble_shotting": trouble_shotting,
                 "transformers_version": transformers_version,
+                "run_id": run_id,
+                "run_label": run_label,
             }
             template_key = (
                 KUBE_JOB_MULTI_PD_MIX_GREEN if env == "green" else kube_job_type
@@ -652,6 +664,8 @@ def run_npu_e2e_test_case(
                 "env": env,
                 "trouble_shotting": trouble_shotting,
                 "transformers_version": transformers_version,
+                "run_id": run_id,
+                "run_label": run_label,
             }
             template_key = (
                 KUBE_JOB_MULTI_PD_SEPARATION_GREEN if env == "green" else kube_job_type
