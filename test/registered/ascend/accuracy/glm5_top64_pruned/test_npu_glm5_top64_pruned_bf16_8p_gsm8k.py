@@ -37,7 +37,7 @@ OTHER_ARGS = [
     "--trust-remote-code",
     "--disable-radix-cache",
     "--mem-fraction-static",
-    "0.85",
+    "0.7",
     "--served-model-name",
     "glm-5",
     "--moe-a2a-backend",
