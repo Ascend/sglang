@@ -17,6 +17,7 @@ import unittest
 
 from sglang.test.ascend.lora_utils import (
     LORA_MODELS_QWEN3,
+    run_lora_batch_splitting_equivalence_test,
     run_lora_multiple_batch_on_model_cases,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -29,8 +30,8 @@ class TestLoRAQwen3(CustomTestCase):
     def test_ci_lora_models(self):
         run_lora_multiple_batch_on_model_cases(LORA_MODELS_QWEN3)
 
-    # def test_ci_lora_models_batch_splitting(self):
-    #     run_lora_batch_splitting_equivalence_test(LORA_MODELS_QWEN3)
+    def test_ci_lora_models_batch_splitting(self):
+        run_lora_batch_splitting_equivalence_test(LORA_MODELS_QWEN3)
 
 
 if __name__ == "__main__":
