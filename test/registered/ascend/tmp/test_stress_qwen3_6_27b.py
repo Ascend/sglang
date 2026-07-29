@@ -92,6 +92,7 @@ class TestStressQwen3627B(CustomTestCase):
         cls.runner = NpuStressTestRunner(
             test_name="Qwen3.6-27B Stress Test",
             base_url=cls.base_url,
+            num_prompts=200,
         )
 
     def test_stress_qwen3_6_27b(self):
