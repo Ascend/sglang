@@ -27,10 +27,20 @@ register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
 
 
 class TestLoRAQwen3(CustomTestCase):
+    """Testcase: LoRA multi-batch and batch-splitting correctness test for Qwen3.
+    Validates LoRA inference with mixed adapter batches and internal batch splitting
+    against HF reference outputs.
+
+    [Test Category] Functionality
+    [Test Target] LoRA multi-batch and batch-splitting on Qwen3
+    """
+
     def test_ci_lora_models(self):
+        """Test LoRA inference with mixed adapter batches, validated via ROUGE-L against HF reference."""
         run_lora_multiple_batch_on_model_cases(LORA_MODELS_QWEN3)
 
     def test_ci_lora_models_batch_splitting(self):
+        """Test internal batch splitting when distinct adapter count exceeds max_loras_per_batch."""
         run_lora_batch_splitting_equivalence_test(LORA_MODELS_QWEN3)
 
 
