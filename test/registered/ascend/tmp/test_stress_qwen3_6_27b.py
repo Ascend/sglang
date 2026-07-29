@@ -5,7 +5,7 @@ import unittest
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     QWEN3_6_27B_W8A8_MODEL_PATH,
 )
-from sglang.test.ascend.test_npu_stress_utils import NpuStressTestRunner
+from sglang.test.ascend.npu_stress_utils import NpuStressTestRunner
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import DEFAULT_URL_FOR_TEST, CustomTestCase
 
