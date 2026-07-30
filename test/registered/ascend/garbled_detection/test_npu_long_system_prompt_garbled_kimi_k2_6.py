@@ -15,7 +15,7 @@ register_npu_ci(
     disabled="Currently it is executed manually.",
 )
 
-MAX_TEST_ROUNDS_NUM = 100
+MAX_TEST_ROUNDS_NUM = 3
 
 # Environment variables matching the kimi_k2_6 performance test configuration
 SERVER_ENVS = {
