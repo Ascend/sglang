@@ -113,13 +113,13 @@ if [ -n "${COVERAGE_FILE}" ]; then
     python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
     # Enable subprocess coverage tracking via .pth file and COVERAGE_PROCESS_START
     SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
-    echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
+    echo "import numpy; import torch; import torchvision; import coverage; coverage.process_startup()" > "${SITE_PACKAGES}/coverage.pth"
     rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
-    export COVERAGE_RCFILE="/data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc"
-    export COVERAGE_PROCESS_START="/data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc"
-    mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data
+    export COVERAGE_RCFILE="/tmp/coverage_data/.coveragerc"
+    export COVERAGE_PROCESS_START="/tmp/coverage_data/.coveragerc"
+    mkdir -p /tmp/coverage_data
     mkdir -p "$(dirname "${COVERAGE_FILE}")"
-    cp ${sglang_source_path}/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
+    cp ${sglang_source_path}/.coveragerc /tmp/coverage_data/.coveragerc
 fi
 
 # set environment of cann
