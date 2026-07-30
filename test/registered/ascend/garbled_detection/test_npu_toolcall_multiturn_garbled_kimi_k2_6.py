@@ -62,7 +62,7 @@ SERVER_ARGS = [
     "--max-running-requests",
     "208",
     "--chunked-prefill-size",
-    "32768",
+    "8192",
     "--context-length",
     "262144",
     "--max-prefill-tokens",
