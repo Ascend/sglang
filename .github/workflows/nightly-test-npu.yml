@@ -115,9 +115,13 @@ jobs:
       matrix:
         test_config:
           # qwen3_6_35b_a3b performance tests
-          - name: qwen3_30b_dump_basic_eval
+          - name: test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/kvtc/test_npu_qwen3_30b_dump_basic_eval.py
+            test_case: test/registered/ascend/kvtc/qwen3_30b_a3b/test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k.py
+            test_type: 'perf'
+          - name: test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k_evalscope
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/kvtc/qwen3_30b_a3b/test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k_evalscope.py
             test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
