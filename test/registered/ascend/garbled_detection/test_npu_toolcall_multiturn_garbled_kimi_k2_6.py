@@ -60,7 +60,7 @@ SERVER_ARGS = [
     "--mem-fraction-static",
     "0.83",
     "--max-running-requests",
-    "2",
+    "32",
     "--chunked-prefill-size",
     "32768",
     "--context-length",
