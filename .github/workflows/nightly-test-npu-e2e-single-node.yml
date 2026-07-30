@@ -51,6 +51,8 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.image }}
+      volumes:
+        - /data/ascend-ci-share-pkking-sglang:/data/ascend-ci-share-pkking-sglang
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
