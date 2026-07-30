@@ -104,10 +104,9 @@ class TestNpuGdnMtpToolCallMultiTurn(GarbledDetectionBase):
     server_envs = SERVER_ENVS
     max_rounds = MAX_TEST_ROUNDS_NUM
 
-    # Activates _run_non_streaming_tool_call_scenario
-    request_body_file = REQUEST_DATA_BODY_FILE
-
     def test_tool_call_scenario(self):
+        with open(REQUEST_DATA_BODY_FILE, "r", encoding="utf-8") as f:
+            self.request_body = f.read()
         self._run_non_streaming_tool_call_scenario()
 
 

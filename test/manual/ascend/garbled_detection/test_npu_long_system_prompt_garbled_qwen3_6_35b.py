@@ -134,6 +134,14 @@ class TestStreamingGarbledDetection(GarbledDetectionBase):
     system_prompt = _SYSTEM_PROMPT
     user_prompt = _USER_PROMPT
     max_rounds = MAX_TEST_ROUNDS_NUM
+    extra_payload = {
+        "max_completion_tokens": 10000,
+        "frequency_penalty": 1.5,
+        "presence_penalty": 1.5,
+        "temperature": 0.1,
+        "top_k": 10,
+        "top_p": 0.6,
+    }
 
     def test_streaming_no_garbled(self):
         self._run_streaming_no_garbled()
@@ -158,23 +166,18 @@ class TestStreamingGarbledDetectionWithReasoningParser(GarbledDetectionBase):
     system_prompt = _SYSTEM_PROMPT
     user_prompt = _USER_PROMPT
     max_rounds = MAX_TEST_ROUNDS_NUM
+    extra_payload = {
+        "max_completion_tokens": 10000,
+        "frequency_penalty": 1.5,
+        "presence_penalty": 1.5,
+        "temperature": 0.1,
+        "top_k": 10,
+        "top_p": 0.6,
+        "chat_template_kwargs": {"enable_thinking": True},
+    }
 
     def test_streaming_no_garbled_with_reasoning_parser(self):
-        """Explicit reasoning parser → both reasoning_content and content should be clean."""
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": self.user_prompt},
-        ]
-        chat_template_kwargs = {"enable_thinking": True}
-
-        for i in range(self.max_rounds):
-            logger.info(f"===== Iteration {i}/{self.max_rounds} =====")
-            response = self._send_streaming_request(
-                messages, chat_template_kwargs=chat_template_kwargs
-            )
-            result = self._parse_streaming_response(response)
-            logger.info(f"finish_reason: {result['finish_reason']}")
-            self._assert_no_garbled(result, context=f"reasoning_parser[{i}]")
+        self._run_streaming_no_garbled()
 
 
 if __name__ == "__main__":

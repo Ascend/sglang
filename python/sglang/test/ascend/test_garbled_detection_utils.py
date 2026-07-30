@@ -215,9 +215,12 @@ class GarbledDetectionBase(CustomTestCase):
         Number of stress-test iterations (default: 100).
     api_key : str
         API key for server auth (default: "sk-1234").
-    request_body_file : str or None
-        Path to a JSON request body file for tool-call scenario.
-        ``None`` (default) skips ``_run_non_streaming_tool_call_scenario``.
+    extra_payload : dict or None
+        Extra fields for streaming requests; also merged into non-streaming
+        request body via ``data.update()``. ``None`` (default) adds nothing.
+    request_body : str or None
+        Raw JSON body for ``_run_non_streaming_tool_call_scenario``.
+        Set before calling the method (e.g. read from a file).
     """
 
     # --- Subclasses override these as needed ---
@@ -228,8 +231,10 @@ class GarbledDetectionBase(CustomTestCase):
     user_prompt = ""
     max_rounds = 100
     api_key = "sk-1234"
-    # Set to a JSON file path to enable _run_non_streaming_tool_call_scenario.
-    request_body_file = None
+    # Extra fields merged into payload (streaming via **, non-streaming via update).
+    extra_payload = None
+    # Raw JSON body string for _run_non_streaming_tool_call_scenario.
+    request_body = None
 
     @classmethod
     def setUpClass(cls):
@@ -250,25 +255,17 @@ class GarbledDetectionBase(CustomTestCase):
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
 
-    def _send_streaming_request(self, messages, **payload_overrides):
-        """Send a streaming chat completion request.
+    def _send_request(self, payload, stream=True, timeout=None):
+        """Send a chat completion request.
 
-        Any keyword arguments are merged into the payload, allowing callers
-        to override defaults or add extra fields (e.g. chat_template_kwargs).
+        Args:
+            payload: Request payload dict.
+            stream: Whether to stream the response.
+            timeout: Request timeout in seconds (None for default).
         """
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "max_tokens": 10000,
-            "frequency_penalty": 1.5,
-            "presence_penalty": 1.5,
-            "stream": True,
-            "temperature": 0.1,
-            "top_k": 10,
-            "top_p": 0.6,
-        }
-        payload.update(payload_overrides)
-
+        kwargs = {}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
         response = requests.post(
             self.base_url + "/chat/completions",
             headers={
@@ -276,7 +273,8 @@ class GarbledDetectionBase(CustomTestCase):
                 "Content-Type": "application/json",
             },
             json=payload,
-            stream=True,
+            stream=stream,
+            **kwargs,
         )
         return response
 
@@ -469,7 +467,15 @@ class GarbledDetectionBase(CustomTestCase):
 
         for i in range(self.max_rounds):
             logger.info(f"===== Iteration {i}/{self.max_rounds} =====")
-            response = self._send_streaming_request(messages)
+            response = self._send_request(
+                {
+                    "model": self.model,
+                    "messages": messages,
+                    "stream": True,
+                    **(self.extra_payload or {}),
+                },
+                stream=True,
+            )
             result = self._parse_streaming_response(response)
             logger.info(f"finish_reason: {result['finish_reason']}")
             self._assert_no_garbled(result, context=f"run_streaming_no_garbled[{i}]")
@@ -477,38 +483,39 @@ class GarbledDetectionBase(CustomTestCase):
     def _run_non_streaming_tool_call_scenario(self):
         """Reusable non-streaming tool-call garbled-detection test logic.
 
-        Sends a pre-saved JSON request body (``request_body_file``) as a
-        non-streaming POST, then checks the response content, reasoning and
-        tool-call arguments for garbled signals.
+        Uses ``self.request_body`` as the raw JSON request body string,
+        sends a non-streaming POST, then checks the response content,
+        reasoning and tool-call arguments for garbled signals.
 
-        Requires ``request_body_file`` to be set (not ``None``).
+        The caller is responsible for setting ``self.request_body`` before
+        calling this method (e.g. reading from a file).
 
         Subclasses should define a ``test_*`` method that calls this, e.g.::
 
             def test_tool_call_scenario(self):
+                with open("tool_calls.json", "r") as f:
+                    self.request_body = f.read()
                 self._run_non_streaming_tool_call_scenario()
         """
-        self.assertIsNotNone(self.request_body_file, "No request_body_file configured")
+
+        raw_body = self.request_body
+        self.assertIsNotNone(raw_body, "request_body not set")
 
         logger.info(
             f"[{self._testMethodName}] ======== Start: tool call scenario ========"
         )
-
-        with open(self.request_body_file, "r", encoding="utf-8") as f:
-            raw_body = f.read()
 
         logger.info(
             f"[{self._testMethodName}] Request body length: {len(raw_body)} chars"
         )
 
         data = json.loads(raw_body)
+        data.update(self.extra_payload or {})
         logger.info(
             f"[{self._testMethodName}] Local parse OK: "
             f"messages={len(data.get('messages', []))}, "
             f"tools={len(data.get('tools', []))}"
         )
-
-        url = f"{self.base_url}/chat/completions"
 
         for iteration in range(1, self.max_rounds + 1):
             logger.info(
@@ -516,17 +523,9 @@ class GarbledDetectionBase(CustomTestCase):
             )
 
             try:
-                resp = requests.post(
-                    url,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {self.api_key}",
-                    },
-                    data=raw_body,
-                    timeout=300,
-                )
+                resp = self._send_request(data, stream=False, timeout=300)
             except requests.exceptions.ConnectionError:
-                self.fail(f"Cannot connect to {url}")
+                self.fail(f"Cannot connect to {self.base_url}/chat/completions")
             except Exception as e:
                 self.fail(f"Request error: {e}")
 
