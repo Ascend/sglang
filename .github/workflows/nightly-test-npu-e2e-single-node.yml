@@ -83,20 +83,7 @@ jobs:
           cat $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
           echo ""
           echo "=== [4/4] Test coverage.process_startup() works ==="
-          python -c "
-import sys
-try:
-    import numpy
-    import torch
-    import torchvision
-    import triton
-    import requests
-    import coverage
-    print('All imports OK')
-except Exception as e:
-    print(f'IMPORT FAILED: {e}', file=sys.stderr)
-    sys.exit(1)
-" || echo 'ERROR: coverage.pth imports will fail!'
+          python -c "import numpy; import torch; import torchvision; import triton; import requests; import coverage; print('All imports OK')" || echo 'ERROR: coverage.pth imports will fail!'
 
       - name: Run test
         timeout-minutes: 300
