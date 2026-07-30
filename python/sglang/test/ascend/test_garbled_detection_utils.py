@@ -230,6 +230,8 @@ class GarbledDetectionBase(CustomTestCase):
     api_key = "sk-1234"
     # Set to a JSON file path to enable _run_non_streaming_tool_call_scenario.
     request_body_file = None
+    # Extra payload fields to pass to _send_streaming_request.
+    extra_payload = None
 
     @classmethod
     def setUpClass(cls):
@@ -259,13 +261,7 @@ class GarbledDetectionBase(CustomTestCase):
         payload = {
             "model": self.model,
             "messages": messages,
-            "max_tokens": 10000,
-            "frequency_penalty": 1.5,
-            "presence_penalty": 1.5,
             "stream": True,
-            "temperature": 0.1,
-            "top_k": 10,
-            "top_p": 0.6,
         }
         payload.update(payload_overrides)
 
@@ -469,7 +465,9 @@ class GarbledDetectionBase(CustomTestCase):
 
         for i in range(self.max_rounds):
             logger.info(f"===== Iteration {i}/{self.max_rounds} =====")
-            response = self._send_streaming_request(messages)
+            response = self._send_streaming_request(
+                messages, **(self.extra_payload or {})
+            )
             result = self._parse_streaming_response(response)
             logger.info(f"finish_reason: {result['finish_reason']}")
             self._assert_no_garbled(result, context=f"run_streaming_no_garbled[{i}]")
