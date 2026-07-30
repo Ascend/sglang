@@ -68,6 +68,36 @@ jobs:
           mkdir -p /data/ascend-ci-share-pkking-sglang/coverage_data/${{ inputs.coverage_run_id }}
           cp $GITHUB_WORKSPACE/.coveragerc /data/ascend-ci-share-pkking-sglang/coverage_data/.coveragerc
 
+      - name: Verify coverage setup
+        shell: bash
+        run: |
+          echo "=== [1/4] Check if share storage is network-mounted ==="
+          df -h /data/ascend-ci-share-pkking-sglang/
+          echo ""
+          mount | grep ascend-ci-share || echo "WARNING: /data/ascend-ci-share-pkking-sglang not found in mount output"
+          echo ""
+          echo "=== [2/4] Check directory exists on share storage ==="
+          ls -la /data/ascend-ci-share-pkking-sglang/coverage_data/${{ inputs.coverage_run_id }}/
+          echo ""
+          echo "=== [3/4] Check coverage.pth content ==="
+          cat $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          echo ""
+          echo "=== [4/4] Test coverage.process_startup() works ==="
+          python -c "
+import sys
+try:
+    import numpy
+    import torch
+    import torchvision
+    import triton
+    import requests
+    import coverage
+    print('All imports OK')
+except Exception as e:
+    print(f'IMPORT FAILED: {e}', file=sys.stderr)
+    sys.exit(1)
+" || echo 'ERROR: coverage.pth imports will fail!'
+
       - name: Run test
         timeout-minutes: 300
         env:
@@ -169,6 +199,18 @@ jobs:
           test_exit_code=0
           ${PYTHON_FOR_SGLANG} -u ${test_case} 2>&1 | tee /tmp/test_output.log || test_exit_code=$?
           echo "Finished test case ${test_case}"
+
+          echo "=== [Coverage Diag] Check coverage data files ==="
+          COVERAGE_DIR="/data/ascend-ci-share-pkking-sglang/coverage_data/${{ inputs.coverage_run_id }}"
+          echo "COVERAGE_DIR=${COVERAGE_DIR}"
+          echo "COVERAGE_FILE=${COVERAGE_FILE}"
+          if [ -d "$COVERAGE_DIR" ]; then
+            ls -la "$COVERAGE_DIR/"
+            echo "File count: $(ls -1 "$COVERAGE_DIR/" | wc -l)"
+          else
+            echo "ERROR: Coverage directory does not exist after test!"
+          fi
+          echo "=== [Coverage Diag] End ==="
 
           if [ "${test_exit_code}" = "0" ]; then
             test_status="pass"

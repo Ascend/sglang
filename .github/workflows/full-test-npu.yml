@@ -952,6 +952,29 @@ jobs:
         run: |
           git config --system --add safe.directory ${GITHUB_WORKSPACE}
 
+      - name: Diagnose coverage data
+        run: |
+          echo "=== [Coverage Diag] Check share storage mount ==="
+          df -h /data/ascend-ci-share-pkking-sglang/
+          echo ""
+          mount | grep ascend-ci-share || echo "WARNING: share storage not found in mount"
+          echo ""
+          echo "=== [Coverage Diag] List coverage_data parent dir ==="
+          ls -la /data/ascend-ci-share-pkking-sglang/coverage_data/ || echo "ERROR: coverage_data dir not found"
+          echo ""
+          echo "=== [Coverage Diag] List run-specific dir ==="
+          DATA_DIR=/data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
+          echo "DATA_DIR=$DATA_DIR"
+          if [ -d "$DATA_DIR" ]; then
+            ls -la "$DATA_DIR/"
+          else
+            echo "ERROR: $DATA_DIR does not exist"
+          fi
+          echo ""
+          echo "=== [Coverage Diag] Find all .coverage files on share storage ==="
+          find /data/ascend-ci-share-pkking-sglang/coverage_data/ -name ".coverage*" -type f 2>/dev/null || echo "No .coverage files found anywhere"
+          echo "=== [Coverage Diag] End ==="
+
       - name: Combine and generate report
         run: |
           DATA_DIR=/data/ascend-ci-share-pkking-sglang/coverage_data/${{ github.run_id }}-${{ github.run_attempt }}
