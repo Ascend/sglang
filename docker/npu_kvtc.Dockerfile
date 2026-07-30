@@ -96,7 +96,7 @@ RUN git clone https://github.com/jfckm/sglang-kvtc.git --branch ${SGLANG_TAG} /s
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu] && \
     ${PIP_INSTALL} lm-eval && \
-    ${PIP_INSTALL} "lm-eval\[api,ruler\]"
+    ${PIP_INSTALL} "lm-eval[api,ruler]"
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
