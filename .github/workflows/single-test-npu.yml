@@ -39,7 +39,7 @@ jobs:
           ln -sf ${sglang_source_path} /root/sglang
 
           test_cases=(
-            "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
+            "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py"
           )
 
           for test_case in "${test_cases[@]}"; do
