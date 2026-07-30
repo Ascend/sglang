@@ -75,7 +75,6 @@ SERVER_ARGS = [
     "8",
     "12",
     "13",
-    "--disable-radix-cache",
     "--model-loader-extra-config",
     '{"enable_multithread_load": true}',
     "--speculative-algorithm",
