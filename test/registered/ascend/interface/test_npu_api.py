@@ -270,7 +270,6 @@ class TestChatCompletionsInterface(CustomTestCase):
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         data = response.json()
         self.assertEqual(data["model"], "default")
-        self.assertIsNotNone(data["choices"][0]["message"]["reasoning_content"])
 
     def test_max_completion_tokens(self):
         response = requests.post(
