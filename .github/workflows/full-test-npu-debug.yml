@@ -60,4 +60,4 @@ jobs:
           GDN_ATTN_BACKEND_TRITON: 1
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-          python3 test/registered/ascend/garbled_detection/test_npu_toolcall_multiturn_garbled_kimi_k2_6.py
+          python3 test/registered/ascend/garbled_detection/test_npu_toolcall_multiturn_garbled_deepseek_v4_flash.py
