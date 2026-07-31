@@ -57,9 +57,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Install crane
-        run: |
-          curl -sL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin crane
+      - name: Install skopeo
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
 
       - name: Copy and retag image across platforms
         run: |
@@ -89,10 +88,10 @@ jobs:
           echo "========================================="
 
           # 跨平台复制镜像
-          # SWR 不支持 OCI 格式，需要 --format docker 转成 Docker V2.2
-          # Quay / DockerHub 支持 OCI，原样复制即可
+          # SWR 不支持 OCI 格式，--format v2s2 转成 Docker V2.2
+          # Quay / DockerHub 支持 OCI，原样复制
           if [ "${{ inputs.target_platform }}" = "swr" ]; then
-            crane copy --format docker $SOURCE_IMAGE $TARGET_IMAGE
+            skopeo copy --multi-arch all --format v2s2 docker://$SOURCE_IMAGE docker://$TARGET_IMAGE
           else
-            crane copy $SOURCE_IMAGE $TARGET_IMAGE
+            skopeo copy --multi-arch all docker://$SOURCE_IMAGE docker://$TARGET_IMAGE
           fi
