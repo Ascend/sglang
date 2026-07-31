@@ -5,10 +5,10 @@ from types import SimpleNamespace
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    QWEN3_30B_A3B_EAGLE3_WEIGHTS_PATH,
-    QWEN3_30B_A3B_WEIGHTS_PATH,
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    QWEN3_A3B_EAGLE_MODEL_PATH,
 )
+from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -20,7 +20,7 @@ from sglang.test.test_utils import (
     write_github_step_summary,
 )
 
-register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 
 
 NPU_ENV = {
@@ -47,7 +47,7 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
     @classmethod
     def setUpClass(cls):
         cls.model = QWEN3_30B_A3B_WEIGHTS_PATH
-        cls.draft_model = QWEN3_30B_A3B_EAGLE3_WEIGHTS_PATH
+        cls.draft_model = QWEN3_A3B_EAGLE_MODEL_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         other_args = [
             "--trust-remote-code",
@@ -111,14 +111,21 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
                 avg_spec_accept_length = internal_state["spec_accept_length"]
 
         if is_in_ci():
+            avg_display = (
+                f"{avg_spec_accept_length:.2f}"
+                if avg_spec_accept_length is not None
+                else "None"
+            )
             write_github_step_summary(
                 f"### test_gsm8k (EAGLE3 DP Attention on NPU)\n"
                 f'{metrics["score"]=:.3f}\n'
-                f"{avg_spec_accept_length=:.2f}\n"
+                f"avg_spec_accept_length={avg_display}\n"
             )
-            self.assertGreater(metrics["score"], 0.91)
-            if avg_spec_accept_length is not None:
-                self.assertGreater(avg_spec_accept_length, 1.0)
+        self.assertGreater(metrics["score"], 0.91)
+        self.assertIsNotNone(
+            avg_spec_accept_length, "avg_spec_accept_length should not be None"
+        )
+        self.assertGreater(avg_spec_accept_length, 1.0)
 
 
 if __name__ == "__main__":

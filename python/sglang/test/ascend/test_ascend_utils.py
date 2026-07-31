@@ -299,10 +299,6 @@ QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 STEP3_VL_10B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "stepfun-ai/Step3-VL-10B")
 
 QWEN3_30B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B")
-QWEN3_30B_A3B_EAGLE3_WEIGHTS_PATH = os.path.join(
-    HF_MODEL_WEIGHTS_DIR,
-    "models--Tengyunw--qwen3_30b_moe_eagle3/snapshots/8e9210903e414103478affec69046bb9ddaa3ca7",
-)
 QWEN3_30B_A3B_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B-w8a8"
 )

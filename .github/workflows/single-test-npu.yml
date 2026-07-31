@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# test round 19: address reviewer comments - modelscope paths, reasoning test, full-x suite, assertion fix
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-4
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
@@ -38,9 +38,11 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 使用时替换为实际的测试用例路径
+          # Test cases - round 19: address reviewer comments
           test_cases=(
-            "test/registered/ascend/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_constrained_decoding_spec_reasoning.py"
+            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_infer_beta_dp_attention.py"
+            "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_dp_attention.py"
           )
 
           for test_case in "${test_cases[@]}"; do

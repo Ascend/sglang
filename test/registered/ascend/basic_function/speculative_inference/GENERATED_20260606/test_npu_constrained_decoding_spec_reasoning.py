@@ -4,7 +4,10 @@ import unittest
 import openai
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_8B_EAGLE3_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_8B_EAGLE3_WEIGHTS_PATH,
+    QWEN3_8B_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -13,7 +16,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestNPUConstrainedDecodingSpecReasoning(CustomTestCase):
@@ -45,7 +48,7 @@ class TestNPUConstrainedDecodingSpecReasoning(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.model = "Qwen/Qwen3-8B"
+        cls.model = QWEN3_8B_WEIGHTS_PATH
         cls.draft_model = QWEN3_8B_EAGLE3_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         launch_args = [
@@ -101,8 +104,17 @@ class TestNPUConstrainedDecodingSpecReasoning(CustomTestCase):
                 "type": "json_schema",
                 "json_schema": {"name": "foo", "schema": json.loads(self.json_schema)},
             },
+            extra_body={"chat_template_kwargs": {"enable_thinking": True}},
         )
-        text = response.choices[0].message.content
+        message = response.choices[0].message
+        text = message.content
+
+        reasoning_content = getattr(message, "reasoning_content", None)
+        self.assertIsNotNone(
+            reasoning_content,
+            "reasoning_content should not be None when thinking is enabled",
+        )
+        self.assertGreater(len(reasoning_content), 0)
 
         self.assertIsNotNone(text)
         try:
