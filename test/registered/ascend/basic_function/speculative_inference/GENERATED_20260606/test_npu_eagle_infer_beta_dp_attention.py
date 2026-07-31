@@ -51,10 +51,10 @@ def _run_gsm8k(base_url: str, model: str):
 
 
 class TestNpuEagleDPAttnServerSmall(CustomTestCase):
-    """Test EAGLE3 with DP attention on NPU (TP=1, DP=2, 2 NPU).
+    """Test EAGLE3 with DP attention on NPU (TP=2, DP=2, 2 NPU).
 
     [Test Category] Speculative Decoding
-    [Test Target] --speculative-algorithm=EAGLE3; --tp-size 1; --dp-size 2;
+    [Test Target] --speculative-algorithm=EAGLE3; --tp-size 2; --dp-size 2;
     --enable-dp-attention; --speculative-draft-model-path
     """
 
@@ -66,7 +66,7 @@ class TestNpuEagleDPAttnServerSmall(CustomTestCase):
         other_args = [
             "--trust-remote-code",
             "--tp-size",
-            "1",
+            "2",
             "--dp-size",
             "2",
             "--enable-dp-attention",

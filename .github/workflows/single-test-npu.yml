@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 19: address reviewer comments - modelscope paths, reasoning test, full-x suite, assertion fix
+# test round 21: dp-attention uses NPU count = tp-size; both DP cases use tp=2 (2 NPU), use 2-NPU runner
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-4
+    runs-on: linux-aarch64-a3-2
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
@@ -38,7 +38,7 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - round 19: address reviewer comments
+          # Test cases - round 21: 2-NPU runner (dp-attention NPU count = tp-size)
           test_cases=(
             "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_constrained_decoding_spec_reasoning.py"
             "test/registered/ascend/basic_function/speculative_inference/GENERATED_20260606/test_npu_eagle_infer_beta_dp_attention.py"
