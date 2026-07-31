@@ -58,7 +58,7 @@ SERVER_ARGS = [
     "--tp-size",
     "16",
     "--mem-fraction-static",
-    "0.83",
+    "0.95",
     "--max-running-requests",
     "32",
     "--chunked-prefill-size",
