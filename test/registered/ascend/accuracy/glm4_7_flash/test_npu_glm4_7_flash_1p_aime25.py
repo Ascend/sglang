@@ -57,7 +57,7 @@ OTHER_ARGS = [
 ]
 
 
-class TestNPUDeepSeek_V3_2_8P_AIME2025(TestAscendAccuracyTestCaseBase):
+class TestNPUGLM_4_7_FLASH_1P_AIME25(TestAscendAccuracyTestCaseBase):
 
     model = GLM_4_7_FLASH_MODEL_PATH
     envs = ENVS
