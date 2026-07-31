@@ -58,6 +58,9 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # ====================== 镜像地址拼接（源=pull，目标=push） ======================
+      - name: Install skopeo
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
+
       - name: Copy and retag image across platforms
         run: |
           # 源镜像（仅拉取）
@@ -85,5 +88,5 @@ jobs:
           echo "To:   $TARGET_IMAGE"
           echo "========================================="
 
-          # 跨平台复制镜像
-          docker buildx imagetools create -t $TARGET_IMAGE $SOURCE_IMAGE
+          # 跨平台复制镜像（skopeo 原样复制，不会转成 OCI 格式推给 SWR）
+          skopeo copy --multi-arch all docker://$SOURCE_IMAGE docker://$TARGET_IMAGE
