@@ -12,14 +12,11 @@ from sglang.test.run_eval import run_eval
 from sglang.test.server_fixtures.disaggregation_fixture import (
     PDDisaggregationServerBase,
 )
-from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-    popen_launch_pd_server,
-)
+from sglang.test.test_utils import popen_launch_pd_server
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
-_RETRY_MARKER = "optimistic prefill retry"
+_RETRY_MARKER = "optimistic prefill yielded"
 
 
 def _start_prefill_with_capture(cls):
@@ -36,7 +33,7 @@ def _start_prefill_with_capture(cls):
         "bfloat16",
         "--disable-radix-cache",
         "--disable-cuda-graph",
-        "--optimistic-prefill-retries",
+        "--optimistic-prefill-attempts",
         "3",
         "--log-requests-level",
         "2",
@@ -57,7 +54,7 @@ def _start_prefill_with_capture(cls):
         "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
         "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "3600",
         "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "3600",
-        "SLANG_TEST_FORCE_OPTIMISTIC_PREFILL_RETRY_PROB": "0.1",
+        "SGLANG_TEST_FORCE_OPTIMISTIC_PREFILL_RETRY_PROB": "1.0",
     }
 
     _, host, port = cls.prefill_url.split(":")
@@ -155,7 +152,7 @@ class TestDisaggregationDecodeWithHiCache(DisaggregationHiCacheBase):
         cls.process_decode = popen_launch_pd_server(
             cls.model,
             cls.decode_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=3600,
             other_args=decode_args,
             env=env,
         )
