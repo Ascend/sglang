@@ -58,9 +58,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # ====================== 镜像地址拼接（源=pull，目标=push） ======================
-      - name: Install crane
-        run: |
-          curl -sL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin crane
+      - name: Install skopeo
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
 
       - name: Copy and retag image across platforms
         run: |
@@ -89,5 +88,5 @@ jobs:
           echo "To:   $TARGET_IMAGE"
           echo "========================================="
 
-          # 跨平台复制镜像（crane 默认保留全架构 + 原样 manifest 格式）
-          crane copy $SOURCE_IMAGE $TARGET_IMAGE
+          # 跨平台复制镜像
+          skopeo copy --all docker://$SOURCE_IMAGE docker://$TARGET_IMAGE
