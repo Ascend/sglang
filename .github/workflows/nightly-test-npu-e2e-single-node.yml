@@ -248,6 +248,7 @@ jobs:
         with:
           name: coverage-${{ inputs.coverage_run_id }}-${{ inputs.test_config_name }}
           path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
           retention-days: 7
 
       - name: Backup plog
