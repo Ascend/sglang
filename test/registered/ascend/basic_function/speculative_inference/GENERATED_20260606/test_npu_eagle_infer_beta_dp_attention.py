@@ -82,7 +82,8 @@ class TestNpuEagleDPAttnServerSmall(CustomTestCase):
             "4",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--cuda-graph-max-bs",
+            "64",
             "--mem-fraction-static",
             "0.7",
         ]
