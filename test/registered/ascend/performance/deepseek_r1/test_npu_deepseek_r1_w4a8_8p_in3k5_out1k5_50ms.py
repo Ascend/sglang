@@ -19,11 +19,12 @@ MODEL_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "72",
     "DEEPEP_HCCL_BUFFSIZE": "2000",
+    "HCCL_BUFFSIZE": "300",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "10",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -49,6 +50,7 @@ MODEL_OTHER_ARGS = [
     4,
     8,
     12,
+    13,
     14,
     "--mem-fraction-static",
     0.9,
@@ -72,7 +74,7 @@ MODEL_OTHER_ARGS = [
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
-    3,
+    2,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
@@ -84,7 +86,7 @@ MODEL_OTHER_ARGS = [
     "--tool-call-parser",
     "deepseekv3",
     "--max-total-tokens",
-    100000,
+    90000,
 ]
 
 
@@ -100,8 +102,8 @@ class TestNPUDeepSeekR1W4A8(TestAscendPerformanceTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
-    seed = 1
     tpot = 50
+    seed = 1
     output_token_throughput = 3457.1
 
     def test_throughput(self):
