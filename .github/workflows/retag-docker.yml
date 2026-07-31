@@ -28,7 +28,9 @@ on:
 jobs:
   retag:
     if: github.repository == 'Ascend/sglang'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/skopeo/stable:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,10 +58,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # ====================== 镜像地址拼接（源=pull，目标=push） ======================
-      - name: Install skopeo
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
 
       - name: Copy and retag image across platforms
         run: |
