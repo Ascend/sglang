@@ -83,7 +83,7 @@ jobs:
 
           echo "======= Cross Platform Image Copy ======="
           echo "Source (pull): ${{ inputs.source_platform }}"
-          echo "Target (push): ${{ inputs.target_platform }}"qua'y
+          echo "Target (push): ${{ inputs.target_platform }}"
           echo "From: $SOURCE_IMAGE"
           echo "To:   $TARGET_IMAGE"
           echo "========================================="
