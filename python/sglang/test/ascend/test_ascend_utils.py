@@ -56,7 +56,7 @@ BAICHUAN2_13B_CHAT_WEIGHTS_PATH = os.path.join(
 C4AI_COMMAND_R_V01_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "CohereForAI/c4ai-command-r-v01"
 )
-C4AI_COMMAND_R_V01_CHAT_TEMPLATE_PATH = "/__w/sglang/sglang/test/registered/ascend/llm_models/tool_chat_template_c4ai_command_r_v01.jinja"
+C4AI_COMMAND_R_V01_CHAT_TEMPLATE_PATH = "/__w/sglang/sglang/test/registered/npu/llm_models/tool_chat_template_c4ai_command_r_v01.jinja"
 CHATGLM2_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/chatglm2-6b")
 DBRX_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "AI-ModelScope/dbrx-instruct"
@@ -429,13 +429,13 @@ INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
 # fmt: on
 
 # Other
-DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/ascend/basic_function/parameter/deepseek_coder.json"
+DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/npu/basic_function/parameter/deepseek_coder.json"
 FR_SPEC_TOKEN_MAP_PATH = "/root/.cache/sglang/FR-Spec/freq_32768.pt"
 HOT_MAP_PT = "/root/.cache/sglang/hot_map/expert_distribution_recorder.pt"
 HOT_MAP_JSON = "/root/.cache/sglang/hot_map/expert_distribution_recorder.json"
 HOT_MAP_STRING = "/root/.cache/sglang/hot_map/qwen3_30b_a3b_random_no_redundant.json"
 CONFIG_YAML_PATH = (
-    "/__w/sglang/sglang/test/registered/ascend/basic_function/config/config.yaml"
+    "/__w/sglang/sglang/test/registered/npu/basic_function/config/config.yaml"
 )
 
 
