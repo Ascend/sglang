@@ -175,7 +175,7 @@ jobs:
           echo "COVERAGE_FILE=${COVERAGE_FILE}"
           if [ -d "$COVERAGE_DIR" ]; then
             ls -la "$COVERAGE_DIR/"
-            echo "File count: $(ls -1 "$COVERAGE_DIR/" | wc -l)"
+            echo "File count: $(ls -A1 "$COVERAGE_DIR/" | wc -l)"
           else
             echo "ERROR: Coverage directory does not exist after test!"
           fi

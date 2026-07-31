@@ -288,6 +288,15 @@ jobs:
           cd test
           python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
 
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-2-npu-a3-part${{ matrix.part }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
+
   full-4-npu-a3:
     needs: [ set-image-config ]
     runs-on: linux-aarch64-a3-4
@@ -950,6 +959,8 @@ jobs:
       ]
     if: always()
     runs-on: linux-aarch64-a3-2
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
