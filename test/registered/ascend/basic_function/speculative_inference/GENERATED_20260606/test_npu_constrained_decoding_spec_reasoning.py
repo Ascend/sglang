@@ -55,8 +55,6 @@ class TestNPUConstrainedDecodingSpecReasoning(CustomTestCase):
             "--trust-remote-code",
             "--attention-backend",
             "ascend",
-            "--cuda-graph-max-bs",
-            "64",
             "--tp-size",
             "1",
             "--mem-fraction-static",
