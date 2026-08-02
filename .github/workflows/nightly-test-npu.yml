@@ -115,10 +115,6 @@ jobs:
       matrix:
         test_config:
           # qwen3_6_35b_a3b performance tests
-          - name: test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/kvtc/qwen3_30b_a3b/test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k.py
-            test_type: 'perf'
           - name: test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k_evalscope
             runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/kvtc/qwen3_30b_a3b/test_npu_kvtc_qwen3_30b_a3b_1p_gsm8k_evalscope.py
