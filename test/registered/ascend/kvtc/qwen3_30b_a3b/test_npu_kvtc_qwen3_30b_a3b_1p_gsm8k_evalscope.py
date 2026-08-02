@@ -104,31 +104,98 @@ OTHER_ARGS = [
     QWEN3_30B_A3B_MODEL_PATH,
 ]
 
+BENCHMARK_SIZE_LIMIT = None
+KVTC_CALIBRATION_LIMIT = None
 
-class TestNPUQwen3_30BA3B_1P_gsm8k(TestAscendPerformanceKvtcTestCaseLME, CustomTestCase):
+class TestNPUQwen3_30BA3B_1P_gsm8k_cr_8(TestAscendPerformanceKvtcTestCaseLME, CustomTestCase):
     """Qwen 3 gsm8k lm-eval Test for NPU"""
 
     model = QWEN3_30B_A3B_MODEL_PATH
     benchmark_tool = KVTC_EVALSCOPE
     other_args = OTHER_ARGS
+    kvtc_keys_compression_ratio = 8
+    kvtc_values_compression_ratio = 8
+    kvtc_hicache_size = 80
     envs = ENVS
-    limit = 10
-    kvtc_limit_calibration = 5
-    kvtc_force_calibration = True
+    benchmark_size_limit = BENCHMARK_SIZE_LIMIT
+    kvtc_limit_calibration = KVTC_CALIBRATION_LIMIT
+    kvtc_force_calibration = False
     kvtc_client_concurrency = 4
     task_list = [{"name": "gsm8k"}]
     kvtc_calibration_params = {
         **KVTC_CALIBRATION_PARAMS,
-        "N": 10000,
-        "q": 100,
     }
 
-    def test_lm_eval(self):
+    def test_KVTC_evalscope_gsm8k_cr_8(self):
         # filling kvcache run
         logger.info("First iteration")
         results = self.launch_eval()
         resp = requests.get(url=self.base_url+ "/trim_cache", timeout=30)
         logger.info(resp.text)
+        resp.raise_for_status()
+        resp = requests.get(url=self.base_url+ "/radix_tree", timeout=30)
+        logger.info(resp.text)
+        logger.info("Second iteration")
+        results = self.launch_eval()
+
+
+class TestNPUQwen3_30BA3B_1P_gsm8k_cr_16(TestAscendPerformanceKvtcTestCaseLME, CustomTestCase):
+    """Qwen 3 gsm8k lm-eval Test for NPU"""
+
+    model = QWEN3_30B_A3B_MODEL_PATH
+    benchmark_tool = KVTC_EVALSCOPE
+    other_args = OTHER_ARGS
+    kvtc_keys_compression_ratio = 16
+    kvtc_values_compression_ratio = 16
+    kvtc_hicache_size = 80
+    envs = ENVS
+    benchmark_size_limit = BENCHMARK_SIZE_LIMIT
+    kvtc_limit_calibration = KVTC_CALIBRATION_LIMIT
+    kvtc_force_calibration = False
+    kvtc_client_concurrency = 4
+    task_list = [{"name": "gsm8k"}]
+    kvtc_calibration_params = {
+        **KVTC_CALIBRATION_PARAMS,
+    }
+
+    def test_KVTC_evalscope_gsm8k_cr_16(self):
+        # filling kvcache run
+        logger.info("First iteration")
+        results = self.launch_eval()
+        resp = requests.get(url=self.base_url+ "/trim_cache", timeout=30)
+        logger.info(resp.text)
+        resp.raise_for_status()
+        resp = requests.get(url=self.base_url+ "/radix_tree", timeout=30)
+        logger.info(resp.text)
+        logger.info("Second iteration")
+        results = self.launch_eval()
+
+class TestNPUQwen3_30BA3B_1P_gsm8k_cr32(TestAscendPerformanceKvtcTestCaseLME, CustomTestCase):
+    """Qwen 3 gsm8k lm-eval Test for NPU"""
+
+    model = QWEN3_30B_A3B_MODEL_PATH
+    benchmark_tool = KVTC_EVALSCOPE
+    other_args = OTHER_ARGS
+    kvtc_keys_compression_ratio = 32
+    kvtc_values_compression_ratio = 32
+    kvtc_hicache_size = 80
+    envs = ENVS
+    benchmark_size_limit = BENCHMARK_SIZE_LIMIT
+    kvtc_limit_calibration = KVTC_CALIBRATION_LIMIT
+    kvtc_force_calibration = False
+    kvtc_client_concurrency = 4
+    task_list = [{"name": "gsm8k"}]
+    kvtc_calibration_params = {
+        **KVTC_CALIBRATION_PARAMS,
+    }
+
+    def test_KVTC_evalscope_gsm8k_cr_32(self):
+        # filling kvcache run
+        logger.info("First iteration")
+        results = self.launch_eval()
+        resp = requests.get(url=self.base_url+ "/trim_cache", timeout=30)
+        logger.info(resp.text)
+        resp.raise_for_status()
         resp = requests.get(url=self.base_url+ "/radix_tree", timeout=30)
         logger.info(resp.text)
         logger.info("Second iteration")
