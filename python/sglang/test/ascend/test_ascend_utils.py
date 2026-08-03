@@ -304,6 +304,10 @@ QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 )
 STEP3_VL_10B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "stepfun-ai/Step3-VL-10B")
 
+OPENAI_WHISPER_LARGE_V3_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "openai/whisper-large-v3"
+)
+
 QWEN3_30B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B")
 QWEN3_30B_A3B_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B-w8a8"
@@ -407,11 +411,18 @@ QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = os.path.join(
 )
 # Images path
 IMAGES_EXAMPLE_PATH = os.path.join(IMAGES_DIR, "example_image.png")
+IMAGE_MAN_IRONING_PATH = os.path.join(IMAGES_DIR, "man_ironing_on_back_of_suv.png")
+IMAGE_SGL_LOGO_PATH = os.path.join(IMAGES_DIR, "sgl_logo.png")
 IMAGES_023_PATH = os.path.join(IMAGES_DIR, "023.jpg")
 IMAGES_MAN_PATH = os.path.join(IMAGES_DIR, "man.png")
 IMAGES_LOGO_PATH = os.path.join(IMAGES_DIR, "logo.png")
+IMAGES_1_1_PATH = os.path.join(IMAGES_DIR, "1x1.png")
+IMAGE_MAN_IRONING_PATH = os.path.join(IMAGES_DIR, "man_ironing_on_back_of_suv.png")
+IMAGE_SGL_LOGO_PATH = os.path.join(IMAGES_DIR, "sgl_logo.png")
 VIDEO_JOBS_PATH = os.path.join(VIDEO_DIR, "jobs.mp4")
 AUDIO_TRUMP_WEF_PATH = os.path.join(VIDEO_DIR, "audios_Trump_WEF_2018_10s.mp3")
+VIDEO_JOBS_PRESENTING_IPOD_PATH = os.path.join(VIDEO_DIR, "jobs_presenting_ipod.mp4")
+AUDIO_BIRD_SONG_PATH = os.path.join(VIDEO_DIR, "audios_bird_song.mp3")
 INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
     IMAGES_DIR, "invoice_with_barcode_logo.jpeg"
 )
