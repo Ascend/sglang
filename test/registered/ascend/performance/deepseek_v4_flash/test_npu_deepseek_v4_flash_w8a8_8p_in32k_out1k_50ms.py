@@ -32,7 +32,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://80.5.17.33:24699",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://80.5.17.40:24699",
     "ZBAL_ENABLE_GRAPH": "1",
     # dsv4
     "IS_DEEPSEEK_V4": "1",
@@ -40,7 +40,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_DEBUG_FWD_INPUT": "1",
     "USE_FUSED_HC_PRE_ASCENDC": "1",
     "SGLANG_DSV4_NPU_FUSED_COMPRESSOR": "1",
-    "SGLANG_DSV4_NPU_FUSED_COMPRESSOR_PREFILL": "1",
+    "SGLANG_DSV4_NPU_FUSED_COMPRESSOR_PREFILL": "0",
     # skip gpu branch
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
@@ -72,7 +72,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--device",
     "npu",
     "--prefill-max-requests",
-    160,
+    32,
     "--attention-backend",
     "dsv4",
     "--watchdog-timeout",
@@ -82,7 +82,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--chunked-prefill-size",
     131072,
     "--max-running-requests",
-    160,
+    64,
     "--dp-size",
     16,
     "--enable-dp-attention",
@@ -101,7 +101,6 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     2,
     4,
     8,
-    10,
     # MTP (EAGLE) configuration.
     "--speculative-algorithm",
     "EAGLE",
@@ -117,8 +116,8 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
 ]
 
 
-class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestAscendPerformanceTestCaseBase):
-    """Test NPU performance for DeepSeek-V4-Flash W8A8 8p in8k out1k."""
+class TestNPUDeepSeekV4FlashW8A88PIn32kOut1k50ms(TestAscendPerformanceTestCaseBase):
+    """Test NPU performance for DeepSeek-V4-Flash W8A8 8p in32k out1k."""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
@@ -126,19 +125,19 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestAscendPerformanceTestCaseBas
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     dataset_name = "random"
-    input_len = 8000
+    input_len = 32000
     output_len = 1000
-    num_prompts = 160
-    max_concurrency = 160
+    num_prompts = 64
+    max_concurrency = 64
     random_range_ratio = 1
     warmup_requests = 0
     request_rate = float("inf")
     seed = 1
     tpot = 50
-    output_token_throughput = 1708
+    output_token_throughput = 0  # TBD
 
-    def test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms(self):
-        """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in8k out1k."""
+    def test_npu_deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms(self):
+        """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in32k out1k."""
         self.run_throughput()
 
 
