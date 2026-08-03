@@ -73,9 +73,9 @@ class TestDraftConfigFile(CustomTestCase):
                     "--dtype",
                     "bfloat16",
                     "--decrypted-config-file",
-                    "/__w/sglang/sglang/test/registered/ascend/basic_function/checkpoint_decryption/Qwen3-8B/config.json",
+                    "/__w/sglang/sglang/test/registered/npu/basic_function/checkpoint_decryption/Qwen3-8B/config.json",
                     "--decrypted-draft-config-file",
-                    "/__w/sglang/sglang/test/registered/ascend/basic_function/checkpoint_decryption/Qwen3-8B_eagle3/config.json",
+                    "/__w/sglang/sglang/test/registered/npu/basic_function/checkpoint_decryption/Qwen3-8B_eagle3/config.json",
                 ],
                 env={
                     "SGLANG_ENABLE_SPEC_V2": "1",
