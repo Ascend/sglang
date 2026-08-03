@@ -75,6 +75,8 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
+      volumes:
+        - /data/ascend-ci-share-pkking-sglang:/root/.cache
       env:
         KUBECONFIG: /root/.cache/.cache/kb.yaml
         KUBECTL: /root/.cache/.cache/kubectl
