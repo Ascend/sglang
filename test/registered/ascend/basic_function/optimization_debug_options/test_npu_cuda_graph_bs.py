@@ -264,8 +264,8 @@ class TestCudaGraphBs(CustomTestCase):
             f"  Mean TTFT: {t1:.1f} ms (max_bs=1) vs {t8:.1f} ms (max_bs=8)\n"
             f"  P99  TTFT: {p1:.1f} ms (max_bs=1) vs {p8:.1f} ms (max_bs=8)"
         )
-        self.assertGreater(t1, 0)
-        self.assertGreater(t8, 0)
+        # Larger max_bs enables request batching, reducing average TTFT.
+        self.assertGreater(t1, t8)
 
 
 if __name__ == "__main__":
