@@ -111,16 +111,35 @@ class TestTPServerNPUProcesses(CustomTestCase):
         )
 
         rows = []
+        pid_col = None  # column index of "Process id" header
         for line in result.stdout.splitlines():
-            # Only parse data rows from pipe-delimited table; skip
-            # separators (+===), headers, and "No running processes".
-            if "|" not in line or "+" in line or "No running" in line:
+            if "|" not in line:
                 continue
             parts = [p.strip() for p in line.split("|")]
-            for part in parts:
-                if part.isdigit() and 3 <= len(part) <= 7:
-                    rows.append({"pid": int(part)})
-                    break
+
+            # Locate the process table by its "Process id" column header.
+            if pid_col is None:
+                for i, part in enumerate(parts):
+                    if part == "Process id":
+                        pid_col = i
+                        break
+                continue  # skip the header row itself
+
+            # Reached the next section header ("NPU" row) → stop.
+            if any(parts) and parts[1].startswith("NPU"):
+                break
+            # Separator line or empty data row → skip.
+            if "+" in line or not any(parts):
+                continue
+            # No data in PID column → skip.
+            if not parts[pid_col].isdigit():
+                continue
+
+            pid = int(parts[pid_col])
+            # Safety guard: only accept real OS-level PIDs.
+            if psutil.pid_exists(pid):
+                rows.append({"pid": pid})
+
         return rows
 
     def _format_rows(self, rows):
