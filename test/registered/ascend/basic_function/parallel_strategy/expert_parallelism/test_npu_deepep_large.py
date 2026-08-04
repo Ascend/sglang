@@ -16,7 +16,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=1000, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=2000, suite="full-2-npu-a3", nightly=True)
 
 
 class TestDeepseek(CustomTestCase):
