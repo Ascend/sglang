@@ -92,11 +92,11 @@ class TestDeepseek(CustomTestCase):
 
 
 class TestDeepseekMTP(CustomTestCase):
-    """Testcase: Verify MTP superimposed EP scenario the inference accuracy of the model on the
+    """Testcase: Verify MTP superimposed EP and DP scenario the inference accuracy of the model on the
     GSM8K dataset is no less than 0.34.
 
     [Test Category] Parameters
-    [Test Target] MTP + EP
+    [Test Target] MTP + EP + DP
     """
 
     @classmethod
