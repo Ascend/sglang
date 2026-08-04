@@ -278,6 +278,7 @@ def run_lora_batch_splitting_equivalence_test(
         lora_drain_wait_threshold: When any LoRA adapter request waits longer than
             this threshold (in seconds), the scheduler will selectively drain one
             running adapter to make room. Set to 0 to disable draining (default).
+        torch_dtype (torch.dtype): The torch dtype to use.
     """
     max_loras_per_batch = 2
 
