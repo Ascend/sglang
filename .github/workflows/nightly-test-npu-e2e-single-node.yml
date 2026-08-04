@@ -47,11 +47,16 @@ concurrency:
 
 jobs:
   verify-dirs:
-    runs-on: ubuntu-latest
+    name: verify-dirs
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.image }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Verify directory structure
+      - name: Verify directory structure on real CI machine
+        env:
+          VERIFY_BASE_DIR: /root/.cache
         run: bash scripts/ci/verify_directory_structure.sh
 
   e2e:

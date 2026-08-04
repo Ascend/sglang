@@ -1,10 +1,15 @@
 #!/bin/bash
 # verify_directory_structure.sh
 # Verifies the directory creation logic from all three NPU test execution paths.
-# This can be run locally or via CI without using any NPU/k8s resources.
+# Can run in two modes:
+#   1. Real CI machine mode: set VERIFY_BASE_DIR=/root/.cache so directories are
+#      created and verified in-place on the actual CI machine (uses real runner).
+#   2. Sandbox mode (default): no VERIFY_BASE_DIR, uses a temp dir under /tmp,
+#      requires no NPU/k8s resources.
 #
 # Usage:
-#   bash scripts/ci/verify_directory_structure.sh
+#   bash scripts/ci/verify_directory_structure.sh                  # sandbox
+#   VERIFY_BASE_DIR=/root/.cache bash scripts/ci/verify_directory_structure.sh
 #
 # Simulates the path construction from:
 #   1. nightly-test-npu-e2e-single-node.yml
@@ -22,11 +27,17 @@ HOSTNAME="${HOSTNAME:-test-host-001}"
 RUN_ID="${RUN_ID}"  # keep empty to test fallback
 
 # ============================================================
-# Use a temp directory instead of /root/.cache
+# Base directory: real CI path (VERIFY_BASE_DIR) or sandbox
 # ============================================================
-BASE_DIR="/tmp/verify-dirs-$(date +%Y%m%d-%H%M%S)"
-rm -rf "$BASE_DIR"
-mkdir -p "$BASE_DIR"
+if [ -n "${VERIFY_BASE_DIR}" ]; then
+  BASE_DIR="${VERIFY_BASE_DIR}"
+  echo "[MODE] REAL CI MACHINE mode: BASE_DIR=${BASE_DIR}"
+  echo "       Directories will be created and verified in-place on the CI machine."
+else
+  BASE_DIR="/tmp/verify-dirs-$(date +%Y%m%d-%H%M%S)"
+  echo "[MODE] Sandbox mode: BASE_DIR=${BASE_DIR}"
+fi
+mkdir -p "${BASE_DIR}"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -264,8 +275,12 @@ echo " RESULTS: $PASS_COUNT passed, $FAIL_COUNT failed"
 echo "============================================"
 
 # Cleanup
-rm -rf "$BASE_DIR"
-echo "Cleaned up: $BASE_DIR"
+if [ -z "${VERIFY_BASE_DIR}" ]; then
+  rm -rf "$BASE_DIR"
+  echo "Cleaned up: $BASE_DIR"
+else
+  echo "Real CI mode: directories kept at ${BASE_DIR}/tests for inspection."
+fi
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
   echo ""
