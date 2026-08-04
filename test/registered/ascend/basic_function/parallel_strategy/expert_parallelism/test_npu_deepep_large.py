@@ -26,6 +26,7 @@ class TestDeepseek(CustomTestCase):
     [Test Category] Parameters
     [Test Target] DP + EP
     """
+
     @classmethod
     def setUpClass(cls):
         cls.model = DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
@@ -97,6 +98,7 @@ class TestDeepseekMTP(CustomTestCase):
     [Test Category] Parameters
     [Test Target] MTP + EP
     """
+
     @classmethod
     def setUpClass(cls):
         cls.model = DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
