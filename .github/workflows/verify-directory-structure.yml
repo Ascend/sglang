@@ -1,0 +1,27 @@
+name: Verify Directory Structure
+
+# Lightweight verification that uses ONLY free GitHub-hosted runners.
+# No NPU or k8s resources are consumed.
+# Validates the {branch}-{run_id} directory creation logic from:
+#   1. nightly-test-npu-e2e-single-node.yml
+#   2. nightly-test-npu-e2e-multi-node.yml
+#   3. single-test-npu.yml
+
+on:
+  push:
+    branches: [pr_branch_plli_for_check_in_2]
+  pull_request:
+    branches: [pr_branch_plli_for_check_in_2]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify directory structure
+        shell: bash
+        run: |
+          bash scripts/ci/verify_directory_structure.sh
