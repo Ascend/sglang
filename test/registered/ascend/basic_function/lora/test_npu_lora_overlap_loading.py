@@ -2,7 +2,7 @@ import multiprocessing as mp
 import unittest
 
 from sglang.test.ascend.lora_utils import (
-    CI_MULTI_LORA_MODELS,
+    LORA_MODELS_QWEN3,
     run_lora_batch_splitting_equivalence_test,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -15,7 +15,7 @@ class TestLoRAOverlapLoading(CustomTestCase):
 
     def test_ci_lora_models_batch_splitting(self):
         run_lora_batch_splitting_equivalence_test(
-            CI_MULTI_LORA_MODELS,
+            LORA_MODELS_QWEN3,
             enable_lora_overlap_loading=True,
         )
 
