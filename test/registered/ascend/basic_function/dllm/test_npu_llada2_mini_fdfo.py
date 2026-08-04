@@ -32,7 +32,7 @@ class TestNpuHierarchicalCacheTTFT(CustomTestCase):
                 "--max-running-requests",
                 16,
                 "--dllm-algorithm",
-                "LowConfidence"
+                "LowConfidence",
             ],
             [
                 "--trust-remote-code",
@@ -45,16 +45,12 @@ class TestNpuHierarchicalCacheTTFT(CustomTestCase):
                 16,
                 "--dllm-algorithm",
                 "LowConfidence",
-                "--no-dllm-fdfo"
+                "--no-dllm-fdfo",
             ],
         ]
         for common_arg in common_args:
             other_args = common_arg + (
-                [
-                    "--attention-backend",
-                    "ascend",
-                    "--disable-cuda-graph"
-                ]
+                ["--attention-backend", "ascend", "--disable-cuda-graph"]
             )
             res = run_bench_serving(
                 model=model,
@@ -63,7 +59,7 @@ class TestNpuHierarchicalCacheTTFT(CustomTestCase):
                 random_output_len=1024,
                 request_rate=float("inf"),
                 max_concurrency=16,
-                other_server_args=other_args
+                other_server_args=other_args,
             )
             TTFT = res["mean_ttft_ms"]
             TTFTS.append(TTFT)
