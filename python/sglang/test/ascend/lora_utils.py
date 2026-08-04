@@ -282,7 +282,7 @@ def run_lora_batch_splitting_equivalence_test(
     """
     max_loras_per_batch = 2
 
-    def _run_test(model_case: LoRAModelCase, torch_dtype: torch.dtype ):
+    def _run_test(model_case: LoRAModelCase, torch_dtype: torch.dtype):
         lora_adapter_paths = [a.name for a in model_case.adaptors]
         assert (
             len(lora_adapter_paths) >= max_loras_per_batch
