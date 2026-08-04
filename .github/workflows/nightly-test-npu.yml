@@ -73,6 +73,8 @@ jobs:
       image_a2: ${{ steps.set-vars.outputs.image_a2 }}
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
+      branch_label: ${{ steps.set-vars.outputs.branch_label }}
+      workflow_name: ${{ steps.set-vars.outputs.workflow_name }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
@@ -103,6 +105,12 @@ jobs:
           else
             echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
           fi
+          BRANCH_LABEL="${{ github.event.pull_request.head.label }}"
+          if [ -z "${BRANCH_LABEL}" ]; then
+            BRANCH_LABEL="${{ github.ref_name }}"
+          fi
+          echo "branch_label=${BRANCH_LABEL}" >> $GITHUB_OUTPUT
+          echo "workflow_name=${{ github.workflow }}" >> $GITHUB_OUTPUT
 #  nightly-poc-single-node-a2-tests:
 #    name: single-node-poc-a2
 #    if: ${{ !cancelled() }}
@@ -153,6 +161,8 @@ jobs:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       install_sglang_from_source: false
       transformers_version: ''
+      branch_label: ${{ needs.set-image-config.outputs.branch_label }}
+      workflow_name: ${{ needs.set-image-config.outputs.workflow_name }}
 
   nightly-poc-multi-node-tests:
     name: multi-node-poc
@@ -200,6 +210,8 @@ jobs:
       install_sglang_from_source: false
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
+      branch_label: ${{ needs.set-image-config.outputs.branch_label }}
+      workflow_name: ${{ needs.set-image-config.outputs.workflow_name }}
 
   nightly-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
@@ -227,6 +239,8 @@ jobs:
       install_sglang_from_source: false
       prefill_decode_deployment: 'mix'
       transformers_version: ''
+      branch_label: ${{ needs.set-image-config.outputs.branch_label }}
+      workflow_name: ${{ needs.set-image-config.outputs.workflow_name }}
 
   check-all-jobs:
     if: ${{ !cancelled() && github.event_name != 'workflow_call' }}

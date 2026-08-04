@@ -77,16 +77,21 @@ jobs:
 
           workflow_type="single"
           run_id=${RUN_ID:-${{ github.run_id }}}
-          branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          BRANCH_LABEL="${{ github.event.pull_request.head.label }}"
+          if [ -z "${BRANCH_LABEL}" ]; then
+            BRANCH_LABEL="${{ github.ref_name }}"
+          fi
+          branch_label=$(echo "${BRANCH_LABEL}" | tr '/:' '--')
+          workflow_name=$(echo "${{ github.workflow }}" | tr ' ' '_')
           timestamp=$(date +%H%M%S)
-          log_path_base="/root/.cache/tests/logs/log/${branch}-${run_id}/${workflow_type}/${timestamp}"
+          log_path_base="/root/.cache/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${timestamp}"
           echo "Log base path: ${log_path_base}"
 
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
 
             # prepare for output data
-            test_data_output_path=/root/.cache/tests/output/${branch}-${run_id}/${workflow_type}/single/${tc_name}-${timestamp}
+            test_data_output_path=/root/.cache/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/single/${tc_name}-${timestamp}
             mkdir -p ${test_data_output_path}
             export METRICS_DATA_FILE=${test_data_output_path}
             echo "Metrics file path: ${METRICS_DATA_FILE}"

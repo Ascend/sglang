@@ -25,6 +25,11 @@ GITHUB_RUN_ID="${GITHUB_RUN_ID:-12345678901}"
 GITHUB_REF_NAME="${GITHUB_REF_NAME:-pr_branch_plli_for_check_in_2}"
 HOSTNAME="${HOSTNAME:-test-host-001}"
 RUN_ID="${RUN_ID}"  # keep empty to test fallback
+BRANCH_LABEL_RAW="${BRANCH_LABEL_RAW:-pllimax:pr_branch_plli_for_check_in_2}"
+WORKFLOW_NAME="${WORKFLOW_NAME:-Full Test (NPU)}"
+WF_TYPE_NIGHTLY="${WF_TYPE_NIGHTLY:-nightly}"
+WF_TYPE_FULLTEST="${WF_TYPE_FULLTEST:-fulltest}"
+WF_TYPE_SINGLE="${WF_TYPE_SINGLE:-single}"
 
 # ============================================================
 # Base directory: real CI path (VERIFY_BASE_DIR) or sandbox
@@ -49,6 +54,8 @@ echo " Base dir:  $BASE_DIR"
 echo " Run ID:    $GITHUB_RUN_ID"
 echo " Ref name:  $GITHUB_REF_NAME"
 echo " HOSTNAME:  $HOSTNAME"
+echo " Branch:    $BRANCH_LABEL_RAW"
+echo " Workflow:  $WORKFLOW_NAME"
 echo ""
 
 pass() {
@@ -73,21 +80,19 @@ verify_single_node_e2e() {
 
   echo "--- $path_label ---"
 
-  # --- EXACT LOGIC from nightly-test-npu-e2e-single-node.yml lines 85-94 ---
+  # --- EXACT LOGIC from nightly-test-npu-e2e-single-node.yml lines 109-115 ---
   tc_name=${test_case##*/}
   tc_name=${tc_name%.*}
   run_id=${RUN_ID:-${GITHUB_RUN_ID}}
-  # Note: ${{ inputs.workflow_type }} and ${{ inputs.test_type }} replaced at
-  # workflow template expansion time. Simulation passes them as function args.
-  branch=$(echo "$GITHUB_REF_NAME" | tr '/' '-')
+  branch_label=$(echo "${BRANCH_LABEL_RAW}" | tr '/:' '--')
+  workflow_name=$(echo "${WORKFLOW_NAME}" | tr ' ' '_')
   timestamp=$(date +%H%M%S)
-  test_data_output_path=${BASE_DIR}/tests/output/${branch}-${run_id}/${workflow_type}/${test_type}/${tc_name}-${timestamp}
+  test_data_output_path=${BASE_DIR}/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${test_type}/${tc_name}-${timestamp}
   mkdir -p ${test_data_output_path}
-  # METRICS_DATA_FILE export is simulated by writing a file
   echo "  output_path=$test_data_output_path"
 
-  # --- EXACT LOGIC from nightly-test-npu-e2e-single-node.yml lines 152-155 ---
-  log_path="${BASE_DIR}/tests/logs/log/${branch}-${run_id}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
+  # --- EXACT LOGIC from nightly-test-npu-e2e-single-node.yml lines 175-177 ---
+  log_path="${BASE_DIR}/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
   rm -rf ${log_path} 2>/dev/null || true
   mkdir -p ${log_path}
   echo "  log_path=$log_path"
@@ -124,20 +129,21 @@ verify_standalone() {
 
   echo "--- $path_label ---"
 
-  # --- EXACT LOGIC from single-test-npu.yml lines 79-83 ---
-  workflow_type="single"
+  # --- EXACT LOGIC from single-test-npu.yml (updated) ---
+  workflow_type="${WF_TYPE_SINGLE}"
   run_id=${RUN_ID:-${GITHUB_RUN_ID}}
-  branch=$(echo "$GITHUB_REF_NAME" | tr '/' '-')
+  branch_label=$(echo "${BRANCH_LABEL_RAW}" | tr '/:' '--')
+  workflow_name=$(echo "${WORKFLOW_NAME}" | tr ' ' '_')
   timestamp=$(date +%H%M%S)
-  log_path_base="${BASE_DIR}/tests/logs/log/${branch}-${run_id}/${workflow_type}/${timestamp}"
+  log_path_base="${BASE_DIR}/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${timestamp}"
   echo "  log_path_base=$log_path_base"
 
   local tc_idx=0
   for test_case in "${test_cases[@]}"; do
     tc_name=$(basename ${test_case} .py)
 
-    # --- EXACT LOGIC from single-test-npu.yml lines 90-98 ---
-    test_data_output_path=${BASE_DIR}/tests/output/${branch}-${run_id}/${workflow_type}/single/${tc_name}-${timestamp}
+    # --- EXACT LOGIC from single-test-npu.yml ---
+    test_data_output_path=${BASE_DIR}/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/single/${tc_name}-${timestamp}
     mkdir -p ${test_data_output_path}
 
     log_path="${log_path_base}/${tc_name}/${HOSTNAME}"
@@ -178,21 +184,21 @@ verify_standalone() {
 # Path 1: Single-node E2E with workflow_type=nightly, test_type=perf
 verify_single_node_e2e \
   "Single-node E2E (nightly/perf)" \
-  "nightly" \
+  "${WF_TYPE_NIGHTLY}" \
   "perf" \
   "test/registered/ascend/performance/test_npu_bench_serving_performance.py"
 
 # Path 1: Single-node E2E with workflow_type=fulltest, test_type=accuracy
 verify_single_node_e2e \
   "Single-node E2E (fulltest/accuracy)" \
-  "fulltest" \
+  "${WF_TYPE_FULLTEST}" \
   "accuracy" \
   "test/registered/ascend/accuracy/test_npu_qwen3_next_80b_a3b_sglang.py"
 
 # Path 2: Multi-node E2E (uses identical path construction as single-node)
 verify_single_node_e2e \
   "Multi-node E2E (nightly/perf)" \
-  "nightly" \
+  "${WF_TYPE_NIGHTLY}" \
   "perf" \
   "test/registered/ascend/performance/test_npu_deepseek_v3_multi_node_ep.py"
 
@@ -209,26 +215,26 @@ echo "============================================"
 echo " Top-Level Directory Structure Check"
 echo "============================================"
 
-EXPECTED_TOP="${BASE_DIR}/tests/output/${branch}-${run_id}"
+EXPECTED_TOP="${BASE_DIR}/tests/output/${branch_label}-${run_id}/${workflow_name}"
 echo " Expected top-level output: $EXPECTED_TOP"
 
 if [ -d "$EXPECTED_TOP" ]; then
-  pass "Top-level output directory exists: {branch}-{run_id} = ${branch}-${run_id}"
+  pass "Top-level output directory exists: {branch_label}-{run_id}/{workflow_name} = ${branch_label}-${run_id}/${workflow_name}"
 else
   fail "Top-level output directory MISSING: ${EXPECTED_TOP}"
 fi
 
-EXPECTED_LOG_TOP="${BASE_DIR}/tests/logs/log/${branch}-${run_id}"
+EXPECTED_LOG_TOP="${BASE_DIR}/tests/logs/log/${branch_label}-${run_id}/${workflow_name}"
 if [ -d "$EXPECTED_LOG_TOP" ]; then
-  pass "Top-level log directory exists: {branch}-{run_id} = ${branch}-${run_id}"
+  pass "Top-level log directory exists: {branch_label}-{run_id}/{workflow_name} = ${branch_label}-${run_id}/${workflow_name}"
 else
   fail "Top-level log directory MISSING: ${EXPECTED_LOG_TOP}"
 fi
 
 # Show expected sub-directories for each workflow_type
 echo ""
-echo "--- Sub-directories under {branch}-{run_id}/output ---"
-for wf_type in "nightly" "fulltest" "single"; do
+echo "--- Sub-directories under {branch_label}-{run_id}/{workflow_name}/output ---"
+for wf_type in "${WF_TYPE_NIGHTLY}" "${WF_TYPE_FULLTEST}" "${WF_TYPE_SINGLE}"; do
   wf_dir="${EXPECTED_TOP}/${wf_type}"
   if [ -d "$wf_dir" ]; then
     echo "  workflow_type=$wf_type: EXISTS"
@@ -241,8 +247,8 @@ for wf_type in "nightly" "fulltest" "single"; do
 done
 
 echo ""
-echo "--- Sub-directories under {branch}-{run_id}/logs/log ---"
-for wf_type in "nightly" "fulltest" "single"; do
+echo "--- Sub-directories under {branch_label}-{run_id}/{workflow_name}/logs/log ---"
+for wf_type in "${WF_TYPE_NIGHTLY}" "${WF_TYPE_FULLTEST}" "${WF_TYPE_SINGLE}"; do
   wf_dir="${EXPECTED_LOG_TOP}/${wf_type}"
   if [ -d "$wf_dir" ]; then
     echo "  workflow_type=$wf_type: EXISTS"

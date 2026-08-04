@@ -40,6 +40,16 @@ on:
         type: string
         default: ""
         description: "The transformers version number for running sglang. Use default version in image if keep empty."
+      branch_label:
+        required: false
+        type: string
+        default: ''
+        description: 'Branch label (e.g., "pllimax:pr_branch_plli_for_check_in_2" for PR, or ref_name otherwise)'
+      workflow_name:
+        required: false
+        type: string
+        default: ''
+        description: 'Name of the orchestrating workflow (e.g., "Nightly Test (NPU)")'
 
 concurrency:
   group: ascend-nightly-e2e-singlenode-${{ github.workflow_ref }}-${{ github.ref }}-${{ inputs.test_config_name }}
@@ -99,9 +109,10 @@ jobs:
           tc_name=${tc_name%.*}
           run_id=${RUN_ID:-${{ github.run_id }}}
           workflow_type=${{ inputs.workflow_type }}
-          branch=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          branch_label=$(echo "${{ inputs.branch_label }}" | tr '/:' '--')
+          workflow_name=$(echo "${{ inputs.workflow_name }}" | tr ' ' '_')
           timestamp=$(date +%H%M%S)
-          test_data_output_path=/root/.cache/tests/output/${branch}-${run_id}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
+          test_data_output_path=/root/.cache/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
           mkdir -p ${test_data_output_path}
           export METRICS_DATA_FILE=${test_data_output_path}
           echo "Metrics file path: ${METRICS_DATA_FILE}"
@@ -163,7 +174,7 @@ jobs:
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
           # Set environment of cann
-          log_path="/root/.cache/tests/logs/log/${branch}-${run_id}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
+          log_path="/root/.cache/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
           rm -rf ${log_path}
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"
