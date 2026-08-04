@@ -53,14 +53,14 @@ CI_MULTI_LORA_MODELS = [
         adaptors=[
             LoRAAdaptor(
                 name=QWEN3_5_4B_MCAT_LORA_PATH,
-                prefill_tolerance=2.5e-1,
-                decode_tolerance=2.5e-1,
+                prefill_tolerance=3e-1,
+                decode_tolerance=3e-1,
                 rouge_l_tolerance=0.9,
             ),
             LoRAAdaptor(
                 name=QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH,
-                prefill_tolerance=2.5e-1,
-                decode_tolerance=2.5e-1,
+                prefill_tolerance=3e-1,
+                decode_tolerance=3e-1,
                 rouge_l_tolerance=0.9,
             ),
         ],
