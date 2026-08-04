@@ -61,6 +61,16 @@ on:
         required: false
         type: string
         default: ''
+      branch_label:
+        description: 'Branch label (e.g., "pllimax:pr_branch_plli_for_check_in_2" for PR, or ref_name otherwise)'
+        required: false
+        type: string
+        default: ''
+      workflow_name:
+        description: 'Name of the orchestrating workflow (e.g., "Full Test (NPU)")'
+        required: false
+        type: string
+        default: ''
 concurrency:
   group: nightly-test-npu-${{ inputs.ref || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
@@ -105,12 +115,19 @@ jobs:
           else
             echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
           fi
-          BRANCH_LABEL="${{ github.event.pull_request.head.label }}"
+          BRANCH_LABEL="${{ inputs.branch_label }}"
+          if [ -z "${BRANCH_LABEL}" ]; then
+            BRANCH_LABEL="${{ github.event.pull_request.head.label }}"
+          fi
           if [ -z "${BRANCH_LABEL}" ]; then
             BRANCH_LABEL="${{ github.ref_name }}"
           fi
           echo "branch_label=${BRANCH_LABEL}" >> $GITHUB_OUTPUT
-          echo "workflow_name=${{ github.workflow }}" >> $GITHUB_OUTPUT
+          if [ -z "${{ inputs.workflow_name }}" ]; then
+            echo "workflow_name=${{ github.workflow }}" >> $GITHUB_OUTPUT
+          else
+            echo "workflow_name=${{ inputs.workflow_name }}" >> $GITHUB_OUTPUT
+          fi
 #  nightly-poc-single-node-a2-tests:
 #    name: single-node-poc-a2
 #    if: ${{ !cancelled() }}
@@ -248,7 +265,7 @@ jobs:
 #      - nightly-poc-single-node-a2-tests
       - nightly-poc-single-node-tests
       - nightly-poc-multi-node-tests
-#      - nightly-poc-multi-node-mix-tests
+      - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
     steps:
       - name: Download all metrics

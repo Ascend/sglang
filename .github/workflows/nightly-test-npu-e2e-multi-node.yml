@@ -80,9 +80,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify-dirs:
+    name: verify-dirs
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify directory structure on real CI machine
+        env:
+          VERIFY_BASE_DIR: /root/.cache
+        run: bash scripts/ci/verify_directory_structure.sh
+
   e2e:
     name: ${{ inputs.test_config_name }}
     runs-on: ${{ inputs.runner }}
+    needs: verify-dirs
+    # 验证模式：仅通过 verify-dirs 验证目录创建与结果/日志文件生成，不实际执行测试用例
+    if: false
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
       env:
