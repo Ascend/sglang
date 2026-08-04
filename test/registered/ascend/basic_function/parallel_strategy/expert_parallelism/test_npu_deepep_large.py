@@ -20,6 +20,12 @@ register_npu_ci(est_time=2000, suite="full-2-npu-a3", nightly=True)
 
 
 class TestDeepseek(CustomTestCase):
+    """Testcase: Verify DP superimposed EP scenario the inference accuracy of the model on the
+    GSM8K dataset is no less than 0.34.
+
+    [Test Category] Parameters
+    [Test Target] DP + EP
+    """
     @classmethod
     def setUpClass(cls):
         cls.model = DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
@@ -85,6 +91,12 @@ class TestDeepseek(CustomTestCase):
 
 
 class TestDeepseekMTP(CustomTestCase):
+    """Testcase: Verify MTP superimposed EP scenario the inference accuracy of the model on the
+    GSM8K dataset is no less than 0.34.
+
+    [Test Category] Parameters
+    [Test Target] MTP + EP
+    """
     @classmethod
     def setUpClass(cls):
         cls.model = DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
