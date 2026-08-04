@@ -60,8 +60,6 @@ jobs:
     needs: verify-dirs
     container:
       image: ${{ inputs.image }}
-      volumes:
-        - /data/ascend-ci-share-pkking-sglang:/root/.cache
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

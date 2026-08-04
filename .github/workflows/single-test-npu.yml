@@ -18,8 +18,6 @@ jobs:
     runs-on: linux-aarch64-a3-2
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
-      volumes:
-        - /data/ascend-ci-share-pkking-sglang:/root/.cache
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
