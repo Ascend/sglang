@@ -56,23 +56,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify-dirs:
-    name: verify-dirs
-    runs-on: ${{ inputs.runner }}
-    container:
-      image: ${{ inputs.image }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Verify directory structure on real CI machine
-        env:
-          VERIFY_BASE_DIR: /root/.cache
-        run: bash scripts/ci/verify_directory_structure.sh
-
   e2e:
     name: ${{ inputs.test_config_name }}
     runs-on: ${{ inputs.runner }}
-    needs: verify-dirs
     container:
       image: ${{ inputs.image }}
     steps:
