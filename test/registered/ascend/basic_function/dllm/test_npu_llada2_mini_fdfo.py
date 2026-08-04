@@ -72,6 +72,12 @@ class TestNpuHierarchicalCacheTTFT(CustomTestCase):
             p99_ttft = res["p99_ttft_ms"]
             p99_ttfts.append(p99_ttft)
 
+        # FDFO (First-Done-First-Out) scheduling improves performance by prioritizing
+        # requests that complete their diffusion steps earlier, reducing waiting time.
+        # With FDFO enabled:
+        # - TTFT is lower because earlier-completing requests get priority and start generating tokens sooner
+        # - Throughput is higher due to better hardware utilization from reduced blocking
+        # - P99 TTFT is lower because FDFO prevents a single slow request from blocking others
         assert float(TTFTS[0]) < float(TTFTS[1])
         assert float(throughputs[0]) > float(throughputs[1])
         assert float(p99_ttfts[0]) < float(p99_ttfts[1])
