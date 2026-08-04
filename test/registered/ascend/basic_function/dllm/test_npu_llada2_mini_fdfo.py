@@ -16,7 +16,7 @@ class TestNpuHierarchicalCacheTTFT(CustomTestCase):
     [Test Target] --dllm-fdfo
     """
 
-    def test_no_chunked_prefill_without_radix_cache(self):
+    def test_dlla_fdfo_vs_no_fdfo_performance(self):
         TTFTS = []
         throughputs = []
         p99_ttfts = []
