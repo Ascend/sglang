@@ -130,7 +130,7 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ARGS = [
     "--ep-dispatch-algorithm",
     "static",
     "--init-expert-location",
-    "/home/cjr/eplb_prefill_heat/pd_prefill_0720.pt",
+    "/root/.cache/modelscope/hub/models/hot_map/pd_prefill_0720.pt",
 ]
 
 # Decode node launch arguments for DSV4-Flash PD-Sep.
