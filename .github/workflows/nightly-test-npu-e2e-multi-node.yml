@@ -70,9 +70,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify-dirs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify directory structure
+        run: bash scripts/ci/verify_directory_structure.sh
+
   e2e:
     name: ${{ inputs.test_config_name }}
     runs-on: ${{ inputs.runner }}
+    needs: verify-dirs
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
       volumes:
