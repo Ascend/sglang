@@ -257,6 +257,7 @@ def run_lora_batch_splitting_equivalence_test(
     disable_radix_cache: bool = True,
     enable_lora_overlap_loading: Optional[bool] = None,
     lora_drain_wait_threshold: float = 0.0,
+    torch_dtype: Optional[torch.dtype] = torch.dtype,
 ):
     """
     Test that SRT correctly handles batch splitting with multiple LoRA adapters.
@@ -280,7 +281,7 @@ def run_lora_batch_splitting_equivalence_test(
     """
     max_loras_per_batch = 2
 
-    def _run_test(model_case: LoRAModelCase, torch_dtype: torch.dtype):
+    def _run_test(model_case: LoRAModelCase, torch_dtype = torch_dtype ):
         lora_adapter_paths = [a.name for a in model_case.adaptors]
         assert (
             len(lora_adapter_paths) >= max_loras_per_batch
