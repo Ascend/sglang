@@ -1,6 +1,8 @@
 import multiprocessing as mp
 import unittest
 
+import torch
+
 from sglang.test.ascend.lora_utils import (
     CI_MULTI_LORA_MODELS,
     run_lora_batch_splitting_equivalence_test,
@@ -17,6 +19,7 @@ class TestLoRAOverlapLoading(CustomTestCase):
         run_lora_batch_splitting_equivalence_test(
             CI_MULTI_LORA_MODELS,
             enable_lora_overlap_loading=True,
+            torch_dtype=torch.bfloat16,
         )
 
 
