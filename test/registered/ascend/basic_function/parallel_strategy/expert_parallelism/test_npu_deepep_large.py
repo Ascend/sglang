@@ -59,8 +59,8 @@ class TestDeepseek(CustomTestCase):
                 "ascend",
             ],
             env={
-                "DEEPEP_HCCL_BUFFSIZE":"1800",
-                "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK":"1024",
+                "DEEPEP_HCCL_BUFFSIZE": "1800",
+                "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "1024",
             },
         )
 
@@ -82,6 +82,7 @@ class TestDeepseek(CustomTestCase):
         print(f"Eval accuracy of GSM8K: {metrics=}")
 
         self.assertGreater(metrics["score"], 0.34)
+
 
 class TestDeepseekMTP(CustomTestCase):
     @classmethod
