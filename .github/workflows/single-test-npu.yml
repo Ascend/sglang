@@ -82,7 +82,7 @@ jobs:
             BRANCH_LABEL="${{ github.ref_name }}"
           fi
           branch_label=$(echo "${BRANCH_LABEL}" | tr '/:' '--')
-          workflow_name=$(echo "${{ github.workflow }}" | tr ' ' '_')
+          workflow_name=$(echo "${{ github.workflow }}" | tr ' ' '_' | tr -d '()')
           timestamp=$(date +%H%M%S)
           log_path_base="/root/.cache/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${timestamp}"
           echo "Log base path: ${log_path_base}"

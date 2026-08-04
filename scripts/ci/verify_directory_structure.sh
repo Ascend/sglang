@@ -85,7 +85,7 @@ verify_single_node_e2e() {
   tc_name=${tc_name%.*}
   run_id=${RUN_ID:-${GITHUB_RUN_ID}}
   branch_label=$(echo "${BRANCH_LABEL_RAW}" | tr '/:' '--')
-  workflow_name=$(echo "${WORKFLOW_NAME}" | tr ' ' '_')
+  workflow_name=$(echo "${WORKFLOW_NAME}" | tr ' ' '_' | tr -d '()')
   timestamp=$(date +%H%M%S)
   test_data_output_path=${BASE_DIR}/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${test_type}/${tc_name}-${timestamp}
   mkdir -p ${test_data_output_path}
@@ -133,7 +133,7 @@ verify_standalone() {
   workflow_type="${WF_TYPE_SINGLE}"
   run_id=${RUN_ID:-${GITHUB_RUN_ID}}
   branch_label=$(echo "${BRANCH_LABEL_RAW}" | tr '/:' '--')
-  workflow_name=$(echo "${WORKFLOW_NAME}" | tr ' ' '_')
+  workflow_name=$(echo "${WORKFLOW_NAME}" | tr ' ' '_' | tr -d '()')
   timestamp=$(date +%H%M%S)
   log_path_base="${BASE_DIR}/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${timestamp}"
   echo "  log_path_base=$log_path_base"

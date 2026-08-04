@@ -110,7 +110,7 @@ jobs:
           run_id=${RUN_ID:-${{ github.run_id }}}
           workflow_type=${{ inputs.workflow_type }}
           branch_label=$(echo "${{ inputs.branch_label }}" | tr '/:' '--')
-          workflow_name=$(echo "${{ inputs.workflow_name }}" | tr ' ' '_')
+          workflow_name=$(echo "${{ inputs.workflow_name }}" | tr ' ' '_' | tr -d '()')
           timestamp=$(date +%H%M%S)
           test_data_output_path=/root/.cache/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
           mkdir -p ${test_data_output_path}
