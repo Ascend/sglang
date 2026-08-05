@@ -159,7 +159,7 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "--speculative-eagle-topk",
     "1",
     "--speculative-num-draft-tokens",
-    "4"
+    "4",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {
