@@ -1,70 +1,32 @@
+import multiprocessing as mp
 import unittest
 
-import requests
+import torch
 
-from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH,
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+from sglang.test.ascend.lora_utils import (
+    CI_MULTI_LORA_MODELS,
+    run_lora_batch_splitting_equivalence_test,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-    DEFAULT_URL_FOR_TEST,
-    CustomTestCase,
-    popen_launch_server,
-)
+from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
 
-class TestLoraEnableOverlapLoading(CustomTestCase):
-    """Testcase：Verify LoRA set --enable-lora-overlap-loading parameter, inference request successful.
+class TestLoRAOverlapLoading(CustomTestCase):
 
-    [Test Category] Parameter
-    [Test Target] --enable-lora-overlap-loading
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        cls.process = popen_launch_server(
-            LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=[
-                "--enable-lora",
-                "--lora-path",
-                f"lora_a={LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH}",
-                "--enable-lora-overlap-loading",
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
-                "--max-loras-per-batch",
-                "2",
-                "--max-loaded-loras",
-                "4",
-            ],
+    def test_ci_lora_models_batch_splitting(self):
+        run_lora_batch_splitting_equivalence_test(
+            CI_MULTI_LORA_MODELS,
+            enable_lora_overlap_loading=True,
+            torch_dtype=torch.bfloat16,
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        kill_process_tree(cls.process.pid)
-
-    def test_lora_with_enable_overlap_loading(self):
-        response = requests.post(
-            f"{DEFAULT_URL_FOR_TEST}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 1,
-                },
-                "lora_path": "lora_a",
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Paris", response.text)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    try:
+        mp.set_start_method("spawn")
+    except RuntimeError:
+        pass
+
+    unittest.main(warnings="ignore")

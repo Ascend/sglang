@@ -118,6 +118,12 @@ LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH = os.path.join(
 LLAMA_3_2_1B_INSTRUCT_TOOL_FAST_LORA_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "suayptalha/FastLlama-3.2-LoRA"
 )
+VALADAPT_LLAMA_3_1_8B_CHINESE_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "faridlazuarda/valadapt-llama-3.1-8B-it-chinese"
+)
+CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "philschmid/code-llama-3-1-8b-text-to-sql-lora"
+)
 LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "LLM-Research/Llama-3.2-1B-Instruct"
 )
@@ -336,6 +342,13 @@ QWEN3_5_397B_W8A8_MODEL_PATH = os.path.join(
 )
 QWEN3_5_35B_W8A8_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-35B-A3B-w8a8-mtp"
+)
+QWEN3_5_4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-4B")
+QWEN3_5_4B_MCAT_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "jamezoon/qwen3.5-4b-mcat-lora"
+)
+QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Aswinkv07/qwen3.5-4b-neo4j-text2cypher-lora"
 )
 QWEN3_5_9B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-9B")
 QWEN3_5_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-35B-A3B")
