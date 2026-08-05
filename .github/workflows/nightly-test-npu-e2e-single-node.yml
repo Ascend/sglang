@@ -97,8 +97,10 @@ jobs:
           workflow_type=${{ inputs.workflow_type }}
           branch_label=$(echo "${{ inputs.branch_label }}" | tr '/:' '--')
           workflow_name=$(echo "${{ inputs.workflow_name }}" | tr ' ' '_' | tr -d '()')
+          # 任务创建日期（北京时间, UTC+8）
+          create_date=$(date -u -d '+8 hours' +%Y%m%d)
           timestamp=$(date +%H%M%S)
-          test_data_output_path=/root/.cache/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
+          test_data_output_path=/root/.cache/tests/output/${branch_label}-${create_date}-${run_id}/${workflow_name}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
           mkdir -p ${test_data_output_path}
           export METRICS_DATA_FILE=${test_data_output_path}
           echo "Metrics file path: ${METRICS_DATA_FILE}"
@@ -160,7 +162,7 @@ jobs:
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
           # Set environment of cann
-          log_path="/root/.cache/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
+          log_path="/root/.cache/tests/logs/log/${branch_label}-${create_date}-${run_id}/${workflow_name}/${workflow_type}/${tc_name}-${timestamp}/${HOSTNAME}"
           rm -rf ${log_path}
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"

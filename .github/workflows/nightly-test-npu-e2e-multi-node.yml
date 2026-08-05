@@ -156,8 +156,10 @@ jobs:
           workflow_type=${{ inputs.workflow_type }}
           branch_label=$(echo "${{ inputs.branch_label }}" | tr '/:' '--')
           workflow_name=$(echo "${{ inputs.workflow_name }}" | tr ' ' '_' | tr -d '()')
+          # 任务创建日期（北京时间, UTC+8）
+          create_date=$(date -u -d '+8 hours' +%Y%m%d)
           timestamp=$(date +%H%M%S)
-          metrics_data_path=/root/.cache/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
+          metrics_data_path=/root/.cache/tests/output/${branch_label}-${create_date}-${run_id}/${workflow_name}/${workflow_type}/${{ inputs.test_type }}/${tc_name}-${timestamp}
           mkdir -p ${metrics_data_path}
           echo "Metrics file path: ${metrics_data_path}"
 

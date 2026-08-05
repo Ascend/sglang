@@ -83,15 +83,17 @@ jobs:
           fi
           branch_label=$(echo "${BRANCH_LABEL}" | tr '/:' '--')
           workflow_name=$(echo "${{ github.workflow }}" | tr ' ' '_' | tr -d '()')
+          # 任务创建日期（北京时间, UTC+8）
+          create_date=$(date -u -d '+8 hours' +%Y%m%d)
           timestamp=$(date +%H%M%S)
-          log_path_base="/root/.cache/tests/logs/log/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/${timestamp}"
+          log_path_base="/root/.cache/tests/logs/log/${branch_label}-${create_date}-${run_id}/${workflow_name}/${workflow_type}/${timestamp}"
           echo "Log base path: ${log_path_base}"
 
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
 
             # prepare for output data
-            test_data_output_path=/root/.cache/tests/output/${branch_label}-${run_id}/${workflow_name}/${workflow_type}/single/${tc_name}-${timestamp}
+            test_data_output_path=/root/.cache/tests/output/${branch_label}-${create_date}-${run_id}/${workflow_name}/${workflow_type}/single/${tc_name}-${timestamp}
             mkdir -p ${test_data_output_path}
             export METRICS_DATA_FILE=${test_data_output_path}
             echo "Metrics file path: ${METRICS_DATA_FILE}"
