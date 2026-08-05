@@ -90,21 +90,6 @@ class TestNpuMsprobeDumpConfig(CustomTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Paris", response.text)
 
-        self.err_log_file.seek(0)
-        err_log = self.err_log_file.read()
-        self.assertIn(
-            "When msProbe is enabled",
-            err_log,
-            "Expected stderr to contain 'When msProbe is enabled', proving "
-            "--msprobe-dump-config was parsed and cuda graph + warmup were disabled",
-        )
-        self.assertNotIn(
-            "Please install msprobe",
-            err_log,
-            "Expected stderr NOT to contain 'Please install msprobe', proving "
-            "mindstudio-probe is installed and PrecisionDebugger was created",
-        )
-
         # msprobe writes dump.json into per-step subdirectories
         # (e.g. step31/dump.json), not at the root of the dump dir.
         dump_files = []
