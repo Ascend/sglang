@@ -41,7 +41,7 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ENVS = {
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "62084",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://192.168.25.209:14699",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
     "ZBAL_ENABLE_GRAPH": "1",
     # PD disagg
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
@@ -215,13 +215,13 @@ class TestNPUDeepSeekV4FlashW8A81P1D16PIn8kOut1k50ms(TestAscendPerfMultiNodePdSe
     input_len = 8000
     output_len = 1000
     num_prompts = 128
-    max_concurrency = 128
+    max_concurrency = 800
     random_range_ratio = 1
     warmup_requests = 0
     request_rate = float("inf")
     seed = 1
     tpot = 50
-    output_token_throughput = 0  # TBD
+    output_token_throughput = 7046  # TBD
 
     def test_npu_deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms(self):
         """Run NPU performance test for DeepSeek-V4-Flash W8A8 1P+1D 16p in8k out1k."""

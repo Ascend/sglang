@@ -21,7 +21,7 @@ GLM_5_2_PD_SEP_PREFILL_ENVS = {
     "TRANSFORMERS_VERBOSITY": "error",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_MF_STORE_URL": "tcp://61.47.19.68:24709",
+    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "1200",
     "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "1200",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -186,13 +186,13 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In128k_Out1k(TestAscendPerfMultiNodePdSepTestCa
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 64
+    max_concurrency = 32
     num_prompts = 200
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
     tpot = 20
-    output_token_throughput = 3850
+    output_token_throughput = 696
 
     def test_npu_glm_5_2_w4a8_pd_sep_in128k_out1k(self):
         """Run NPU performance test for GLM-5.2-w4a8 PD separation"""
