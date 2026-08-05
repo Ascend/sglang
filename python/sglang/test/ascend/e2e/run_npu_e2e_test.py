@@ -518,10 +518,11 @@ def generate_metrics_json(metrics_data_file, test_case, status):
     tc_name = test_case.rsplit("/", 1)[-1].rsplit(".", 1)[0]
 
     test_type = "unknown"
+    # 目录结构: .../tests/output/{branch_label}-{run_id}/{workflow_name}/{workflow_type}/{test_type}/{tc_name}-{timestamp}
     parts = metrics_data_file.split("/")
     for i, part in enumerate(parts):
-        if part == "output" and i + 3 < len(parts):
-            test_type = parts[i + 3]
+        if part == "output" and i + 4 < len(parts):
+            test_type = parts[i + 4]
             break
 
     output = {

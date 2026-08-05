@@ -140,9 +140,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    # 验证模式：仅通过 verify-dirs 验证目录创建与结果/日志文件生成，不实际执行测试用例
-    if: false
-    # if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -222,9 +220,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    # 验证模式：仅通过 verify-dirs 验证目录创建与结果/日志文件生成，不实际执行测试用例
-    if: false
-    # if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -295,9 +291,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    # 验证模式：仅通过 verify-dirs 验证目录创建与结果/日志文件生成，不实际执行测试用例
-    if: false
-    # if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -365,9 +359,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    # 验证模式：仅通过 verify-dirs 验证目录创建与结果/日志文件生成，不实际执行测试用例
-    if: false
-    # if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -434,9 +426,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    # 验证模式：仅通过 verify-dirs 验证目录创建与结果/日志文件生成，不实际执行测试用例
-    if: false
-    # if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -533,6 +523,13 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms
             prefill_size: 1
             decode_size: 1
