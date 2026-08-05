@@ -28,7 +28,7 @@ KIMI_K2_6_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "96",
-    "HCCL_BUFFSIZE": "1200",
+    "DEEPEP_HCCL_BUFFSIZE": "1200",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_NPU_USE_MLAPO": "1",
     "SGLANG_NPU_USE_MULTI_STREAM": "1",
@@ -114,6 +114,7 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     output_len = 1500
     random_range_ratio = 1
     warmup_requests = 0
+    seed = 1
     tpot = 20
     output_token_throughput = 1900
 

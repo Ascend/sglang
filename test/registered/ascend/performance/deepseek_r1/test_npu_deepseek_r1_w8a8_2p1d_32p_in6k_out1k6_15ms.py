@@ -25,7 +25,7 @@ MODEL_CONFIG = {
         "STREAMS_PER_DEVICE": "32",
         "SGLANG_NPU_USE_MLAPO": "1",
         "SGLANG_USE_FIA_NZ": "1",
-        "HCCL_BUFFSIZE": "1536",
+        "DEEPEP_HCCL_BUFFSIZE": "1536",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
         "TASK_QUEUE_ENABLE": "2",
         "HCCL_SOCKET_IFNAME": NIC_NAME,
@@ -39,7 +39,7 @@ MODEL_CONFIG = {
         "SGLANG_USE_FIA_NZ": "1",
         "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
         "SGLANG_ENABLE_SPEC_V2": "1",
-        "HCCL_BUFFSIZE": "650",
+        "DEEPEP_HCCL_BUFFSIZE": "650",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "16",
         "TASK_QUEUE_ENABLE": "1",
         "SGLANG_SCHEDULER_SKIP_ALL_GATHER": "1",
@@ -160,6 +160,7 @@ class TestDeepSeekR1W8A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 6000
     output_len = 1600
     random_range_ratio = 1
+    seed = 1
     tpot = 20.5
     # T: None   800I A3: None     Dev-800I: 1181/32@19.81
     output_token_throughput = 1058

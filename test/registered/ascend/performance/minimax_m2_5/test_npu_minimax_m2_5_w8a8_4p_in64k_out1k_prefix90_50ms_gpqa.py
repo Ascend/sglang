@@ -31,7 +31,7 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS = {
     "SGLANG_NPU_FUSED_MOE_MODE": "2",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "140000",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "HCCL_BUFFSIZE": "1024",
+    "DEEPEP_HCCL_BUFFSIZE": "1024",
     "SGLANG_EXTERNAL_MODEL_PACKAGE": "custom_eagle3",
     "PYTHONPATH": f"{MINIMAX_M2_5_EAGLE3_MODEL_PATH}:{os.environ.get('PYTHONPATH', '')}",
 }
@@ -52,7 +52,7 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     10,
     "--chunked-prefill-size",
     67072,
-    "--max-prefill-token",
+    "--max-prefill-tokens",
     67000,
     "--cuda-graph-bs",
     2,
@@ -109,6 +109,7 @@ class TestNPUMiniMaxM2_5W8A8_4P_In64k_Out1k_Prefix90_50ms(
     output_len = 1024
     random_range_ratio = 1
     repeat_rate = 0.9
+    seed = 1
     tpot = 50
     output_token_throughput = 390.5859
     request_rate = float("inf")
@@ -126,7 +127,7 @@ class TestNPUMiniMaxM2_5_W8A8_4P_In3k5_Out1k5_GPQA(TestAscendAccuracyTestCaseBas
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
     generation_config = {"max_tokens": 65536, "temperature": 1.0}
-    max_concurrency = 64
+    eval_batch_size = 64
 
     def test_accuracy(self):
         self.run_accuracy()

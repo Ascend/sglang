@@ -18,7 +18,7 @@ register_npu_ci(
 QWEN3_6_35B_A3B_3K5_1K5_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "HCCL_BUFFSIZE": "1",
+    "HCCL_BUFFSIZE": "100",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
@@ -39,6 +39,8 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     "npu",
     "--chunked-prefill-size",
     -1,
+    "--max-total-tokens",
+    659840,
     "--max-prefill-tokens",
     43400,
     "--disable-radix-cache",
@@ -50,7 +52,7 @@ QWEN3_6_35B_A3B_3K5_1K5_OTHER_ARGS = [
     "--max-mamba-cache-size",
     122,
     "--mem-fraction-static",
-    0.8,
+    0.9,
     "--cuda-graph-bs",
     4,
     16,
@@ -92,10 +94,12 @@ class TestNPUQwen3_6_35BA3B_1P_In3k5_Out1k5_50ms(TestAscendPerformanceTestCaseBa
     envs = QWEN3_6_35B_A3B_3K5_1K5_ENVS
     dataset_name = "random"
     max_concurrency = 122
+    warmup_requests = max_concurrency
     num_prompts = 122
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 2031.71
 

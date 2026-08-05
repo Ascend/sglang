@@ -4,8 +4,8 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH,
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+    QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH,
+    QWEN3_5_4B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -37,10 +37,10 @@ class TestLoraBackend(CustomTestCase):
             "ascend",
             "--disable-cuda-graph",
             "--lora-path",
-            f"tool_calling={LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH}",
+            f"lora_a={QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH}",
         ]
         cls.process = popen_launch_server(
-            LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+            QWEN3_5_4B_WEIGHTS_PATH,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
@@ -62,6 +62,7 @@ class TestLoraBackend(CustomTestCase):
                     "temperature": 0,
                     "max_new_tokens": 32,
                 },
+                "lora_path": "lora_a",
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -69,14 +70,6 @@ class TestLoraBackend(CustomTestCase):
         response = requests.get(DEFAULT_URL_FOR_TEST + "/server_info")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["lora_backend"], f"{self.lora_backend}")
-
-
-class TestLoraBackendCsgmv(TestLoraBackend):
-    lora_backend = "csgmv"
-
-
-class TestLoraBackendAscend(TestLoraBackend):
-    lora_backend = "ascend"
 
 
 class TestLoraBackendTorchNative(TestLoraBackend):

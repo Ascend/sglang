@@ -28,7 +28,7 @@ MODEL_CONFIG = {
         "SGLANG_USE_FIA_NZ": "1",
         "SGLANG_NPU_USE_MULTI_STREAM": "1",
         "SGLANG_USE_AG_AFTER_QLORA": "1",
-        "HCCL_BUFFSIZE": "800",
+        "DEEPEP_HCCL_BUFFSIZE": "800",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
         "TASK_QUEUE_ENABLE": "2",
         "SGLANG_NPU_FUSED_MOE_MODE": "2",
@@ -46,7 +46,7 @@ MODEL_CONFIG = {
         "SGLANG_NPU_USE_MULTI_STREAM": "1",
         "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
         "SGLANG_ENABLE_SPEC_V2": "1",
-        "HCCL_BUFFSIZE": "600",
+        "DEEPEP_HCCL_BUFFSIZE": "600",
         "TASK_QUEUE_ENABLE": "1",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
         "SGLANG_NPU_FUSED_MOE_MODE": "1",
@@ -182,9 +182,9 @@ class TestDeepSeekR1W8A8(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 3584
     output_len = 1536
     random_range_ratio = 1
+    seed = 1
     tpot = 50
-    # T: 224@40ms    800I A3: 1.8*T
-    output_token_throughput = 17588
+    output_token_throughput = 17616.6336
 
     def test_throughput(self):
         self.run_throughput()

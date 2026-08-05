@@ -135,6 +135,7 @@ class TestDeepSeekV32HierarchicalCacheHit(TestAscendPerfMultiNodePdSepTestCaseBa
     input_len = 1000
     output_len = 20
     random_range_ratio = 1
+    seed = 1
 
     @classmethod
     def setUpClass(cls):

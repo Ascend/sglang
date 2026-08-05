@@ -19,7 +19,7 @@ QWEN3_5_397B_64K_PREFIX_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "2200",
+    "DEEPEP_HCCL_BUFFSIZE": "2200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -97,12 +97,13 @@ class TestNPUQwen3_5_397B_64K_Prefix90(TestAscendPerformanceTestCaseBase):
     envs = QWEN3_5_397B_64K_PREFIX_ENVS
     dataset_name = "generated-shared-prefix"
     warmup_requests = 0
-    max_concurrency = 112
-    num_prompts = 112
+    max_concurrency = 96
+    num_prompts = 96
     repeat_rate = 0.9
     input_len = 65536
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     temperature = 0.6

@@ -38,7 +38,7 @@ DECODE_ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "HCCL_BUFFSIZE": "1200",
+    "DEEPEP_HCCL_BUFFSIZE": "1200",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
@@ -178,7 +178,9 @@ class TestNPUKimiK2_6_W4A8_1P1D_16p_In128k_Out1k_Prefix90_100ms(
     input_len = 128000
     output_len = 1000
     random_range_ratio = 1
+    seed = 1
     ttft = 5000
+    pop_sglang_is_in_ci_for_gsp = True
     tpot = 100
     output_token_throughput = 21.41
 

@@ -57,14 +57,6 @@ QWEN3_5_397B_128K_OTHER_ARGS = [
     16,
     "--mem-fraction-static",
     0.6,
-    "--cuda-graph-bs",
-    2,
-    4,
-    6,
-    8,
-    12,
-    14,
-    16,
     "--quantization",
     "modelslim",
     "--enable-multimodal",
@@ -110,6 +102,7 @@ class TestNPUQwen3_5_397B_128K(TestAscendPerformanceTestCaseBase):
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     request_rate = float("inf")
     temperature = 0.6

@@ -22,7 +22,7 @@ MODEL_CONFIG = {
         "SGLANG_SET_CPU_AFFINITY": "1",
         "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
         "STREAMS_PER_DEVICE": "32",
-        "HCCL_BUFFSIZE": "1200",
+        "DEEPEP_HCCL_BUFFSIZE": "1200",
         "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
         "TASK_QUEUE_ENABLE": "2",
         "HCCL_SOCKET_IFNAME": NIC_NAME,
@@ -38,7 +38,7 @@ MODEL_CONFIG = {
         "SGLANG_SCHEDULER_SKIP_ALL_GATHER": "1",
         "HCCL_SOCKET_IFNAME": NIC_NAME,
         "GLOO_SOCKET_IFNAME": NIC_NAME,
-        "HCCL_BUFFSIZE": "400",
+        "DEEPEP_HCCL_BUFFSIZE": "400",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "8",
     },
     "router_envs": {},
@@ -71,9 +71,9 @@ MODEL_CONFIG = {
         "--disable-cuda-graph",
         "--moe-dense-tp-size",
         1,
-        "--enable-nsa-prefill-context-parallel",
-        "--nsa-prefill-cp-mode",
-        "in-seq-split",
+        "--enable-prefill-cp",
+        "--cp-strategy",
+        "zigzag",
         "--attn-cp-size",
         32,
         "--speculative-algorithm",
@@ -113,7 +113,7 @@ MODEL_CONFIG = {
         68000,
         "--max-running-requests",
         32,
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         4,
         "--moe-a2a-backend",
         "deepep",
@@ -154,6 +154,7 @@ class TestDeepSeekV32(TestAscendPerfMultiNodePdSepTestCaseBase):
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
+    seed = 1
     tpot = 26
     output_token_throughput = 132.48
 

@@ -15,11 +15,16 @@ from sglang.test.ascend.e2e.gen_dataset_fixed_len import (
     save_jsonl,
 )
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    ACTIVE_TEST_CLASS,
+    CONFIGMAP_NAME,
+    NAMESPACE,
     SERVICE_PORT,
     check_role,
     launch_pd_mix_node,
     launch_pd_separation_node,
     launch_router,
+    query_configmap,
+    wait_for_prefill_decode_exit,
     wait_server_ready,
 )
 from sglang.test.test_utils import (
@@ -149,12 +154,18 @@ GLM_5_1_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.1-w
 MINIMAX_M2_5_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
 )
+MIMO_V2_FLASH_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/iridiumine/MiMo-V2-Flash-W8A8"
+)
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )
 
 QWEN3_5_397B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w8a8-mtp"
+)
+DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-w8a8-mtp"
 )
 QWEN3_5_397B_W4A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
@@ -785,50 +796,56 @@ def assert_metrics(self, metrics):
         raise Exception("No metrics obtained from benchmark")
 
     tc_name = self.__class__.__name__
-    if self.tpot and metrics.get("mean_tpot"):
+
+    # Always dump measured values when available, regardless of threshold
+    if metrics.get("mean_tpot"):
         dump_metric(
             "tpot",
             float(metrics["mean_tpot"]),
             labels={"test_case": tc_name, "type": "perf"},
         )
-        dump_metric(
-            "tpot_baseline",
-            float(self.tpot),
-            labels={"test_case": tc_name, "type": "perf"},
-        )
-    if self.output_token_throughput and metrics.get("total_tps"):
+        if self.tpot:
+            dump_metric(
+                "tpot_baseline",
+                float(self.tpot),
+                labels={"test_case": tc_name, "type": "perf"},
+            )
+    if metrics.get("total_tps"):
         dump_metric(
             "throughput",
             float(metrics["total_tps"]),
             labels={"test_case": tc_name, "type": "perf"},
         )
-        dump_metric(
-            "throughput_baseline",
-            float(self.output_token_throughput),
-            labels={"test_case": tc_name, "type": "perf"},
-        )
-    if self.ttft and metrics.get("mean_ttft"):
+        if self.output_token_throughput:
+            dump_metric(
+                "throughput_baseline",
+                float(self.output_token_throughput),
+                labels={"test_case": tc_name, "type": "perf"},
+            )
+    if metrics.get("mean_ttft"):
         dump_metric(
             "ttft",
             float(metrics["mean_ttft"]),
             labels={"test_case": tc_name, "type": "perf"},
         )
-        dump_metric(
-            "ttft_baseline",
-            float(self.ttft),
-            labels={"test_case": tc_name, "type": "perf"},
-        )
-    if self.mean_e2e_latency and metrics.get("mean_e2e_latency"):
+        if self.ttft:
+            dump_metric(
+                "ttft_baseline",
+                float(self.ttft),
+                labels={"test_case": tc_name, "type": "perf"},
+            )
+    if metrics.get("mean_e2e_latency"):
         dump_metric(
             "e2e_latency",
             float(metrics["mean_e2e_latency"]),
             labels={"test_case": tc_name, "type": "perf"},
         )
-        dump_metric(
-            "e2e_latency_baseline",
-            float(self.mean_e2e_latency),
-            labels={"test_case": tc_name, "type": "perf"},
-        )
+        if self.mean_e2e_latency:
+            dump_metric(
+                "e2e_latency_baseline",
+                float(self.mean_e2e_latency),
+                labels={"test_case": tc_name, "type": "perf"},
+            )
 
     if self.tpot:
         if self.tpot < TPOT_THRESHOLD:
@@ -1163,15 +1180,25 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        logger.info("Start exec tearDownClass")
         if cls.process:
             try:
                 kill_process_tree(cls.process.pid)
+                for _ in range(60):
+                    if cls.process.poll() is not None:
+                        logger.info("Process fully exited")
+                        break
+                    time.sleep(1)
+                else:
+                    logger.warning("Process did NOT exit in time")
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
+        logger.info("tearDownClass finished")
 
     @classmethod
     @check_role(allowed_roles=["router"])
     def start_router_server(cls):
+        wait_for_prefill_decode_exit(key=ACTIVE_TEST_CLASS, value=cls.__name__)
         logger.info(f"Starting router in thread...")
         sglang_thread = threading.Thread(target=launch_router, args=(cls.model_config,))
         sglang_thread.daemon = True
@@ -1195,6 +1222,13 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
 
         # Loop to check if the process is still running
         while True:
+            configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+            if configmap and configmap.data:
+                executing_class = configmap.data.get(ACTIVE_TEST_CLASS)
+                if executing_class and executing_class != cls.__name__:
+                    logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+                    logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
+                    return
             if cls.process.poll() is None:
                 # Process is still running
                 time.sleep(30)

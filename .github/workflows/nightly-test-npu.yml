@@ -112,9 +112,9 @@ jobs:
       max-parallel: 6
       matrix:
         test_config:
-          - name: qwen3_32b_w8a8_2p_in3k5_out1k5_50ms_a2
+          - name: qwen3_32b_w8a8_4p_in3k5_out1k5_50ms_a2
             runner: linux-aarch64-a2b3-4
-            test_case: test/registered/ascend/performance/qwen3_32b/test_npu_qwen3_32b_w8a8_2p_in3k5_out1k5_50ms_a2.py
+            test_case: test/registered/ascend/performance/qwen3_32b/test_npu_qwen3_32b_w8a8_4p_in3k5_out1k5_50ms_a2.py
             test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
@@ -176,9 +176,9 @@ jobs:
             runner: linux-aarch64-a3-4
             test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_w8a8_2p_in128k_out1k_50ms.py
             test_type: 'perf'
-          - name: qwen3_6_27b_2p_in64k_out1k_prefix90_50ms
+          - name: qwen3_6_27b_1p_in64k_out1k_prefix90_50ms
             runner: linux-aarch64-a3-4
-            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_2p_in64k_out1k_prefix90_50ms.py
+            test_case: test/registered/ascend/performance/qwen3_6_27b/test_npu_qwen3_6_27b_1p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
           - name: qwen3_6_27b_1p_in1024x1024_30_out1024_50ms
             runner: linux-aarch64-a3-2
@@ -232,17 +232,13 @@ jobs:
             test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms_gpqa.py
             test_type: 'perf'
           # deepseek_v3_2 accuracy tests
-          - name: deepseek_v3_2_8p_aime25
+          - name: deepseek_v3_2_8p_gsm8k
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/accuracy/deepseek_v3_2/test_npu_deepseek_v3_2_8p_aime25.py
+            test_case: test/registered/ascend/accuracy/deepseek_v3_2/test_npu_deepseek_v3_2_8p_gsm8k.py
           # glm4_7_flash accuracy tests
           - name: glm4_7_flash_1p_aime25
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_1p_aime25.py
-          # glm4_6v_flash accuracy tests
-          - name: glm4_6v_flash_1p_mmmu
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/accuracy/glm4_6v_flash/test_npu_glm4_6v_flash_1p_mmmu.py
           # qwen3_vl_8b_thinking accuracy tests
           - name: qwen3_vl_8b_thinking_1p_mmmu
             runner: linux-aarch64-a3-2
@@ -251,6 +247,11 @@ jobs:
           - name: qwen3_vl_30b_a3b_thinking_1p_mmmu
             runner: linux-aarch64-a3-2
             test_case: test/registered/ascend/accuracy/qwen3_vl_30b_a3b_thinking/test_npu_qwen3_vl_30b_a3b_thinking_1p_mmmu.py
+          # deepseek_v4_flash performance tests
+          - name: deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/ascend/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py
+            test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
@@ -276,6 +277,21 @@ jobs:
             decode_size: 2
             router_size: 1
             test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          # mimo_v2_flash performance tests
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in16k_out1_ttft_5s
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in16k_out1_ttft_5s.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in16k_out1k_tpot_20ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in16k_out1k_tpot_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
@@ -318,7 +334,7 @@ jobs:
       prefill_decode_deployment: 'mix'
       transformers_version: ''
   check-all-jobs:
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name != 'workflow_call' }}
     needs:
       - nightly-poc-single-node-a2-tests
       - nightly-poc-single-node-tests
@@ -403,4 +419,6 @@ jobs:
 
           FAIL=0
           if [ "${single_result}" != "success" ] && [ "${single_result}" != "skipped" ]; then FAIL=1; fi
+          if [ "${multi_result}" != "success" ] && [ "${multi_result}" != "skipped" ]; then FAIL=1; fi
+          if [ "${mix_result}" != "success" ] && [ "${mix_result}" != "skipped" ]; then FAIL=1; fi
           exit $FAIL

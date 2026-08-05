@@ -20,7 +20,7 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
-    "HCCL_BUFFSIZE": "1200",
+    "DEEPEP_HCCL_BUFFSIZE": "1200",
     # "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
     # "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
@@ -39,7 +39,7 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
     "SGLANG_SPEC_ENABLE_OVERLAP_REFLOW": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
-    "HCCL_BUFFSIZE": "650",
+    "DEEPEP_HCCL_BUFFSIZE": "650",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     "TASK_QUEUE_ENABLE": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
@@ -68,7 +68,7 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--served-model-name",
     "glm-5",
     "--chunked-prefill-size",
-    524288,
+    53248,
     "--max-prefill-tokens",
     180000,
     "--moe-a2a-backend",
@@ -84,9 +84,9 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--enable-dp-attention",
     "--load-balance-method",
     "round_robin",
-    "--enable-nsa-prefill-context-parallel",
-    "--nsa-prefill-cp-mode",
-    "in-seq-split",
+    "--enable-prefill-cp",
+    "--cp-strategy",
+    "zigzag",
     "--attn-cp-size",
     8,
     "--enable-dp-lm-head",
@@ -192,6 +192,7 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     input_len = 66560
     output_len = 1536
     random_range_ratio = 1
+    seed = 1
     tpot = 25
     output_token_throughput = 81215
     repeat_rate = 0.9

@@ -30,7 +30,7 @@ QWEN3_30B_A3B_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
     "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
-    "HCCL_BUFFSIZE": "400",
+    "DEEPEP_HCCL_BUFFSIZE": "400",
 }
 
 QWEN3_30B_A3B_OTHER_ARGS = [
@@ -106,6 +106,7 @@ class TestQwen30B(TestAscendPerformanceTestCaseBase):
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
+    seed = 1
     tpot = 50
     output_token_throughput = 3200
 
