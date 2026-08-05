@@ -205,7 +205,9 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_MODEL_CONFIG = {
 }
 
 
-class TestNPUDeepSeekV4FlashW8A81P1D16PIn8kOut1k50ms(TestAscendPerfMultiNodePdSepTestCaseBase):
+class TestNPUDeepSeekV4FlashW8A81P1D16PIn8kOut1k50ms(
+    TestAscendPerfMultiNodePdSepTestCaseBase
+):
     """Test NPU performance for DeepSeek-V4-Flash W8A8 PD-Sep 1P+1D 16p in8k out1k."""
 
     model_config = DEEPSEEK_V4_FLASH_W8A8_1P1D_MODEL_CONFIG
