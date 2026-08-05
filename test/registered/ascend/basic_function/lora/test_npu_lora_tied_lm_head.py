@@ -107,7 +107,7 @@ def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
 
     # Clean up the model to free memory
     del peft_model, model
-    torch.cuda.empty_cache()
+    torch.npu.empty_cache()
 
 
 class TestLoRATiedLMHead(CustomTestCase):
