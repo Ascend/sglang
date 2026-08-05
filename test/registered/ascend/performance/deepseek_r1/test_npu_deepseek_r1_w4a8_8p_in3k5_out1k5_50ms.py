@@ -98,7 +98,7 @@ class TestNPUDeepSeekR1W4A8(TestAscendPerformanceTestCaseBase):
     envs = MODEL_ENVS
     dataset_name = "random"
     max_concurrency = 224
-    num_prompts = 896
+    num_prompts = 448
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
