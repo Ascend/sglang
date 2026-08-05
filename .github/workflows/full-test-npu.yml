@@ -44,7 +44,7 @@ on:
           - poc
           - no_nightly
           - poc_no_nightly
-        default: 'poc'
+        default: 'poc_no_nightly'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
