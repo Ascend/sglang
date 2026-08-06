@@ -97,6 +97,7 @@ class TestNPUQwen3_6_35BA3B_1P_In1024x1024_30_Out1024_50ms(
     dataset_name = "image"
     max_concurrency = 120
     num_prompts = 120
+    warmup_requests = max_concurrency
     input_len = 30
     output_len = 1024
     random_range_ratio = 1
