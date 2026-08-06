@@ -31,6 +31,11 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "ENABLE_PROFILING": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
+    "ZBAL_HCCL_OP": "send,recv",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24672",
 }
 
 GLM_5_1_PD_SEP_DECODE_ENVS = {
@@ -47,6 +52,7 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
     "TASK_QUEUE_ENABLE": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
 }
 
 GLM_5_1_PD_SEP_PREFILL_ARGS = [
@@ -71,7 +77,7 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "--served-model-name",
     "glm-5",
     "--chunked-prefill-size",
-    8192,
+    32768,
     "--max-prefill-tokens",
     180000,
     "--moe-a2a-backend",
@@ -84,25 +90,23 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "bfloat16",
     "--speculative-draft-model-quantization",
     "unquant",
-    "--enable-prefill-cp",
-    "--cp-strategy",
-    "zigzag",
+    "--enable-nsa-prefill-context-parallel",
+    "--nsa-prefill-cp-mode",
+    "in-seq-split",
     "--attn-cp-size",
     4,
+    "--disable-radix-cache",
     "--enable-dp-lm-head",
     "--moe-dense-tp",
     1,
     "--pp-size",
     8,
-    "--reasoning-parser",
-    "glm45",
-    "--tool-call-parser",
-    "glm47",
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
     "--disaggregation-mode",
     "decode",
+    "--trust-remote-code",
     "--tp-size",
     32,
     "--nnodes",
@@ -148,10 +152,14 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     "round_robin",
     "--speculative-draft-model-quantization",
     "unquant",
-    "--reasoning-parser",
-    "glm45",
-    "--tool-call-parser",
-    "glm47",
+    "--speculative-algorithm",
+    "NEXTN",
+    "--speculative-num-steps",
+    "3",
+    "--speculative-eagle-topk",
+    "1",
+    "--speculative-num-draft-tokens",
+    "4",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {
@@ -172,8 +180,8 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestAscendPerfMultiNodePdSepTestCas
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 1
-    num_prompts = 1
+    max_concurrency = 32
+    num_prompts = 32
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
