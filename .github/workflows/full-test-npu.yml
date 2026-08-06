@@ -214,7 +214,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-full-2-npu-a3-part${{ matrix.part }}
+          name: coverage-full-1-npu-a3-part${{ matrix.part }}
           path: /tmp/coverage_data/.coverage*
           include-hidden-files: true
           retention-days: 7
@@ -385,7 +385,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-full-2-npu-a3-part${{ matrix.part }}
+          name: coverage-full-4-npu-a3-part${{ matrix.part }}
           path: /tmp/coverage_data/.coverage*
           include-hidden-files: true
           retention-days: 7
