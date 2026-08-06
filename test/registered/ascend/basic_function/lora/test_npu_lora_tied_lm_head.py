@@ -31,6 +31,7 @@ except ImportError:
     from peft import LoraConfig, get_peft_model
 
 from transformers import AutoModelForCausalLM
+
 from sglang.test.ascend.test_ascend_utils import QWEN3_5_4B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.runners import HFRunner, SRTRunner
@@ -47,6 +48,7 @@ TEST_PROMPTS = [
 
 MAX_NEW_TOKENS = 16
 LOGPROB_THRESHOLD = 2.5e-1
+
 
 def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
     """
