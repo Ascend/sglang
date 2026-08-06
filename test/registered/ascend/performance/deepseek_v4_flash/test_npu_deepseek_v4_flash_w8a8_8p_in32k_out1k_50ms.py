@@ -134,6 +134,7 @@ class TestNPUDeepSeekV4FlashW8A88PIn32kOut1k50ms(TestAscendPerformanceTestCaseBa
     request_rate = float("inf")
     seed = 1
     tpot = 50
+    max_attempts = 3
     output_token_throughput = 972  # TBD
 
     def test_npu_deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms(self):
