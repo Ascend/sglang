@@ -209,7 +209,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }
+          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
       - name: Upload coverage data
         if: always()
         uses: actions/upload-artifact@v4
@@ -380,7 +380,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}、
+          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
       - name: Upload coverage data
         if: always()
         uses: actions/upload-artifact@v4
