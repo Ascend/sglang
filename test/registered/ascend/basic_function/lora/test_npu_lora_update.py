@@ -510,9 +510,9 @@ MAX_LORA_RANK_TESTS = [
         base=BASE_MODEL,
         max_loras_per_batch=3,
         all_adapters=[
-            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-            CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,  # r = 4
+            LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,  # r = 32
+            CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,  # r = 256
         ],
         initial_adapters=[LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH],
         op_sequence=[
@@ -1509,7 +1509,6 @@ class TestLoRADynamicUpdate(CustomTestCase):
             self.assertEqual(adapter_models[0]["id"], "adapter1")
             self.assertEqual(adapter_models[0]["root"], adapters[0])
             self.assertIsNotNone(adapter_models[0]["parent"])
-            print(f"response.json():{response.json()}")
 
             # Load second adapter
             session.load_lora_adapter(lora_name="adapter2", lora_path=adapters[1])
@@ -1519,7 +1518,7 @@ class TestLoRADynamicUpdate(CustomTestCase):
             self.assertTrue(response.ok, response.text)
             models_data = response.json()
             self.assertEqual(len(models_data["data"]), 3)  # Base model + 2 adapters
-            print(f"response.json():{response.json()}")
+
             # Verify both adapters are listed
             adapter_models = [m for m in models_data["data"] if m.get("parent")]
             self.assertEqual(len(adapter_models), 2)
