@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 """
 PREFILL_DELAYER_HELPER = """\
 _DEBUG_LOG = get_bool_env_var("SGLANG_PREFILL_DELAYER_DEBUG_LOG")
-_MAX_PREFILL_BS_DECAY = 0.998
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +17,7 @@ def update_max_prefill_bs_high_watermark(
     current_high_watermark: float, admitted_prefill_bs: int
 ) -> float:
     \"\"\"Update the high-watermark after an actual prefill admission.\"\"\"
-    if admitted_prefill_bs <= 0:
-        return current_high_watermark
-
-    return max(
-        current_high_watermark * _MAX_PREFILL_BS_DECAY,
-        float(admitted_prefill_bs),
-    )
+    return max(current_high_watermark, float(admitted_prefill_bs))
 """
 
 SCHEDULER_IMPORT_OLD = """\
