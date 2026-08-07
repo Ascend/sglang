@@ -6,17 +6,16 @@ from enum import Enum
 from typing import Any, Iterable, List, Optional, Union
 
 import requests
-import torch
+
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
+    LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-    LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
 )
-from sglang.srt.utils import kill_process_tree
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.runners import SRTRunner
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -78,6 +77,8 @@ def create_batch_data(adapters: Union[str, list]) -> List[tuple[str, str]]:
     if not isinstance(adapters, list):
         adapters = [adapters]
     return [(prompt, adapter) for prompt in PROMPTS for adapter in adapters]
+
+
 """1445s"""
 BASIC_TESTS = [
     TestCase(
@@ -137,7 +138,9 @@ BASIC_TESTS = [
             ),
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH),
+                data=create_batch_data(
+                    LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH
+                ),
             ),
             Operation(
                 type=OperationType.FORWARD,
@@ -190,7 +193,9 @@ BASIC_TESTS = [
             ),
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH),
+                data=create_batch_data(
+                    LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH
+                ),
             ),
             Operation(
                 type=OperationType.FORWARD,
@@ -282,7 +287,9 @@ BASIC_TESTS = [
             ),
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH),
+                data=create_batch_data(
+                    LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH
+                ),
             ),
             Operation(
                 type=OperationType.FORWARD,
@@ -337,13 +344,13 @@ TARGET_MODULE_TESTS = [
         op_sequence=[
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(
-                    LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH
-                ),
+                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH),
             ),
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH),
+                data=create_batch_data(
+                    LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH
+                ),
                 expected_error="never been loaded",
             ),
             Operation(
@@ -375,7 +382,9 @@ TARGET_MODULE_TESTS = [
         op_sequence=[
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH),
+                data=create_batch_data(
+                    LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH
+                ),
             ),
             Operation(
                 type=OperationType.FORWARD,
@@ -419,7 +428,9 @@ TARGET_MODULE_TESTS = [
             ),
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH),
+                data=create_batch_data(
+                    LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH
+                ),
                 expected_error="never been loaded",
             ),
             Operation(
@@ -455,7 +466,9 @@ MAX_LORA_RANK_TESTS = [
         op_sequence=[
             Operation(
                 type=OperationType.FORWARD,
-                data=create_batch_data(LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH),
+                data=create_batch_data(
+                    LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH
+                ),
             ),
             Operation(
                 type=OperationType.FORWARD,
@@ -574,9 +587,7 @@ MAX_LOADED_LORAS_TESTS = [
             Operation(
                 type=OperationType.LOAD,
                 data=LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-                expected_implicit_evictions={
-                    CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH
-                },
+                expected_implicit_evictions={CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH},
             ),
             # Implicitly load "philschmid/code-llama-3-1-8b-text-to-sql-lora"
             Operation(
@@ -617,9 +628,7 @@ MAX_LOADED_LORAS_TESTS = [
                         LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
                     ]
                 ),
-                expected_implicit_evictions={
-                    CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH
-                },
+                expected_implicit_evictions={CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH},
             ),
             Operation(
                 type=OperationType.UNLOAD,
@@ -1129,7 +1138,6 @@ def LoRAUpdateTestSession(
     mode: LoRAUpdateTestSessionMode,
     **kwargs: Any,
 ):
-
     if mode == LoRAUpdateTestSessionMode.SERVER:
         return LoRAUpdateServerTestSession(testcase=testcase, **kwargs)
     else:
@@ -1299,6 +1307,7 @@ class TestLoRADynamicUpdate(CustomTestCase):
                         f"ROUGE-L score {rouge_score} of outputs is below tolerance of {ROUGE_L_TOL} "
                         f"at batch {i}, prompt {j}:\n- Dynamic: '{d_out}'\n- Static: '{s_out}'",
                     )
+
     def test_dynamic_lora_update_server(self):
         """
         Test dynamic LoRA updates in server mode.
