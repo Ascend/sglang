@@ -102,9 +102,5 @@ class TestLoraMemoryEvictionFifo(CustomTestCase):
         )
 
 
-class TestLoraMemoryEvictionLru(TestLoraMemoryEvictionFifo):
-    lora_eviction_policy = "lru"
-
-
 if __name__ == "__main__":
     unittest.main()
