@@ -347,6 +347,49 @@ _NEGOTIATE_TEST_CASES = [
         expected_allow=True,
         expected_reason="wait_success",
     ),
+    # The all-branch slot condition must release after max_delay_passes.
+    NegotiateTestCase(
+        name="slot_condition_pass_cap_timeout",
+        max_delay_passes=3,
+        token_usage_low_watermark=0.8,
+        calls=[
+            # skip_first_delayer consumes the first would-be delay.
+            NegotiateCall(
+                prefillable=[True, True, True, True],
+                token_usage=[0.9, 0.9, 0.9, 0.9],
+                running_batch=[100, 100, 100, 100],
+                max_prefill_bs=[80, 80, 80, 80],
+                waiting_queue_len=[10, 10, 10, 10],
+                max_running_requests=128,
+            ),
+            NegotiateCall(
+                prefillable=[True, True, True, True],
+                token_usage=[0.9, 0.9, 0.9, 0.9],
+                running_batch=[100, 100, 100, 100],
+                max_prefill_bs=[80, 80, 80, 80],
+                waiting_queue_len=[10, 10, 10, 10],
+                max_running_requests=128,
+            ),
+            NegotiateCall(
+                prefillable=[True, True, True, True],
+                token_usage=[0.9, 0.9, 0.9, 0.9],
+                running_batch=[100, 100, 100, 100],
+                max_prefill_bs=[80, 80, 80, 80],
+                waiting_queue_len=[10, 10, 10, 10],
+                max_running_requests=128,
+            ),
+            NegotiateCall(
+                prefillable=[True, True, True, True],
+                token_usage=[0.9, 0.9, 0.9, 0.9],
+                running_batch=[100, 100, 100, 100],
+                max_prefill_bs=[80, 80, 80, 80],
+                waiting_queue_len=[10, 10, 10, 10],
+                max_running_requests=128,
+            ),
+        ],
+        expected_allow=True,
+        expected_reason="wait_timeout",
+    ),
 ]
 
 

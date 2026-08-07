@@ -133,6 +133,20 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+
+            kimi_test_case="test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py"
+            if [ "${test_case}" = "${kimi_test_case}" ]; then
+              echo "Apply and verify the prefill high-watermark fix"
+              ${PYTHON_FOR_SGLANG} \
+                scripts/ci/npu/apply_prefill_high_watermark_fix.py \
+                ${sglang_pkg_path}
+              export PYTHONPATH=${sglang_pkg_path}:$PYTHONPATH
+              ${PYTHON_FOR_SGLANG} -u \
+                test/registered/unit/managers/test_prefill_delayer_high_watermark.py
+              ${PYTHON_FOR_SGLANG} -u \
+                test/registered/scheduler/test_prefill_delayer.py \
+                TestPrefillDelayerNegotiate.test_negotiate
+            fi
           fi
 
           source /usr/local/Ascend/cann/set_env.sh || true
