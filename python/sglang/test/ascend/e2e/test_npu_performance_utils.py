@@ -151,6 +151,7 @@ KIMI_K2_5_EAGLE3_MODEL_PATH = (
 )
 GLM_4_7_FLASH_MODEL_PATH = "/root/.cache/modelscope/hub/models/ZhipuAI/GLM-4.7-Flash"
 GLM_5_1_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.1-w4a8"
+GLM_5_2_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.2-w4a8"
 MINIMAX_M2_5_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
 )
