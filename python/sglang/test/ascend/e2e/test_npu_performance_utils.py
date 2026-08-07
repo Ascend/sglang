@@ -937,7 +937,17 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 import psutil
 
                 parent = psutil.Process(cls.process.pid)
-                parent.terminate()  # SIGTERM: let coverage flush
+                # SIGTERM all children first so coverage can flush
+                for child in parent.children(recursive=True):
+                    try:
+                        child.terminate()
+                    except psutil.NoSuchProcess:
+                        pass
+                gone, alive = psutil.wait_procs(
+                    parent.children(recursive=True), timeout=10
+                )
+                # SIGTERM parent so its atexit/shutdown runs
+                parent.terminate()
                 try:
                     parent.wait(timeout=10)
                 except psutil.TimeoutExpired:
@@ -1195,7 +1205,17 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 import psutil
 
                 parent = psutil.Process(cls.process.pid)
-                parent.terminate()  # SIGTERM: let coverage flush
+                # SIGTERM all children first so coverage can flush
+                for child in parent.children(recursive=True):
+                    try:
+                        child.terminate()
+                    except psutil.NoSuchProcess:
+                        pass
+                gone, alive = psutil.wait_procs(
+                    parent.children(recursive=True), timeout=10
+                )
+                # SIGTERM parent so its atexit/shutdown runs
+                parent.terminate()
                 try:
                     parent.wait(timeout=10)
                 except psutil.TimeoutExpired:
