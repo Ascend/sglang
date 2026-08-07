@@ -15,9 +15,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-2-
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,7 +40,19 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/ascend/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/ascend/basic_function/checkpoint_decryption/test_npu_decrypted_draft_config_file.py"
+            "test/registered/ascend/llm_models/test_npu_qwq_32b_w8a8.py"
+            "test/registered/ascend/basic_function/logging/test_npu_tracing_disaggregation.py"
+            "test/registered/ascend/vlm_models/test_npu_step3_vl_10b.py"
+            "test/registered/ascend/basic_function/kernel_backends/test_npu_mm_attention_backend.py"
+            "test/registered/ascend/vlm_models/test_npu_encoder_dp.py"
+            "test/registered/ascend/vlm_models/test_npu_minicpm_o_2_6.py"
+            "test/registered/ascend/vlm_models/test_npu_mistral_small_3_1_24b_instruct_2503.py"
+            "test/registered/ascend/llm_models/test_npu_qwen3_30b_attn_cp.py"
+            "test/registered/ascend/basic_function/Multi-Modal/test_npu_mm_limit.py"
+            "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
+            "test/registered/ascend/vlm_models/test_npu_qwen3_vl_235b_a22b_instruct.py"
+            "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py"
           )
 
           for test_case in "${test_cases[@]}"; do
