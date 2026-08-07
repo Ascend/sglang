@@ -78,7 +78,7 @@ def create_batch_data(adapters: Union[str, list]) -> List[tuple[str, str]]:
     if not isinstance(adapters, list):
         adapters = [adapters]
     return [(prompt, adapter) for prompt in PROMPTS for adapter in adapters]
-
+"""1445s"""
 BASIC_TESTS = [
     TestCase(
         description="dynamic lora update with initial lora_paths",
