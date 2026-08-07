@@ -1129,9 +1129,8 @@ def LoRAUpdateTestSession(
     mode: LoRAUpdateTestSessionMode,
     **kwargs: Any,
 ):
-    if mode == LoRAUpdateTestSessionMode.ENGINE:
-        return LoRAUpdateEngineTestSession(testcase=testcase, **kwargs)
-    elif mode == LoRAUpdateTestSessionMode.SERVER:
+
+    if mode == LoRAUpdateTestSessionMode.SERVER:
         return LoRAUpdateServerTestSession(testcase=testcase, **kwargs)
     else:
         raise ValueError(f"Unrecognized mode: {mode!r}")
