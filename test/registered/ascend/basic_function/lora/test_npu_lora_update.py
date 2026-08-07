@@ -368,8 +368,8 @@ TARGET_MODULE_TESTS = [
         max_loras_per_batch=3,
         max_lora_rank=64,
         all_adapters=[
-            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,  # target_modules = q, k, v, o, gate, up, down
+            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,  # target_modules = q, k, v, o, gate
         ],
         initial_adapters=[LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH],
         op_sequence=[
@@ -406,8 +406,8 @@ TARGET_MODULE_TESTS = [
         max_loras_per_batch=3,
         max_lora_rank=64,
         all_adapters=[
-            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,  # target_modules = q, k, v, o, gate, up, down
+            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,  # target_modules = q, k, v, o, gate
         ],
         initial_adapters=[LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH],
         op_sequence=[
@@ -447,9 +447,9 @@ MAX_LORA_RANK_TESTS = [
         max_loras_per_batch=3,
         max_lora_rank=32,
         all_adapters=[
-            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-            CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,  # r = 4
+            LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,  # r = 32
+            CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,  # r = 256
         ],
         initial_adapters=[LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH],
         op_sequence=[
