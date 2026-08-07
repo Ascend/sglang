@@ -38,10 +38,7 @@ PROMPTS = [
 
 MEM_FRACTION_STATIC = 0.8
 BASE_MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH="/home/weights/code-llama-3-1-8b-text-to-sql-lora"
-LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH="/home/weights/llama-3.1-nemoguard-8b-topic-control"
-LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH="/home/weights/llama-3.1-8b-ocr-correction"
-LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH="/home/weights/fact-generation-llama-3.1-8b-instruct-lora"
+
 
 class OperationType(Enum):
     LOAD = "load"
