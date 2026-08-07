@@ -330,8 +330,8 @@ TARGET_MODULE_TESTS = [
         lora_target_modules=["all"],
         max_lora_rank=64,
         all_adapters=[
-            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,  # target_modules = q, k, v, o, gate, up, down
+            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,  # target_modules = q, k, v, o, gate
         ],
         initial_adapters=[LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH],
         op_sequence=[
