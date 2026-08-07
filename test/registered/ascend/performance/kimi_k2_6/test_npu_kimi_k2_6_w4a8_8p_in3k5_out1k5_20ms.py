@@ -1,5 +1,8 @@
 import unittest
+from pathlib import Path
 
+import requests
+import sglang
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
@@ -96,6 +99,7 @@ KIMI_K2_6_OTHER_ARGS = [
     "kimi_k2",
     "--tool-call-parser",
     "kimi_k2",
+    "--enable-metrics",
 ]
 
 
@@ -118,8 +122,82 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
     tpot = 20
     output_token_throughput = 1900
 
+    _scheduler_source = None
+    _scheduler_path = (
+        Path(sglang.__file__).resolve().parent / "srt/managers/scheduler.py"
+    )
+
+    @classmethod
+    def _disable_max_prefill_bs_decay(cls):
+        original = cls._scheduler_path.read_bytes()
+        decay = b"self.max_prefill_bs *= 0.998"
+        no_decay = b"self.max_prefill_bs *= 1.0"
+        match_count = original.count(decay)
+        if match_count != 1:
+            raise RuntimeError(
+                f"Expected exactly one max_prefill_bs decay in "
+                f"{cls._scheduler_path}, found {match_count}"
+            )
+
+        cls._scheduler_path.write_bytes(original.replace(decay, no_decay, 1))
+        cls._scheduler_source = original
+        print(
+            f"Disabled max_prefill_bs decay in {cls._scheduler_path}",
+            flush=True,
+        )
+
+    @classmethod
+    def _restore_scheduler_source(cls):
+        if cls._scheduler_source is not None:
+            cls._scheduler_path.write_bytes(cls._scheduler_source)
+            cls._scheduler_source = None
+            print(
+                f"Restored scheduler source at {cls._scheduler_path}",
+                flush=True,
+            )
+
+    @classmethod
+    def setUpClass(cls):
+        cls._disable_max_prefill_bs_decay()
+        try:
+            super().setUpClass()
+        except BaseException:
+            cls._restore_scheduler_source()
+            raise
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            super().tearDownClass()
+        finally:
+            cls._restore_scheduler_source()
+
     def test_kimi_k2_6_w4a8(self):
-        self.run_throughput()
+        try:
+            self.run_throughput()
+        finally:
+            try:
+                response = requests.get(
+                    f"{self.base_url}/metrics",
+                    timeout=10,
+                )
+                response.raise_for_status()
+
+                found = False
+                for line in response.text.splitlines():
+                    if line.startswith(
+                        "sglang:prefill_delayer_outcomes_total"
+                    ):
+                        print(line, flush=True)
+                        found = True
+
+                if not found:
+                    print(
+                        "No prefill_delayer_outcomes_total metrics found",
+                        flush=True,
+                    )
+            except requests.RequestException as exc:
+                print(f"Failed to fetch Prometheus metrics: {exc}", flush=True)
 
 
 if __name__ == "__main__":
