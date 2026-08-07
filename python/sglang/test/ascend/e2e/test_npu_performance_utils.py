@@ -937,21 +937,9 @@ class TestAscendPerformanceTestCaseBase(CustomTestCase):
                 import psutil
 
                 parent = psutil.Process(cls.process.pid)
-                children = parent.children(recursive=True)
-                for child in children:
-                    try:
-                        child.terminate()
-                    except psutil.NoSuchProcess:
-                        pass
-                if children:
-                    gone, alive = psutil.wait_procs(children, timeout=10)
-                    if alive:
-                        logger.warning(f"Child processes still alive: {alive}, force killing")
-                        for p in alive:
-                            p.kill()
                 parent.terminate()  # SIGTERM: let coverage flush
                 try:
-                    parent.wait(timeout=20)
+                    parent.wait(timeout=10)
                 except psutil.TimeoutExpired:
                     pass
                 kill_process_tree(cls.process.pid)
@@ -1207,21 +1195,9 @@ class TestAscendPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 import psutil
 
                 parent = psutil.Process(cls.process.pid)
-                children = parent.children(recursive=True)
-                for child in children:
-                    try:
-                        child.terminate()
-                    except psutil.NoSuchProcess:
-                        pass
-                if children:
-                    gone, alive = psutil.wait_procs(children, timeout=10)
-                    if alive:
-                        logger.warning(f"Child processes still alive: {alive}, force killing")
-                        for p in alive:
-                            p.kill()
                 parent.terminate()  # SIGTERM: let coverage flush
                 try:
-                    parent.wait(timeout=20)
+                    parent.wait(timeout=10)
                 except psutil.TimeoutExpired:
                     pass
                 kill_process_tree(cls.process.pid)
