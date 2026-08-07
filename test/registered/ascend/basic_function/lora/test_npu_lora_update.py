@@ -1482,12 +1482,6 @@ class TestLoRADynamicUpdate(CustomTestCase):
             response = requests.get(DEFAULT_URL_FOR_TEST + "/v1/models")
             self.assertTrue(response.ok, response.text)
             models_data = response.json()
-            print("Test with no adapters loaded")
-            print(f"response.ok:{response.ok}"
-                  f"response.text:{response.text}"
-                  )
-
-            print(f"response.json():{response.json()}")
             self.assertEqual(models_data["object"], "list")
             self.assertEqual(len(models_data["data"]), 1)  # Only base model
             base_model = models_data["data"][0]
