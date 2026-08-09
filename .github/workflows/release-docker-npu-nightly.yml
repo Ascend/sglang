@@ -1,4 +1,4 @@
-name: Release Docker Images Nightly1 (NPU)
+name: Release Docker Images Nightly (NPU)
 on:
   workflow_dispatch:
 concurrency:
