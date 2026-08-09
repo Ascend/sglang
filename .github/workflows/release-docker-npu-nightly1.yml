@@ -1,4 +1,4 @@
-name: Release Docker Images Nightly (NPU)
+name: Release Docker Images Nightly1 (NPU)
 on:
   pull_request:
     branches:
@@ -73,7 +73,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: docker
-          file: docker/npu.Dockerfile
+          file: docker/npu1.Dockerfile
           platforms: linux/arm64,linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
