@@ -29,17 +29,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: |
-            lmsysorg/sglang
-          # push with schedule event
-          # push with workflow_dispatch event
-          tags: |
-            type=ref,event=pr
-            type=ref,event=branch
-            type=schedule,pattern=main
-          flavor: |
-            latest=false
-            suffix=-cann${{ matrix.cann_version }}-${{ matrix.device_type }},onlatest=true
+          images: quay.io/ascend/sglang
+          tags: ${{ env.FULL_TAG }}
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into docker hub
