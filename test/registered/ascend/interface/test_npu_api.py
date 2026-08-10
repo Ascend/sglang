@@ -437,12 +437,21 @@ class TestChatCompletionsInterface(CustomTestCase):
         self.assertNotEqual(content1, content2)
 
     def test_stop_token_ids(self):
+        # Use a prompt that deterministically produces a colon (token 13 in
+        # the Llama tokenizer) so the stop condition is triggered by the
+        # expected token id. temperature=0 keeps the output reproducible.
         response = requests.post(
             f"{self.base_url}/v1/chat/completions",
             json={
                 "model": self.model,
-                "messages": [{"role": "user", "content": "Hello"}],
-                "stop_token_ids": [1, 13],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "List exactly three items in one line, using the format: item1: item2: item3:",
+                    }
+                ],
+                "stop_token_ids": [13],
+                "temperature": 0,
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")

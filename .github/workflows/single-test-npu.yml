@@ -52,7 +52,7 @@ jobs:
             "test/registered/ascend/basic_function/Multi-Modal/test_npu_mm_limit.py"
             "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
             "test/registered/ascend/vlm_models/test_npu_qwen3_vl_235b_a22b_instruct.py"
-            "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py"
+            "test/registered/ascend/interface/test_npu_api.py"
           )
 
           for test_case in "${test_cases[@]}"; do
