@@ -264,7 +264,7 @@ def set_environment_variables(env_vars, master_prefill_ip=None):
 
     for key, value in env_vars.items():
         if master_prefill_ip and key == "SGLANG_ZBAL_BOOTSTRAP_URL":
-            value = f"tcp://{master_prefill_ip}:24699"
+            value = f"tcp://{master_prefill_ip}:24688"
         logger.info(f"Setting ENV_VAR {key}={value}")
         os.environ[key] = value
 
