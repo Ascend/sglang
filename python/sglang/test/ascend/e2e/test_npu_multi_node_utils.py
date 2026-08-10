@@ -249,7 +249,7 @@ def discover_worker_nodes():
         return 0
 
 
-def set_environment_variables(env_vars, master_prefill_ip = None):
+def set_environment_variables(env_vars, master_prefill_ip=None):
     """Set environment variables.
 
     Args:
