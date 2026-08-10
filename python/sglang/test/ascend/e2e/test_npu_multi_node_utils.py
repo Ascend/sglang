@@ -44,6 +44,10 @@ ROUTER_CONFIGMAP_TIMEOUT = 300
 SERVER_INITIALIZATION_DELAY = 30
 SERVICE_EXIT_WAIT_SECONDS = 120
 
+# Primary Node IP
+MASTER_PREFILL_IP = None
+MASTER_DECODE_IP = None
+
 
 def get_nic_name():
     """
@@ -506,6 +510,9 @@ def launch_pd_separation_node(model_config):
                 master_decode_ip = pod_ip
 
         if master_prefill_ip and master_decode_ip:
+            global MASTER_PREFILL_IP, MASTER_DECODE_IP
+            MASTER_PREFILL_IP = master_prefill_ip
+            MASTER_DECODE_IP = master_decode_ip
             is_ready = True
         else:
             logger.info(
