@@ -1,11 +1,11 @@
 name: Single Nod Test (NPU)
 
 on:
-  pull_request:
-    branches:
-      - testcases
-    paths:
-      - ".github/workflows/single-test.yml"
+#  pull_request:
+#    branches:
+#      - testcases
+#    paths:
+#      - ".github/workflows/single-test.yml"
   workflow_dispatch:
     inputs:
       ref:
