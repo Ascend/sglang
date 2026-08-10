@@ -1,6 +1,6 @@
 import unittest
 
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME, MASTER_PREFILL_IP
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -34,7 +34,7 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": f"tcp://{MASTER_PREFILL_IP}:24699",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "",
     "ZBAL_ENABLE_GRAPH": "1",
 }
 

@@ -44,10 +44,6 @@ ROUTER_CONFIGMAP_TIMEOUT = 300
 SERVER_INITIALIZATION_DELAY = 30
 SERVICE_EXIT_WAIT_SECONDS = 120
 
-# Primary Node IP
-MASTER_PREFILL_IP = None
-MASTER_DECODE_IP = None
-
 
 def get_nic_name():
     """
@@ -253,11 +249,12 @@ def discover_worker_nodes():
         return 0
 
 
-def set_environment_variables(env_vars):
+def set_environment_variables(env_vars, master_prefill_ip):
     """Set environment variables.
 
     Args:
         env_vars (dict): Environment variables dictionary.
+        master_prefill_ip:
 
     Returns:
         dict: Updated environment variables.
@@ -266,6 +263,8 @@ def set_environment_variables(env_vars):
         return {}
 
     for key, value in env_vars.items():
+        if master_prefill_ip and key == "SGLANG_ZBAL_BOOTSTRAP_URL":
+            value = f"tcp://{master_prefill_ip}:24699"
         logger.info(f"Setting ENV_VAR {key}={value}")
         os.environ[key] = value
 
@@ -510,9 +509,6 @@ def launch_pd_separation_node(model_config):
                 master_decode_ip = pod_ip
 
         if master_prefill_ip and master_decode_ip:
-            global MASTER_PREFILL_IP, MASTER_DECODE_IP
-            MASTER_PREFILL_IP = master_prefill_ip
-            MASTER_DECODE_IP = master_decode_ip
             is_ready = True
         else:
             logger.info(
@@ -534,7 +530,7 @@ def launch_pd_separation_node(model_config):
 
     if role == "prefill":
         # Current node is prefill
-        set_environment_variables(model_config.get("prefill_envs"))
+        set_environment_variables(model_config.get("prefill_envs"), master_prefill_ip)
 
         prefill_args = model_config["prefill_args"]
         if is_prefill_instance_multi_node:
