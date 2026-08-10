@@ -148,6 +148,7 @@ from sglang.srt.managers.multimodal_processor import get_mm_processor, import_pr
 from sglang.srt.managers.prefill_delayer import (
     PrefillDelayer,
     PrefillDelayerSinglePassExecutor,
+    RecentPrefillBatchSizeTracker,
 )
 from sglang.srt.managers.schedule_batch import (
     FINISH_ABORT,
@@ -924,6 +925,7 @@ class Scheduler(
             self.schedule_low_priority_values_first,
         )
         self.prefill_delayer: Optional[PrefillDelayer] = None
+        self.prefill_bs_tracker = RecentPrefillBatchSizeTracker()
         self.max_prefill_bs: int = 0
         if self.server_args.enable_prefill_delayer:
             if self.server_args.disaggregation_mode == "decode":
@@ -2682,7 +2684,9 @@ class Scheduler(
             self.chunked_req is None or len(can_run_list) != 1
         )
 
-        self.max_prefill_bs = max(self.max_prefill_bs, len(can_run_list))
+        self.max_prefill_bs = self.prefill_bs_tracker.observe_admission(
+            len(can_run_list)
+        )
         if self.enable_hierarchical_cache:
             # todo (zhiqiang): disable cuda graph execution if hicache loading triggered
             new_batch.hicache_consumer_index = (
