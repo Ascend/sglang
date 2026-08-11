@@ -100,8 +100,8 @@ class TestLoraDrainWaitThreshold(CustomTestCase):
             )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            future1 = executor.submit(send_request, 200, "lora_a")
-            future2 = executor.submit(send_request, 300, "lora_b")
+            future1 = executor.submit(send_request, 500, "lora_a")
+            future2 = executor.submit(send_request, 600, "lora_b")
             response1 = future1.result()
             response2 = future2.result()
         sleep(3)
@@ -187,8 +187,8 @@ class TestUnLoraDrainWaitThreshold(CustomTestCase):
             )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            future1 = executor.submit(send_request, 200, "lora_a")
-            future2 = executor.submit(send_request, 300, "lora_b")
+            future1 = executor.submit(send_request, 800, "lora_a")
+            future2 = executor.submit(send_request, 1000, "lora_b")
             response1 = future1.result()
             response2 = future2.result()
 

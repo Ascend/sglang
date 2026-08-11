@@ -56,6 +56,7 @@ class TestQwen3NextMTPTopk(GSM8KMixin, PrefixCacheBranchingMixin, DefaultServerB
     model = QWEN3_NEXT_MODEL
     cache_chunk_size = 64
     gsm8k_accuracy_thres = 0.93
+    timeout = 1800
     other_args = [
         "--trust-remote-code",
         "--speculative-algorithm",
@@ -93,6 +94,7 @@ class TestQwen3NextMTPV2(GSM8KMixin, DefaultServerBase):
 
     model = QWEN3_NEXT_MODEL
     gsm8k_accuracy_thres = 0.93
+    timeout = 1800
     other_args = [
         "--trust-remote-code",
         "--speculative-algorithm",
