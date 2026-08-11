@@ -25,29 +25,118 @@ logger = logging.getLogger(__name__)
 
 
 class RecentPrefillBatchSizeTracker:
-    \"\"\"Track the largest of the latest real prefill admissions.
+    \"\"\"Track the largest of the latest non-empty prefill attempts.
 
-    The default window keeps 64 non-empty admissions. Decode-only and idle
-    scheduler passes do not age the high-watermark.
+    The default window keeps 16 attempts. Successful admissions use their
+    actual batch size; rejected attempts use a conservative local estimate.
+    Decode-only and idle scheduler passes do not age the high-watermark.
     \"\"\"
 
-    def __init__(self, window_size: int = 64):
+    def __init__(self, window_size: int = 16):
         if window_size <= 0:
             raise ValueError(f\"window_size must be positive, got {window_size}\")
-        self._recent_admission_sizes = deque(maxlen=window_size)
+        self._recent_attempt_sizes = deque(maxlen=window_size)
 
     @property
     def max_prefill_bs(self) -> int:
-        return max(self._recent_admission_sizes, default=0)
+        return max(self._recent_attempt_sizes, default=0)
 
-    def observe_admission(self, admitted_prefill_bs: int) -> int:
-        if admitted_prefill_bs <= 0:
+    def observe_attempt(self, attempted_prefill_bs: int) -> int:
+        if attempted_prefill_bs <= 0:
             raise ValueError(
-                \"admitted_prefill_bs must be positive for a real admission, \"
-                f\"got {admitted_prefill_bs}\"
+                \"attempted_prefill_bs must be positive for a non-empty attempt, \"
+                f\"got {attempted_prefill_bs}\"
             )
-        self._recent_admission_sizes.append(admitted_prefill_bs)
+        self._recent_attempt_sizes.append(attempted_prefill_bs)
         return self.max_prefill_bs
+"""
+
+PREFILL_DELAYER_EXECUTOR_INIT_OLD = """\
+        self._result: Optional[_NegotiateOutput] = None
+"""
+PREFILL_DELAYER_EXECUTOR_INIT_NEW = """\
+        self._result: Optional[_NegotiateOutput] = None
+        self._attempted_prefill_bs = 0
+"""
+
+PREFILL_DELAYER_FINALIZE_OLD = """\
+    def finalize(self, *, actual_prefill: bool):
+        if not self._called:
+            self.negotiate_should_allow_prefill(local_prefillable=False)
+
+        _record_single_pass_result(
+            actual_execution=actual_prefill,
+            output=self._result,
+            metrics_collector=self._prefill_delayer._metrics_collector,
+            debug_log_enabled=self._prefill_delayer._debug_log_enabled,
+        )
+"""
+PREFILL_DELAYER_FINALIZE_NEW = """\
+    def finalize(self, *, actual_prefill_bs: int) -> int:
+        if not self._called:
+            self.negotiate_should_allow_prefill(local_prefillable=False)
+
+        _record_single_pass_result(
+            actual_execution=actual_prefill_bs > 0,
+            output=self._result,
+            metrics_collector=self._prefill_delayer._metrics_collector,
+            debug_log_enabled=self._prefill_delayer._debug_log_enabled,
+        )
+        return actual_prefill_bs or self._attempted_prefill_bs
+
+    def _estimate_attempted_prefill_bs(
+        self,
+        *,
+        running_batch: int,
+        max_running_requests: int,
+        waiting_queue_len: int,
+    ) -> int:
+        local_max_running_requests = max_running_requests
+        if not self._prefill_delayer.enable_dp_attention:
+            local_max_running_requests = (
+                max_running_requests + self._prefill_delayer.dp_size - 1
+            ) // self._prefill_delayer.dp_size
+
+        # The delayer negotiates before PrefillAdder materializes can_run_list,
+        # so a rejected pass has no exact batch size. This upper bound is exact
+        # when the waiting queue is the limiter (for example, two queued
+        # requests after a cached BS=10 spike), and it never exceeds the local
+        # request slots available to the candidate batch.
+        free_slots = max(local_max_running_requests - running_batch, 1)
+        non_empty_queue_len = max(waiting_queue_len, 1)
+        return min(non_empty_queue_len, free_slots)
+"""
+
+PREFILL_DELAYER_NEGOTIATE_OLD = """\
+    def negotiate_should_allow_prefill(
+        self,
+        local_prefillable: bool,
+        running_batch: int = 0,
+        max_prefill_bs: int = 0,
+        max_running_requests: int = 0,
+        waiting_queue_len: int = 0,
+    ) -> bool:
+        if not self._called:
+"""
+PREFILL_DELAYER_NEGOTIATE_NEW = """\
+    def negotiate_should_allow_prefill(
+        self,
+        local_prefillable: bool,
+        running_batch: int = 0,
+        max_prefill_bs: int = 0,
+        max_running_requests: int = 0,
+        waiting_queue_len: int = 0,
+    ) -> bool:
+        if local_prefillable:
+            self._attempted_prefill_bs = max(
+                self._attempted_prefill_bs,
+                self._estimate_attempted_prefill_bs(
+                    running_batch=running_batch,
+                    max_running_requests=max_running_requests,
+                    waiting_queue_len=waiting_queue_len,
+                ),
+            )
+        if not self._called:
 """
 
 SCHEDULER_IMPORT_OLD = """\
@@ -81,14 +170,24 @@ SCHEDULER_PASS_DECAY = """\
             # ~350 forward passes).
             self.max_prefill_bs *= 0.998
 """
+SCHEDULER_FINALIZE_OLD = """\
+        if self.prefill_delayer:
+            prefill_delayer_single_pass.finalize(actual_prefill=ret is not None)
+"""
+SCHEDULER_FINALIZE_NEW = """\
+        if self.prefill_delayer:
+            observed_prefill_bs = prefill_delayer_single_pass.finalize(
+                actual_prefill_bs=ret.batch_size() if ret is not None else 0
+            )
+            if observed_prefill_bs > 0:
+                self.max_prefill_bs = self.prefill_bs_tracker.observe_attempt(
+                    observed_prefill_bs
+                )
+"""
 SCHEDULER_ADMISSION_OLD = (
     "        self.max_prefill_bs = max(self.max_prefill_bs, len(can_run_list))"
 )
-SCHEDULER_ADMISSION_NEW = """\
-        self.max_prefill_bs = self.prefill_bs_tracker.observe_admission(
-            len(can_run_list)
-        )
-""".rstrip()
+SCHEDULER_ADMISSION_NEW = ""
 
 
 def _replace_once(source: str, old: str, new: str, path: Path) -> str:
@@ -109,9 +208,13 @@ def apply_fix(runtime_python_root: Path) -> None:
 
     already_applied = (
         "class RecentPrefillBatchSizeTracker:" in prefill_delayer_source
+        and "def observe_attempt(" in prefill_delayer_source
+        and "def finalize(self, *, actual_prefill_bs: int) -> int:"
+        in prefill_delayer_source
         and SCHEDULER_IMPORT_NEW in scheduler_source
         and SCHEDULER_HIGH_WATERMARK_INIT_NEW in scheduler_source
-        and SCHEDULER_ADMISSION_NEW in scheduler_source
+        and SCHEDULER_FINALIZE_NEW in scheduler_source
+        and SCHEDULER_ADMISSION_OLD not in scheduler_source
         and SCHEDULER_PASS_DECAY not in scheduler_source
     )
     if already_applied:
@@ -130,6 +233,24 @@ def apply_fix(runtime_python_root: Path) -> None:
         PREFILL_DELAYER_HELPER,
         prefill_delayer_path,
     )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_EXECUTOR_INIT_OLD,
+        PREFILL_DELAYER_EXECUTOR_INIT_NEW,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_FINALIZE_OLD,
+        PREFILL_DELAYER_FINALIZE_NEW,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_NEGOTIATE_OLD,
+        PREFILL_DELAYER_NEGOTIATE_NEW,
+        prefill_delayer_path,
+    )
     scheduler_source = _replace_once(
         scheduler_source,
         SCHEDULER_IMPORT_OLD,
@@ -146,6 +267,12 @@ def apply_fix(runtime_python_root: Path) -> None:
         scheduler_source,
         SCHEDULER_HIGH_WATERMARK_INIT_OLD,
         SCHEDULER_HIGH_WATERMARK_INIT_NEW,
+        scheduler_path,
+    )
+    scheduler_source = _replace_once(
+        scheduler_source,
+        SCHEDULER_FINALIZE_OLD,
+        SCHEDULER_FINALIZE_NEW,
         scheduler_path,
     )
     scheduler_source = _replace_once(
