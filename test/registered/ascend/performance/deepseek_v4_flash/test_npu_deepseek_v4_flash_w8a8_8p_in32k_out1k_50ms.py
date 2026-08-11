@@ -124,7 +124,7 @@ class TestNPUDeepSeekV4FlashW8A88PIn32kOut1k50ms(TestAscendPerformanceTestCaseBa
     model = DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
-    dataset_name = "gsm8k"
+    dataset_name = "random"
     dataset_path = "/root/.cache/modelscope/hub/datasets/gsm8k_deepseekv4/cache0_32000/formal_run1_160_32000_cache0.json"
     input_len = 32000
     output_len = 1000
