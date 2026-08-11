@@ -46,13 +46,6 @@ jobs:
             "test/registered/ascend/basic_function/logging/test_npu_tracing_disaggregation.py"
             "test/registered/ascend/vlm_models/test_npu_step3_vl_10b.py"
             "test/registered/ascend/basic_function/kernel_backends/test_npu_mm_attention_backend.py"
-#            "test/registered/ascend/vlm_models/test_npu_encoder_dp.py"
-#            "test/registered/ascend/vlm_models/test_npu_minicpm_o_2_6.py"
-#            "test/registered/ascend/vlm_models/test_npu_mistral_small_3_1_24b_instruct_2503.py"
-#            "test/registered/ascend/llm_models/test_npu_qwen3_30b_attn_cp.py"
-#            "test/registered/ascend/basic_function/Multi-Modal/test_npu_mm_limit.py"
-#            "test/registered/ascend/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
-#            "test/registered/ascend/vlm_models/test_npu_qwen3_vl_235b_a22b_instruct.py"
           )
 
           for test_case in "${test_cases[@]}"; do
