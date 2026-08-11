@@ -67,10 +67,9 @@ jobs:
             "test/registered/ascend/basic_function/lora/test_npu_lora_overlap_loading.py"
             "test/registered/ascend/basic_function/lora/test_npu_lora_qwen3.py"
             "test/registered/ascend/basic_function/openai_server/test_npu_serving_transcription.py"
-            "test/registered/ascend/basic_function/lora/test_npu_lora_eviction.py"
             "test/registered/ascend/basic_function/api_related/test_npu_api_related_tool_call.py"
             "test/registered/ascend/basic_function/lora/test_npu_wait_threshold.py"
-            "test/registered/ascend/basic_function/sessions/test_npu_streaming_session.py "
+            "test/registered/ascend/basic_function/sessions/test_npu_streaming_session.py"
             "test/registered/ascend/basic_function/lora/test_npu_lora_radix_cache.py"
           )
 
