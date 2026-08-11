@@ -33,8 +33,8 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
         cls.start_decode()
 
         # Block until both
-        cls.wait_server_ready(cls.prefill_url + "/health", process=cls.process_prefill)
-        cls.wait_server_ready(cls.decode_url + "/health", process=cls.process_decode)
+        cls.wait_server_ready(cls.prefill_url + "/health")
+        cls.wait_server_ready(cls.decode_url + "/health")
 
         cls.launch_lb()
         os.environ["OPENAI_API_KEY"] = "sk-123456"
@@ -98,7 +98,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
-            base_url=self.base_url,
+            base_url=self.lb_url,
             model=self.model,
             eval_name="gsm8k",
             api="completion",
@@ -132,8 +132,8 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
         cls.start_decode()
 
         # Block until both
-        cls.wait_server_ready(cls.prefill_url + "/health", process=cls.process_prefill)
-        cls.wait_server_ready(cls.decode_url + "/health", process=cls.process_decode)
+        cls.wait_server_ready(cls.prefill_url + "/health")
+        cls.wait_server_ready(cls.decode_url + "/health")
 
         cls.launch_lb()
         os.environ["OPENAI_API_KEY"] = "sk-123456"
@@ -203,7 +203,7 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
-            base_url=self.base_url,
+            base_url=self.lb_url,
             model=self.model,
             eval_name="gsm8k",
             api="completion",
