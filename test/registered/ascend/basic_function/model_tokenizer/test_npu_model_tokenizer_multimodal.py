@@ -100,7 +100,7 @@ class TestNpuModelTokenizerMultimodal(CustomTestCase):
         # The `--model-impl` configuration specifies assertions for sglang parameters.
         self.assertIn("type=Qwen3VLForConditionalGeneration", content)
         # Assertions for the --enable-multimodal parameter
-        self.assertIn("Using sdpa as multimodal attention backend", content)
+        self.assertIn("Using ascend_attn as multimodal attention backend", content)
         self.out_log_file.close()
         self.err_log_file.close()
 

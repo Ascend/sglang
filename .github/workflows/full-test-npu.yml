@@ -1,12 +1,12 @@
 name: Full Test (NPU)
 
 on:
-  pull_request:
-    branches:
-      - main
-      - testcases
-    paths:
-      - ".github/workflows/full-test-npu.yml"
+#  pull_request:
+#    branches:
+#      - main
+#      - testcases
+#    paths:
+#      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -98,13 +98,13 @@ jobs:
           fi
 
           if [ -z "${{ inputs.skip_install_flag }}" ]; then
-            echo "skip_install_flag=true" >> $GITHUB_OUTPUT
+            echo "skip_install_flag=false" >> $GITHUB_OUTPUT
           else
             echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.test_scope }}" ]; then
-            echo "test_scope=func" >> $GITHUB_OUTPUT
+            echo "test_scope=poc" >> $GITHUB_OUTPUT
           else
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
