@@ -1,4 +1,4 @@
-name: Release Docker Images NPU2 (CANN 9.1.0)
+name: Release Docker Images Nightly
 
 on:
   workflow_dispatch:
