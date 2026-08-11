@@ -1,5 +1,5 @@
 ARG CANN_VERSION=9.1.0
-ARG DEVICE_TYPE=a3
+ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
 
@@ -72,7 +72,7 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN ${PIP_INSTALL} memfabric-hybrid==1.1.4
+RUN ${PIP_INSTALL} memfabric-hybrid==1.2.0
 
 ### Install memfabric-zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.1.1
