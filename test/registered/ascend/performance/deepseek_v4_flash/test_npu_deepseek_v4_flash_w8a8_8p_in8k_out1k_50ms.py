@@ -80,7 +80,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--mem-fraction-static",
     0.7,
     "--chunked-prefill-size",
-    131072,
+    -1,
     "--max-running-requests",
     160,
     "--dp-size",
