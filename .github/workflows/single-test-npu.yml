@@ -15,9 +15,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-4-
+    runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -81,34 +81,13 @@ jobs:
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"
 
-          # Run all test cases sequentially; a failure does not abort the
-          # remaining cases. Each result is recorded and the final summary
-          # determines the job's exit status.
-          failed_cases=()
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
-            echo "========== Running test case: ${test_case} =========="
-            if python -u ${sglang_source_path}/${test_case}; then
-              echo "PASSED: ${test_case}"
-            else
-              echo "FAILED: ${test_case}"
-              failed_cases+=("${test_case}")
-            fi
+            echo "Running test case ${test_case}"
+            python -u ${sglang_source_path}/${test_case}
             echo "Finished test case ${test_case}"
           done
 
-          echo "========== Test Summary =========="
-          total=${#test_cases[@]}
-          failed=${#failed_cases[@]}
-          passed=$((total - failed))
-          echo "Total: ${total}, Passed: ${passed}, Failed: ${failed}"
-          if [ ${failed} -gt 0 ]; then
-            echo "Failed cases:"
-            for fc in "${failed_cases[@]}"; do
-              echo "  - ${fc}"
-            done
-            exit 1
-          fi
 
           plog_path="/root/ascend/log/debug/plog"
           if [ -d "$plog_path" ];then
