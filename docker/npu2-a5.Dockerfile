@@ -25,10 +25,10 @@ ARG DEVICE_TYPE
 
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
       echo "Using x86_64 dependencies"; \
-      echo "PTA_URL=$PTA_URL_AMD64" >> /etc/environment_new; \
+      echo "export PTA_URL=$PTA_URL_AMD64" >> /etc/environment_new; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
       echo "Using aarch64 dependencies"; \
-      echo "PTA_URL=$PTA_URL_ARM64" >> /etc/environment_new; \
+      echo "export PTA_URL=$PTA_URL_ARM64" >> /etc/environment_new; \
     else \
       echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1; \
     fi
@@ -88,8 +88,15 @@ RUN . /etc/environment_new && \
 
 ## Install triton-ascend
 RUN . /etc/environment_new && \
-    (${PIP_INSTALL} pybind11) && \
-    (${PIP_INSTALL} https://github.com/triton-lang/triton-ascend/releases/download/v3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+    ${PIP_INSTALL} pybind11 && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        ${PIP_INSTALL} https://github.com/triton-lang/triton-ascend/releases/download/v3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl; \
+    elif [ "$TARGETARCH" = "amd64" ]; then \
+        ${PIP_INSTALL} https://github.com/triton-lang/triton-ascend/releases/download/v3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH"; \
+        exit 1; \
+    fi
 
 # Install SGLang
 RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
