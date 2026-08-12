@@ -72,7 +72,7 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN ${PIP_INSTALL} memfabric-hybrid==1.2.0
+RUN ${PIP_INSTALL} memfabric-hybrid==1.2.0 -i https://pypi.org/simple/
 
 ### Install memfabric-zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.2.0

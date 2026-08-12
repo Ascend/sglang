@@ -75,7 +75,7 @@ ENV LC_ALL=en_US.UTF-8
 RUN ${PIP_INSTALL} memfabric-hybrid==1.1.4
 
 ### Install memfabric-zbal
-RUN ${PIP_INSTALL} memfabric-zbal==1.2.0
+RUN ${PIP_INSTALL} memfabric-zbal==1.2.0 -i https://pypi.org/simple/
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
 
