@@ -74,7 +74,7 @@ class TestNPUStreamingSession(NPUStreamingSessionServerBase, StreamingSessionKit
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
     kv_inherit_offsets = (0,)
 
@@ -304,7 +304,7 @@ class TestNPUStreamingSessionEagle3(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
     kv_inherit_offsets = (-1,)
 
@@ -347,7 +347,7 @@ class TestNPUStreamingSessionRetract(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
 
@@ -374,7 +374,7 @@ class TestNPUStreamingSessionEagle3Retract(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
     kv_inherit_offsets = (-1,)
