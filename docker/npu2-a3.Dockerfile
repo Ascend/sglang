@@ -32,7 +32,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     else \
       echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1; \
     fi
-
+ 
 WORKDIR /workspace
 
 # Define environments
@@ -75,7 +75,7 @@ ENV LC_ALL=en_US.UTF-8
 RUN ${PIP_INSTALL} memfabric-hybrid==1.1.4
 
 ### Install memfabric-zbal
-RUN ${PIP_INSTALL} memfabric-zbal==1.1.1
+RUN ${PIP_INSTALL} memfabric-zbal==1.2.0
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
 
