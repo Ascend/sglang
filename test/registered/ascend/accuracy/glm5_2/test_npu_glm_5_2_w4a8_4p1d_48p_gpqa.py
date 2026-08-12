@@ -178,6 +178,7 @@ GLM_5_2_PD_SEP_MODEL_CONFIG = {
     "router_envs": {},
 }
 
+
 class TestNPUGLM5_2_W4A8_PD_SEP_GPQA(TestAscendAccuracyMultiNodePdSepTestCaseBase):
     """Test NPU accuracy for GLM-5.2-w4a8 PD separation on gpqa_diamond"""
 
@@ -197,6 +198,7 @@ class TestNPUGLM5_2_W4A8_PD_SEP_GPQA(TestAscendAccuracyMultiNodePdSepTestCaseBas
     def test_npu_glm5_2_w4a8_pd_sep_gpqa(self):
         """Run NPU accuracy test for GLM-5.2-w4a8 PD separation on gpqa_diamond"""
         self.run_accuracy()
+
 
 if __name__ == "__main__":
     unittest.main()
