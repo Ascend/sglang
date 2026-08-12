@@ -88,7 +88,6 @@ jobs:
             echo "Finished test case ${test_case}"
           done
 
-
           plog_path="/root/ascend/log/debug/plog"
           if [ -d "$plog_path" ];then
             echo "Plog files found. Begin to backup them."
