@@ -297,8 +297,6 @@ def run_a_suite(args):
     # Strict: all discovered files must have proper registration
     sanity_check = True
 
-    all_tests = collect_tests(files, sanity_check=sanity_check)
-
     # If --files is provided, restrict to the specified files and skip
     # suite/nightly filtering so tests can run regardless of their
     # registered suite. Paths may be relative (to repo root) or absolute.
@@ -308,10 +306,12 @@ def run_a_suite(args):
             for p in (f.strip() for f in args.files.split(","))
             if p.strip()
         }
-        all_tests = [t for t in all_tests if os.path.normpath(t.filename) in wanted]
+        files = [f for f in files if os.path.normpath(f) in wanted]
+        all_tests = collect_tests(files, sanity_check=False)
         ci_tests = all_tests
         skipped_tests = []
     else:
+        all_tests = collect_tests(files, sanity_check=sanity_check)
         validate_all_suites(all_tests)
         ci_tests, skipped_tests = filter_tests(all_tests, hw, suite, nightly)
 
