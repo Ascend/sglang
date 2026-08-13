@@ -47,8 +47,10 @@ class RecentPrefillBatchSizeTracker:
         if _DEBUG_LOG:
             logger.info(
                 "PrefillDelayer tracker update "
-                "(observed_prefill_bs=%d, max_prefill_bs_before=%d, "
+                "(window_size=%d, observed_prefill_bs=%d, "
+                "max_prefill_bs_before=%d, "
                 "max_prefill_bs_after=%d, recent_attempt_sizes=%s)",
+                self._recent_attempt_sizes.maxlen,
                 attempted_prefill_bs,
                 max_prefill_bs_before,
                 max_prefill_bs_after,

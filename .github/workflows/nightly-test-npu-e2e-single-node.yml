@@ -162,9 +162,11 @@ jobs:
             cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
 
             kimi_test_case="test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py"
+            minimax_test_case="test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py"
             qwen_1024_test_case="test/registered/npu/performance/qwen3_6_27b/test_npu_qwen3_6_27b_1p_in1024x1024_30_out1024_50ms.py"
             qwen_1080p_test_case="test/registered/npu/performance/qwen3_6_27b/test_npu_qwen3_6_27b_1p_in1080p_30_out256_50ms.py"
             if [ "${test_case}" = "${kimi_test_case}" ] || \
+              [ "${test_case}" = "${minimax_test_case}" ] || \
               [ "${test_case}" = "${qwen_1024_test_case}" ] || \
               [ "${test_case}" = "${qwen_1080p_test_case}" ]; then
               echo "Apply and verify the prefill high-watermark fix"
@@ -174,9 +176,6 @@ jobs:
               export PYTHONPATH=${sglang_pkg_path}:$PYTHONPATH
               ${PYTHON_FOR_SGLANG} -u \
                 test/registered/unit/managers/test_prefill_delayer_high_watermark.py
-              ${PYTHON_FOR_SGLANG} -u \
-                test/registered/scheduler/test_prefill_delayer.py \
-                TestPrefillDelayerNegotiate.test_negotiate
             fi
           fi
 

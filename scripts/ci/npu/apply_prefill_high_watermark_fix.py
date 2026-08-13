@@ -61,8 +61,10 @@ class RecentPrefillBatchSizeTracker:
         if _DEBUG_LOG:
             logger.info(
                 "PrefillDelayer tracker update "
-                "(observed_prefill_bs=%d, max_prefill_bs_before=%d, "
+                "(window_size=%d, observed_prefill_bs=%d, "
+                "max_prefill_bs_before=%d, "
                 "max_prefill_bs_after=%d, recent_attempt_sizes=%s)",
+                self._recent_attempt_sizes.maxlen,
                 attempted_prefill_bs,
                 max_prefill_bs_before,
                 max_prefill_bs_after,
@@ -221,6 +223,41 @@ PREFILL_DELAYER_SLOT_CONDITION_NEW = """\
             if slot_condition or queue_condition:
 """
 
+PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY = """\
+                else:
+                    # Bound the wait like the "mixed" branch: on a saturated
+                    # engine slot_condition may never turn false, so cap the
+                    # delay by max_delay_passes.
+                    prev_delayed_count = prev_state.delayed_count if prev_state else 0
+                    if prev_delayed_count < self._max_delay_passes - 1:
+                        next_state = prev_state or _State()
+                        next_state = next_state.bump_delayed_count()
+                        return _NegotiateOutput(
+                            next_state=next_state,
+                            output_allow=False,
+                            output_reason="delay",
+                            **debug_info,
+                        )
+                    return _NegotiateOutput(
+                        next_state=None,
+                        output_allow=True,
+                        output_reason="wait_timeout",
+                        **debug_info,
+                        **wait_info,
+                    )
+"""
+PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY = """\
+                else:
+                    next_state = prev_state or _State()
+                    next_state = next_state.bump_delayed_count()
+                    return _NegotiateOutput(
+                        next_state=next_state,
+                        output_allow=False,
+                        output_reason="delay",
+                        **debug_info,
+                    )
+"""
+
 SCHEDULER_IMPORT_OLD = """\
 from sglang.srt.managers.prefill_delayer import (
     PrefillDelayer,
@@ -281,6 +318,26 @@ def _replace_once(source: str, old: str, new: str, path: Path) -> str:
     return source.replace(old, new, 1)
 
 
+def _remove_all_path_max_delay_passes(source: str, path: Path) -> tuple[str, bool]:
+    """Keep max-delay-passes on mixed only for this targeted NPU experiment."""
+    if PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY in source:
+        return (
+            _replace_once(
+                source,
+                PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY,
+                PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY,
+                path,
+            ),
+            True,
+        )
+    if PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY in source:
+        return source, False
+    raise RuntimeError(
+        f"Could not identify the all-path delay block in {path}; refusing to "
+        "run an experiment with ambiguous max-delay-passes behavior"
+    )
+
+
 def apply_fix(runtime_python_root: Path) -> None:
     environ_path = runtime_python_root / "sglang/srt/environ.py"
     prefill_delayer_path = (
@@ -291,6 +348,10 @@ def apply_fix(runtime_python_root: Path) -> None:
     environ_source = environ_path.read_text()
     prefill_delayer_source = prefill_delayer_path.read_text()
     scheduler_source = scheduler_path.read_text()
+
+    prefill_delayer_source, removed_all_path_cap = (
+        _remove_all_path_max_delay_passes(prefill_delayer_source, prefill_delayer_path)
+    )
 
     already_applied = (
         ENVIRON_WINDOW_SIZE_FIELD in environ_source
@@ -303,9 +364,19 @@ def apply_fix(runtime_python_root: Path) -> None:
         and SCHEDULER_FINALIZE_NEW in scheduler_source
         and SCHEDULER_ADMISSION_OLD not in scheduler_source
         and SCHEDULER_PASS_DECAY not in scheduler_source
+        and PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY in prefill_delayer_source
+        and PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY not in prefill_delayer_source
     )
     if already_applied:
-        print("Prefill high-watermark fix is already present", flush=True)
+        if removed_all_path_cap:
+            prefill_delayer_path.write_text(prefill_delayer_source)
+            print(
+                "Removed the all-path max-delay-passes cap; recent-attempt "
+                "high-watermark fix was already present",
+                flush=True,
+            )
+        else:
+            print("Prefill high-watermark fix is already present", flush=True)
         return
 
     environ_source = _replace_once(
