@@ -147,7 +147,7 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ARGS = [
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.8,
+    0.75,
     "--prefill-max-requests",
     1,
     "--disable-radix-cache",
