@@ -101,7 +101,10 @@ class TestChatBootstrapParams(DisaggregationTestBase):
         """room is mandatory in real PD mode: omitted → 400."""
         response = self._post_trio(self.base_host, self.bootstrap_port, None)
         self.assertEqual(response.status_code, 400, response.text)
-        self.assertIn("bootstrap room id", response.json()["error"]["message"])
+        body = response.json()
+        # The abort path may serialize the message under either key.
+        message = body.get("error", {}).get("message", "") or body.get("detail", "")
+        self.assertIn("bootstrap room id", message)
 
     # NOTE: host-omitted is intentionally NOT tested: NetworkAddress(None, port)
     # raises AttributeError in __post_init__ (network.py:456-459) inside the
