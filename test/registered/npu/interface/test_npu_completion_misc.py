@@ -76,7 +76,10 @@ class TestCompletionMisc(CustomTestCase):
     def test_rid_batch_expansion(self):
         """Batch prompt + str rid: _normalize_rid expands to rid_0/rid_1."""
         response = self._post(
-            self._payload(prompt=["The capital of France is", "The capital of Germany is"], rid="batch")
+            self._payload(
+                prompt=["The capital of France is", "The capital of Germany is"],
+                rid="batch",
+            )
         )
         self.assertEqual(response.status_code, 200, response.text)
         # Non-streaming response id comes from the first sub-request.
@@ -171,15 +174,16 @@ class TestCompletionCustomLabels(CustomTestCase):
         kill_process_tree(cls.process.pid)
 
     def _metrics_labels(self):
-        metrics = requests.get(f"{self.base_url.replace('/v1', '')}/metrics", timeout=10).text
+        metrics = requests.get(
+            f"{self.base_url.replace('/v1', '')}/metrics", timeout=10
+        ).text
         return metrics
 
     def _post_completion(self, payload, headers=None):
         return requests.post(
             f"{self.base_url}/completions",
             json=payload,
-            headers=headers
-            or {"Authorization": f"Bearer {self.api_key}"},
+            headers=headers or {"Authorization": f"Bearer {self.api_key}"},
         )
 
     def test_custom_labels_header_takes_effect(self):

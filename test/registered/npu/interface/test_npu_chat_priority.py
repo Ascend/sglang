@@ -75,9 +75,7 @@ class TestChatPriorityScheduling(CustomTestCase):
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
-                loads = requests.get(
-                    f"{self.base_url}/loads", timeout=5
-                ).json()
+                loads = requests.get(f"{self.base_url}/loads", timeout=5).json()
                 if loads.get("aggregate", {}).get("total_running_reqs", 0) > 0:
                     return
             except Exception:
@@ -309,7 +307,8 @@ class TestChatPriorityDisabled(CustomTestCase):
         )
         self.assertEqual(response.status_code, 503, response.text)
         self.assertIn(
-            "Using priority is disabled for this server", response.json()["error"]["message"]
+            "Using priority is disabled for this server",
+            response.json()["error"]["message"],
         )
 
 

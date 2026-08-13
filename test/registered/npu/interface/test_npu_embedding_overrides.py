@@ -96,15 +96,17 @@ class TestEmbeddingOverrides(CustomTestCase):
                 input="Hello",
                 extra_body={"embed_overrides": [self._unit_vector(0)]},
             )
-        self.assertIn(
-            "embed_override_token_id is required", str(ctx.exception)
-        )
+        self.assertIn("embed_override_token_id is required", str(ctx.exception))
 
     def test_override_takes_effect(self):
         """Single placeholder token: the output depends entirely on the override."""
         input_ids = [self.placeholder]
-        ev = self._embed_with_override(input_ids, self._unit_vector(0)).data[0].embedding
-        ew = self._embed_with_override(input_ids, self._unit_vector(1)).data[0].embedding
+        ev = (
+            self._embed_with_override(input_ids, self._unit_vector(0)).data[0].embedding
+        )
+        ew = (
+            self._embed_with_override(input_ids, self._unit_vector(1)).data[0].embedding
+        )
         self.assertLess(
             cosine(ev, ew),
             0.999,
@@ -116,12 +118,14 @@ class TestEmbeddingOverrides(CustomTestCase):
         # NOTE: context tokens must NOT include the placeholder id, otherwise
         # the placeholder scan counts extra occurrences and rejects the request.
         input_ids = [314, 703, 284, self.placeholder]
-        baseline = self.client.embeddings.create(
-            model=self.model, input=input_ids
-        ).data[0].embedding
-        overridden = self._embed_with_override(
-            input_ids, self._unit_vector(0)
-        ).data[0].embedding
+        baseline = (
+            self.client.embeddings.create(model=self.model, input=input_ids)
+            .data[0]
+            .embedding
+        )
+        overridden = (
+            self._embed_with_override(input_ids, self._unit_vector(0)).data[0].embedding
+        )
         self.assertLess(
             cosine(baseline, overridden),
             0.999,

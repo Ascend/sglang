@@ -91,7 +91,9 @@ class TestCompletionSampling(CustomTestCase):
     # --- top_p / top_k / min_p interactions ---
 
     def test_top_k_n2_greedy_identical(self):
-        response = self._complete(n=2, temperature=1.5, max_tokens=32, extra_body={"top_k": 1})
+        response = self._complete(
+            n=2, temperature=1.5, max_tokens=32, extra_body={"top_k": 1}
+        )
         texts = [choice.text for choice in response.choices]
         self.assertEqual(texts[0], texts[1], "top_k=1 is greedy: n choices identical")
 
@@ -130,9 +132,7 @@ class TestCompletionSampling(CustomTestCase):
     def test_n_batch_batch_major_order(self):
         """prompt list × n: batch-major ordering — choice i belongs to prompt i//n."""
         prompts = ["The capital of France is", "The capital of Germany is"]
-        response = self._complete(
-            prompt=prompts, n=2, temperature=0, max_tokens=16
-        )
+        response = self._complete(prompt=prompts, n=2, temperature=0, max_tokens=16)
         self.assertEqual(len(response.choices), 4)
         # Batch-major ordering: choices 0,1 belong to prompt 0; 2,3 to prompt 1.
         self.assertEqual(response.choices[0].text, response.choices[1].text)
@@ -198,9 +198,11 @@ class TestCompletionSeedDeterministic(CustomTestCase):
         self.assertEqual(non_stream, stream_text)
 
     def test_top_p_stream_consistent(self):
-        non_stream = self._complete(
-            temperature=0.8, top_p=0.1, max_tokens=32, seed=42
-        ).choices[0].text
+        non_stream = (
+            self._complete(temperature=0.8, top_p=0.1, max_tokens=32, seed=42)
+            .choices[0]
+            .text
+        )
         stream = self._complete(
             temperature=0.8, top_p=0.1, max_tokens=32, seed=42, stream=True
         )

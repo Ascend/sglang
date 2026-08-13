@@ -6,13 +6,16 @@ import requests
 # Allow importing the PD fixture from the pd_disaggregation directory when
 # run directly by run_suite.py.
 sys.path.insert(
-    0, os.path.join(os.path.dirname(__file__), "..", "basic_function", "pd_disaggregation")
+    0,
+    os.path.join(
+        os.path.dirname(__file__), "..", "basic_function", "pd_disaggregation"
+    ),
 )
+
+from test_npu_disaggregation_basic import DisaggregationTestBase
 
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-
-from test_npu_disaggregation_basic import DisaggregationTestBase
 
 register_npu_ci(est_time=800, suite="debug-full-2-npu-a3", nightly=True)
 

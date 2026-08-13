@@ -265,11 +265,11 @@ class TestChatSessionRadixCache(CustomTestCase):
             "max_tokens": 64,
             "session_id": "sess-1",
         }
-        first = requests.post(
+        requests.post(
             f"{self.base_url}/chat/completions",
             json=payload,
             headers={"Authorization": f"Bearer {self.api_key}"},
-        ).json()
+        )
         second = requests.post(
             f"{self.base_url}/chat/completions",
             json=payload,
@@ -277,7 +277,9 @@ class TestChatSessionRadixCache(CustomTestCase):
         ).json()
 
         cached = second["usage"]["prompt_tokens_details"]["cached_tokens"]
-        self.assertGreater(cached, 0, "second request with same session_id should hit cache")
+        self.assertGreater(
+            cached, 0, "second request with same session_id should hit cache"
+        )
 
 
 if __name__ == "__main__":

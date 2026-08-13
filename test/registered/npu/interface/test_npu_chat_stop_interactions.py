@@ -174,7 +174,9 @@ class TestChatStopInteractions(CustomTestCase):
                 max_tokens=20,
                 extra_body={"min_tokens": 50},
             )
-        self.assertIn("min_new_tokens must be in [0, max_new_tokens", str(ctx.exception))
+        self.assertIn(
+            "min_new_tokens must be in [0, max_new_tokens", str(ctx.exception)
+        )
 
     def test_stop_and_stop_token_ids_combined(self):
         """stop string and stop_token_ids are checked independently — whichever

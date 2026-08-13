@@ -161,9 +161,7 @@ class TestCompletionStopFamily(CustomTestCase):
     # --- ignore_eos ---
 
     def test_ignore_eos_exact_length(self):
-        response = self._complete(
-            max_tokens=50, extra_body={"ignore_eos": True}
-        )
+        response = self._complete(max_tokens=50, extra_body={"ignore_eos": True})
         self.assertEqual(response.usage.completion_tokens, 50)
         self.assertEqual(response.choices[0].finish_reason, "length")
 

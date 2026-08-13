@@ -89,7 +89,9 @@ class TestCompletionStructure(CustomTestCase):
 
     def test_json_schema_regex_mutual_exclusion_400(self):
         with self.assertRaises(openai.BadRequestError) as ctx:
-            self._complete(extra_body={"json_schema": '{"type":"object"}', "regex": r"\d+"})
+            self._complete(
+                extra_body={"json_schema": '{"type":"object"}', "regex": r"\d+"}
+            )
         self.assertIn(
             "Only one of regex, json_schema, or ebnf can be set.", str(ctx.exception)
         )
@@ -150,9 +152,7 @@ class TestCompletionStructure(CustomTestCase):
     # --- ebnf ---
 
     def test_ebnf_basic(self):
-        response = self._complete(
-            extra_body={"ebnf": 'root ::= "1" | "2" | "3"'}
-        )
+        response = self._complete(extra_body={"ebnf": 'root ::= "1" | "2" | "3"'})
         self.assertIn(response.choices[0].text.strip(), ("1", "2", "3"))
 
     def test_ebnf_invalid_abort(self):

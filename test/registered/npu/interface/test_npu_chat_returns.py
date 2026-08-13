@@ -62,9 +62,7 @@ class TestChatReturnFields(CustomTestCase):
         # The server renders with add_generation_prompt=True
         # (serving_chat.py:1048-1055); the engine-side prompt_token_ids
         # includes the assistant generation prompt tokens.
-        return self.tokenizer.apply_chat_template(
-            MESSAGES, add_generation_prompt=True
-        )
+        return self.tokenizer.apply_chat_template(MESSAGES, add_generation_prompt=True)
 
     # --- return_meta_info ---
 
@@ -180,9 +178,7 @@ class TestChatCachedTokensDetails(CustomTestCase):
             "return_cached_tokens_details": True,
         }
         first = self._post(payload)
-        self.assertNotIn(
-            "sglext", first, "first request should have no cache hit"
-        )
+        self.assertNotIn("sglext", first, "first request should have no cache hit")
 
         second = self._post(payload)
         details = second["sglext"]["cached_tokens_details"]
