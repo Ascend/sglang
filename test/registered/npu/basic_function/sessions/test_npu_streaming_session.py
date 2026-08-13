@@ -331,8 +331,12 @@ class TestNPUStreamingSessionEagle3LargePage(TestNPUStreamingSession):
         "1",
         "--speculative-num-draft-tokens",
         "4",
+        # EAGLE3 loads both target and draft model on a single card.
+        # page-size 256 enlarges the aclnn SelfAttention workspace, so we
+        # lower mem-fraction-static to leave more room for the operator
+        # working memory and avoid ERR00100 (ACL API failure).
         "--mem-fraction-static",
-        "0.7",
+        "0.6",
         "--page-size",
         "256",
     ]
@@ -402,8 +406,12 @@ class TestNPUStreamingSessionEagle3RetractLargePage(TestNPUStreamingSession):
         "1",
         "--speculative-num-draft-tokens",
         "4",
+        # EAGLE3 loads both target and draft model on a single card.
+        # page-size 256 enlarges the aclnn SelfAttention workspace, so we
+        # lower mem-fraction-static to leave more room for the operator
+        # working memory and avoid ERR00100 (ACL API failure).
         "--mem-fraction-static",
-        "0.7",
+        "0.6",
         "--page-size",
         "256",
     ]

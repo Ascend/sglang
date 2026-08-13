@@ -447,16 +447,16 @@ class TestChatCompletionsInterface(CustomTestCase):
                 "messages": [
                     {
                         "role": "user",
-                        "content": "Hello",
+                        "content": "Hello!",
                     }
                 ],
-                "stop_token_ids": [1, 13],
+                "stop_token_ids": [131],
                 "temperature": 0,
             },
         )
         print(response.text)
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
-        self.assertEqual(response.json()["choices"][0]["matched_stop"], 13)
+        self.assertEqual(response.json()["choices"][0]["matched_stop"], 131)
 
     def test_rid(self):
         response = requests.post(
