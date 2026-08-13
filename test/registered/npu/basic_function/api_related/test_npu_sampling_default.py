@@ -231,7 +231,7 @@ class TestSamplingDefaultsModel(BaseSamplingTest):
             "--sampling-defaults",
             "model",
         ]
-        logger.info(f"\n=== Launching server in model mode ===")
+        logger.info("\n=== Launching server in model mode ===")
         logger.info(f"Launch parameters: {server_args}")
 
         cls.server_process = popen_launch_server(
@@ -330,7 +330,7 @@ class TestSamplingDefaultsOpenAI(BaseSamplingTest):
             "--sampling-defaults",
             "openai",
         ]
-        logger.info(f"\n=== Launching server in openai mode ===")
+        logger.info("\n=== Launching server in openai mode ===")
         logger.info(f"Launch parameters: {server_args}")
 
         cls.server_process = popen_launch_server(

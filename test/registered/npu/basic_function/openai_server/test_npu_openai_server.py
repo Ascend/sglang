@@ -171,23 +171,23 @@ class TestOpenAIServer(CustomTestCase):
             print(f"{response=}")
             usage = response.usage
             if usage is not None:
-                assert usage.prompt_tokens > 0, f"usage.prompt_tokens was zero"
-                assert usage.completion_tokens > 0, f"usage.completion_tokens was zero"
-                assert usage.total_tokens > 0, f"usage.total_tokens was zero"
+                assert usage.prompt_tokens > 0, "usage.prompt_tokens was zero"
+                assert usage.completion_tokens > 0, "usage.completion_tokens was zero"
+                assert usage.total_tokens > 0, "usage.total_tokens was zero"
                 continue
 
             index = response.choices[0].index
             is_first = is_firsts.get(index, True)
 
             if logprobs:
-                assert response.choices[0].logprobs, f"no logprobs in response"
+                assert response.choices[0].logprobs, "no logprobs in response"
                 assert isinstance(
                     response.choices[0].logprobs.tokens[0], str
                 ), f"{response.choices[0].logprobs.tokens[0]} is not a string"
                 if not (is_first and echo):
                     assert isinstance(
                         response.choices[0].logprobs.top_logprobs[0], dict
-                    ), f"top_logprobs was not a dictionary"
+                    ), "top_logprobs was not a dictionary"
                     ret_num_top_logprobs = len(
                         response.choices[0].logprobs.top_logprobs[0]
                     )
@@ -203,8 +203,8 @@ class TestOpenAIServer(CustomTestCase):
                         prompt
                     ), f"{response.choices[0].text} and all args {echo} {logprobs} {token_input} {is_first}"
                 is_firsts[index] = False
-            assert response.id, f"no id in response"
-            assert response.created, f"no created in response"
+            assert response.id, "no id in response"
+            assert response.created, "no created in response"
 
         for index in [i for i in range(parallel_sample_num * num_choices)]:
             assert not is_firsts.get(
@@ -271,9 +271,9 @@ class TestOpenAIServer(CustomTestCase):
         for response in generator:
             usage = response.usage
             if usage is not None:
-                assert usage.prompt_tokens > 0, f"usage.prompt_tokens was zero"
-                assert usage.completion_tokens > 0, f"usage.completion_tokens was zero"
-                assert usage.total_tokens > 0, f"usage.total_tokens was zero"
+                assert usage.prompt_tokens > 0, "usage.prompt_tokens was zero"
+                assert usage.completion_tokens > 0, "usage.completion_tokens was zero"
+                assert usage.total_tokens > 0, "usage.total_tokens was zero"
                 continue
 
             index = response.choices[0].index
@@ -287,18 +287,18 @@ class TestOpenAIServer(CustomTestCase):
             if is_firsts.get(index, True):
                 assert (
                     data.role == "assistant"
-                ), f"data.role was not 'assistant' for first chunk"
+                ), "data.role was not 'assistant' for first chunk"
                 is_firsts[index] = False
                 continue
 
             if logprobs and not is_finished.get(index, False):
-                assert response.choices[0].logprobs, f"logprobs was not returned"
+                assert response.choices[0].logprobs, "logprobs was not returned"
                 assert isinstance(
                     response.choices[0].logprobs.content[0].top_logprobs[0].token, str
-                ), f"top_logprobs token was not a string"
+                ), "top_logprobs token was not a string"
                 assert isinstance(
                     response.choices[0].logprobs.content[0].top_logprobs, list
-                ), f"top_logprobs was not a list"
+                ), "top_logprobs was not a list"
                 ret_num_top_logprobs = len(
                     response.choices[0].logprobs.content[0].top_logprobs
                 )

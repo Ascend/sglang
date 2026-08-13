@@ -248,9 +248,11 @@ class TestMatryoshkaEmbeddingModel(CustomTestCase):
         client = openai.Client(api_key=self.api_key, base_url=self.base_url)
 
         def embed(text):
-            return client.embeddings.create(
-                model=self.model, input=text, dimensions=256
-            ).data[0].embedding
+            return (
+                client.embeddings.create(model=self.model, input=text, dimensions=256)
+                .data[0]
+                .embedding
+            )
 
         def cosine(a, b):
             dot = sum(x * y for x, y in zip(a, b))
