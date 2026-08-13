@@ -108,7 +108,7 @@ jobs:
           else
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
-
+#
 #  nighly-test-npu:
 #    needs: [ set-image-config ]
 #    name: nightly-test-npu
@@ -474,7 +474,7 @@ jobs:
 #          cd ../
 #          cd test
 #          python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
-
+#
   nightly-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
