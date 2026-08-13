@@ -896,7 +896,7 @@ jobs:
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/npu/accuracy/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26.py
             prefill_decode_deployment: 'separation'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
