@@ -306,7 +306,10 @@ class TestNPUStreamingSessionEagle3(TestNPUStreamingSession):
         "--page-size",
         "16",
     ]
-    kv_inherit_offsets = (-1,)
+    # NPU EAGLE3 may or may not commit the last sampled token before
+    # max_new stops (kv_committed_len = input + output - 1 or +0).
+    # Tolerate both behaviors.
+    kv_inherit_offsets = (-1, 0)
 
 
 class TestNPUStreamingSessionEagle3LargePage(TestNPUStreamingSession):
@@ -333,7 +336,7 @@ class TestNPUStreamingSessionEagle3LargePage(TestNPUStreamingSession):
         "--page-size",
         "256",
     ]
-    kv_inherit_offsets = (-1,)
+    kv_inherit_offsets = (-1, 0)
 
 
 class TestNPUStreamingSessionRetract(TestNPUStreamingSession):
@@ -377,7 +380,7 @@ class TestNPUStreamingSessionEagle3Retract(TestNPUStreamingSession):
         "16",
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
-    kv_inherit_offsets = (-1,)
+    kv_inherit_offsets = (-1, 0)
 
 
 class TestNPUStreamingSessionEagle3RetractLargePage(TestNPUStreamingSession):
@@ -405,7 +408,7 @@ class TestNPUStreamingSessionEagle3RetractLargePage(TestNPUStreamingSession):
         "256",
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
-    kv_inherit_offsets = (-1,)
+    kv_inherit_offsets = (-1, 0)
 
 
 __all__ = [

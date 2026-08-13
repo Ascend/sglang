@@ -450,10 +450,11 @@ class TestChatCompletionsInterface(CustomTestCase):
                         "content": "List exactly three items in one line, using the format: item1: item2: item3:",
                     }
                 ],
-                "stop_token_ids": [13],
+                "stop_token_ids": [1, 13],
                 "temperature": 0,
             },
         )
+        print(response.text)
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         self.assertEqual(response.json()["choices"][0]["matched_stop"], 13)
 

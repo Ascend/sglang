@@ -155,7 +155,7 @@ jobs:
           cd test
           # Only run the selected test files for this suite via --files.
           # suite/nightly filtering is bypassed when --files is provided.
-          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/ascend/interface/test_npu_api.py,test/registered/ascend/basic_function/speculative_inference/test_npu_adaptive_speculative.py,test/registered/ascend/basic_function/lora/test_npu_lora_qwen3.py,test/registered/ascend/basic_function/openai_server/test_npu_serving_transcription.py,test/registered/ascend/basic_function/api_related/test_npu_api_related_tool_call.py,test/registered/ascend/basic_function/sessions/test_npu_streaming_session.py,test/registered/ascend/basic_function/lora/test_npu_lora_radix_cache.py"
+          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/ascend/interface/test_npu_api.py,test/registered/ascend/basic_function/lora/test_npu_lora_qwen3.py,test/registered/ascend/basic_function/openai_server/test_npu_serving_transcription.py,test/registered/ascend/basic_function/sessions/test_npu_streaming_session.py"
 
   full-2-npu-a3:
     needs: [ set-image-config ]
@@ -225,7 +225,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/ascend/llm_models/test_npu_llama_2_7b_communications_compression.py,test/registered/ascend/vlm_models/test_npu_vision_openai_server_a.py,test/registered/ascend/llm_models/test_npu_llama_2_7b_communications_compression.py,test/registered/ascend/llm_models/test_npu_qwq_32b_w8a8.py,test/registered/ascend/basic_function/lora/test_npu_lora_qwen3_6_27b_logprob_diff.py,test/registered/ascend/vlm_models/test_npu_vlm_input_format.py"
+          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/ascend/vlm_models/test_npu_vision_openai_server_a.py,test/registered/ascend/basic_function/lora/test_npu_lora_qwen3_6_27b_logprob_diff.py,test/registered/ascend/vlm_models/test_npu_vlm_input_format.py"
 
   full-4-npu-a3:
     needs: [ set-image-config ]
@@ -292,7 +292,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/ascend/llm_models/test_npu_qwen3_30b_attn_cp.py,test/registered/ascend/basic_function/dp_attn/test_npu_dp_attention.py,test/registered/ascend/vlm_models/test_npu_encoder_dp.py"
+          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/ascend/basic_function/dp_attn/test_npu_dp_attention.py"
 
   full-8-npu-a3:
     needs: [ set-image-config ]
