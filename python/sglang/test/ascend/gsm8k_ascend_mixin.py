@@ -29,6 +29,7 @@ class GSM8KAscendMixin(ABC):
     server_cmd = ""
     gsm8k_num_shots = 5
     num_questions = 200
+    gsm8k_parallel = 128
 
     env = {
         **os.environ,
@@ -65,6 +66,14 @@ class GSM8KAscendMixin(ABC):
         kill_process_tree(cls.process.pid)
 
     def test_gsm8k(self):
+        from sglang.test.ascend.npu_eval_accuracy_kit import (
+            _is_pr_pipeline,
+            run_npu_pr_smoke,
+        )
+
+        if _is_pr_pipeline:
+            run_npu_pr_smoke(self.base_url)
+            return
         accuracy_threshold = getattr(self, "accuracy", 0.00)
         output_throughput_threshold = getattr(self, "output_throughput", 0.00)
 
@@ -89,6 +98,7 @@ class GSM8KAscendMixin(ABC):
             metrics = run_eval(args)
             model_metrics["accuracy"] = metrics["score"]
             model_metrics["output_throughput"] = metrics["output_throughput"]
+            model_metrics["latency"] = metrics["latency"]
             self.assertGreaterEqual(
                 metrics["score"],
                 accuracy_threshold,
