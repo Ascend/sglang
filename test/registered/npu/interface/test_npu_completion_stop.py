@@ -168,7 +168,12 @@ class TestCompletionStopFamily(CustomTestCase):
         self.assertEqual(response.choices[0].finish_reason, "length")
 
     def test_ignore_eos_false_natural_stop(self):
-        response = self._complete(max_tokens=200)
+        response = self.client.completions.create(
+            model=self.model,
+            prompt="Count from 1 to 20.",
+            temperature=0,
+            max_tokens=200,
+        )
         self.assertLess(response.usage.completion_tokens, 200)
         self.assertEqual(response.choices[0].finish_reason, "stop")
 
@@ -208,7 +213,10 @@ class TestCompletionStopFamily(CustomTestCase):
 
     def test_min_tokens_stream(self):
         stream = self._complete(
-            max_tokens=32, stream=True, extra_body={"min_tokens": 5}
+            max_tokens=32,
+            stream=True,
+            stream_options={"include_usage": True},
+            extra_body={"min_tokens": 5},
         )
         # usage chunk carries completion_tokens
         total = None

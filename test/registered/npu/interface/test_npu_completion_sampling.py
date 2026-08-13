@@ -90,27 +90,13 @@ class TestCompletionSampling(CustomTestCase):
 
     # --- top_p / top_k / min_p interactions ---
 
-    def test_top_p_stream_consistent(self):
-        non_stream = self._complete(
-            temperature=0.8, top_p=0.1, max_tokens=32, seed=42
-        ).choices[0].text
-        stream = self._complete(
-            temperature=0.8, top_p=0.1, max_tokens=32, seed=42, stream=True
-        )
-        stream_text = "".join(
-            chunk.choices[0].text for chunk in stream if chunk.choices
-        )
-        # Stream and non-stream share the engine path; with the same seed the
-        # concatenated stream output must match the non-stream output.
-        self.assertEqual(non_stream, stream_text)
-
     def test_top_k_n2_greedy_identical(self):
-        response = self._complete(top_k=1, n=2, temperature=1.5, max_tokens=32)
+        response = self._complete(n=2, temperature=1.5, max_tokens=32, extra_body={"top_k": 1})
         texts = [choice.text for choice in response.choices]
         self.assertEqual(texts[0], texts[1], "top_k=1 is greedy: n choices identical")
 
     def test_min_p_n2(self):
-        response = self._complete(min_p=0.2, n=2, max_tokens=32)
+        response = self._complete(n=2, max_tokens=32, extra_body={"min_p": 0.2})
         self.assertEqual(len(response.choices), 2)
         for choice in response.choices:
             self.assertTrue(choice.text)
@@ -136,9 +122,8 @@ class TestCompletionSampling(CustomTestCase):
         logprobs = response.choices[0].logprobs
         self.assertTrue(logprobs.tokens)
         self.assertTrue(logprobs.token_logprobs)
-        # top-k gated off when k=0: top_logprobs entries are empty
-        for top in logprobs.top_logprobs:
-            self.assertEqual(len(top), 0)
+        # top-k gated off when k=0: top_logprobs is an empty list
+        self.assertEqual(logprobs.top_logprobs, [])
 
     # --- n x batch ordering ---
 
@@ -149,11 +134,10 @@ class TestCompletionSampling(CustomTestCase):
             prompt=prompts, n=2, temperature=0, max_tokens=16
         )
         self.assertEqual(len(response.choices), 4)
-        # choice 0,1 belong to prompt 0; choice 2,3 belong to prompt 1
-        self.assertEqual(response.choices[0].index, 0)
-        self.assertEqual(response.choices[1].index, 0)
-        self.assertEqual(response.choices[2].index, 1)
-        self.assertEqual(response.choices[3].index, 1)
+        # Batch-major ordering: choices 0,1 belong to prompt 0; 2,3 to prompt 1.
+        self.assertEqual(response.choices[0].text, response.choices[1].text)
+        self.assertEqual(response.choices[2].text, response.choices[3].text)
+        self.assertNotEqual(response.choices[0].text, response.choices[2].text)
 
 
 class TestCompletionSeedDeterministic(CustomTestCase):
@@ -208,6 +192,18 @@ class TestCompletionSeedDeterministic(CustomTestCase):
     def test_seed_stream_consistent(self):
         non_stream = self._complete(seed=42).choices[0].text
         stream = self._complete(seed=42, stream=True)
+        stream_text = "".join(
+            chunk.choices[0].text for chunk in stream if chunk.choices
+        )
+        self.assertEqual(non_stream, stream_text)
+
+    def test_top_p_stream_consistent(self):
+        non_stream = self._complete(
+            temperature=0.8, top_p=0.1, max_tokens=32, seed=42
+        ).choices[0].text
+        stream = self._complete(
+            temperature=0.8, top_p=0.1, max_tokens=32, seed=42, stream=True
+        )
         stream_text = "".join(
             chunk.choices[0].text for chunk in stream if chunk.choices
         )

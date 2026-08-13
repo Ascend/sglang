@@ -114,7 +114,7 @@ class TestChatRid(CustomTestCase):
         while time.time() < deadline:
             try:
                 loads = requests.get(f"{self.base_url}/loads", timeout=5).json()
-                if loads.get("num_running_reqs", 0) > 0:
+                if loads.get("aggregate", {}).get("total_running_reqs", 0) > 0:
                     break
             except Exception:
                 pass

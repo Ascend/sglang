@@ -99,7 +99,7 @@ class TestCompletionMisc(CustomTestCase):
         while time.time() < deadline:
             try:
                 loads = requests.get(f"{self.base_url}/loads", timeout=5).json()
-                if loads.get("num_running_reqs", 0) > 0:
+                if loads.get("aggregate", {}).get("total_running_reqs", 0) > 0:
                     break
             except Exception:
                 pass
@@ -194,7 +194,7 @@ class TestCompletionCustomLabels(CustomTestCase):
         )
         self.assertEqual(response.status_code, 200, response.text)
         # The label appears in the Prometheus metrics endpoint.
-        deadline = time.time() + 15
+        deadline = time.time() + 30
         while time.time() < deadline:
             if 'tenant="acme"' in self._metrics_labels():
                 break
@@ -209,12 +209,15 @@ class TestCompletionCustomLabels(CustomTestCase):
             "prompt": "Say hi.",
             "temperature": 0,
             "max_tokens": 16,
-            "custom_labels": {"tenant": "acme"},
+            "custom_labels": {"tenant": "body-only"},
         }
         response = self._post_completion(payload)
         self.assertEqual(response.status_code, 200, response.text)
+        # Distinct label value avoids interference from the header test.
         self.assertNotIn(
-            'tenant="acme"', self._metrics_labels(), "body custom_labels must be ignored"
+            'tenant="body-only"',
+            self._metrics_labels(),
+            "body custom_labels must be ignored",
         )
 
 

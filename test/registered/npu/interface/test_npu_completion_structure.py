@@ -98,18 +98,23 @@ class TestCompletionStructure(CustomTestCase):
         """response_format silently overwrites the top-level json_schema
         (serving_completions.py:169-178)."""
         response = self._complete(
-            extra_body={"json_schema": '{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}'},
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "result",
-                    "schema": {
-                        "type": "object",
-                        "properties": {"result": {"type": "integer"}},
-                        "required": ["result"],
+            extra_body={
+                "json_schema": (
+                    '{"type":"object","properties":{"name":{"type":"string"}},'
+                    '"required":["name"]}'
+                ),
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "result",
+                        "schema": {
+                            "type": "object",
+                            "properties": {"result": {"type": "integer"}},
+                            "required": ["result"],
+                        },
                     },
                 },
-            },
+            }
         )
         data = json.loads(response.choices[0].text)
         self.assertIn(
