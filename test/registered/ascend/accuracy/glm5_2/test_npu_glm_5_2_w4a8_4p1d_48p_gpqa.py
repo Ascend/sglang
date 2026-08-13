@@ -165,7 +165,7 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
-    "--disaggregation-decode-enable-radix-cache",
+    # "--disaggregation-decode-enable-radix-cache",
 ]
 
 GLM_5_2_PD_SEP_MODEL_CONFIG = {
