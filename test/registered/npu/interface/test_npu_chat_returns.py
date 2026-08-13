@@ -169,7 +169,9 @@ class TestChatCachedTokensDetails(CustomTestCase):
         ).json()
 
     def test_cached_tokens_details_on_second_hit(self):
-        prompt = "Explain the theory of relativity in one paragraph."
+        # The radix cache only stores sizable prefixes; use the community-proven
+        # 256-token prompt so the second request actually hits the cache.
+        prompt = "just return me a string with of 5000 characters, " * 24
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],

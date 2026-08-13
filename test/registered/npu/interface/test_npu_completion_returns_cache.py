@@ -121,7 +121,9 @@ class TestCompletionCacheKeys(CustomTestCase):
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
 
-    PROMPT = "Explain the theory of relativity in one paragraph."
+    # The radix cache only stores sizable prefixes; use the community-proven
+    # 256-token prompt so the second request actually hits the cache.
+    PROMPT = "just return me a string with of 5000 characters, " * 24
 
     def _post(self, payload):
         response = requests.post(
@@ -208,7 +210,7 @@ class TestCompletionSessionCache(CustomTestCase):
     def test_session_id_cache_hit(self):
         payload = {
             "model": self.model,
-            "prompt": "Explain the theory of relativity in one paragraph.",
+            "prompt": "just return me a string with of 5000 characters, " * 24,
             "temperature": 0,
             "max_tokens": 64,
             "session_id": "sess-1",

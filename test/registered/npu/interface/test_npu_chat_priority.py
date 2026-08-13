@@ -306,9 +306,10 @@ class TestChatPriorityDisabled(CustomTestCase):
             headers={"Authorization": f"Bearer {self.api_key}"},
         )
         self.assertEqual(response.status_code, 503, response.text)
+        # fastapi HTTPException body uses the "detail" key, not "error".
         self.assertIn(
             "Using priority is disabled for this server",
-            response.json()["error"]["message"],
+            response.json()["detail"],
         )
 
 

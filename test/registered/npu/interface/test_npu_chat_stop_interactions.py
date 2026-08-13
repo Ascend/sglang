@@ -112,16 +112,18 @@ class TestChatStopInteractions(CustomTestCase):
     def test_min_tokens_stop_not_protected(self):
         """stop strings are NOT gated by min_tokens: the request can stop before min is reached."""
         response = self._chat(
-            max_tokens=200,
+            max_tokens=600,
             stop="\n",
-            extra_body={"min_tokens": 100},
+            extra_body={"min_tokens": 500},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
         self.assertEqual(choice.matched_stop, "\n")
+        # The first newline comes far before 500 tokens: stop strings are not
+        # gated by min_tokens.
         self.assertLess(
             response.usage.completion_tokens,
-            100,
+            500,
             "stop string should terminate before min_tokens is satisfied",
         )
 

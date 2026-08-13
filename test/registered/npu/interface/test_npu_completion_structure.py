@@ -84,7 +84,8 @@ class TestCompletionStructure(CustomTestCase):
                 }
             )
         self.assertIn(
-            "Only one of regex, json_schema, or ebnf can be set.", str(ctx.exception)
+            "Only one of json_schema, regex, ebnf, or structural_tag can be set.",
+            str(ctx.exception),
         )
 
     def test_json_schema_regex_mutual_exclusion_400(self):

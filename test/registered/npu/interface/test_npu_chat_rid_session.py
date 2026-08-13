@@ -178,7 +178,7 @@ class TestChatCacheKeyIsolation(CustomTestCase):
             "messages": [
                 {
                     "role": "user",
-                    "content": "Explain the theory of relativity in one paragraph.",
+                    "content": "just return me a string with of 5000 characters, " * 24,
                 }
             ],
             "temperature": 0,
@@ -258,7 +258,7 @@ class TestChatSessionRadixCache(CustomTestCase):
             "messages": [
                 {
                     "role": "user",
-                    "content": "Explain the theory of relativity in one paragraph.",
+                    "content": "just return me a string with of 5000 characters, " * 24,
                 }
             ],
             "temperature": 0,

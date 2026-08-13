@@ -194,7 +194,11 @@ class TestCompletionCustomLabels(CustomTestCase):
             "max_tokens": 16,
         }
         response = self._post_completion(
-            payload, headers={"X-Custom-Labels": '{"tenant":"acme"}'}
+            payload,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "X-Custom-Labels": '{"tenant":"acme"}',
+            },
         )
         self.assertEqual(response.status_code, 200, response.text)
         # The label appears in the Prometheus metrics endpoint.

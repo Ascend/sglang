@@ -50,11 +50,8 @@ class TestCompletionSampling(CustomTestCase):
         kill_process_tree(cls.process.pid)
 
     def _complete(self, **kwargs):
-        return self.client.completions.create(
-            model=self.model,
-            prompt="The capital of France is",
-            **kwargs,
-        )
+        kwargs.setdefault("prompt", "The capital of France is")
+        return self.client.completions.create(model=self.model, **kwargs)
 
     # --- max_tokens default 16 ---
 

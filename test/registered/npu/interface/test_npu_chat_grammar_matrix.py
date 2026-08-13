@@ -75,7 +75,8 @@ class TestChatGrammarMatrix(CustomTestCase):
                 }
             )
         self.assertIn(
-            "Only one of regex, json_schema, or ebnf can be set.", str(ctx.exception)
+            "Only one of json_schema, regex, ebnf, or structural_tag can be set.",
+            str(ctx.exception),
         )
 
     def test_json_schema_ebnf_mutual_exclusion_400(self):
@@ -108,20 +109,20 @@ class TestChatGrammarMatrix(CustomTestCase):
             self._chat(extra_body={"regex": "("})
         self.assertIn("Failed to compile regex grammar", str(ctx.exception))
 
-    def test_structural_tag_regex_silent_override(self):
-        """structural_tag is NOT in the mutual exclusion list: regex wins silently,
-        no 400, no warning — the output follows the regex, not the tag."""
-        response = self._chat(
-            extra_body={"regex": r"\d+"},
-            response_format={
-                "type": "structural_tag",
-                "format": {"type": "const_string", "value": "<answer>"},
-            },
-        )
-        content = response.choices[0].message.content
-        self.assertTrue(
-            content.replace(" ", "").isdigit(),
-            f"output should follow the regex (digits only), got: {content!r}",
+    def test_structural_tag_regex_mutual_exclusion_400(self):
+        """structural_tag IS in the mutual exclusion list (latest business
+        code): regex + structural_tag is rejected with 400."""
+        with self.assertRaises(openai.BadRequestError) as ctx:
+            self._chat(
+                extra_body={"regex": r"\d+"},
+                response_format={
+                    "type": "structural_tag",
+                    "format": {"type": "const_string", "value": "<answer>"},
+                },
+            )
+        self.assertIn(
+            "Only one of json_schema, regex, ebnf, or structural_tag can be set.",
+            str(ctx.exception),
         )
 
 
