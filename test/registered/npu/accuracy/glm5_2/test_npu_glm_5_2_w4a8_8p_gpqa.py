@@ -2,7 +2,7 @@ import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
-    TestAscendAccuracyTestCaseBase,
+    TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     GLM_5_2_W4A8_MODEL_PATH,
@@ -82,7 +82,7 @@ GLM_5_2_W4A8_8P_OTHER_ARGS = [
 ]
 
 
-class TestNPUGLM5_2_W4A8_8P_GPQA(TestAscendAccuracyTestCaseBase):
+class TestNPUGLM5_2_W4A8_8P_GPQA(TestNpuAccuracyTestCaseBase):
     """Test NPU accuracy for GLM-5.2-w4a8 8p single node on gpqa_diamond"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
