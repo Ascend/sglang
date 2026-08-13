@@ -41,8 +41,20 @@ class RecentPrefillBatchSizeTracker:
                 "attempted_prefill_bs must be positive for a non-empty attempt, "
                 f"got {attempted_prefill_bs}"
             )
+        max_prefill_bs_before = self.max_prefill_bs
         self._recent_attempt_sizes.append(attempted_prefill_bs)
-        return self.max_prefill_bs
+        max_prefill_bs_after = self.max_prefill_bs
+        if _DEBUG_LOG:
+            logger.info(
+                "PrefillDelayer tracker update "
+                "(observed_prefill_bs=%d, max_prefill_bs_before=%d, "
+                "max_prefill_bs_after=%d, recent_attempt_sizes=%s)",
+                attempted_prefill_bs,
+                max_prefill_bs_before,
+                max_prefill_bs_after,
+                list(self._recent_attempt_sizes),
+            )
+        return max_prefill_bs_after
 
 
 @dataclass(frozen=True)
@@ -230,6 +242,7 @@ class PrefillDelayer:
             # Targets workloads where decode requests finish one-at-a-time
             # and fragment prefill into many tiny batches.
             queue_condition = False
+            queue_min_effective = 0
             if self._queue_trigger_enabled and global_running_batch_max > 0:
                 queue_min_effective = min(
                     int(global_running_batch_max * self._queue_min_ratio),
@@ -248,6 +261,25 @@ class PrefillDelayer:
                 max_running_requests - global_running_batch_max
                 < global_max_prefill_bs_max
             )
+
+            if _DEBUG_LOG:
+                logger.info(
+                    "PrefillDelayer all-path conditions "
+                    "(running_batch=%d, waiting_queue_len=%d, "
+                    "max_running_requests=%d, free_slots=%d, "
+                    "max_prefill_bs=%d, queue_min_effective=%d, "
+                    "slot_condition=%s, queue_condition=%s, "
+                    "delayed_count_before=%d)",
+                    global_running_batch_max,
+                    global_waiting_queue_max,
+                    max_running_requests,
+                    max_running_requests - global_running_batch_max,
+                    global_max_prefill_bs_max,
+                    queue_min_effective,
+                    slot_condition,
+                    queue_condition,
+                    prev_state.delayed_count if prev_state else 0,
+                )
 
             if slot_condition or queue_condition:
                 # When the "max_decode_bs - running_bs < max_prefill_bs" condition is met,
@@ -356,6 +388,23 @@ class PrefillDelayerSinglePassExecutor:
             output=self._result,
             metrics_collector=self._prefill_delayer._metrics_collector,
         )
+        if _DEBUG_LOG and (actual_prefill_bs > 0 or self._attempted_prefill_bs > 0):
+            logger.info(
+                "PrefillDelayer non-empty pass result "
+                "(estimated_attempted_prefill_bs=%d, actual_prefill_bs=%d, "
+                "input_estimation=%s, output_allow=%s, output_reason=%s, "
+                "delayed_count_after=%d)",
+                self._attempted_prefill_bs,
+                actual_prefill_bs,
+                self._result.input_estimation,
+                self._result.output_allow,
+                self._result.output_reason,
+                (
+                    self._result.next_state.delayed_count
+                    if self._result.next_state is not None
+                    else 0
+                ),
+            )
         return actual_prefill_bs or self._attempted_prefill_bs
 
     def _estimate_attempted_prefill_bs(
