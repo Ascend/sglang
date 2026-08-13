@@ -2,7 +2,7 @@ ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=a3
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
-ARG arch
+
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
 # Update pip & apt sources
