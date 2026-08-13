@@ -137,6 +137,13 @@ class TestCompletionSampling(CustomTestCase):
         self.assertNotEqual(response.choices[0].text, response.choices[2].text)
 
 
+@unittest.skip(
+    "NPU deterministic inference requires the batch_invariant_ops package "
+    "that registers torch.ops.batch_invariant_ops.npu_* kernels; it is "
+    "distributed via Huawei-internal channels and is unavailable in the "
+    "public CI image (ModuleNotFoundError crashes the scheduler). Re-enable "
+    "once the CI image ships the package."
+)
 class TestCompletionSeedDeterministic(CustomTestCase):
     """Testcase: seed on /v1/completions under --enable-deterministic-inference.
 

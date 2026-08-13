@@ -17,6 +17,13 @@ register_npu_ci(est_time=400, suite="debug-full-1-npu-a3", nightly=True)
 PROMPT = "Write a short poem about autumn."
 
 
+@unittest.skip(
+    "NPU deterministic inference requires the batch_invariant_ops package "
+    "that registers torch.ops.batch_invariant_ops.npu_* kernels; it is "
+    "distributed via Huawei-internal channels and is unavailable in the "
+    "public CI image (ModuleNotFoundError crashes the scheduler). Re-enable "
+    "once the CI image ships the package."
+)
 class TestChatSeedDeterministic(CustomTestCase):
     """Testcase: seed behavior under --enable-deterministic-inference.
 
