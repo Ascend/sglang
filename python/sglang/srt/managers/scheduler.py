@@ -925,7 +925,9 @@ class Scheduler(
             self.schedule_low_priority_values_first,
         )
         self.prefill_delayer: Optional[PrefillDelayer] = None
-        self.prefill_bs_tracker = RecentPrefillBatchSizeTracker()
+        self.prefill_bs_tracker = RecentPrefillBatchSizeTracker(
+            window_size=envs.SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE.get()
+        )
         self.max_prefill_bs: int = 0
         if self.server_args.enable_prefill_delayer:
             if self.server_args.disaggregation_mode == "decode":

@@ -2,6 +2,14 @@ import argparse
 from pathlib import Path
 
 
+ENVIRON_WINDOW_SIZE_ANCHOR = """\
+    SGLANG_PREFILL_DELAYER_TOKEN_USAGE_LOW_WATERMARK = EnvFloat(None)
+"""
+ENVIRON_WINDOW_SIZE_FIELD = """\
+    SGLANG_PREFILL_DELAYER_TOKEN_USAGE_LOW_WATERMARK = EnvFloat(None)
+    SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE = EnvInt(16)
+"""
+
 PREFILL_DELAYER_HELPER_ANCHOR = """\
 _DEBUG_LOG = get_bool_env_var("SGLANG_PREFILL_DELAYER_DEBUG_LOG")
 
@@ -233,7 +241,9 @@ SCHEDULER_HIGH_WATERMARK_INIT_OLD = """\
 """
 SCHEDULER_HIGH_WATERMARK_INIT_NEW = """\
         self.prefill_delayer: Optional[PrefillDelayer] = None
-        self.prefill_bs_tracker = RecentPrefillBatchSizeTracker()
+        self.prefill_bs_tracker = RecentPrefillBatchSizeTracker(
+            window_size=envs.SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE.get()
+        )
         self.max_prefill_bs: int = 0
 """
 
@@ -272,16 +282,19 @@ def _replace_once(source: str, old: str, new: str, path: Path) -> str:
 
 
 def apply_fix(runtime_python_root: Path) -> None:
+    environ_path = runtime_python_root / "sglang/srt/environ.py"
     prefill_delayer_path = (
         runtime_python_root / "sglang/srt/managers/prefill_delayer.py"
     )
     scheduler_path = runtime_python_root / "sglang/srt/managers/scheduler.py"
 
+    environ_source = environ_path.read_text()
     prefill_delayer_source = prefill_delayer_path.read_text()
     scheduler_source = scheduler_path.read_text()
 
     already_applied = (
-        "class RecentPrefillBatchSizeTracker:" in prefill_delayer_source
+        ENVIRON_WINDOW_SIZE_FIELD in environ_source
+        and "class RecentPrefillBatchSizeTracker:" in prefill_delayer_source
         and "def observe_attempt(" in prefill_delayer_source
         and "def finalize(self, *, actual_prefill_bs: int) -> int:"
         in prefill_delayer_source
@@ -295,6 +308,12 @@ def apply_fix(runtime_python_root: Path) -> None:
         print("Prefill high-watermark fix is already present", flush=True)
         return
 
+    environ_source = _replace_once(
+        environ_source,
+        ENVIRON_WINDOW_SIZE_ANCHOR,
+        ENVIRON_WINDOW_SIZE_FIELD,
+        environ_path,
+    )
     prefill_delayer_source = _replace_once(
         prefill_delayer_source,
         PREFILL_DELAYER_IMPORT_OLD,
@@ -368,6 +387,7 @@ def apply_fix(runtime_python_root: Path) -> None:
         scheduler_path,
     )
 
+    environ_path.write_text(environ_source)
     prefill_delayer_path.write_text(prefill_delayer_source)
     scheduler_path.write_text(scheduler_source)
     print(f"Applied prefill high-watermark fix to {runtime_python_root}", flush=True)
