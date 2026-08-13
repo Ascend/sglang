@@ -137,4 +137,3 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && cd "$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" && ln -sf deep_ep/deep_ep_cpp*.so
 
 CMD ["/bin/bash"]
-https://github.com/sgl-project/sgl-kernel-npu/releases/download/2026.8.13/custom-ops-2026.8.13-torch2.10.0-cann9.0.0-910b-aarch64.zip
