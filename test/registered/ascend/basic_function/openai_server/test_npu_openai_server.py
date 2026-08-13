@@ -109,8 +109,15 @@ class TestOpenAIServer(CustomTestCase):
             assert isinstance(response.choices[0].logprobs.top_logprobs[1], dict)
             ret_num_top_logprobs = len(response.choices[0].logprobs.top_logprobs[1])
 
-            # FIXME: Sometimes, some top_logprobs are missing in the return value. The reason is that some output id maps to the same output token and duplicate in the map
-            assert ret_num_top_logprobs > 0
+            # Some top_logprobs entries can collapse because distinct token ids
+            # may decode to the same text (utils.py to_openai_style_logprobs).
+            # The engine guarantees at most `logprobs` entries per position; the
+            # sampled token's own logprob is always the first entry.
+            assert 0 < ret_num_top_logprobs <= logprobs
+            assert (
+                response.choices[0].logprobs.tokens[1]
+                in response.choices[0].logprobs.top_logprobs[1]
+            ), "sampled token must appear in its own top_logprobs"
 
             # when echo=True and request.logprobs>0, logprob_start_len is 0, so the first token's logprob would be None.
             if not echo:
@@ -184,8 +191,11 @@ class TestOpenAIServer(CustomTestCase):
                     ret_num_top_logprobs = len(
                         response.choices[0].logprobs.top_logprobs[0]
                     )
-                    # FIXME: Sometimes, some top_logprobs are missing in the return value. The reason is that some output id maps to the same output token and duplicate in the map
-                    assert ret_num_top_logprobs > 0, f"ret_num_top_logprobs was 0"
+                    # Same collapse caveat as the non-stream path: at most
+                    # `logprobs` entries per position.
+                    assert (
+                        0 < ret_num_top_logprobs <= logprobs
+                    ), f"ret_num_top_logprobs={ret_num_top_logprobs}, logprobs={logprobs}"
 
             if is_first:
                 if echo:

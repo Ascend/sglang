@@ -447,6 +447,7 @@ class TestChatCompletionsInterface(CustomTestCase):
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         self.assertEqual(response.json()["choices"][0]["matched_stop"], 13)
+        self.assertEqual(response.json()["choices"][0]["finish_reason"], "stop")
 
     def test_rid(self):
         response = requests.post(
@@ -646,6 +647,7 @@ class TestEnableThinking(CustomTestCase):
         logging.info(f"response.json:{response.json()}")
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         self.assertEqual(response.json()["choices"][0]["matched_stop"], 13)
+        self.assertEqual(response.json()["choices"][0]["finish_reason"], "stop")
 
     def test_model_parameters_rid(self):
         response = requests.post(

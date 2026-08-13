@@ -250,5 +250,95 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             kill_process_tree(process.pid)
 
 
+class TestStreamResponseIncludeUsageCompletions(CustomTestCase):
+    """Testcase: /v1/completions counterpart of the server-flag matrix.
+
+    The doc's completions stream_options row explicitly lacked coverage
+    (the chat-only file above states "/v1/completions is not covered here").
+
+    [Test Category] Parameter
+    [Test Target] stream_options on /v1/completions
+    """
+
+    model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+    base_url = DEFAULT_URL_FOR_TEST
+
+    @classmethod
+    def _launch_server(cls, extra_args):
+        return popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=["--attention-backend", "ascend"] + extra_args,
+        )
+
+    @classmethod
+    def _stream_completion(cls, send_stream_options, client_include_usage=False):
+        """Completions stream chunks use choices[].text (not delta)."""
+        body = {
+            "prompt": "The capital of France is",
+            "stream": True,
+            "max_tokens": 32,
+        }
+        if send_stream_options:
+            body["stream_options"] = {"include_usage": client_include_usage}
+
+        resp = requests.post(
+            f"{DEFAULT_URL_FOR_TEST}/v1/completions",
+            json=body,
+        )
+        resp.raise_for_status()
+
+        chunks = []
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            line_str = line.decode("utf-8") if isinstance(line, bytes) else line
+            if line_str.startswith("data:") and not line_str.startswith("data: [DONE]"):
+                chunks.append(json.loads(line_str[6:]))
+        return chunks
+
+    def test_client_include_usage(self):
+        """Server default off + client include_usage=True → final chunk has usage."""
+        process = self._launch_server([])
+        try:
+            health = requests.get(f"{self.base_url}/health_generate")
+            self.assertEqual(health.status_code, 200)
+
+            chunks = self._stream_completion(
+                send_stream_options=True, client_include_usage=True
+            )
+            self.assertGreater(len(chunks), 1, "expected content + usage chunks")
+            last = chunks[-1]
+            usage = last.get("usage")
+            self.assertIsNotNone(usage, "last chunk must contain usage")
+            self.assertGreater(usage["prompt_tokens"], 0)
+            self.assertGreater(usage["completion_tokens"], 0)
+            self.assertEqual(
+                usage["prompt_tokens"] + usage["completion_tokens"],
+                usage["total_tokens"],
+            )
+            self.assertEqual(last.get("choices"), [])
+        finally:
+            kill_process_tree(process.pid)
+
+    def test_server_default_true(self):
+        """Server flag on + no stream_options → usage forced on completions."""
+        process = self._launch_server(["--stream-response-default-include-usage"])
+        try:
+            health = requests.get(f"{self.base_url}/health_generate")
+            self.assertEqual(health.status_code, 200)
+
+            chunks = self._stream_completion(send_stream_options=False)
+            self.assertGreater(len(chunks), 1, "expected content + usage chunks")
+            last = chunks[-1]
+            self.assertIsNotNone(
+                last.get("usage"), "server default must force a usage chunk"
+            )
+            self.assertEqual(last.get("choices"), [])
+        finally:
+            kill_process_tree(process.pid)
+
+
 if __name__ == "__main__":
     unittest.main()

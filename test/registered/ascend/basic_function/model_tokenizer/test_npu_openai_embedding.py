@@ -120,6 +120,22 @@ class TestOpenAIEmbedding(CustomTestCase):
 
         self.assertEqual(cm.exception.status_code, 400)
 
+    def test_model_param_not_used_for_selection(self):
+        """The request's model name is not validated or used for model
+        selection — the response echoes the server's model path."""
+        client = openai.Client(api_key=self.api_key, base_url=self.base_url)
+
+        normal = client.embeddings.create(model=self.model, input="Hello world")
+        bogus = client.embeddings.create(
+            model="nonexistent-model-name", input="Hello world"
+        )
+
+        self.assertEqual(
+            normal.model,
+            bogus.model,
+            "response.model must echo the server model path regardless of the request model",
+        )
+
 
 class TestMatryoshkaEmbeddingModel(CustomTestCase):
     """Test class for Model that supports Matryoshka embedding functionality, using OpenAI API."""
@@ -208,6 +224,49 @@ class TestMatryoshkaEmbeddingModel(CustomTestCase):
                     dimensions=dimensions,
                 )
             self.assertEqual(cm.exception.status_code, 400)
+
+    def test_matryoshka_embedding_l2_norm(self):
+        """Value-level: the truncated vector is L2-normalized AFTER truncation
+        (pooler.py:192-199) — the result must be a unit vector."""
+        client = openai.Client(api_key=self.api_key, base_url=self.base_url)
+
+        response = client.embeddings.create(
+            model=self.model, input="Hello world", dimensions=256
+        )
+        embedding = response.data[0].embedding
+        norm = sum(x * x for x in embedding) ** 0.5
+        self.assertAlmostEqual(
+            norm,
+            1.0,
+            places=3,
+            msg="truncated embedding must be L2-normalized to unit norm",
+        )
+
+    def test_matryoshka_embedding_semantic_preserved(self):
+        """Value-level: semantic relations survive truncation — similar texts
+        stay closer than dissimilar texts in the 256-dim space."""
+        client = openai.Client(api_key=self.api_key, base_url=self.base_url)
+
+        def embed(text):
+            return client.embeddings.create(
+                model=self.model, input=text, dimensions=256
+            ).data[0].embedding
+
+        def cosine(a, b):
+            dot = sum(x * y for x, y in zip(a, b))
+            na = sum(x * x for x in a) ** 0.5
+            nb = sum(y * y for y in b) ** 0.5
+            return dot / (na * nb)
+
+        a1 = embed("The weather is sunny today")
+        a2 = embed("It is a bright and sunny day")
+        b = embed("Quantum physics explains subatomic particles")
+
+        self.assertGreater(
+            cosine(a1, a2),
+            cosine(a1, b),
+            "similar texts must be closer than dissimilar texts after truncation",
+        )
 
 
 if __name__ == "__main__":
