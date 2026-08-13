@@ -307,6 +307,43 @@ class TestLoRAEdgeCases(CustomTestCase):
         error_message = str(context.exception)
         self.logger.error(f"Invalid adapter error: {error_message}")
 
+    def test_lora_path_field_unloaded_adapter_400(self):
+        """The lora_path FIELD (not model:adapter syntax) with an adapter that
+        was never loaded → 400 'has never been loaded'."""
+        with self.assertRaises(openai.BadRequestError) as context:
+            self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "Hello!"}],
+                max_tokens=30,
+                extra_body={"lora_path": "never_loaded"},
+            )
+        self.assertIn("has never been loaded", str(context.exception))
+
+    def test_lora_path_field_changes_output(self):
+        """Functional effectiveness: the lora_path field must actually change
+        model behavior — base and adapter outputs differ at temperature=0."""
+        prompt = "What tools do you have available?"
+        base_response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+            temperature=0,
+        )
+        adapter_response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+            temperature=0,
+            extra_body={"lora_path": "tool_calling"},
+        )
+        base_text = base_response.choices[0].message.content
+        adapter_text = adapter_response.choices[0].message.content
+        self.assertNotEqual(
+            base_text,
+            adapter_text,
+            "lora_path should change the model's behavior (tool_calling LoRA)",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

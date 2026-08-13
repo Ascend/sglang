@@ -77,26 +77,32 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             extra_body={"ignore_eos": True},
         )
 
-        default_tokens = len(
-            self.tokenizer.encode(response_default.choices[0].message.content)
-        )
-        ignore_eos_tokens = len(
-            self.tokenizer.encode(response_ignore_eos.choices[0].message.content)
-        )
+        default_tokens = response_default.usage.completion_tokens
+        ignore_eos_tokens = response_ignore_eos.usage.completion_tokens
 
-        # Check if ignore_eos resulted in more tokens or exactly max_tokens
-        # The ignore_eos response should either:
-        # 1. Have more tokens than the default response (if default stopped at EOS before max_tokens)
-        # 2. Have exactly max_tokens (if it reached the max_tokens limit)
-        self.assertTrue(
-            ignore_eos_tokens > default_tokens or ignore_eos_tokens >= max_tokens,
-            f"ignore_eos did not generate more tokens: {ignore_eos_tokens} vs {default_tokens}",
+        # ignore_eos=True forces generation to exactly max_tokens (length finish
+        # is checked before EOS, and EOS is never a stop condition)
+        self.assertEqual(
+            ignore_eos_tokens,
+            max_tokens,
+            f"ignore_eos=True should generate exactly {max_tokens} tokens, got {ignore_eos_tokens}",
         )
-
         self.assertEqual(
             response_ignore_eos.choices[0].finish_reason,
             "length",
             f"Expected finish_reason='length' for ignore_eos=True, got {response_ignore_eos.choices[0].finish_reason}",
+        )
+
+        # ignore_eos=False stops naturally at EOS before max_tokens
+        self.assertLess(
+            default_tokens,
+            max_tokens,
+            f"ignore_eos=False should stop before {max_tokens} tokens, got {default_tokens}",
+        )
+        self.assertEqual(
+            response_default.choices[0].finish_reason,
+            "stop",
+            f"Expected finish_reason='stop' for ignore_eos=False, got {response_default.choices[0].finish_reason}",
         )
 
 
