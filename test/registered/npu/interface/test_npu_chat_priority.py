@@ -24,7 +24,7 @@ class TestChatPriorityScheduling(CustomTestCase):
     the slot; a higher-priority request must preempt it (threshold=0 makes any
     positive difference trigger preemption).
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] priority
     """
 
@@ -216,7 +216,7 @@ class TestChatPriorityScheduling(CustomTestCase):
 class TestChatPrioritySilentlyIgnored(CustomTestCase):
     """Testcase: priority without --enable-priority-scheduling is silently ignored.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] priority (silent ignore on a plain server)
     """
 
@@ -271,7 +271,7 @@ class TestChatPrioritySilentlyIgnored(CustomTestCase):
 class TestChatPriorityDisabled(CustomTestCase):
     """Testcase: priority behavior without --enable-priority-scheduling.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] priority (silent ignore / abort-on-priority-when-disabled)
     """
 

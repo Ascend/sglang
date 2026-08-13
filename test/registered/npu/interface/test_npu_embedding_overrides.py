@@ -30,7 +30,7 @@ class TestEmbeddingOverrides(CustomTestCase):
     normally. Functional verification: swapping the override vector changes the
     output embedding — a no-op override mechanism would leave it unchanged.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] embed_override_token_id / embed_overrides
     """
 

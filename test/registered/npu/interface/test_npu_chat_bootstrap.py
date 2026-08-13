@@ -1,4 +1,13 @@
+import os
+import sys
+
 import requests
+
+# Allow importing the PD fixture from the pd_disaggregation directory when
+# run directly by run_suite.py.
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "basic_function", "pd_disaggregation")
+)
 
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
@@ -15,7 +24,7 @@ class TestChatBootstrapParams(DisaggregationTestBase):
     node pulls the room's KV cache from the given bootstrap address. The body
     params are a KV-cache rendezvous contract, not a routing instruction.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] bootstrap_host / bootstrap_port / bootstrap_room
     """
 

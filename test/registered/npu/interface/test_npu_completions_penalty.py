@@ -24,7 +24,7 @@ class TestCompletionsPenalty(CustomTestCase):
     completions endpoint has zero penalty coverage. Each penalty is verified
     standalone with repetition_penalty pinned to 1.0 (disabled).
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] frequency_penalty / presence_penalty
     """
 

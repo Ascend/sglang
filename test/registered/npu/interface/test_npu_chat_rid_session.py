@@ -24,7 +24,7 @@ HEX32 = re.compile(r"^[0-9a-f]{32}$")
 class TestChatRid(CustomTestCase):
     """Testcase: rid behavior on /v1/chat/completions.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] rid (auto-generation / n>1 regeneration / stream echo / duplicate rejection)
     """
 
@@ -138,7 +138,7 @@ class TestChatCacheKeyIsolation(CustomTestCase):
     The final cache key is cache_salt + extra_key (no separator); any change
     isolates the radix cache entry.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] extra_key / cache_salt
     """
 
@@ -223,7 +223,7 @@ class TestChatCacheKeyIsolation(CustomTestCase):
 class TestChatSessionRadixCache(CustomTestCase):
     """Testcase: session_id enables session KV retention under the session radix cache.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] session_id
     """
 

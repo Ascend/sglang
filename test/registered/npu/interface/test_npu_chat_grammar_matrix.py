@@ -18,7 +18,7 @@ register_npu_ci(est_time=400, suite="debug-full-1-npu-a3", nightly=True)
 class TestChatGrammarMatrix(CustomTestCase):
     """Testcase: grammar constraint mutual exclusion and dispatch behavior.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] regex / ebnf / response_format(json_schema, structural_tag) interactions
     """
 
@@ -128,7 +128,7 @@ class TestChatGrammarMatrix(CustomTestCase):
 class TestChatGrammarBackendNone(CustomTestCase):
     """Testcase: grammar constraints are rejected when launched with --grammar-backend none.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] --grammar-backend none negative path
     """
 

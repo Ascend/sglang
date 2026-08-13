@@ -21,7 +21,7 @@ class TestChatDeadParams(CustomTestCase):
     Each case pins the current silent-ignore contract: the parameter is accepted
     by Pydantic, never forwarded/consumed, and must not change the output.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] session_params / user / best_of (dead params)
     """
 

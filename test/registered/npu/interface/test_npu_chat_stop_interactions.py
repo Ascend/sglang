@@ -25,7 +25,7 @@ The story should span multiple events, challenges, and character developments ov
 class TestChatStopInteractions(CustomTestCase):
     """Testcase: stop-family parameter interactions on /v1/chat/completions.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] no_stop_trim / min_tokens x stop / ignore_eos x stop_token_ids / stream x stop / n x stop
     """
 

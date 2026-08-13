@@ -24,7 +24,7 @@ class TestChatSeedDeterministic(CustomTestCase):
     maximizes randomness, so identical outputs across two requests can only be
     explained by the seed taking effect.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] seed
     """
 

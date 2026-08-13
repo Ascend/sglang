@@ -22,7 +22,7 @@ MESSAGES = [{"role": "user", "content": "What is 2 + 2? Answer briefly."}]
 class TestChatReturnFields(CustomTestCase):
     """Testcase: return_meta_info / return_prompt_token_ids / return_token_ids on /v1/chat/completions.
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] return_meta_info / return_prompt_token_ids / return_token_ids
     """
 
@@ -137,7 +137,7 @@ class TestChatReturnFields(CustomTestCase):
 class TestChatCachedTokensDetails(CustomTestCase):
     """Testcase: return_cached_tokens_details requires a cache hit (same prompt twice).
 
-    [Test Category] Parameter
+    [Test Category] Interface
     [Test Target] return_cached_tokens_details
     """
 
