@@ -447,7 +447,7 @@ class TestChatCompletionsInterface(CustomTestCase):
                 "messages": [
                     {
                         "role": "user",
-                        "content": "List exactly three items in one line, using the format: item1: item2: item3:",
+                        "content": "Hello",
                     }
                 ],
                 "stop_token_ids": [1, 13],
