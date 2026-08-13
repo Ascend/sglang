@@ -147,7 +147,7 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ARGS = [
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.8,
+    0.75,
     "--prefill-max-requests",
     1,
     "--disable-radix-cache",
@@ -216,7 +216,7 @@ class TestNPUDeepSeekV4FlashW8A81P1D16PIn8kOut1k50ms(
     dataset_name = "random"
     input_len = 8000
     output_len = 1000
-    num_prompts = 128
+    num_prompts = 1600
     max_concurrency = 800
     random_range_ratio = 1
     warmup_requests = 0

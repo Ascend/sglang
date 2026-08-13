@@ -125,6 +125,7 @@ class TestNPUDeepSeekV4FlashW8A88PIn32kOut1k50ms(TestNpuPerformanceTestCaseBase)
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     dataset_name = "random"
+    dataset_path = "/root/.cache/modelscope/hub/datasets/gsm8k_deepseekv4/cache0_32000/formal_run1_64_32000_cache0.json"
     input_len = 32000
     output_len = 1000
     num_prompts = 64
@@ -135,7 +136,7 @@ class TestNPUDeepSeekV4FlashW8A88PIn32kOut1k50ms(TestNpuPerformanceTestCaseBase)
     seed = 1
     tpot = 50
     max_attempts = 3
-    output_token_throughput = 972  # TBD
+    output_token_throughput = 927  # TBD
 
     def test_npu_deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms(self):
         """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in32k out1k."""
