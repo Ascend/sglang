@@ -1,5 +1,7 @@
 import os
 import sys
+import threading
+import time
 
 import requests
 
@@ -54,19 +56,33 @@ class TestChatBootstrapParams(DisaggregationTestBase):
             timeout=120,
         )
 
-    def _warm_prefill(self, host, port, room):
-        """Register the room on the prefill side first: the prefill node
-        computes KV and announces it at bootstrap_host:port for this room."""
-        return requests.post(
-            self.prefill_url + "/v1/chat/completions",
-            json=self._trio_payload(host, port, room),
-            timeout=120,
-        )
+    def _fire_prefill(self, host, port, room):
+        """Fire-and-forget the prefill request: the prefill node computes KV
+        and registers the room, but in PD mode it has no generation response
+        path — its HTTP request must NOT be awaited (a synchronous POST would
+        hang until the client timeout, then the prefill aborts its own
+        bootstrap with KVTransferError)."""
+
+        def post():
+            try:
+                requests.post(
+                    self.prefill_url + "/v1/chat/completions",
+                    json=self._trio_payload(host, port, room),
+                    timeout=120,
+                )
+            except Exception:
+                # The prefill side may abort its own bootstrap after the KV
+                # transfer — the decode response is all the test needs.
+                pass
+
+        threading.Thread(target=post, daemon=True).start()
+        # Let the prefill compute KV and register the room before decode polls.
+        time.sleep(1)
 
     def test_trio_completes(self):
-        """Full trio: after the prefill registers the room, decode pulls KV
-        from the bootstrap address and completes."""
-        self._warm_prefill(self.base_host, self.bootstrap_port, 101)
+        """Full trio: the prefill registers the room (fire-and-forget), then
+        decode pulls KV from the bootstrap address and returns the response."""
+        self._fire_prefill(self.base_host, self.bootstrap_port, 101)
         response = self._post_trio(self.base_host, self.bootstrap_port, 101)
         self.assertEqual(response.status_code, 200, response.text)
         content = response.json()["choices"][0]["message"]["content"]
@@ -75,7 +91,7 @@ class TestChatBootstrapParams(DisaggregationTestBase):
     def test_port_omitted_defaults(self):
         """port is the only optional member: it defaults to
         --disaggregation-bootstrap-port."""
-        self._warm_prefill(self.base_host, None, 102)
+        self._fire_prefill(self.base_host, None, 102)
         response = self._post_trio(self.base_host, None, 102)
         self.assertEqual(response.status_code, 200, response.text)
         content = response.json()["choices"][0]["message"]["content"]
