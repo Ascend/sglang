@@ -219,6 +219,38 @@ def upsert_configmap_field_strict(
         raise
 
 
+def wait_for_prefill_decode_exit(
+    key: str,
+    value: str,
+    timeout: int = ROUTER_CONFIGMAP_TIMEOUT,
+    poll_interval: int = 15,
+):
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+        if not configmap or not configmap.data:
+            logger.info(f"ConfigMap data is not available yet, waiting for 15s...")
+            time.sleep(poll_interval)
+            continue
+
+        existing_value = configmap.data.get(key)
+
+        upsert_configmap_field_strict(CONFIGMAP_NAME, NAMESPACE, key, value)
+
+        if existing_value is not None:
+            logger.info(
+                "%s already set (%s), waiting 120s for prefill/decode to exit ...",
+                key,
+                existing_value,
+            )
+            time.sleep(SERVICE_EXIT_WAIT_SECONDS)
+        else:
+            logger.info("%s set for the first time (%s)", key, value)
+
+        return
+
+
 # Get node count from Kubernetes
 def discover_worker_nodes():
     """Discover worker nodes from Kubernetes.
@@ -825,7 +857,7 @@ def wait_server_ready(url, timeout=LOCAL_TIMEOUT):
                 logger.info(
                     f"Server {url} returned status code: {response.status_code}"
                 )
-        except Exception as e:
+        except Exception:
             # logger.error(f"Server {url} request error: {e}, retrying...")
             pass
 
@@ -837,43 +869,7 @@ def wait_server_ready(url, timeout=LOCAL_TIMEOUT):
         time.sleep(check_interval)
 
 
-def wait_for_prefill_decode_exit(
-    key: str,
-    value: str,
-    timeout: int = ROUTER_CONFIGMAP_TIMEOUT,
-    poll_interval: int = 15,
-):
-    start_time = time.time()
-
-    while time.time() - start_time < timeout:
-        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
-        if not configmap or not configmap.data:
-            logger.info(f"ConfigMap data is not available yet, waiting for 15s...")
-            time.sleep(poll_interval)
-            continue
-
-        existing_value = configmap.data.get(key)
-
-        upsert_configmap_field_strict(CONFIGMAP_NAME, NAMESPACE, key, value)
-
-        if existing_value is not None:
-            logger.info(
-                "%s already set (%s), waiting 120s for prefill/decode to exit...",
-                key,
-                existing_value,
-            )
-            time.sleep(SERVICE_EXIT_WAIT_SECONDS)
-        else:
-            logger.info("%s set for the first time (%s)", key, value)
-
-        return
-
-    raise RuntimeError(
-        f"Timeout: Failed to get complete node information from ConfigMap"
-    )
-
-
-class TestAscendMultiNodePdMixTestCaseBase(CustomTestCase):
+class TestNpuMultiNodePdMixTestCaseBase(CustomTestCase):
     model_config = None
 
     @classmethod
@@ -977,7 +973,7 @@ class TestAscendMultiNodePdMixTestCaseBase(CustomTestCase):
         )
 
 
-class TestAscendMultiNodePdSepTestCaseBase(CustomTestCase):
+class TestNpuMultiNodePdSepTestCaseBase(CustomTestCase):
     model_config = None
 
     @classmethod
