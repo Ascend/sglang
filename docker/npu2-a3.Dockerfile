@@ -2,15 +2,14 @@ ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=a3
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
-
+ARG arch
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
 # Update pip & apt sources
 ARG TARGETARCH
 ARG CANN_VERSION
 ARG DEVICE_TYPE
-ARG TARGETARCH
-ARG ARCH
+ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
 ARG PYTORCH_VERSION="2.10.0"
@@ -25,13 +24,6 @@ ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 
 
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        echo "export ARCH=aarch64" >> /etc/environment_new; \
-    elif [ "$TARGETARCH" = "amd64" ]; then \
-        echo "export ARCH=x86_64" >> /etc/environment_new; \
-    else \
-        echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1; \
-    fi
 
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
       echo "Using x86_64 dependencies"; \
@@ -120,8 +112,8 @@ RUN mkdir cann-custom-ops && \
     unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     unzip ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     chmod +x *.run && \
-    ./CANN-custom_ops-none-linux.$(arch).run --install-path=/usr/local/Ascend/cann-${CANN_VERSION}/opp --force && \
-    ./cann-ops-transformer-custom_linux-$(arch).run --install-path=/usr/local/Ascend/cann-${CANN_VERSION}/opp --force && \
+    ./CANN-custom_ops-none-linux.$(arch).run --install-path=/usr/local/Ascend/cann-${CANN_VERSION}/opp && \
+    ./cann-ops-transformer-custom_linux-$(arch).run --install-path=/usr/local/Ascend/cann-${CANN_VERSION}/opp -- --force && \
     ${PIP_INSTALL} custom_ops-1.0-cp312-cp312-linux_$(arch).whl && \
     cd .. && rm -rf cann-custom-ops
 
