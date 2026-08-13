@@ -76,7 +76,10 @@ class TestChatPriorityScheduling(CustomTestCase):
         while time.time() < deadline:
             try:
                 loads = requests.get(f"{self.base_url}/loads", timeout=5).json()
-                if loads.get("aggregate", {}).get("total_running_reqs", 0) > 0:
+                total = sum(
+                    rank.get("num_running_reqs", 0) for rank in loads.get("loads", [])
+                )
+                if total > 0:
                     return
             except Exception:
                 pass
@@ -306,11 +309,9 @@ class TestChatPriorityDisabled(CustomTestCase):
             headers={"Authorization": f"Bearer {self.api_key}"},
         )
         self.assertEqual(response.status_code, 503, response.text)
-        # fastapi HTTPException body uses the "detail" key, not "error".
-        self.assertIn(
-            "Using priority is disabled for this server",
-            response.json()["detail"],
-        )
+        # The 503 body format varies across business-code versions ("error"
+        # or "detail"); assert on the raw text.
+        self.assertIn("Using priority is disabled for this server", response.text)
 
 
 if __name__ == "__main__":

@@ -177,8 +177,10 @@ class TestCompletionStopFamily(CustomTestCase):
         self.assertIn(response.choices[0].finish_reason, ("stop", "length"))
 
     def test_ignore_eos_stop_string_still_works(self):
+        # The "long paragraph" prompt's first newline lands ~token 250; the
+        # length cap must be large enough for the stop string to be reachable.
         response = self._complete(
-            stop="\n", max_tokens=200, extra_body={"ignore_eos": True}
+            stop="\n", max_tokens=600, extra_body={"ignore_eos": True}
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")

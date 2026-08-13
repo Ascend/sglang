@@ -94,7 +94,8 @@ class TestCompletionStructure(CustomTestCase):
                 extra_body={"json_schema": '{"type":"object"}', "regex": r"\d+"}
             )
         self.assertIn(
-            "Only one of regex, json_schema, or ebnf can be set.", str(ctx.exception)
+            "Only one of json_schema, regex, ebnf, or structural_tag can be set.",
+            str(ctx.exception),
         )
 
     def test_json_schema_response_format_override(self):
@@ -138,7 +139,8 @@ class TestCompletionStructure(CustomTestCase):
         with self.assertRaises(openai.BadRequestError) as ctx:
             self._complete(extra_body={"regex": r"\d+", "ebnf": 'root ::= "1"'})
         self.assertIn(
-            "Only one of regex, json_schema, or ebnf can be set.", str(ctx.exception)
+            "Only one of json_schema, regex, ebnf, or structural_tag can be set.",
+            str(ctx.exception),
         )
 
     def test_regex_stream(self):

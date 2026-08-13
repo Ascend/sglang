@@ -66,7 +66,7 @@ class TestCompletionsPenalty(CustomTestCase):
     def _diversity(self, prompt, penalty_key, penalty_value):
         """Average vocab diversity over 5 seeded runs."""
         diversities = []
-        for i in range(5):
+        for i in range(10):
             payload = {
                 "model": self.model,
                 "prompt": prompt,
@@ -117,7 +117,7 @@ class TestCompletionsPenalty(CustomTestCase):
         non_stream = self._diversity(prompt, "frequency_penalty", 1.99)
 
         stream_diversities = []
-        for i in range(5):
+        for i in range(10):
             payload = {
                 "model": self.model,
                 "prompt": prompt,

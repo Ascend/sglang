@@ -1,4 +1,6 @@
+import time
 import unittest
+import uuid
 
 import openai
 import requests
@@ -144,7 +146,16 @@ class TestCompletionCacheKeys(CustomTestCase):
         return payload
 
     def _cached_tokens(self, payload):
-        return self._post(payload)["usage"]["prompt_tokens_details"]["cached_tokens"]
+        """Poll for the cache hit: the radix-cache commit happens after the
+        HTTP response returns, so an immediate repeat may still miss."""
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            response = self._post(payload)
+            details = response["usage"].get("prompt_tokens_details")
+            if details and details.get("cached_tokens"):
+                return details["cached_tokens"]
+            time.sleep(1)
+        return 0
 
     def test_return_cached_tokens_details(self):
         payload = self._payload(return_cached_tokens_details=True)
@@ -159,19 +170,21 @@ class TestCompletionCacheKeys(CustomTestCase):
         self.assertGreater(device + host + storage, 0)
 
     def test_extra_key_isolation(self):
-        warm = self._payload(cache_salt="s1", extra_key="a")
+        tag = uuid.uuid4().hex[:8]
+        warm = self._payload(cache_salt=f"s1-{tag}", extra_key=f"a-{tag}")
         self._post(warm)
         self.assertGreater(self._cached_tokens(warm), 0)
 
-        different = self._payload(cache_salt="s1", extra_key="b")
+        different = self._payload(cache_salt=f"s1-{tag}", extra_key=f"b-{tag}")
         self.assertEqual(self._cached_tokens(different), 0)
 
     def test_cache_salt_isolation(self):
-        warm = self._payload(cache_salt="a", extra_key="e1")
+        tag = uuid.uuid4().hex[:8]
+        warm = self._payload(cache_salt=f"a-{tag}", extra_key=f"e1-{tag}")
         self._post(warm)
         self.assertGreater(self._cached_tokens(warm), 0)
 
-        different = self._payload(cache_salt="b", extra_key="e1")
+        different = self._payload(cache_salt=f"b-{tag}", extra_key=f"e1-{tag}")
         self.assertEqual(self._cached_tokens(different), 0)
 
 
