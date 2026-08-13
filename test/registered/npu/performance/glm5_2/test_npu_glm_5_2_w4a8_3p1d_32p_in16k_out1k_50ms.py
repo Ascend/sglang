@@ -189,7 +189,7 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
     output_len = 1000
     random_range_ratio = 1
     tpot = 50
-    output_token_throughput = 1694  # TBD
+    output_token_throughput = 1694
 
     def test_npu_glm_5_2_w4a8_pd_sep_in16k_out1k(self):
         """Run NPU performance test for GLM-5.2-w4a8 PD separation 3p1d"""
