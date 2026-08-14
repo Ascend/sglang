@@ -89,9 +89,9 @@ class TestNPUAdaptiveSpeculativeServer(CustomTestCase):
                 {
                     "1": {
                         "candidate_steps": [1, 3],
-                        "ema_alpha": 1.0,
-                        "warmup_batches": 1,
-                        "update_interval": 1,
+                        "ema_alpha": 0.2,
+                        "warmup_batches": 10,
+                        "update_interval": 10,
                         "up_hysteresis": 0.0,
                     }
                 },

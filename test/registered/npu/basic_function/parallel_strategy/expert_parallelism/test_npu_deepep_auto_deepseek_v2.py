@@ -2,6 +2,8 @@ import os
 import unittest
 from types import SimpleNamespace
 
+import torch
+
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
 from sglang.test.ascend.run_eval import run_eval as run_ascend_eval
 from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
@@ -43,6 +45,7 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
     }
 
     def test_mmlu(self):
+        torch.use_deterministic_algorithms(True)
         expect_score = 0.58
         args = SimpleNamespace(
             base_url=self.base_url,
