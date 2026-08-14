@@ -320,23 +320,83 @@ def _replace_once(source: str, old: str, new: str, path: Path) -> str:
 
 
 def apply_fix(runtime_python_root: Path) -> None:
+    environ_path = runtime_python_root / "sglang/srt/environ.py"
     prefill_delayer_path = (
         runtime_python_root / "sglang/srt/managers/prefill_delayer.py"
     )
     scheduler_path = runtime_python_root / "sglang/srt/managers/scheduler.py"
 
+    environ_source = environ_path.read_text()
     prefill_delayer_source = prefill_delayer_path.read_text()
     scheduler_source = scheduler_path.read_text()
 
     already_applied = (
-        SCHEDULER_PASS_DECAY not in scheduler_source
+        ENVIRON_WINDOW_SIZE_FIELD in environ_source
+        and "class RecentPrefillBatchSizeTracker:" in prefill_delayer_source
+        and "def observe_attempt(" in prefill_delayer_source
+        and "def finalize(self, *, actual_prefill_bs: int) -> int:"
+        in prefill_delayer_source
+        and SCHEDULER_IMPORT_NEW in scheduler_source
+        and SCHEDULER_HIGH_WATERMARK_INIT_NEW in scheduler_source
+        and SCHEDULER_FINALIZE_NEW in scheduler_source
+        and SCHEDULER_ADMISSION_OLD not in scheduler_source
+        and SCHEDULER_PASS_DECAY not in scheduler_source
         and PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY not in prefill_delayer_source
         and PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY in prefill_delayer_source
     )
+
     if already_applied:
-        print("PR 32880 behavior is already reverted", flush=True)
+        print("Prefill high-watermark fix is already present", flush=True)
         return
 
+    environ_source = _replace_once(
+        environ_source,
+        ENVIRON_WINDOW_SIZE_ANCHOR,
+        ENVIRON_WINDOW_SIZE_FIELD,
+        environ_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_IMPORT_OLD,
+        PREFILL_DELAYER_IMPORT_NEW,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_HELPER_ANCHOR,
+        PREFILL_DELAYER_HELPER,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_EXECUTOR_INIT_OLD,
+        PREFILL_DELAYER_EXECUTOR_INIT_NEW,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_FINALIZE_OLD,
+        PREFILL_DELAYER_FINALIZE_NEW,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_NEGOTIATE_OLD,
+        PREFILL_DELAYER_NEGOTIATE_NEW,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_ALL_PATH_CONDITIONS_OLD,
+        PREFILL_DELAYER_ALL_PATH_CONDITIONS_NEW,
+        prefill_delayer_path,
+    )
+    prefill_delayer_source = _replace_once(
+        prefill_delayer_source,
+        PREFILL_DELAYER_SLOT_CONDITION_OLD,
+        PREFILL_DELAYER_SLOT_CONDITION_NEW,
+        prefill_delayer_path,
+    )
     prefill_delayer_source = _replace_once(
         prefill_delayer_source,
         PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY,
@@ -344,12 +404,43 @@ def apply_fix(runtime_python_root: Path) -> None:
         prefill_delayer_path,
     )
     scheduler_source = _replace_once(
-        scheduler_source, SCHEDULER_PASS_DECAY, "", scheduler_path
+        scheduler_source,
+        SCHEDULER_IMPORT_OLD,
+        SCHEDULER_IMPORT_NEW,
+        scheduler_path,
+    )
+    scheduler_source = _replace_once(
+        scheduler_source,
+        SCHEDULER_PASS_DECAY,
+        "",
+        scheduler_path,
+    )
+    scheduler_source = _replace_once(
+        scheduler_source,
+        SCHEDULER_HIGH_WATERMARK_INIT_OLD,
+        SCHEDULER_HIGH_WATERMARK_INIT_NEW,
+        scheduler_path,
+    )
+    scheduler_source = _replace_once(
+        scheduler_source,
+        SCHEDULER_FINALIZE_OLD,
+        SCHEDULER_FINALIZE_NEW,
+        scheduler_path,
+    )
+    scheduler_source = _replace_once(
+        scheduler_source,
+        SCHEDULER_ADMISSION_OLD,
+        SCHEDULER_ADMISSION_NEW,
+        scheduler_path,
     )
 
+    environ_path.write_text(environ_source)
     prefill_delayer_path.write_text(prefill_delayer_source)
     scheduler_path.write_text(scheduler_source)
-    print(f"Reverted PR 32880 behavior in {runtime_python_root}", flush=True)
+    print(
+        f"Applied sliding-window fix without all-path pass cap to {runtime_python_root}",
+        flush=True,
+    )
 
 
 def main() -> None:
