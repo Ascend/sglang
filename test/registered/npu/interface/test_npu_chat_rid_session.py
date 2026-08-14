@@ -289,6 +289,9 @@ class TestChatSessionRadixCache(CustomTestCase):
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             api_key=cls.api_key,
+            # --enable-session-radix-cache requires the unified radix tree
+            # backend (same env as test/registered/radix_cache/*).
+            env={"SGLANG_ENABLE_UNIFIED_RADIX_TREE": "1"},
             other_args=[
                 "--attention-backend",
                 "ascend",
