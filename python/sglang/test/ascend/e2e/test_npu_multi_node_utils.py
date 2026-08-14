@@ -281,12 +281,11 @@ def discover_worker_nodes():
         return 0
 
 
-def set_environment_variables(env_vars, master_prefill_ip=None):
+def set_environment_variables(env_vars):
     """Set environment variables.
 
     Args:
         env_vars (dict): Environment variables dictionary.
-        master_prefill_ip:
 
     Returns:
         dict: Updated environment variables.
@@ -295,8 +294,6 @@ def set_environment_variables(env_vars, master_prefill_ip=None):
         return {}
 
     for key, value in env_vars.items():
-        if master_prefill_ip and key == "SGLANG_ZBAL_BOOTSTRAP_URL":
-            value = f"tcp://{master_prefill_ip}:24688"
         logger.info(f"Setting ENV_VAR {key}={value}")
         os.environ[key] = value
 
@@ -562,7 +559,7 @@ def launch_pd_separation_node(model_config):
 
     if role == "prefill":
         # Current node is prefill
-        set_environment_variables(model_config.get("prefill_envs"), master_prefill_ip)
+        set_environment_variables(model_config.get("prefill_envs"))
 
         prefill_args = model_config["prefill_args"]
         if is_prefill_instance_multi_node:
