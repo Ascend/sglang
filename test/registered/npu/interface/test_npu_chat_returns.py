@@ -62,7 +62,13 @@ class TestChatReturnFields(CustomTestCase):
         # The server renders with add_generation_prompt=True
         # (serving_chat.py:1048-1055); the engine-side prompt_token_ids
         # includes the assistant generation prompt tokens.
-        return self.tokenizer.apply_chat_template(MESSAGES, add_generation_prompt=True)
+        result = self.tokenizer.apply_chat_template(
+            MESSAGES, add_generation_prompt=True
+        )
+        # Newer transformers return a BatchEncoding dict; older ones a list.
+        if isinstance(result, dict):
+            result = result["input_ids"]
+        return result
 
     # --- return_meta_info ---
 

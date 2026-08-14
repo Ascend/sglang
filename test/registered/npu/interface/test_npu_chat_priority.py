@@ -75,7 +75,9 @@ class TestChatPriorityScheduling(CustomTestCase):
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
-                loads = requests.get(f"{self.base_url}/loads", timeout=5).json()
+                loads = requests.get(
+                    f"{self.base_url}/loads?include=core", timeout=5
+                ).json()
                 total = sum(
                     rank.get("num_running_reqs", 0) for rank in loads.get("loads", [])
                 )

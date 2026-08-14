@@ -51,12 +51,11 @@ class TestCompletionStructure(CustomTestCase):
         kill_process_tree(cls.process.pid)
 
     def _complete(self, **kwargs):
+        kwargs.setdefault(
+            "prompt", "Extract the name and age from: Zhang San is 35 years old."
+        )
         return self.client.completions.create(
-            model=self.model,
-            prompt="Extract the name and age from: Zhang San is 35 years old.",
-            temperature=0,
-            max_tokens=64,
-            **kwargs,
+            model=self.model, temperature=0, max_tokens=64, **kwargs
         )
 
     # --- json_schema (completions unique) ---
