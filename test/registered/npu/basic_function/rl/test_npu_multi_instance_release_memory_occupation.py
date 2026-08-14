@@ -160,6 +160,8 @@ class TestNPUMultiInstanceReleaseMemoryOccupation(CustomTestCase):
         if multiprocessing.get_start_method(allow_none=True) != "spawn":
             multiprocessing.set_start_method("spawn", force=True)
 
+        os.environ["PYTORCH_NPU_ALLOC_CONF"] = "expandable_segments:False"
+
     def test_multi_instance_release_memory_occupation(self):
         master_port = find_available_port(23456)
 

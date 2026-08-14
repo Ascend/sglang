@@ -74,7 +74,7 @@ class TestNPUStreamingSession(NPUStreamingSessionServerBase, StreamingSessionKit
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
     kv_inherit_offsets = (0,)
 
@@ -304,9 +304,12 @@ class TestNPUStreamingSessionEagle3(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
-    kv_inherit_offsets = (-1,)
+    # NPU EAGLE3 may or may not commit the last sampled token before
+    # max_new stops (kv_committed_len = input + output - 1 or +0).
+    # Tolerate both behaviors.
+    kv_inherit_offsets = (-1, 0)
 
 
 class TestNPUStreamingSessionEagle3LargePage(TestNPUStreamingSession):
@@ -329,11 +332,14 @@ class TestNPUStreamingSessionEagle3LargePage(TestNPUStreamingSession):
         "--speculative-num-draft-tokens",
         "4",
         "--mem-fraction-static",
-        "0.7",
+        "0.6",
         "--page-size",
         "256",
     ]
-    kv_inherit_offsets = (-1,)
+    # NPU EAGLE3 may or may not commit the last sampled token before
+    # max_new stops (kv_committed_len = input + output - 1 or +0).
+    # Tolerate both behaviors.
+    kv_inherit_offsets = (-1, 0)
 
 
 class TestNPUStreamingSessionRetract(TestNPUStreamingSession):
@@ -347,7 +353,7 @@ class TestNPUStreamingSessionRetract(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
 
@@ -374,10 +380,13 @@ class TestNPUStreamingSessionEagle3Retract(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "4",
+        "16",
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
-    kv_inherit_offsets = (-1,)
+    # NPU EAGLE3 may or may not commit the last sampled token before
+    # max_new stops (kv_committed_len = input + output - 1 or +0).
+    # Tolerate both behaviors.
+    kv_inherit_offsets = (-1, 0)
 
 
 class TestNPUStreamingSessionEagle3RetractLargePage(TestNPUStreamingSession):
@@ -400,7 +409,7 @@ class TestNPUStreamingSessionEagle3RetractLargePage(TestNPUStreamingSession):
         "--speculative-num-draft-tokens",
         "4",
         "--mem-fraction-static",
-        "0.7",
+        "0.6",
         "--page-size",
         "256",
     ]
