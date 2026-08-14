@@ -42,6 +42,8 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     "--tool-call-parser",
     "minimax-m2",
     "--enable-prefill-delayer",
+    "--prefill-delayer-max-delay-passes",
+    64,
     "--prefill-max-requests",
     10,
     "--chunked-prefill-size",
