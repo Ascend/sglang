@@ -19,7 +19,7 @@ from openai import AsyncOpenAI
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     EVALSCOPE,
-    TestAscendAccuracyTestCaseBase,
+    TestNpuAccuracyTestCaseBase,
     run_evalscope,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -449,7 +449,7 @@ class TestAscendPerformanceKvtcTestCaseBase(
 
 
 class TestAscendAccuracyKvtcTestCaseBase(
-    _AscendKvtcTestCaseBase, TestAscendAccuracyTestCaseBase
+    _AscendKvtcTestCaseBase, TestNpuAccuracyTestCaseBase
 ):
     pass
 
