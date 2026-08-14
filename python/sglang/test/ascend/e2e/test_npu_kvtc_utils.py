@@ -23,7 +23,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     run_evalscope,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    TestAscendPerformanceTestCaseBase,
+    TestNpuPerformanceTestCaseBase,
     run_aisbench,
 )
 from sglang.test.kits.lm_eval_kit import LMEvalMixin
@@ -443,7 +443,7 @@ class _AscendKvtcTestCaseBase:
 
 
 class TestAscendPerformanceKvtcTestCaseBase(
-    _AscendKvtcTestCaseBase, TestAscendPerformanceTestCaseBase
+    _AscendKvtcTestCaseBase, TestNpuPerformanceTestCaseBase
 ):
     pass
 
@@ -455,7 +455,7 @@ class TestAscendAccuracyKvtcTestCaseBase(
 
 
 class TestAscendPerformanceKvtcTestCaseLME(
-    _AscendKvtcTestCaseBase, TestAscendPerformanceTestCaseBase
+    _AscendKvtcTestCaseBase, TestNpuPerformanceTestCaseBase
 ):
     model = None
     batch_size = 16
