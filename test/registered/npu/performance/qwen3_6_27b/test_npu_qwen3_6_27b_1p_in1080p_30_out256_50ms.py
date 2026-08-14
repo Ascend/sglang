@@ -27,7 +27,7 @@ QWEN3_6_27B_1080P_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
     "SGLANG_PREFILL_DELAYER_DEBUG_LOG": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE": "64",
+    "SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE": "128",
 }
 
 QWEN3_6_27B_1080P_OTHER_ARGS = [
@@ -72,7 +72,7 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     "--prefill-delayer-max-delay-ms",
     5500,
     "--prefill-delayer-max-delay-passes",
-    128,
+    300,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
