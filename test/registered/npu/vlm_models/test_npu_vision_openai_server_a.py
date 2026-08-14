@@ -59,7 +59,7 @@ class TestQwen3VLServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.9",
+        "0.8",
         "--tp-size",
         "2",
         "--mm-attention-backend",
