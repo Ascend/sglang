@@ -1,8 +1,6 @@
 import io
 import logging
-import os
 import unittest
-from contextlib import contextmanager
 
 import requests
 
@@ -28,27 +26,6 @@ logger = logging.getLogger(__name__)
 # Register CI task for NPU environment
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
-# ===================== Common Env Var Management Functions =====================
-TEST_RELATED_ENVS = ["SGLANG_IS_IN_CI", "SGLANG_TEST_STUCK_DETOKENIZER"]
-
-
-@contextmanager
-def temporary_test_envs(ci_mode: bool = None, stuck_detokenizer: int = None):
-    """Manage only test-related environment variables, auto save/restore"""
-    original_values = {var: os.environ.get(var) for var in TEST_RELATED_ENVS}
-    try:
-        if ci_mode is not None:
-            os.environ["SGLANG_IS_IN_CI"] = "True" if ci_mode else "False"
-        if stuck_detokenizer is not None:
-            os.environ["SGLANG_TEST_STUCK_DETOKENIZER"] = str(stuck_detokenizer)
-        yield
-    finally:
-        for var_name, original_val in original_values.items():
-            if original_val is None:
-                os.environ.pop(var_name, None)
-            else:
-                os.environ[var_name] = original_val
-
 
 class BaseTestDetokenizerWatchdog:
     """Testcase: Ensure that soft-watchdog-timeout is set by default in the CI environment, and in non-CI environments it is not set by default and needs to be set manually.
@@ -68,6 +45,14 @@ class BaseTestDetokenizerWatchdog:
 
     @classmethod
     def setUpClass(cls):
+        # Set CI-mode env for the whole class lifetime: the server reads it at
+        # launch, and CustomTestCase reads is_in_ci() during test methods to
+        # pick the retry count -- both must see the scenario value.
+        if cls.ci_mode is not None:
+            cls._ci_env_ctx = envs.SGLANG_IS_IN_CI.override(cls.ci_mode)
+            cls._ci_env_ctx.__enter__()
+            cls.addClassCleanup(cls._ci_env_ctx.__exit__, None, None, None)
+
         cls.stdout = io.StringIO()
         cls.stderr = io.StringIO()
         cls.process = None
@@ -194,14 +179,6 @@ class TestNonCIWithoutSoftWatchdog(BaseTestDetokenizerWatchdog, CustomTestCase):
     set_soft_watchdog = False
 
 
-# ===================== Test Execution Function =====================
-def run_test_scenario(test_case_cls):
-    """Run single test scenario, auto manage environment variables"""
-    with temporary_test_envs(ci_mode=test_case_cls.ci_mode):
-        suite = unittest.TestLoader().loadTestsFromTestCase(test_case_cls)
-        unittest.TextTestRunner(verbosity=2).run(suite)
-
-
 # ===================== Watchdog Tests =====================
 class BaseTestSoftWatchdog:
     """Testcase: Verify that soft-watchdog-timeout triggers correctly when Scheduler init is stuck.
@@ -265,34 +242,23 @@ class TestSoftWatchdogSchedulerInit(BaseTestSoftWatchdog, CustomTestCase):
     expected_message = "Scheduler watchdog timeout"
 
 
-# ===================== Main Function (Execute Four Scenarios) =====================
+# ===================== Main Function =====================
+def load_tests(loader, standard_tests, pattern):
+    """Pin the original scenario order (unittest sorts by class name by default)."""
+    suite = unittest.TestSuite()
+    for cls in (
+        TestCIWithoutSoftWatchdog,
+        TestCIWithSoftWatchdog,
+        TestNonCIWithSoftWatchdog,
+        TestNonCIWithoutSoftWatchdog,
+        TestSoftWatchdogTokenizer,
+        TestSoftWatchdogSchedulerInit,
+    ):
+        suite.addTests(loader.loadTestsFromTestCase(cls))
+    return suite
+
+
 if __name__ == "__main__":
-    # Scenario 1: CI + no soft-watchdog
-    logger.info("=== Scenario 1: CI Environment - No soft-watchdog ===")
-    run_test_scenario(TestCIWithoutSoftWatchdog)
-
-    # Scenario 2: CI + set soft-watchdog(20s) → block 30s
-    logger.info(
-        "\n=== Scenario 2: CI Environment - Set soft-watchdog(20s), block 30s ==="
-    )
-    run_test_scenario(TestCIWithSoftWatchdog)
-
-    # Scenario 3: Non-CI + set soft-watchdog(20s) → block 30s
-    logger.info(
-        "\n=== Scenario 3: Non-CI Environment - Set soft-watchdog(20s), block 30s ==="
-    )
-    run_test_scenario(TestNonCIWithSoftWatchdog)
-
-    # Scenario 4: Non-CI + no soft-watchdog (verify AssertionError)
-    logger.info(
-        "\n=== Scenario 4: Non-CI Environment - No soft-watchdog (Verify AssertionError) ==="
-    )
-    run_test_scenario(TestNonCIWithoutSoftWatchdog)
-
-    logger.info("\n=== Scenario 5: Tokenizer soft-watchdog ===")
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestSoftWatchdogTokenizer)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
-    logger.info("\n=== Scenario 6: SchedulerInit soft-watchdog ===")
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestSoftWatchdogSchedulerInit)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    # CI executes this file as `python3 file.py -f`; run every TestCase subclass
+    # so that test failures propagate as a non-zero exit code.
+    unittest.main()
