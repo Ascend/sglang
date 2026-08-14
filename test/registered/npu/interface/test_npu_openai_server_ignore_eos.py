@@ -41,6 +41,10 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
         )
         cls.base_url += "/v1"
         cls.tokenizer = get_tokenizer(cls.model)
+        # The default branch forces the EOS token so the natural-stop
+        # assertion is deterministic instead of betting on the model
+        # ending its "Count from 1 to 20." answer within max_tokens.
+        cls.eot_id = cls.tokenizer.eos_token_id
 
     @classmethod
     def tearDownClass(cls):
@@ -64,6 +68,7 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             temperature=0,
             max_tokens=max_tokens,
             extra_body={"ignore_eos": False},
+            logit_bias={str(self.eot_id): 100},
         )
 
         response_ignore_eos = client.chat.completions.create(

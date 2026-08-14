@@ -379,7 +379,9 @@ class TestOpenAIServerWithoutHiddenStates(CustomTestCase):
                 extra_body={"return_hidden_states": True},
             )
         self.assertIn(
-            "The server is not configured to return the hidden states",
+            # Product message: "The server is not configured to return hidden
+            # states. Please set --return-hidden-states-mode ..." (no "the").
+            "not configured to return hidden states",
             str(ctx.exception),
         )
 

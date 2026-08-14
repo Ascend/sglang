@@ -437,12 +437,16 @@ class TestChatCompletionsInterface(CustomTestCase):
         self.assertNotEqual(content1, content2)
 
     def test_stop_token_ids(self):
+        # Force token 13 so the assertion does not depend on the model
+        # emitting it before the natural EOS: with the bias it is the first
+        # sampled token and the id-based finish fires on it.
         response = requests.post(
             f"{self.base_url}/v1/chat/completions",
             json={
                 "model": self.model,
                 "messages": [{"role": "user", "content": "Hello"}],
                 "stop_token_ids": [1, 13],
+                "logit_bias": {"13": 100},
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
