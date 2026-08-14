@@ -115,7 +115,9 @@ class TestChatRid(CustomTestCase):
         while time.time() < deadline:
             try:
                 loads = requests.get(
-                    f"{self.base_url}/loads?include=core", timeout=5
+                    f"{self.base_url}/loads?include=core",
+                    timeout=5,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
                 ).json()
                 total = sum(
                     rank.get("num_running_reqs", 0) for rank in loads.get("loads", [])
