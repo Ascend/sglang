@@ -138,11 +138,10 @@ class TestCompletionSampling(CustomTestCase):
 
 
 @unittest.skip(
-    "NPU deterministic inference requires the batch_invariant_ops package "
-    "that registers torch.ops.batch_invariant_ops.npu_* kernels; it is "
-    "distributed via Huawei-internal channels and is unavailable in the "
-    "public CI image (ModuleNotFoundError crashes the scheduler). Re-enable "
-    "once the CI image ships the package."
+    "The batch_invariant_ops package (registers torch.ops.batch_invariant_ops."
+    "npu_* kernels) is an RL-requirement operator that is not open-sourced "
+    "and unavailable in the public CI image; the seed path requires manual "
+    "testing. Re-enable once the package is available in CI."
 )
 class TestCompletionSeedDeterministic(CustomTestCase):
     """Testcase: seed on /v1/completions under --enable-deterministic-inference.
