@@ -1,13 +1,13 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#      - testcases
-#      - testcases-260813
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - main
+      - testcases
+      - testcases-260813
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -29,12 +29,12 @@ on:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260813'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
         type: string
-        default: ''
+        default: 'true'
       test_scope:
         description: 'Test scope: all / func / poc / no_nightly / poc_no_nightly'
         required: true
@@ -45,7 +45,7 @@ on:
           - poc
           - no_nightly
           - poc_no_nightly
-        default: 'poc'
+        default: 'all'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
