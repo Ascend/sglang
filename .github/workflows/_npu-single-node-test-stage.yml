@@ -187,6 +187,9 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           curl -o /tmp/test.jsonl -L https://gh-proxy.test.osinfra.cn/https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl
 
+      - name: Install suite runner dependencies
+        run: python -m pip install tabulate -q
+
       - name: Run test
         timeout-minutes: 300
         env:
@@ -292,7 +295,7 @@ jobs:
 
           echo "## ${tc_name}  ${status_icon} ${test_status}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null || echo 0)
+          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null || true)
           if [ "${metric_count}" -gt 0 ]; then
             echo "| Metric | Value | Pass |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|------|" >> $GITHUB_STEP_SUMMARY
