@@ -674,10 +674,12 @@ class TestStartProfile(CustomTestCase):
         envs.SGLANG_TORCH_PROFILER_DIR.set(OUTPUT_DIR)
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        # Profiling is always available: SchedulerProfilerManager is mounted
+        # unconditionally and /start_profile starts the torch profiler on
+        # demand — the legacy --enable-torch-profiler flag no longer exists.
         cls.other_args = [
             "--attention-backend",
             "ascend",
-            "--enable-torch-profiler",
         ]
         cls.process = popen_launch_server(
             cls.model,

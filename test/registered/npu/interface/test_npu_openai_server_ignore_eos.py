@@ -55,6 +55,11 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
 
         max_tokens = 200
 
+        # Qwen3-0.6B is a thinking model: the round-9 CI echo showed that the
+        # natural "Count from 1 to 20." triggers a >200-token <think> chain,
+        # so natural EOS never arrives within max_tokens. Suppress thinking
+        # so the model answers directly — the target here is the ignore_eos
+        # server flag, not thinking behavior.
         response_default = client.chat.completions.create(
             model=self.model,
             messages=[
@@ -63,7 +68,10 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             ],
             temperature=0,
             max_tokens=max_tokens,
-            extra_body={"ignore_eos": False},
+            extra_body={
+                "ignore_eos": False,
+                "chat_template_kwargs": {"enable_thinking": False},
+            },
         )
 
         response_ignore_eos = client.chat.completions.create(
@@ -74,7 +82,10 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             ],
             temperature=0,
             max_tokens=max_tokens,
-            extra_body={"ignore_eos": True},
+            extra_body={
+                "ignore_eos": True,
+                "chat_template_kwargs": {"enable_thinking": False},
+            },
         )
 
         default_tokens = response_default.usage.completion_tokens

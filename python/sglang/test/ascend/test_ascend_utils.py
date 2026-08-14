@@ -134,8 +134,11 @@ LLAMA_3_2_1B_INSTRUCT_TOOL_FAST_LORA_WEIGHTS_PATH = os.path.join(
 VALADAPT_LLAMA_3_1_8B_CHINESE_LORA_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "faridlazuarda/valadapt-llama-3.1-8B-it-chinese"
 )
-CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH = os.path.join(
-    MODEL_WEIGHTS_DIR, "philschmid/code-llama-3-1-8b-text-to-sql-lora"
+# Only present in the CI image's HuggingFace hub cache (ModelScope layout
+# lacks this adapter); pinned to the exact snapshot shipped in the image.
+CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH = (
+    "/root/.cache/huggingface/hub/models--philschmid--code-llama-3-1-8b-text-to-sql-lora/"
+    "snapshots/141fc3a09386a8baf0d7495c247ae2d1a565f69f"
 )
 LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "nvidia/llama-3.1-nemoguard-8b-topic-control"
