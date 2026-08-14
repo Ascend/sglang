@@ -66,7 +66,7 @@ class TestCompletionStopFamily(CustomTestCase):
     def _complete(self, **kwargs):
         return self.client.completions.create(
             model=self.model,
-            prompt=STORY_PROMPT,
+            prompt=kwargs.pop("prompt", STORY_PROMPT),
             temperature=0,
             **kwargs,
         )
@@ -238,14 +238,14 @@ class TestCompletionStopFamily(CustomTestCase):
         self.assertIn(response.choices[0].finish_reason, ("stop", "length"))
 
     def test_ignore_eos_stop_string_still_works(self):
-        # Force the newline token into the output: under ignore_eos the
-        # token-based finish is disabled, so only the string matcher can
-        # stop the request — the assertion directly probes that path.
+        # The structured prompt constrains the newline to appear inside
+        # normal output; under ignore_eos only the string matcher can
+        # stop the request — the assertion probes that path directly.
         response = self._complete(
+            prompt="List three colors, one per line.",
             stop="\n",
             max_tokens=600,
             extra_body={"ignore_eos": True},
-            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         echo = response.model_dump_json()
