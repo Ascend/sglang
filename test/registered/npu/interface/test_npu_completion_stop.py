@@ -3,6 +3,7 @@ import unittest
 import openai
 
 from sglang.srt.utils import kill_process_tree
+from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -49,6 +50,15 @@ class TestCompletionStopFamily(CustomTestCase):
         cls.base_url += "/v1"
         cls.client = openai.Client(api_key=cls.api_key, base_url=cls.base_url)
 
+        # Token ids for the strings the stop tests force into the output:
+        # temperature-0 greedy trajectories differ across platforms, so a
+        # test that waits for the model to emit the stop string by chance
+        # cannot distinguish a product bug from a missed trajectory.
+        cls.tokenizer = get_tokenizer(cls.model)
+        cls.newline_id = cls.tokenizer.encode("\n", add_special_tokens=False)[-1]
+        cls.period_id = cls.tokenizer.encode(".", add_special_tokens=False)[-1]
+        cls.and_id = cls.tokenizer.encode(" and", add_special_tokens=False)[-1]
+
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
@@ -64,13 +74,22 @@ class TestCompletionStopFamily(CustomTestCase):
     # --- stop ---
 
     def test_stop_list(self):
-        response = self._complete(stop=["END", "."], max_tokens=200)
+        response = self._complete(
+            stop=["END", "."],
+            max_tokens=200,
+            logit_bias={str(self.period_id): 100},
+        )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
         self.assertIn(choice.matched_stop, ("END", "."))
 
     def test_stop_stream(self):
-        stream = self._complete(stop="\n", max_tokens=200, stream=True)
+        stream = self._complete(
+            stop="\n",
+            max_tokens=200,
+            stream=True,
+            logit_bias={str(self.newline_id): 100},
+        )
         finish_reason = None
         matched = None
         for chunk in stream:
@@ -81,7 +100,12 @@ class TestCompletionStopFamily(CustomTestCase):
         self.assertEqual(matched, "\n")
 
     def test_stop_n2(self):
-        response = self._complete(stop="\n", max_tokens=200, n=2)
+        response = self._complete(
+            stop="\n",
+            max_tokens=200,
+            n=2,
+            logit_bias={str(self.newline_id): 100},
+        )
         self.assertEqual(len(response.choices), 2)
         for choice in response.choices:
             self.assertEqual(choice.finish_reason, "stop")
@@ -90,8 +114,13 @@ class TestCompletionStopFamily(CustomTestCase):
     # --- stop_token_ids ---
 
     def test_stop_token_ids_stream(self):
+        # The token must be emitted for the id-based finish to fire: force
+        # it instead of relying on the greedy trajectory to produce it.
         stream = self._complete(
-            max_tokens=200, stream=True, extra_body={"stop_token_ids": [13]}
+            max_tokens=200,
+            stream=True,
+            extra_body={"stop_token_ids": [self.newline_id]},
+            logit_bias={str(self.newline_id): 100},
         )
         finish_reason = None
         matched = None
@@ -100,21 +129,26 @@ class TestCompletionStopFamily(CustomTestCase):
                 finish_reason = chunk.choices[0].finish_reason
                 matched = chunk.choices[0].matched_stop
         self.assertEqual(finish_reason, "stop")
-        self.assertEqual(matched, 13)
+        self.assertEqual(matched, self.newline_id)
 
     def test_stop_token_ids_n2(self):
         response = self._complete(
-            max_tokens=200, n=2, extra_body={"stop_token_ids": [13]}
+            max_tokens=200,
+            n=2,
+            extra_body={"stop_token_ids": [self.newline_id]},
+            logit_bias={str(self.newline_id): 100},
         )
         for choice in response.choices:
             self.assertEqual(choice.finish_reason, "stop")
-            self.assertEqual(choice.matched_stop, 13)
+            self.assertEqual(choice.matched_stop, self.newline_id)
 
     # --- stop_regex ---
 
     def test_stop_regex_list(self):
         response = self._complete(
-            max_tokens=200, extra_body={"stop_regex": ["\n", "FINISHED"]}
+            max_tokens=200,
+            extra_body={"stop_regex": ["\n", "FINISHED"]},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -123,7 +157,10 @@ class TestCompletionStopFamily(CustomTestCase):
 
     def test_stop_regex_stream(self):
         stream = self._complete(
-            max_tokens=200, stream=True, extra_body={"stop_regex": "and|or"}
+            max_tokens=200,
+            stream=True,
+            extra_body={"stop_regex": "and|or"},
+            logit_bias={str(self.and_id): 100},
         )
         finish_reason = None
         for chunk in stream:
@@ -135,7 +172,10 @@ class TestCompletionStopFamily(CustomTestCase):
 
     def test_no_stop_trim_false(self):
         response = self._complete(
-            stop="\n", max_tokens=200, extra_body={"no_stop_trim": False}
+            stop="\n",
+            max_tokens=200,
+            extra_body={"no_stop_trim": False},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -144,7 +184,10 @@ class TestCompletionStopFamily(CustomTestCase):
 
     def test_no_stop_trim_true(self):
         response = self._complete(
-            stop="\n", max_tokens=200, extra_body={"no_stop_trim": True}
+            stop="\n",
+            max_tokens=200,
+            extra_body={"no_stop_trim": True},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -153,7 +196,11 @@ class TestCompletionStopFamily(CustomTestCase):
 
     def test_no_stop_trim_stream(self):
         stream = self._complete(
-            stop="\n", max_tokens=200, stream=True, extra_body={"no_stop_trim": True}
+            stop="\n",
+            max_tokens=200,
+            stream=True,
+            extra_body={"no_stop_trim": True},
+            logit_bias={str(self.newline_id): 100},
         )
         text = "".join(chunk.choices[0].text for chunk in stream if chunk.choices)
         self.assertTrue(text.endswith("\n"))
@@ -177,10 +224,14 @@ class TestCompletionStopFamily(CustomTestCase):
         self.assertIn(response.choices[0].finish_reason, ("stop", "length"))
 
     def test_ignore_eos_stop_string_still_works(self):
-        # The "long paragraph" prompt's first newline lands ~token 250; the
-        # length cap must be large enough for the stop string to be reachable.
+        # Force the newline token into the output: under ignore_eos the
+        # token-based finish is disabled, so only the string matcher can
+        # stop the request — the assertion directly probes that path.
         response = self._complete(
-            stop="\n", max_tokens=600, extra_body={"ignore_eos": True}
+            stop="\n",
+            max_tokens=600,
+            extra_body={"ignore_eos": True},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -189,7 +240,7 @@ class TestCompletionStopFamily(CustomTestCase):
     def test_ignore_eos_stop_token_ids_ignored(self):
         response = self._complete(
             max_tokens=50,
-            extra_body={"ignore_eos": True, "stop_token_ids": [13]},
+            extra_body={"ignore_eos": True, "stop_token_ids": [self.newline_id]},
         )
         self.assertEqual(response.usage.completion_tokens, 50)
         self.assertEqual(response.choices[0].finish_reason, "length")
@@ -201,8 +252,14 @@ class TestCompletionStopFamily(CustomTestCase):
         self.assertGreaterEqual(response.usage.completion_tokens, 5)
 
     def test_min_tokens_stop_not_protected(self):
+        # Forced newline at token 1: if min_tokens gated the string matcher,
+        # the request would run to >= 100 tokens; stopping at once proves
+        # stop strings are not gated.
         response = self._complete(
-            stop="\n", max_tokens=200, extra_body={"min_tokens": 100}
+            stop="\n",
+            max_tokens=200,
+            extra_body={"min_tokens": 100},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")

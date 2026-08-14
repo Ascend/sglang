@@ -69,12 +69,17 @@ class TestEmbeddingOverrides(CustomTestCase):
         return vec
 
     def _embed_with_override(self, input_ids, override):
+        # embed_overrides is shaped [num_inputs][num_overrides][hidden_size]:
+        # each batch item carries a LIST of override vectors. A flat
+        # `[vector]` is rejected by pydantic before any server-side logic
+        # runs (one list_type error per float), which silently skipped the
+        # semantic validation this suite exists to exercise.
         return self.client.embeddings.create(
             model=self.model,
             input=input_ids,
             extra_body={
                 "embed_override_token_id": self.placeholder,
-                "embed_overrides": [override],
+                "embed_overrides": [[override]],
             },
         )
 

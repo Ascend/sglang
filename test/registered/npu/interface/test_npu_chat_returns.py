@@ -65,8 +65,10 @@ class TestChatReturnFields(CustomTestCase):
         result = self.tokenizer.apply_chat_template(
             MESSAGES, add_generation_prompt=True
         )
-        # Newer transformers return a BatchEncoding dict; older ones a list.
-        if isinstance(result, dict):
+        # Newer transformers return a BatchEncoding (a UserDict, NOT a dict
+        # subclass, so an isinstance(..., dict) check would miss it); older
+        # ones a plain list of ids.
+        if not isinstance(result, (list, tuple)):
             result = result["input_ids"]
         return result
 

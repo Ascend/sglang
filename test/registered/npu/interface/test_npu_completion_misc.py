@@ -119,9 +119,16 @@ class TestCompletionMisc(CustomTestCase):
 
         response = self._post(self._payload(rid="dup1"))
         self.assertEqual(response.status_code, 400, response.text)
-        self.assertIn(
-            "Duplicate request ID detected", response.json()["error"]["message"]
+        body = response.json()
+        # /v1/completions error bodies serialize the message under a
+        # top-level key ('message' for the ValueError path; 'error'/'detail'
+        # on other paths) — read format-agnostically, keep the content check.
+        message = (
+            body.get("error", {}).get("message", "")
+            or body.get("detail", "")
+            or body.get("message", "")
         )
+        self.assertIn("Duplicate request ID detected", message)
         thread.join()
         self.assertEqual(result["status"], 200)
 

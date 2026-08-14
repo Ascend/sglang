@@ -157,6 +157,18 @@ class TestCompletionCacheKeys(CustomTestCase):
             time.sleep(1)
         return 0
 
+    def _cached_tokens_once(self, payload):
+        """Single-shot read for isolation assertions.
+
+        Do NOT poll here: each poll re-posts the payload, which inserts its
+        prefix into the radix cache under the new extra_key — the next poll
+        then reports a hit and the `== 0` assertion can never pass. A fresh
+        key's first request cannot hit by definition, so one read is both
+        sufficient and correct.
+        """
+        details = self._post(payload)["usage"].get("prompt_tokens_details")
+        return details.get("cached_tokens", 0) if details else 0
+
     def test_return_cached_tokens_details(self):
         payload = self._payload(return_cached_tokens_details=True)
         first = self._post(payload)
@@ -176,7 +188,7 @@ class TestCompletionCacheKeys(CustomTestCase):
         self.assertGreater(self._cached_tokens(warm), 0)
 
         different = self._payload(cache_salt=f"s1-{tag}", extra_key=f"b-{tag}")
-        self.assertEqual(self._cached_tokens(different), 0)
+        self.assertEqual(self._cached_tokens_once(different), 0)
 
     def test_cache_salt_isolation(self):
         tag = uuid.uuid4().hex[:8]
@@ -185,7 +197,7 @@ class TestCompletionCacheKeys(CustomTestCase):
         self.assertGreater(self._cached_tokens(warm), 0)
 
         different = self._payload(cache_salt=f"b-{tag}", extra_key=f"e1-{tag}")
-        self.assertEqual(self._cached_tokens(different), 0)
+        self.assertEqual(self._cached_tokens_once(different), 0)
 
 
 class TestCompletionSessionCache(CustomTestCase):

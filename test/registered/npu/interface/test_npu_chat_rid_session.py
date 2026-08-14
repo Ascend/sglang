@@ -207,6 +207,18 @@ class TestChatCacheKeyIsolation(CustomTestCase):
             time.sleep(1)
         return 0
 
+    def _cached_tokens_once(self, payload):
+        """Single-shot read for isolation assertions.
+
+        Do NOT poll here: each poll re-posts the payload, which inserts its
+        prefix into the radix cache under the new extra_key — the next poll
+        then reports a hit and the `== 0` assertion can never pass. A fresh
+        key's first request cannot hit by definition, so one read is both
+        sufficient and correct.
+        """
+        details = self._post(payload)["usage"].get("prompt_tokens_details")
+        return details.get("cached_tokens", 0) if details else 0
+
     def test_extra_key_isolation(self):
         # Unique keys per run: a retry re-posts the same payloads, and any
         # cache entry from a failed attempt would otherwise make the
@@ -219,7 +231,7 @@ class TestChatCacheKeyIsolation(CustomTestCase):
         # Different extra_key → cache isolation.
         different = self._prompt_payload(cache_salt=f"s1-{tag}", extra_key=f"b-{tag}")
         self.assertEqual(
-            self._cached_tokens(different),
+            self._cached_tokens_once(different),
             0,
             "different extra_key should not hit the cache",
         )
@@ -233,7 +245,7 @@ class TestChatCacheKeyIsolation(CustomTestCase):
         # Different cache_salt → cache isolation.
         different = self._prompt_payload(cache_salt=f"b-{tag}", extra_key=f"e1-{tag}")
         self.assertEqual(
-            self._cached_tokens(different),
+            self._cached_tokens_once(different),
             0,
             "different cache_salt should not hit the cache",
         )

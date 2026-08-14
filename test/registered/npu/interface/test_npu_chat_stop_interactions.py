@@ -3,6 +3,7 @@ import unittest
 import openai
 
 from sglang.srt.utils import kill_process_tree
+from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -49,6 +50,16 @@ class TestChatStopInteractions(CustomTestCase):
         cls.base_url += "/v1"
         cls.client = openai.Client(api_key=cls.api_key, base_url=cls.base_url)
 
+        # Token ids for the strings the stop tests force into the output:
+        # temperature-0 greedy trajectories differ across platforms, so a
+        # test that waits for the model to emit the stop string by chance
+        # cannot distinguish a product bug from a missed trajectory.
+        cls.tokenizer = get_tokenizer(cls.model)
+        cls.newline_id = cls.tokenizer.encode("\n", add_special_tokens=False)[-1]
+        cls.eot_id = cls.tokenizer.encode(
+            "<|eot_id|>", add_special_tokens=False
+        )[-1]
+
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
@@ -67,7 +78,10 @@ class TestChatStopInteractions(CustomTestCase):
     def test_no_stop_trim_false(self):
         """no_stop_trim=False (default): matched stop string is trimmed from output."""
         response = self._chat(
-            max_tokens=200, stop="\n", extra_body={"no_stop_trim": False}
+            max_tokens=200,
+            stop="\n",
+            extra_body={"no_stop_trim": False},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -80,7 +94,10 @@ class TestChatStopInteractions(CustomTestCase):
     def test_no_stop_trim_true(self):
         """no_stop_trim=True: matched stop string is kept in output."""
         response = self._chat(
-            max_tokens=200, stop="\n", extra_body={"no_stop_trim": True}
+            max_tokens=200,
+            stop="\n",
+            extra_body={"no_stop_trim": True},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -97,6 +114,7 @@ class TestChatStopInteractions(CustomTestCase):
             stop="\n",
             stream=True,
             extra_body={"no_stop_trim": True},
+            logit_bias={str(self.newline_id): 100},
         )
         text = ""
         finish_reason = None
@@ -115,6 +133,7 @@ class TestChatStopInteractions(CustomTestCase):
             max_tokens=600,
             stop="\n",
             extra_body={"min_tokens": 500},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -129,10 +148,13 @@ class TestChatStopInteractions(CustomTestCase):
 
     def test_ignore_eos_stop_string_still_works(self):
         """ignore_eos only skips token-based finish: user stop strings still fire."""
+        # Force the newline so the string matcher is deterministically the
+        # only finish path under ignore_eos.
         response = self._chat(
             max_tokens=600,
             stop="\n",
             extra_body={"ignore_eos": True},
+            logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -150,11 +172,16 @@ class TestChatStopInteractions(CustomTestCase):
         self.assertEqual(response.choices[0].finish_reason, "length")
 
         # User stop kept: explicitly re-supplying the template stop string
-        # stops the request via the string check.
+        # stops the request via the string check. Force the eot token with
+        # logit_bias so the string deterministically appears in the output —
+        # under ignore_eos the token-based finish is skipped, so a stop here
+        # proves the user-supplied string matcher (including special-token
+        # text) still fires.
         response = self._chat(
             max_tokens=600,
             stop="<|eot_id|>",
             extra_body={"ignore_eos": True},
+            logit_bias={str(self.eot_id): 100},
         )
         choice = response.choices[0]
         self.assertEqual(choice.finish_reason, "stop")
@@ -166,7 +193,7 @@ class TestChatStopInteractions(CustomTestCase):
             max_tokens=50,
             extra_body={
                 "ignore_eos": True,
-                "stop_token_ids": [13],
+                "stop_token_ids": [self.newline_id],
             },
         )
         choice = response.choices[0]
@@ -175,7 +202,12 @@ class TestChatStopInteractions(CustomTestCase):
 
     def test_stream_stop(self):
         """Stream + stop: last chunk carries finish_reason and matched_stop."""
-        stream = self._chat(max_tokens=200, stop="\n", stream=True)
+        stream = self._chat(
+            max_tokens=200,
+            stop="\n",
+            stream=True,
+            logit_bias={str(self.newline_id): 100},
+        )
         finish_reason = None
         for chunk in stream:
             if chunk.choices and chunk.choices[0].finish_reason:
@@ -184,7 +216,12 @@ class TestChatStopInteractions(CustomTestCase):
 
     def test_n2_stop(self):
         """n=2 + stop: each choice independently matches the stop string."""
-        response = self._chat(max_tokens=200, stop="\n", n=2)
+        response = self._chat(
+            max_tokens=200,
+            stop="\n",
+            n=2,
+            logit_bias={str(self.newline_id): 100},
+        )
         self.assertEqual(len(response.choices), 2)
         for choice in response.choices:
             self.assertEqual(choice.finish_reason, "stop")
