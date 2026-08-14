@@ -65,7 +65,7 @@ jobs:
           platforms: linux/arm64,linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          push: ${{ github.repository == 'Ascend/sglang' && github.event_name != 'pull_request' }}
+          push: ${{ github.repository == 'Ascend/sglang' && 'type=registry,ocdiatypei-mes=false' || '' }}
           provenance: false
           sbom: false
           build-args: |
