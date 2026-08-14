@@ -246,17 +246,6 @@ PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY = """\
                         **wait_info,
                     )
 """
-PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY = """\
-                else:
-                    next_state = prev_state or _State()
-                    next_state = next_state.bump_delayed_count()
-                    return _NegotiateOutput(
-                        next_state=next_state,
-                        output_allow=False,
-                        output_reason="delay",
-                        **debug_info,
-                    )
-"""
 
 SCHEDULER_IMPORT_OLD = """\
 from sglang.srt.managers.prefill_delayer import (
@@ -318,26 +307,6 @@ def _replace_once(source: str, old: str, new: str, path: Path) -> str:
     return source.replace(old, new, 1)
 
 
-def _remove_all_path_max_delay_passes(source: str, path: Path) -> tuple[str, bool]:
-    """Keep max-delay-passes on mixed only for this targeted NPU experiment."""
-    if PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY in source:
-        return (
-            _replace_once(
-                source,
-                PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY,
-                PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY,
-                path,
-            ),
-            True,
-        )
-    if PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY in source:
-        return source, False
-    raise RuntimeError(
-        f"Could not identify the all-path delay block in {path}; refusing to "
-        "run an experiment with ambiguous max-delay-passes behavior"
-    )
-
-
 def apply_fix(runtime_python_root: Path) -> None:
     environ_path = runtime_python_root / "sglang/srt/environ.py"
     prefill_delayer_path = (
@@ -348,10 +317,6 @@ def apply_fix(runtime_python_root: Path) -> None:
     environ_source = environ_path.read_text()
     prefill_delayer_source = prefill_delayer_path.read_text()
     scheduler_source = scheduler_path.read_text()
-
-    prefill_delayer_source, removed_all_path_cap = (
-        _remove_all_path_max_delay_passes(prefill_delayer_source, prefill_delayer_path)
-    )
 
     already_applied = (
         ENVIRON_WINDOW_SIZE_FIELD in environ_source
@@ -364,19 +329,16 @@ def apply_fix(runtime_python_root: Path) -> None:
         and SCHEDULER_FINALIZE_NEW in scheduler_source
         and SCHEDULER_ADMISSION_OLD not in scheduler_source
         and SCHEDULER_PASS_DECAY not in scheduler_source
-        and PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY in prefill_delayer_source
-        and PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY not in prefill_delayer_source
+        and PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY in prefill_delayer_source
     )
+    if PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY not in prefill_delayer_source:
+        raise RuntimeError(
+            "The runtime image does not contain the all-path max-delay-passes "
+            "cap required by PR 34284"
+        )
+
     if already_applied:
-        if removed_all_path_cap:
-            prefill_delayer_path.write_text(prefill_delayer_source)
-            print(
-                "Removed the all-path max-delay-passes cap; recent-attempt "
-                "high-watermark fix was already present",
-                flush=True,
-            )
-        else:
-            print("Prefill high-watermark fix is already present", flush=True)
+        print("Prefill high-watermark fix is already present", flush=True)
         return
 
     environ_source = _replace_once(
