@@ -21,7 +21,7 @@ on:
         required: true
         type: string
         description: image for pods
-        default: "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3"
+        default: "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-main"
       install_sglang_deps:
         required: false
         type: boolean
@@ -246,12 +246,26 @@ jobs:
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
 
+          echo "Apply the PR 34284 prefill high-watermark fix to the daily image"
+          ${PYTHON_FOR_SGLANG} \
+            scripts/ci/npu/apply_prefill_high_watermark_fix.py \
+            ${sglang_pkg_path}
+          export PYTHONPATH=${sglang_pkg_path}:$PYTHONPATH
+
+          echo "Verify the patched tracker and all-path max-delay behavior"
+          ${PYTHON_FOR_SGLANG} -u \
+            test/registered/unit/managers/test_prefill_delayer_high_watermark.py
+          ${PYTHON_FOR_SGLANG} -u \
+            test/registered/scheduler/test_prefill_delayer.py \
+            TestPrefillDelayerNegotiate.test_negotiate
+
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
           # Set environment of cann
+          current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${tc_name}/${HOSTNAME}"
           rm -rf ${log_path}
           mkdir -p ${log_path}
