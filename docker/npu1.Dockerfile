@@ -70,16 +70,6 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Install Rust toolchain
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-RUN curl --proto '=https' --tlsv1.2 \
-        --retry 3 \
-        --retry-delay 2 \
-        -sSf https://sh.rustup.rs \
-        | sh -s -- -y --no-modify-path --profile minimal \
-    && rustc --version \
-    && cargo --version
 
 ### Install MemFabric
 RUN ${PIP_INSTALL} memfabric-hybrid==1.0.8
@@ -110,7 +100,7 @@ RUN git clone https://github.com/sgl-project/sglang --branch $SGLANG_TAG /sgl-wo
 
 # Install Deep-ep
 # pin wheel to 0.45.1 ref: https://github.com/pypa/wheel/issues/662
-RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
+RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil tabulate\
     && mkdir sgl-kernel-npu \
     && cd sgl-kernel-npu \
     && wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-py311-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
