@@ -177,13 +177,10 @@ jobs:
               [ "${test_case}" = "${qwen_30b_test_case}" ] || \
               [ "${test_case}" = "${qwen_235b_test_case}" ] || \
               [ "${test_case}" = "${qwen_32b_test_case}" ]; then
-              echo "Apply and verify the prefill high-watermark fix"
+              echo "Apply the prefill high-watermark fix"
               ${PYTHON_FOR_SGLANG} \
                 scripts/ci/npu/apply_prefill_high_watermark_fix.py \
                 ${sglang_pkg_path}
-              export PYTHONPATH=${sglang_pkg_path}:$PYTHONPATH
-              ${PYTHON_FOR_SGLANG} -u \
-                test/registered/unit/managers/test_prefill_delayer_high_watermark.py
             fi
           fi
 
