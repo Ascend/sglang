@@ -93,19 +93,19 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
+            echo "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260813" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.skip_install_flag }}" ]; then
-            echo "skip_install_flag=false" >> $GITHUB_OUTPUT
+            echo "skip_install_flag=true" >> $GITHUB_OUTPUT
           else
             echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.test_scope }}" ]; then
-            echo "test_scope=poc" >> $GITHUB_OUTPUT
+            echo "test_scope=all" >> $GITHUB_OUTPUT
           else
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
