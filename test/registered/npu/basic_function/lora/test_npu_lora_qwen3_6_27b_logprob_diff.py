@@ -76,10 +76,15 @@ def get_prompt_logprobs(engine, input_ids, lora_path):
 class TestLoRAQwen3_6_27BLogprobDiff(CustomTestCase):
 
     def test_lora_qwen3_6_27b_logprob_accuracy(self):
-        adapter_path = snapshot_download(
-            LORA_HF_REPO,
-            repo_type="dataset",
-        )
+        # If LORA_HF_REPO is already a local path (e.g. modelscope cache on
+        # NPU CI), skip snapshot_download which would reject local paths.
+        if os.path.isdir(LORA_HF_REPO):
+            adapter_path = LORA_HF_REPO
+        else:
+            adapter_path = snapshot_download(
+                LORA_HF_REPO,
+                repo_type="dataset",
+            )
 
         engine = sgl.Engine(
             model_path=BASE_MODEL,

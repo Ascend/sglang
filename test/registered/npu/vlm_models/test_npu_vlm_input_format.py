@@ -45,6 +45,11 @@ from sglang.srt.utils.hf_transformers_utils import _fix_added_tokens_encoding
 
 register_npu_ci(est_time=747, suite="full-2-npu-a3", nightly=True)
 
+# NPU devices on CI runners may have slight memory imbalance across cards
+# (e.g. residual memory from prior process or kernel-level allocations).
+# Disable the strict TP memory balance check so the engine can still start
+# when pre_model_load_memory < 0.9 * local_gpu_memory.
+os.environ.setdefault("SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK", "0")
 IMAGE_MAN_IRONING_URL = IMAGE_MAN_IRONING_PATH
 IMAGE_SGL_LOGO_URL = IMAGE_SGL_LOGO_PATH
 
