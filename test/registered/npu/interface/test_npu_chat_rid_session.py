@@ -132,9 +132,16 @@ class TestChatRid(CustomTestCase):
 
         response = self._post(self._payload(rid="dup1"))
         self.assertEqual(response.status_code, 400, response.text)
-        self.assertIn(
-            "Duplicate request ID detected", response.json()["error"]["message"]
+        body = response.json()
+        # /v1/chat/completions error bodies serialize the message under a
+        # top-level key ('message' for the ValueError path; 'error'/'detail'
+        # on other paths) — read format-agnostically, keep the content check.
+        message = (
+            body.get("error", {}).get("message", "")
+            or body.get("detail", "")
+            or body.get("message", "")
         )
+        self.assertIn("Duplicate request ID detected", message)
 
         thread.join()
         self.assertEqual(result["status"], 200)
@@ -226,28 +233,42 @@ class TestChatCacheKeyIsolation(CustomTestCase):
         tag = uuid.uuid4().hex[:8]
         warm = self._prompt_payload(cache_salt=f"s1-{tag}", extra_key=f"a-{tag}")
         self._post(warm)
-        self.assertGreater(self._cached_tokens(warm), 0, "same key should hit")
+        self.assertGreater(
+            self._cached_tokens(warm),
+            0,
+            f"same key should hit (cache_salt={warm.get('cache_salt')!r}, "
+            f"extra_key={warm.get('extra_key')!r})",
+        )
 
         # Different extra_key → cache isolation.
         different = self._prompt_payload(cache_salt=f"s1-{tag}", extra_key=f"b-{tag}")
         self.assertEqual(
             self._cached_tokens_once(different),
             0,
-            "different extra_key should not hit the cache",
+            f"different extra_key should not hit the cache "
+            f"(cache_salt={different.get('cache_salt')!r}, "
+            f"extra_key={different.get('extra_key')!r})",
         )
 
     def test_cache_salt_isolation(self):
         tag = uuid.uuid4().hex[:8]
         warm = self._prompt_payload(cache_salt=f"a-{tag}", extra_key=f"e1-{tag}")
         self._post(warm)
-        self.assertGreater(self._cached_tokens(warm), 0, "same salt should hit")
+        self.assertGreater(
+            self._cached_tokens(warm),
+            0,
+            f"same salt should hit (cache_salt={warm.get('cache_salt')!r}, "
+            f"extra_key={warm.get('extra_key')!r})",
+        )
 
         # Different cache_salt → cache isolation.
         different = self._prompt_payload(cache_salt=f"b-{tag}", extra_key=f"e1-{tag}")
         self.assertEqual(
             self._cached_tokens_once(different),
             0,
-            "different cache_salt should not hit the cache",
+            f"different cache_salt should not hit the cache "
+            f"(cache_salt={different.get('cache_salt')!r}, "
+            f"extra_key={different.get('extra_key')!r})",
         )
 
 

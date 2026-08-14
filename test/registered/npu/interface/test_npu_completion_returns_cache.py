@@ -185,19 +185,41 @@ class TestCompletionCacheKeys(CustomTestCase):
         tag = uuid.uuid4().hex[:8]
         warm = self._payload(cache_salt=f"s1-{tag}", extra_key=f"a-{tag}")
         self._post(warm)
-        self.assertGreater(self._cached_tokens(warm), 0)
+        self.assertGreater(
+            self._cached_tokens(warm),
+            0,
+            f"same key should hit (cache_salt={warm.get('cache_salt')!r}, "
+            f"extra_key={warm.get('extra_key')!r})",
+        )
 
         different = self._payload(cache_salt=f"s1-{tag}", extra_key=f"b-{tag}")
-        self.assertEqual(self._cached_tokens_once(different), 0)
+        self.assertEqual(
+            self._cached_tokens_once(different),
+            0,
+            f"different extra_key should not hit the cache "
+            f"(cache_salt={different.get('cache_salt')!r}, "
+            f"extra_key={different.get('extra_key')!r})",
+        )
 
     def test_cache_salt_isolation(self):
         tag = uuid.uuid4().hex[:8]
         warm = self._payload(cache_salt=f"a-{tag}", extra_key=f"e1-{tag}")
         self._post(warm)
-        self.assertGreater(self._cached_tokens(warm), 0)
+        self.assertGreater(
+            self._cached_tokens(warm),
+            0,
+            f"same salt should hit (cache_salt={warm.get('cache_salt')!r}, "
+            f"extra_key={warm.get('extra_key')!r})",
+        )
 
         different = self._payload(cache_salt=f"b-{tag}", extra_key=f"e1-{tag}")
-        self.assertEqual(self._cached_tokens_once(different), 0)
+        self.assertEqual(
+            self._cached_tokens_once(different),
+            0,
+            f"different cache_salt should not hit the cache "
+            f"(cache_salt={different.get('cache_salt')!r}, "
+            f"extra_key={different.get('extra_key')!r})",
+        )
 
 
 class TestCompletionSessionCache(CustomTestCase):
@@ -217,6 +239,9 @@ class TestCompletionSessionCache(CustomTestCase):
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             api_key=cls.api_key,
+            # --enable-session-radix-cache requires the unified radix tree
+            # backend (same env as test/registered/radix_cache/*).
+            env={"SGLANG_ENABLE_UNIFIED_RADIX_TREE": "1"},
             other_args=[
                 "--attention-backend",
                 "ascend",

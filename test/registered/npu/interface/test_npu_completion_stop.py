@@ -80,8 +80,9 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.period_id): 100},
         )
         choice = response.choices[0]
-        self.assertEqual(choice.finish_reason, "stop")
-        self.assertIn(choice.matched_stop, ("END", "."))
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertIn(choice.matched_stop, ("END", "."), msg=echo)
 
     def test_stop_stream(self):
         stream = self._complete(
@@ -90,14 +91,17 @@ class TestCompletionStopFamily(CustomTestCase):
             stream=True,
             logit_bias={str(self.newline_id): 100},
         )
+        text = ""
         finish_reason = None
         matched = None
         for chunk in stream:
-            if chunk.choices and chunk.choices[0].finish_reason:
-                finish_reason = chunk.choices[0].finish_reason
-                matched = chunk.choices[0].matched_stop
-        self.assertEqual(finish_reason, "stop")
-        self.assertEqual(matched, "\n")
+            if chunk.choices:
+                text += chunk.choices[0].text
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+                    matched = chunk.choices[0].matched_stop
+        self.assertEqual(finish_reason, "stop", msg=text)
+        self.assertEqual(matched, "\n", msg=text)
 
     def test_stop_n2(self):
         response = self._complete(
@@ -106,10 +110,10 @@ class TestCompletionStopFamily(CustomTestCase):
             n=2,
             logit_bias={str(self.newline_id): 100},
         )
-        self.assertEqual(len(response.choices), 2)
+        self.assertEqual(len(response.choices), 2, msg=response.model_dump_json())
         for choice in response.choices:
-            self.assertEqual(choice.finish_reason, "stop")
-            self.assertEqual(choice.matched_stop, "\n")
+            self.assertEqual(choice.finish_reason, "stop", msg=response.model_dump_json())
+            self.assertEqual(choice.matched_stop, "\n", msg=response.model_dump_json())
 
     # --- stop_token_ids ---
 
@@ -122,14 +126,17 @@ class TestCompletionStopFamily(CustomTestCase):
             extra_body={"stop_token_ids": [self.newline_id]},
             logit_bias={str(self.newline_id): 100},
         )
+        text = ""
         finish_reason = None
         matched = None
         for chunk in stream:
-            if chunk.choices and chunk.choices[0].finish_reason:
-                finish_reason = chunk.choices[0].finish_reason
-                matched = chunk.choices[0].matched_stop
-        self.assertEqual(finish_reason, "stop")
-        self.assertEqual(matched, self.newline_id)
+            if chunk.choices:
+                text += chunk.choices[0].text
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+                    matched = chunk.choices[0].matched_stop
+        self.assertEqual(finish_reason, "stop", msg=text)
+        self.assertEqual(matched, self.newline_id, msg=text)
 
     def test_stop_token_ids_n2(self):
         response = self._complete(
@@ -139,8 +146,8 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.newline_id): 100},
         )
         for choice in response.choices:
-            self.assertEqual(choice.finish_reason, "stop")
-            self.assertEqual(choice.matched_stop, self.newline_id)
+            self.assertEqual(choice.finish_reason, "stop", msg=response.model_dump_json())
+            self.assertEqual(choice.matched_stop, self.newline_id, msg=response.model_dump_json())
 
     # --- stop_regex ---
 
@@ -151,9 +158,10 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
-        self.assertEqual(choice.finish_reason, "stop")
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
         # matched_stop echoes the pattern, not the matched text
-        self.assertIn(choice.matched_stop, ("\n", "FINISHED"))
+        self.assertIn(choice.matched_stop, ("\n", "FINISHED"), msg=echo)
 
     def test_stop_regex_stream(self):
         stream = self._complete(
@@ -162,11 +170,14 @@ class TestCompletionStopFamily(CustomTestCase):
             extra_body={"stop_regex": "and|or"},
             logit_bias={str(self.and_id): 100},
         )
+        text = ""
         finish_reason = None
         for chunk in stream:
-            if chunk.choices and chunk.choices[0].finish_reason:
-                finish_reason = chunk.choices[0].finish_reason
-        self.assertEqual(finish_reason, "stop")
+            if chunk.choices:
+                text += chunk.choices[0].text
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+        self.assertEqual(finish_reason, "stop", msg=text)
 
     # --- no_stop_trim ---
 
@@ -178,9 +189,10 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
-        self.assertEqual(choice.finish_reason, "stop")
-        self.assertEqual(choice.matched_stop, "\n")
-        self.assertFalse(choice.text.endswith("\n"))
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
+        self.assertFalse(choice.text.endswith("\n"), msg=echo)
 
     def test_no_stop_trim_true(self):
         response = self._complete(
@@ -190,9 +202,10 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
-        self.assertEqual(choice.finish_reason, "stop")
-        self.assertEqual(choice.matched_stop, "\n")
-        self.assertTrue(choice.text.endswith("\n"))
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
+        self.assertTrue(choice.text.endswith("\n"), msg=echo)
 
     def test_no_stop_trim_stream(self):
         stream = self._complete(
@@ -203,14 +216,15 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.newline_id): 100},
         )
         text = "".join(chunk.choices[0].text for chunk in stream if chunk.choices)
-        self.assertTrue(text.endswith("\n"))
+        self.assertTrue(text.endswith("\n"), msg=text)
 
     # --- ignore_eos ---
 
     def test_ignore_eos_exact_length(self):
         response = self._complete(max_tokens=50, extra_body={"ignore_eos": True})
-        self.assertEqual(response.usage.completion_tokens, 50)
-        self.assertEqual(response.choices[0].finish_reason, "length")
+        echo = response.model_dump_json()
+        self.assertEqual(response.usage.completion_tokens, 50, msg=echo)
+        self.assertEqual(response.choices[0].finish_reason, "length", msg=echo)
 
     def test_ignore_eos_false_natural_stop(self):
         """Without ignore_eos the request stops on EOS or max_tokens — the
@@ -234,16 +248,18 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
-        self.assertEqual(choice.finish_reason, "stop")
-        self.assertEqual(choice.matched_stop, "\n")
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
 
     def test_ignore_eos_stop_token_ids_ignored(self):
         response = self._complete(
             max_tokens=50,
             extra_body={"ignore_eos": True, "stop_token_ids": [self.newline_id]},
         )
-        self.assertEqual(response.usage.completion_tokens, 50)
-        self.assertEqual(response.choices[0].finish_reason, "length")
+        echo = response.model_dump_json()
+        self.assertEqual(response.usage.completion_tokens, 50, msg=echo)
+        self.assertEqual(response.choices[0].finish_reason, "length", msg=echo)
 
     # --- min_tokens ---
 
@@ -262,11 +278,12 @@ class TestCompletionStopFamily(CustomTestCase):
             logit_bias={str(self.newline_id): 100},
         )
         choice = response.choices[0]
-        self.assertEqual(choice.finish_reason, "stop")
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
         self.assertLess(
             response.usage.completion_tokens,
             100,
-            "stop string terminates before min_tokens is satisfied",
+            f"stop string terminates before min_tokens is satisfied; {echo}",
         )
 
     def test_min_tokens_stream(self):
