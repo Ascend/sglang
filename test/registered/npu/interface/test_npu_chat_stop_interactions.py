@@ -127,6 +127,39 @@ class TestChatStopInteractions(CustomTestCase):
             "stop string should terminate before min_tokens is satisfied",
         )
 
+    def test_ignore_eos_stop_string_still_works(self):
+        """ignore_eos only skips token-based finish: user stop strings still fire."""
+        response = self._chat(
+            max_tokens=600,
+            stop="\n",
+            extra_body={"ignore_eos": True},
+        )
+        choice = response.choices[0]
+        self.assertEqual(choice.finish_reason, "stop")
+        self.assertEqual(choice.matched_stop, "\n")
+
+    def test_ignore_eos_template_stop_dropped_user_stop_kept(self):
+        """serving_chat.py:1156 drops the chat template's default stop_str
+        ("<|eot_id|>" for Llama-3.1) under ignore_eos, but keeps the user's
+        explicit stop — the same string re-supplied by the user must fire."""
+        # Template stop dropped: no user stop → generation runs to max_tokens.
+        response = self._chat(
+            max_tokens=200,
+            extra_body={"ignore_eos": True},
+        )
+        self.assertEqual(response.choices[0].finish_reason, "length")
+
+        # User stop kept: explicitly re-supplying the template stop string
+        # stops the request via the string check.
+        response = self._chat(
+            max_tokens=600,
+            stop="<|eot_id|>",
+            extra_body={"ignore_eos": True},
+        )
+        choice = response.choices[0]
+        self.assertEqual(choice.finish_reason, "stop")
+        self.assertEqual(choice.matched_stop, "<|eot_id|>")
+
     def test_ignore_eos_stop_token_ids_shortcircuit(self):
         """ignore_eos=True short-circuits token-based finish: stop_token_ids are silently ignored."""
         response = self._chat(
