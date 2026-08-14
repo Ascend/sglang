@@ -1,5 +1,6 @@
 import json
 import multiprocessing as mp
+import os
 import unittest
 from dataclasses import dataclass
 from enum import Enum
@@ -1150,6 +1151,29 @@ class TestLoRADynamicUpdate(CustomTestCase):
     during a sequence of operations, and that the outputs of forward passes with dynamically loaded
     adapters match the outputs of forward passes with statically loaded adapters.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        # The offline CI image cache may lack the LoRA adapter assets this
+        # suite depends on (adapter_config.json is the canonical marker).
+        # Skip with the exact missing paths so the image owners can add
+        # them; on an image with the assets the full suite runs.
+        missing = [
+            path
+            for path in (
+                CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
+                LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
+                LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
+                LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
+            )
+            if not os.path.exists(os.path.join(path, "adapter_config.json"))
+        ]
+        if missing:
+            raise unittest.SkipTest(
+                "LoRA adapters missing from the offline CI image cache:\n  "
+                + "\n  ".join(missing)
+                + "\nRe-enable once the image ships these adapters."
+            )
 
     def _repeat_each(lst, n):
         return [x for x in lst for _ in range(n)]

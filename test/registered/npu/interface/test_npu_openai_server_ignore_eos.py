@@ -41,10 +41,6 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
         )
         cls.base_url += "/v1"
         cls.tokenizer = get_tokenizer(cls.model)
-        # The default branch forces the EOS token so the natural-stop
-        # assertion is deterministic instead of betting on the model
-        # ending its "Count from 1 to 20." answer within max_tokens.
-        cls.eot_id = cls.tokenizer.eos_token_id
 
     @classmethod
     def tearDownClass(cls):
@@ -68,7 +64,6 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             temperature=0,
             max_tokens=max_tokens,
             extra_body={"ignore_eos": False},
-            logit_bias={str(self.eot_id): 100},
         )
 
         response_ignore_eos = client.chat.completions.create(
@@ -98,16 +93,20 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             f"Expected finish_reason='length' for ignore_eos=True, got {response_ignore_eos.choices[0].finish_reason}",
         )
 
-        # ignore_eos=False stops naturally at EOS before max_tokens
+        # ignore_eos=False: the natural scenario — the model should stop at
+        # its natural EOS before max_tokens. Echo the full response so a
+        # failure carries the actual generated text: a 'length' finish could
+        # hide a product bug that suppresses EOS on this path.
+        echo_default = response_default.model_dump_json()
         self.assertLess(
             default_tokens,
             max_tokens,
-            f"ignore_eos=False should stop before {max_tokens} tokens, got {default_tokens}",
+            f"ignore_eos=False should stop before {max_tokens} tokens, got {default_tokens}; {echo_default}",
         )
         self.assertEqual(
             response_default.choices[0].finish_reason,
             "stop",
-            f"Expected finish_reason='stop' for ignore_eos=False, got {response_default.choices[0].finish_reason}",
+            f"Expected finish_reason='stop' for ignore_eos=False, got {response_default.choices[0].finish_reason}; {echo_default}",
         )
 
 
