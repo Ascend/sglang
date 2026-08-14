@@ -23,7 +23,7 @@ QWEN3_6_27B_1024_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
     "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "300",
-    "SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE": "64",
+    "SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE": "128",
     "ASCEND_USE_FIA": "1",
 }
 
@@ -112,7 +112,7 @@ class TestNPUQwen3_6_27B_1P_In1024x1024_30_Out1024_50ms(TestNpuPerformanceTestCa
     output_token_throughput = 800.8
 
     def test_npu_qwen3_6_27b_1p_in1024x1024_30_out1024_50ms(self):
-        """Run NPU performance test for Qwen3.6-27B in1024x1024 30 out1024 50ms"""
+        """Run NPU performance test for Qwen3.6-27B in1024x1024 30 out1024 50ms."""
         self.run_throughput()
 
 
