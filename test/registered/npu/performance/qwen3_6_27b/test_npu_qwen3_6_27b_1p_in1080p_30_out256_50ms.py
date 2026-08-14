@@ -71,6 +71,8 @@ QWEN3_6_27B_1080P_OTHER_ARGS = [
     0.45,
     "--prefill-delayer-max-delay-ms",
     5500,
+    "--prefill-delayer-max-delay-passes",
+    64,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
