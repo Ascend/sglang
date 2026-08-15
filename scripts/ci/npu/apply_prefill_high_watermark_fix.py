@@ -341,8 +341,7 @@ def apply_fix(runtime_python_root: Path) -> None:
         and SCHEDULER_FINALIZE_NEW in scheduler_source
         and SCHEDULER_ADMISSION_OLD not in scheduler_source
         and SCHEDULER_PASS_DECAY not in scheduler_source
-        and PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY not in prefill_delayer_source
-        and PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY in prefill_delayer_source
+        and PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY in prefill_delayer_source
     )
 
     if already_applied:
@@ -397,12 +396,6 @@ def apply_fix(runtime_python_root: Path) -> None:
         PREFILL_DELAYER_SLOT_CONDITION_NEW,
         prefill_delayer_path,
     )
-    prefill_delayer_source = _replace_once(
-        prefill_delayer_source,
-        PREFILL_DELAYER_ALL_PATH_CAPPED_DELAY,
-        PREFILL_DELAYER_ALL_PATH_UNCAPPED_DELAY,
-        prefill_delayer_path,
-    )
     scheduler_source = _replace_once(
         scheduler_source,
         SCHEDULER_IMPORT_OLD,
@@ -438,7 +431,7 @@ def apply_fix(runtime_python_root: Path) -> None:
     prefill_delayer_path.write_text(prefill_delayer_source)
     scheduler_path.write_text(scheduler_source)
     print(
-        f"Applied sliding-window fix without all-path pass cap to {runtime_python_root}",
+        f"Applied sliding-window fix with all-path pass cap to {runtime_python_root}",
         flush=True,
     )
 
