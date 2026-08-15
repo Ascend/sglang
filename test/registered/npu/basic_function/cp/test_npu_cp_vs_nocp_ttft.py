@@ -284,4 +284,8 @@ if __name__ == "__main__":
         loader.loadTestsFromTestCase(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare)
     )
 
-    unittest.main(verbosity=2, defaultTest=lambda: suite)
+    # Python 3.12+ unittest.main() no longer accepts a callable for
+    # defaultTest (it calls list() on it, raising 'function' object is not
+    # iterable). Pass the TestSuite directly -- it is iterable, and
+    # argv=[""] avoids parsing sys.argv which would override defaultTest.
+    unittest.main(verbosity=2, argv=[""], defaultTest=suite)

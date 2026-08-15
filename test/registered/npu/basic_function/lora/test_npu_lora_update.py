@@ -13,7 +13,7 @@ from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -36,7 +36,15 @@ PROMPTS = [
 ]
 
 MEM_FRACTION_STATIC = 0.8
-BASE_MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+# All four LoRA adapters in this suite (text-to-sql, nemoguard topic-control,
+# ocr-correction, fact-generation) are trained against Llama-3.1-8B-Instruct,
+# which has 32 transformer layers. The 1B base model (Llama-3.2-1B, 16 layers)
+# is incompatible: a LoRA weight keyed ``model.layers.16.*`` raises
+# ``IndexError: index 16 is out of range`` against the 16-entry layer list
+# in [lora_manager.py:_process_weight -> self.layers[layer_id].weights[name]].
+# Use the 8B base that the adapters -- and the ``assertIn("llama-3.1-8b-
+# instruct", ...)`` check in test_v1_models_endpoint_with_lora below -- expect.
+BASE_MODEL = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 
 
 class OperationType(Enum):

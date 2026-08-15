@@ -71,6 +71,14 @@ def setUpModule():
     env = os.environ.copy()
     env["SGLANG_PREFILL_DELAYER_DEBUG_LOG"] = "1"
 
+    # Raise max_delay_passes so the pass-count fallback (default 30) does not
+    # fire before the wall-clock max_delay_ms cap. On Qwen3-0.6B NPU each
+    # forward pass is ~30ms, so the default 30-pass cap releases at ~900ms,
+    # racing ahead of the 5000ms timeout the below-threshold test asserts on.
+    # The pass-count fallback is a backstop for slot-saturated engines where
+    # slot_condition never turns False; here slot_condition is already False
+    # (max_running_requests ~= thousands >> 20 running), so the fallback
+    # should never be the binding release -- max_delay_ms should be.
     other_args = [
         "--attention-backend",
         "ascend",
@@ -80,6 +88,8 @@ def setUpModule():
         str(QUEUE_MIN_RATIO),
         "--prefill-delayer-max-delay-ms",
         str(MAX_DELAY_MS),
+        "--prefill-delayer-max-delay-passes",
+        "10000",
     ]
     GLOBAL_SERVER_PROCESS = popen_launch_server(
         MODEL_PATH,
