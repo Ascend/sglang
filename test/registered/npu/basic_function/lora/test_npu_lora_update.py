@@ -1,7 +1,5 @@
-import glob
 import json
 import multiprocessing as mp
-import os
 import unittest
 from dataclasses import dataclass
 from enum import Enum
@@ -1152,38 +1150,6 @@ class TestLoRADynamicUpdate(CustomTestCase):
     during a sequence of operations, and that the outputs of forward passes with dynamically loaded
     adapters match the outputs of forward passes with statically loaded adapters.
     """
-
-    @classmethod
-    def setUpClass(cls):
-        # The offline CI image cache may lack the LoRA adapter assets this
-        # suite depends on. Probe each adapter for the config AND weight
-        # files; on failure the skip message lists the exact dir contents
-        # so the image owners can see what is actually shipped.
-        broken = []
-        for path in (
-            CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
-        ):
-            config = os.path.join(path, "adapter_config.json")
-            if not os.path.exists(config):
-                broken.append(f"{path}: no adapter_config.json")
-                continue
-            weights = glob.glob(os.path.join(path, "*.safetensors")) or glob.glob(
-                os.path.join(path, "*.bin")
-            )
-            if not weights:
-                contents = (
-                    sorted(os.listdir(path)) if os.path.isdir(path) else ["<no dir>"]
-                )
-                broken.append(f"{path}: no weight files, dir={contents}")
-        if broken:
-            raise unittest.SkipTest(
-                "LoRA adapters unusable in the offline CI image cache:\n  "
-                + "\n  ".join(broken)
-                + "\nRe-enable once the image ships complete adapters."
-            )
 
     def _repeat_each(lst, n):
         return [x for x in lst for _ in range(n)]
