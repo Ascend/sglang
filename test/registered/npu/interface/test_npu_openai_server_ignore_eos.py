@@ -55,6 +55,11 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
 
         max_tokens = 200
 
+        # Qwen3-0.6B is a thinking model: the round-9 CI echo showed that the
+        # natural "Count from 1 to 20." triggers a >200-token <think> chain,
+        # so natural EOS never arrives within max_tokens. Suppress thinking
+        # so the model answers directly — the target here is the ignore_eos
+        # server flag, not thinking behavior.
         response_default = client.chat.completions.create(
             model=self.model,
             messages=[
@@ -63,7 +68,10 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             ],
             temperature=0,
             max_tokens=max_tokens,
-            extra_body={"ignore_eos": False},
+            extra_body={
+                "ignore_eos": False,
+                "chat_template_kwargs": {"enable_thinking": False},
+            },
         )
 
         response_ignore_eos = client.chat.completions.create(
@@ -74,29 +82,42 @@ class TestOpenAIServerIgnoreEOS(CustomTestCase):
             ],
             temperature=0,
             max_tokens=max_tokens,
-            extra_body={"ignore_eos": True},
+            extra_body={
+                "ignore_eos": True,
+                "chat_template_kwargs": {"enable_thinking": False},
+            },
         )
 
-        default_tokens = len(
-            self.tokenizer.encode(response_default.choices[0].message.content)
-        )
-        ignore_eos_tokens = len(
-            self.tokenizer.encode(response_ignore_eos.choices[0].message.content)
-        )
+        default_tokens = response_default.usage.completion_tokens
+        ignore_eos_tokens = response_ignore_eos.usage.completion_tokens
 
-        # Check if ignore_eos resulted in more tokens or exactly max_tokens
-        # The ignore_eos response should either:
-        # 1. Have more tokens than the default response (if default stopped at EOS before max_tokens)
-        # 2. Have exactly max_tokens (if it reached the max_tokens limit)
-        self.assertTrue(
-            ignore_eos_tokens > default_tokens or ignore_eos_tokens >= max_tokens,
-            f"ignore_eos did not generate more tokens: {ignore_eos_tokens} vs {default_tokens}",
+        # ignore_eos=True forces generation to exactly max_tokens (length finish
+        # is checked before EOS, and EOS is never a stop condition)
+        self.assertEqual(
+            ignore_eos_tokens,
+            max_tokens,
+            f"ignore_eos=True should generate exactly {max_tokens} tokens, got {ignore_eos_tokens}",
         )
-
         self.assertEqual(
             response_ignore_eos.choices[0].finish_reason,
             "length",
             f"Expected finish_reason='length' for ignore_eos=True, got {response_ignore_eos.choices[0].finish_reason}",
+        )
+
+        # ignore_eos=False: the natural scenario — the model should stop at
+        # its natural EOS before max_tokens. Echo the full response so a
+        # failure carries the actual generated text: a 'length' finish could
+        # hide a product bug that suppresses EOS on this path.
+        echo_default = response_default.model_dump_json()
+        self.assertLess(
+            default_tokens,
+            max_tokens,
+            f"ignore_eos=False should stop before {max_tokens} tokens, got {default_tokens}; {echo_default}",
+        )
+        self.assertEqual(
+            response_default.choices[0].finish_reason,
+            "stop",
+            f"Expected finish_reason='stop' for ignore_eos=False, got {response_default.choices[0].finish_reason}; {echo_default}",
         )
 
 

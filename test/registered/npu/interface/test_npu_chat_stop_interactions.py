@@ -1,0 +1,317 @@
+import unittest
+
+import openai
+
+from sglang.srt.utils import kill_process_tree
+from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
+    popen_launch_server,
+)
+
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+
+MANY_NEW_TOKENS_PROMPT = """
+Please write an extremely detailed and vivid fantasy story, set in a world full of intricate magic systems, political intrigue, and complex characters.
+Ensure that you thoroughly describe every scene, character's motivations, and the environment. Include long, engaging dialogues and elaborate on the inner thoughts of the characters.
+Each section should be as comprehensive as possible to create a rich and immersive experience for the reader.
+The story should span multiple events, challenges, and character developments over time. Aim to make the story at least 3,000 words long.
+"""
+
+
+class TestChatStopInteractions(CustomTestCase):
+    """Testcase: stop-family parameter interactions on /v1/chat/completions.
+
+    [Test Category] Interface
+    [Test Target] no_stop_trim / min_tokens x stop / ignore_eos x stop_token_ids / stream x stop / n x stop
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.api_key = "sk-123456"
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            api_key=cls.api_key,
+            other_args=[
+                "--max-running-requests",
+                "10",
+                "--attention-backend",
+                "ascend",
+            ],
+        )
+        cls.base_url += "/v1"
+        cls.client = openai.Client(api_key=cls.api_key, base_url=cls.base_url)
+
+        # Token ids for the strings the stop tests force into the output:
+        # temperature-0 greedy trajectories differ across platforms, so a
+        # test that waits for the model to emit the stop string by chance
+        # cannot distinguish a product bug from a missed trajectory.
+        cls.tokenizer = get_tokenizer(cls.model)
+        cls.newline_id = cls.tokenizer.encode("\n", add_special_tokens=False)[-1]
+        cls.eot_id = cls.tokenizer.encode(
+            "<|eot_id|>", add_special_tokens=False
+        )[-1]
+
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+
+    def _chat(self, **kwargs):
+        return self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": MANY_NEW_TOKENS_PROMPT},
+            ],
+            temperature=0,
+            **kwargs,
+        )
+
+    def test_no_stop_trim_false(self):
+        """no_stop_trim=False (default): matched stop string is trimmed from output."""
+        response = self._chat(
+            max_tokens=200,
+            stop="\n",
+            extra_body={"no_stop_trim": False},
+            logit_bias={str(self.newline_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
+        self.assertFalse(
+            choice.message.content.endswith("\n"),
+            f"stop string should be trimmed when no_stop_trim=False; {echo}",
+        )
+
+    def test_no_stop_trim_true(self):
+        """no_stop_trim=True: matched stop string is kept in output."""
+        response = self._chat(
+            max_tokens=200,
+            stop="\n",
+            extra_body={"no_stop_trim": True},
+            logit_bias={str(self.newline_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
+        self.assertTrue(
+            choice.message.content.endswith("\n"),
+            f"stop string should be kept when no_stop_trim=True; {echo}",
+        )
+
+    def test_no_stop_trim_stream(self):
+        """Stream path: concatenated output keeps the stop string when no_stop_trim=True."""
+        stream = self._chat(
+            max_tokens=200,
+            stop="\n",
+            stream=True,
+            extra_body={"no_stop_trim": True},
+            logit_bias={str(self.newline_id): 100},
+        )
+        text = ""
+        finish_reason = None
+        for chunk in stream:
+            if chunk.choices:
+                if chunk.choices[0].delta.content:
+                    text += chunk.choices[0].delta.content
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+        self.assertEqual(finish_reason, "stop", msg=text)
+        self.assertTrue(text.endswith("\n"), msg=text)
+
+    def test_min_tokens_stop_not_protected(self):
+        """stop strings are NOT gated by min_tokens: the request can stop before min is reached."""
+        response = self._chat(
+            max_tokens=600,
+            stop="\n",
+            extra_body={"min_tokens": 500},
+            logit_bias={str(self.newline_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
+        # The first newline comes far before 500 tokens: stop strings are not
+        # gated by min_tokens.
+        self.assertLess(
+            response.usage.completion_tokens,
+            500,
+            f"stop string should terminate before min_tokens is satisfied; {echo}",
+        )
+
+    def test_ignore_eos_stop_string_still_works(self):
+        """ignore_eos only skips token-based finish: user stop strings still fire."""
+        # Force the newline so the string matcher is deterministically the
+        # only finish path under ignore_eos.
+        response = self._chat(
+            max_tokens=600,
+            stop="\n",
+            extra_body={"ignore_eos": True},
+            logit_bias={str(self.newline_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
+
+    def test_ignore_eos_template_stop_dropped_user_stop_kept(self):
+        """serving_chat.py:1156 drops the chat template's default stop_str
+        ("<|eot_id|>" for Llama-3.1) under ignore_eos, but keeps the user's
+        explicit stop — the same string re-supplied by the user must fire."""
+        # Template stop dropped: no user stop → generation runs to max_tokens.
+        response = self._chat(
+            max_tokens=200,
+            extra_body={"ignore_eos": True},
+        )
+        self.assertEqual(
+            response.choices[0].finish_reason,
+            "length",
+            msg=response.model_dump_json(),
+        )
+
+        # User stop kept: explicitly re-supplying the template stop string
+        # stops the request via the string check. Force the eot token with
+        # logit_bias so the string deterministically appears in the output —
+        # under ignore_eos the token-based finish is skipped, so a stop here
+        # proves the user-supplied string matcher (including special-token
+        # text) still fires.
+        response = self._chat(
+            max_tokens=600,
+            stop="<|eot_id|>",
+            extra_body={"ignore_eos": True},
+            logit_bias={str(self.eot_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "<|eot_id|>", msg=echo)
+
+    def test_ignore_eos_stop_token_ids_shortcircuit(self):
+        """ignore_eos=True short-circuits token-based finish: stop_token_ids are silently ignored."""
+        response = self._chat(
+            max_tokens=50,
+            extra_body={
+                "ignore_eos": True,
+                "stop_token_ids": [self.newline_id],
+            },
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "length", msg=echo)
+        self.assertEqual(response.usage.completion_tokens, 50, msg=echo)
+
+    def test_stream_stop(self):
+        """Stream + stop: last chunk carries finish_reason and matched_stop."""
+        stream = self._chat(
+            max_tokens=200,
+            stop="\n",
+            stream=True,
+            logit_bias={str(self.newline_id): 100},
+        )
+        text = ""
+        finish_reason = None
+        for chunk in stream:
+            if chunk.choices:
+                if chunk.choices[0].delta.content:
+                    text += chunk.choices[0].delta.content
+                if chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+        self.assertEqual(finish_reason, "stop", msg=text)
+
+    def test_n2_stop(self):
+        """n=2 + stop: each choice independently matches the stop string."""
+        response = self._chat(
+            max_tokens=200,
+            stop="\n",
+            n=2,
+            logit_bias={str(self.newline_id): 100},
+        )
+        self.assertEqual(len(response.choices), 2, msg=response.model_dump_json())
+        for choice in response.choices:
+            self.assertEqual(choice.finish_reason, "stop", msg=response.model_dump_json())
+            self.assertEqual(choice.matched_stop, "\n", msg=response.model_dump_json())
+
+    def test_stop_never_matching(self):
+        """A stop string that never appears: generation ends via EOS or
+        max_tokens, never via the stop string."""
+        response = self._chat(max_tokens=200, stop="ZZZ999ZZZ")
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertIn(
+            choice.finish_reason,
+            ("stop", "length"),
+            f"generation should end naturally, not via the stop string; {echo}",
+        )
+        self.assertNotEqual(choice.matched_stop, "ZZZ999ZZZ", msg=echo)
+
+    def test_min_tokens_400(self):
+        """min_tokens > max_tokens: engine verify() rejects with 400."""
+        with self.assertRaises(openai.BadRequestError) as ctx:
+            self._chat(
+                max_tokens=20,
+                extra_body={"min_tokens": 50},
+            )
+        self.assertIn(
+            "min_new_tokens must be in [0, max_new_tokens", str(ctx.exception)
+        )
+
+    def test_stop_and_stop_token_ids_combined(self):
+        """stop string and stop_token_ids are checked independently — whichever
+        hits first terminates the request."""
+        # Force the newline token so both conditions are guaranteed to be
+        # evaluable in one step; either finish path may win.
+        response = self._chat(
+            max_tokens=200,
+            stop="\n",
+            extra_body={"stop_token_ids": [self.newline_id]},
+            logit_bias={str(self.newline_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        # matched_stop is either the string or the token id depending on
+        # which condition matched first.
+        self.assertIn(choice.matched_stop, ("\n", self.newline_id), msg=echo)
+
+    def test_stop_regex_list(self):
+        """A list of regex patterns: the first matching pattern in list order wins."""
+        # Force the newline so a list member deterministically matches.
+        response = self._chat(
+            max_tokens=200,
+            extra_body={"stop_regex": ["\n", "FINISHED"]},
+            logit_bias={str(self.newline_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        # matched_stop echoes the PATTERN itself, not the matched text.
+        self.assertIn(choice.matched_stop, ("\n", "FINISHED"), msg=echo)
+
+    def test_ignore_eos_stop_regex_still_works(self):
+        """stop_regex is NOT gated by ignore_eos (unlike stop_token_ids which is
+        short-circuited) — the regex still terminates the request."""
+        # Force the newline so the regex matcher deterministically has a
+        # match to act on under ignore_eos.
+        response = self._chat(
+            max_tokens=200,
+            extra_body={"ignore_eos": True, "stop_regex": "\n"},
+            logit_bias={str(self.newline_id): 100},
+        )
+        choice = response.choices[0]
+        echo = response.model_dump_json()
+        self.assertEqual(choice.finish_reason, "stop", msg=echo)
+        self.assertEqual(choice.matched_stop, "\n", msg=echo)
+
+
+if __name__ == "__main__":
+    unittest.main()

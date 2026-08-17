@@ -341,5 +341,50 @@ class TestOpenAIServerWithEAGLE3AndHiddenStatesEnabled(
         kill_process_tree(cls.process.pid)
 
 
+class TestOpenAIServerWithoutHiddenStates(CustomTestCase):
+    """Testcase: Without "--enable-return-hidden-states", requesting hidden states returns 400.
+
+    [Test Category] Parameter
+    [Test Target] --enable-return-hidden-states (flag-off negative path)
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.api_key = "sk-123456"
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            api_key=cls.api_key,
+            other_args=[
+                "--attention-backend",
+                "ascend",
+            ],
+            env=ENV,
+        )
+        cls.base_url += "/v1"
+
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+
+    def test_return_hidden_states_flag_off(self):
+        client = openai.Client(api_key=self.api_key, base_url=self.base_url)
+        with self.assertRaises(openai.BadRequestError) as ctx:
+            client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "Hello"}],
+                extra_body={"return_hidden_states": True},
+            )
+        self.assertIn(
+            # Product message: "The server is not configured to return hidden
+            # states. Please set --return-hidden-states-mode ..." (no "the").
+            "not configured to return hidden states",
+            str(ctx.exception),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

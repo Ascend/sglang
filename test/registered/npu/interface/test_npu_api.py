@@ -293,7 +293,6 @@ class TestChatCompletionsInterface(CustomTestCase):
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
-        has_reasoning = False
         has_content = False
 
         for line in response.iter_lines():
@@ -303,14 +302,14 @@ class TestChatCompletionsInterface(CustomTestCase):
                     data = json.loads(line[6:])
                     if "choices" in data and len(data["choices"]) > 0:
                         delta = data["choices"][0].get("delta", {})
-                        if "reasoning_content" in delta and delta["reasoning_content"]:
-                            has_reasoning = True
                         if "content" in delta and delta["content"]:
                             has_content = True
 
-        self.assertTrue(
-            has_reasoning, "Reasoning content not included in stream response"
-        )
+        # Llama-3.1 has no thinking format: enable_thinking is silently
+        # ignored and normal content must still stream. Reasoning content is
+        # a thinking-model feature covered by test_npu_enable_thinking.py
+        # (Qwen3-30B-A3B); asserting it here would test the model, not the
+        # product.
         self.assertTrue(has_content, "Normal content not included in stream response")
 
     def test_temperature(self):
@@ -437,16 +436,21 @@ class TestChatCompletionsInterface(CustomTestCase):
         self.assertNotEqual(content1, content2)
 
     def test_stop_token_ids(self):
+        # Force token 13 so the assertion does not depend on the model
+        # emitting it before the natural EOS: with the bias it is the first
+        # sampled token and the id-based finish fires on it.
         response = requests.post(
             f"{self.base_url}/v1/chat/completions",
             json={
                 "model": self.model,
                 "messages": [{"role": "user", "content": "Hello"}],
                 "stop_token_ids": [1, 13],
+                "logit_bias": {"13": 100},
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         self.assertEqual(response.json()["choices"][0]["matched_stop"], 13)
+        self.assertEqual(response.json()["choices"][0]["finish_reason"], "stop")
 
     def test_rid(self):
         response = requests.post(
@@ -646,6 +650,7 @@ class TestEnableThinking(CustomTestCase):
         logging.info(f"response.json:{response.json()}")
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         self.assertEqual(response.json()["choices"][0]["matched_stop"], 13)
+        self.assertEqual(response.json()["choices"][0]["finish_reason"], "stop")
 
     def test_model_parameters_rid(self):
         response = requests.post(
@@ -669,10 +674,12 @@ class TestStartProfile(CustomTestCase):
         envs.SGLANG_TORCH_PROFILER_DIR.set(OUTPUT_DIR)
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        # Profiling is always available: SchedulerProfilerManager is mounted
+        # unconditionally and /start_profile starts the torch profiler on
+        # demand — the legacy --enable-torch-profiler flag no longer exists.
         cls.other_args = [
             "--attention-backend",
             "ascend",
-            "--enable-torch-profiler",
         ]
         cls.process = popen_launch_server(
             cls.model,
