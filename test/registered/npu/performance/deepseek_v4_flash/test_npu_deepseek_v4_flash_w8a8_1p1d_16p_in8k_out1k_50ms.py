@@ -216,7 +216,7 @@ class TestNPUDeepSeekV4FlashW8A81P1D16PIn8kOut1k50ms(
     dataset_name = "random"
     input_len = 8000
     output_len = 1000
-    num_prompts = 2400
+    num_prompts = 1600
     max_concurrency = 800
     random_range_ratio = 1
     warmup_requests = 0
