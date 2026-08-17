@@ -100,4 +100,3 @@ class TestNPUGLM_5_2_W4A8_16P_GPQA(TestNpuAccuracyMultiNodePdMixTestCaseBase):
 
 if __name__ == "__main__":
     unittest.main()
-    
