@@ -1,3 +1,4 @@
+import glob
 import json
 import multiprocessing as mp
 import os
@@ -1155,24 +1156,33 @@ class TestLoRADynamicUpdate(CustomTestCase):
     @classmethod
     def setUpClass(cls):
         # The offline CI image cache may lack the LoRA adapter assets this
-        # suite depends on (adapter_config.json is the canonical marker).
-        # Skip with the exact missing paths so the image owners can add
-        # them; on an image with the assets the full suite runs.
-        missing = [
-            path
-            for path in (
-                CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
-                LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
-                LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-                LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
+        # suite depends on. Probe each adapter for the config AND weight
+        # files; on failure the skip message lists the exact dir contents
+        # so the image owners can see what is actually shipped.
+        broken = []
+        for path in (
+            CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
+            LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
+        ):
+            config = os.path.join(path, "adapter_config.json")
+            if not os.path.exists(config):
+                broken.append(f"{path}: no adapter_config.json")
+                continue
+            weights = glob.glob(os.path.join(path, "*.safetensors")) or glob.glob(
+                os.path.join(path, "*.bin")
             )
-            if not os.path.exists(os.path.join(path, "adapter_config.json"))
-        ]
-        if missing:
+            if not weights:
+                contents = (
+                    sorted(os.listdir(path)) if os.path.isdir(path) else ["<no dir>"]
+                )
+                broken.append(f"{path}: no weight files, dir={contents}")
+        if broken:
             raise unittest.SkipTest(
-                "LoRA adapters missing from the offline CI image cache:\n  "
-                + "\n  ".join(missing)
-                + "\nRe-enable once the image ships these adapters."
+                "LoRA adapters unusable in the offline CI image cache:\n  "
+                + "\n  ".join(broken)
+                + "\nRe-enable once the image ships complete adapters."
             )
 
     def _repeat_each(lst, n):
