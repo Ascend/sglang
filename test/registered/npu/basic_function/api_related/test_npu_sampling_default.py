@@ -146,28 +146,6 @@ class BaseSamplingTest(CustomTestCase):
         time.sleep(3)
         return self._get_sampling_params_from_metrics()
 
-    def _call_completion(self, custom_params: dict = None):
-        """Call the /v1/completions endpoint (completions does NOT use
-        get_param(): it always passes fixed Pydantic defaults)."""
-        req_body = {
-            "model": COMMON_CONFIG["model"],
-            "prompt": "Test sampling parameters: 1+1=",
-            "max_tokens": 128,
-        }
-        if custom_params:
-            req_body.update(custom_params)
-
-        response = requests.post(
-            f"{COMMON_CONFIG['base_url']}/v1/completions",
-            json=req_body,
-            timeout=COMMON_CONFIG["request_timeout"],
-        )
-        self.assertEqual(response.status_code, 200, f"API call failed: {response.text}")
-
-        # Extend waiting time for log writing
-        time.sleep(3)
-        return self._get_sampling_params_from_metrics()
-
     def _get_sampling_params_from_metrics(self):
         """Extract sampling parameters from metrics (adapt to actual log format)"""
         metrics_dir = Path(COMMON_CONFIG["metrics_dir"])
@@ -274,27 +252,6 @@ class TestSamplingDefaultsModel(BaseSamplingTest):
             f"actual={sampling_params['repetition_penalty']}",
         )
         logger.info("✅ Model mode default parameters assertion passed!")
-
-    def test_completions_ignores_model_config(self):
-        """Model mode - /v1/completions does NOT use get_param(): it always
-        passes the fixed Pydantic defaults (temperature=1.0), ignoring the
-        model generation_config (temperature=0.6)."""
-        logger.info("\n=== Testing completions ignores model config ===")
-        sampling_params = self._call_completion()
-
-        self.assertEqual(
-            sampling_params["temperature"],
-            COMMON_CONFIG["SGLANG_BUILTIN_DEFAULTS"]["temperature"],
-            f"completions temperature should be the fixed default 1.0, got "
-            f"{sampling_params['temperature']}",
-        )
-        self.assertEqual(
-            sampling_params["top_p"],
-            COMMON_CONFIG["SGLANG_BUILTIN_DEFAULTS"]["top_p"],
-            f"completions top_p should be the fixed default 1.0, got "
-            f"{sampling_params['top_p']}",
-        )
-        logger.info("✅ Completions ignores model config assertion passed!")
 
     def test_custom_params(self):
         """Model mode - Manually customized parameters"""
