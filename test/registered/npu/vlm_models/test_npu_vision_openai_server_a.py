@@ -148,17 +148,6 @@ class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
     ]
 
 
-class TestGemma4itServer(ImageOpenAITestMixin):
-    model = GEMMA_4_31B_WEIGHTS_PATH
-    extra_args = [
-        "--disable-cuda-graph",
-        "--attention-backend",
-        "ascend",
-        "--tp-size",
-        "4",
-    ]
-
-
 class TestKimiVLServer(ImageOpenAITestMixin):
     model = KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH
     extra_args = [
@@ -175,6 +164,18 @@ class TestKimiVLServer(ImageOpenAITestMixin):
     def test_video_images_chat_completion(self):
         # model context length exceeded
         pass
+
+
+class TestGemma4itServer(ImageOpenAITestMixin):
+    os.environ["ASCEND_USE_FIA"] = "1"
+    model = GEMMA_4_31B_WEIGHTS_PATH
+    extra_args = [
+        "--disable-cuda-graph",
+        "--attention-backend",
+        "ascend",
+        "--tp-size",
+        "4",
+    ]
 
 
 # Delete the mixin classes so that they are not collected by pytest
