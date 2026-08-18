@@ -6,6 +6,7 @@ python3 -m unittest openai_server.basic.test_openai_server.TestOpenAIServer.test
 """
 
 import json
+import os
 import random
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +30,7 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
+os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 register_npu_ci(est_time=400, suite="stage-b-test-1-npu-a2", nightly=False)
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
