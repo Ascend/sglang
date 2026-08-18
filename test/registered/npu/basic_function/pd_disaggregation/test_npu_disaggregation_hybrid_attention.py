@@ -16,7 +16,6 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
-QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_PATH = "/home/weights/Qwen3-Next-80B-A3B-Instruct"
 
 
 class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
