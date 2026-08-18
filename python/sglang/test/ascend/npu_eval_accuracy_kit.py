@@ -41,9 +41,9 @@ def run_npu_pr_smoke(base_url):
     # Case-insensitive match: some instruct models emit "paris" or "PARIS"
     # depending on sampling/tokenization. Matching "paris" in the
     # lowercased body covers all variants without false positives.
-    assert "paris" in response.text.lower(), (
-        f"Expected 'Paris' (case-insensitive) in response, got: {response.text!r}"
-    )
+    assert (
+        "paris" in response.text.lower()
+    ), f"Expected 'Paris' (case-insensitive) in response, got: {response.text!r}"
 
 
 class NPUGSM8KMixin(GSM8KMixin):
