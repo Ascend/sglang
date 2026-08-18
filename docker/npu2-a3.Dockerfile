@@ -106,7 +106,18 @@ RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-
     ${PIP_INSTALL} -v -e .[all_npu]
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
-ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/lib:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
+
+RUN echo "=== ASCEND_HOME_PATH ===" && \
+    echo "$ASCEND_HOME_PATH" && \
+    echo "=== LD_LIBRARY_PATH ===" && \
+    echo "$LD_LIBRARY_PATH" && \
+    echo "=== libascend_hal.so ===" && \
+    find /usr/local/Ascend -name "libascend_hal.so*" -ls 2>/dev/null || true && \
+    echo "=== CANN directory ===" && \
+    ls -la /usr/local/Ascend/ && \
+    echo "=== CANN lib ===" && \
+    find /usr/local/Ascend/cann-${CANN_VERSION} -maxdepth 3 -type f -name "*.so*" 2>/dev/null | head -100
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
