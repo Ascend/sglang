@@ -110,6 +110,9 @@ fi
 # set environment of cann
 . /usr/local/Ascend/cann/set_env.sh
 . /usr/local/Ascend/nnal/atb/set_env.sh
+# Adapt DeepSeek-V4-Flash test cases with additional environment variables.
+source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
+source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
 echo "Running test case ${test_case}"
 tc_name=${test_case##*/}
@@ -131,6 +134,12 @@ else
     ${PYTHON_FOR_SGLANG} -u "${sglang_source_path}/${test_case}" 2>&1 | tee -a "${log_path}/${tc_name}.log"
 fi
 echo "Finished test case ${test_case}"
+
+if [ -n "${METRICS_DATA_FILE}" ]; then
+    mkdir -p "${METRICS_DATA_FILE}"
+    cp "${log_path}/${tc_name}.log" "${METRICS_DATA_FILE}/test_output.log"
+    echo "Metrics log saved to ${METRICS_DATA_FILE}/test_output.log"
+fi
 
 source_plog_path="/root/ascend/log/debug/plog"
 if [ -d "$source_plog_path" ];then

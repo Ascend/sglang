@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 NAMESPACE = os.environ.get("NAMESPACE")
 CONFIGMAP_NAME = os.environ.get("KUBE_CONFIG_MAP")
+ACTIVE_TEST_CLASS = "active-test-class"
 
 LOCAL_TIMEOUT = 3600
 ALL_ROLE_SET = {"prefill", "decode", "router", "master", "worker"}
@@ -41,6 +42,7 @@ BOOTSTRAP_INIT_PORT = 8995
 # Timeouts and delays
 ROUTER_CONFIGMAP_TIMEOUT = 300
 SERVER_INITIALIZATION_DELAY = 30
+SERVICE_EXIT_WAIT_SECONDS = 120
 
 
 def get_nic_name():
@@ -190,6 +192,65 @@ def query_configmap(name, namespace):
         return None
 
 
+def upsert_configmap_field_strict(
+    name: str,
+    namespace: str,
+    key: str,
+    value: str,
+):
+    """
+    Add or update a field in ConfigMap using patch.
+    Strict mode: fail if ConfigMap does not exist.
+    """
+    from kubernetes.client.rest import ApiException
+
+    k8s_api = get_k8s_api()
+    patch = {"data": {key: value}}
+
+    try:
+        k8s_api.patch_namespaced_config_map(name=name, namespace=namespace, body=patch)
+        logger.info(f"Upserted ConfigMap {name}: {key}={value}")
+    except ApiException as e:
+        if e.status == 404:
+            raise RuntimeError(
+                f"ConfigMap {name} does not exist in namespace {namespace}"
+            )
+        logger.error(f"Failed to upsert ConfigMap {name}: {e}")
+        raise
+
+
+def wait_for_prefill_decode_exit(
+    key: str,
+    value: str,
+    timeout: int = ROUTER_CONFIGMAP_TIMEOUT,
+    poll_interval: int = 15,
+):
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+        if not configmap or not configmap.data:
+            logger.info(f"ConfigMap data is not available yet, waiting for 15s...")
+            time.sleep(poll_interval)
+            continue
+
+        existing_value = configmap.data.get(key)
+
+        upsert_configmap_field_strict(CONFIGMAP_NAME, NAMESPACE, key, value)
+
+        if existing_value is not None:
+            logger.info(
+                "%s already set (%s), waiting 120s for prefill/decode to exit ...",
+                key,
+                existing_value,
+            )
+            time.sleep(SERVICE_EXIT_WAIT_SECONDS)
+        else:
+            logger.info("%s set for the first time (%s)", key, value)
+
+        return
+
+
 # Get node count from Kubernetes
 def discover_worker_nodes():
     """Discover worker nodes from Kubernetes.
@@ -321,6 +382,20 @@ def wait_for_all_ports_ready(ips, port, timeout=LOCAL_TIMEOUT, check_interval=15
     return False
 
 
+def _get_nnodes_from_args(args_list):
+    for i, arg in enumerate(args_list):
+        if arg == "--nnodes" and i + 1 < len(args_list):
+            return int(args_list[i + 1])
+    return None
+
+
+def _get_pod_ip_by_keyword(configmap_data, keyword):
+    for pod_name, pod_ip in configmap_data.items():
+        if keyword in pod_name:
+            return pod_ip
+    return None
+
+
 def check_role(allowed_roles: Union[str, Iterable[str]]):
     if isinstance(allowed_roles, str):
         allowed_roles = {allowed_roles}
@@ -351,7 +426,12 @@ def check_role(allowed_roles: Union[str, Iterable[str]]):
 def launch_pd_mix_node(model_config):
     logger.info(f"Launch pd mix node start ......")
     host_name = get_host_name()
-    pod_index = int(host_name.rsplit("-", 1)[-1])
+    last_part = host_name.rsplit("-", 1)[-1]
+    if not last_part.isdigit():
+        raise RuntimeError(
+            f"Unexpected hostname format, expected numeric suffix: {host_name}"
+        )
+    pod_index = int(last_part)
 
     # Monitor ConfigMap to generate dist-init-addr and node-rank
     is_ready = False
@@ -422,7 +502,12 @@ def launch_pd_mix_node(model_config):
 def launch_pd_separation_node(model_config):
     logger.info(f"Launch pd separation node start ......")
     host_name = get_host_name()
-    pod_index = int(host_name.rsplit("-", 1)[-1])
+    last_part = host_name.rsplit("-", 1)[-1]
+    if not last_part.isdigit():
+        raise RuntimeError(
+            f"Unexpected hostname format, expected numeric suffix: {host_name}"
+        )
+    pod_index = int(last_part)
     role = "prefill" if "prefill" in host_name else "decode"
 
     bootstrap_init_port = BOOTSTRAP_INIT_PORT
@@ -435,6 +520,7 @@ def launch_pd_separation_node(model_config):
     # Monitor ConfigMap ready
     is_ready = False
     start_time = time.time()
+    configmap_data = None
     while not is_ready and time.time() - start_time < LOCAL_TIMEOUT:
         configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
         if not configmap or not configmap.data:
@@ -442,9 +528,10 @@ def launch_pd_separation_node(model_config):
             time.sleep(15)
             continue
 
-        logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+        configmap_data = configmap.data
+        logger.info(f"Retrieved ConfigMap data: {configmap_data}")
 
-        for pod_name, pod_ip in configmap.data.items():
+        for pod_name, pod_ip in configmap_data.items():
             if pod_name.endswith("prefill-0"):
                 master_prefill_ip = pod_ip
             if pod_name.endswith("decode-0"):
@@ -472,26 +559,51 @@ def launch_pd_separation_node(model_config):
 
     if role == "prefill":
         # Current node is prefill
-        dist_init_addr = f"{master_prefill_ip}:5000"
-        logger.info(f"Launching prefill node with dist_init_addr={dist_init_addr}")
-
         set_environment_variables(model_config.get("prefill_envs"))
 
         prefill_args = model_config["prefill_args"]
         if is_prefill_instance_multi_node:
-            logger.info(
-                "No node-rank specified - all prefill nodes will form a single instance."
-            )
-            prefill_args.extend(
-                [
-                    "--node-rank",
-                    pod_index,
-                    "--dist-init-addr",
-                    dist_init_addr,
-                    "--disaggregation-bootstrap-port",
-                    bootstrap_init_port,
-                ]
-            )
+            nnodes = _get_nnodes_from_args(prefill_args)
+            if nnodes and nnodes > 1:
+                instance_master_index = (pod_index // nnodes) * nnodes
+                node_rank = pod_index % nnodes
+                instance_group_index = pod_index // nnodes
+                master_pod_keyword = f"prefill-{instance_master_index}"
+                instance_master_ip = _get_pod_ip_by_keyword(
+                    configmap_data, master_pod_keyword
+                )
+                if not instance_master_ip:
+                    raise RuntimeError(
+                        f"Failed to find instance master {master_pod_keyword} in ConfigMap"
+                    )
+                dist_init_addr = f"{instance_master_ip}:5000"
+                logger.info(
+                    f"Multi-node prefill with nnodes={nnodes}: "
+                    f"pod_index={pod_index}, node_rank={node_rank}, "
+                    f"instance_master={master_pod_keyword}, dist_init_addr={dist_init_addr}"
+                )
+                prefill_args.extend(
+                    [
+                        "--node-rank",
+                        node_rank,
+                        "--dist-init-addr",
+                        dist_init_addr,
+                        "--disaggregation-bootstrap-port",
+                        str(bootstrap_init_port + instance_group_index),
+                    ]
+                )
+            else:
+                logger.info(
+                    "No node-rank specified - each prefill node is an independent instance."
+                )
+                prefill_args.extend(
+                    [
+                        "--node-rank",
+                        0,
+                        "--disaggregation-bootstrap-port",
+                        str(bootstrap_init_port + pod_index),
+                    ]
+                )
         else:
             logger.info("Node-rank specified - each prefill node is an instance.")
             prefill_args.extend(
@@ -504,24 +616,41 @@ def launch_pd_separation_node(model_config):
         service_args.extend(prefill_args)
 
     elif role == "decode":
-        dist_init_addr = f"{master_decode_ip}:5000"
-        logger.info(f"Launching decode node with dist_init_addr={dist_init_addr}")
-
         set_environment_variables(model_config.get("decode_envs"))
 
         decode_args = model_config["decode_args"]
         if is_decode_instance_multi_node:
-            logger.info(
-                "No node-rank specified - all decode nodes will form a single instance."
-            )
-            decode_args.extend(
-                [
-                    "--node-rank",
-                    str(pod_index),
-                    "--dist-init-addr",
-                    dist_init_addr,
-                ]
-            )
+            nnodes = _get_nnodes_from_args(decode_args)
+            if nnodes and nnodes > 1:
+                instance_master_index = (pod_index // nnodes) * nnodes
+                node_rank = pod_index % nnodes
+                master_pod_keyword = f"decode-{instance_master_index}"
+                instance_master_ip = _get_pod_ip_by_keyword(
+                    configmap_data, master_pod_keyword
+                )
+                if not instance_master_ip:
+                    raise RuntimeError(
+                        f"Failed to find instance master {master_pod_keyword} in ConfigMap"
+                    )
+                dist_init_addr = f"{instance_master_ip}:5000"
+                logger.info(
+                    f"Multi-node decode with nnodes={nnodes}: "
+                    f"pod_index={pod_index}, node_rank={node_rank}, "
+                    f"instance_master={master_pod_keyword}, dist_init_addr={dist_init_addr}"
+                )
+                decode_args.extend(
+                    [
+                        "--node-rank",
+                        str(node_rank),
+                        "--dist-init-addr",
+                        dist_init_addr,
+                    ]
+                )
+            else:
+                logger.info(
+                    "No node-rank specified - each decode node is an independent instance."
+                )
+                decode_args.extend(["--node-rank", "0"])
         else:
             logger.info("Node-rank specified - each decode node is an instance.")
 
@@ -570,6 +699,17 @@ def launch_router(model_config):
     is_multi_node_prefill_instance = "--node-rank" not in model_config["prefill_args"]
     is_multi_node_decode_instance = "--node-rank" not in model_config["decode_args"]
 
+    prefill_nnodes = (
+        _get_nnodes_from_args(model_config["prefill_args"])
+        if is_multi_node_prefill_instance
+        else None
+    )
+    decode_nnodes = (
+        _get_nnodes_from_args(model_config["decode_args"])
+        if is_multi_node_decode_instance
+        else None
+    )
+
     is_ready = False
     bootstrap_init_port = BOOTSTRAP_INIT_PORT
     start_time = time.time()
@@ -580,24 +720,62 @@ def launch_router(model_config):
             time.sleep(15)
             continue
         logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+
+        prefill_url.clear()
+        decode_url.clear()
+        bootstrap_ports.clear()
+        node_ip_list.clear()
+
         for pod_name, pod_ip in configmap.data.items():
-            pod_index = int(pod_name.rsplit("-", 1)[-1])
-            prefill_keyword = (
-                "prefill-0" if is_multi_node_prefill_instance else "prefill"
-            )
-            if prefill_keyword in pod_name:
-                prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                bootstrap_port = (
-                    bootstrap_init_port
-                    if is_multi_node_prefill_instance
-                    else bootstrap_init_port + pod_index
+            # Skip unexpected entries that don't end with a numeric index
+            last_part = pod_name.rsplit("-", 1)[-1]
+            if not last_part.isdigit():
+                logger.info(
+                    "Skipping ConfigMap entry with non-numeric suffix: %s", pod_name
                 )
-                bootstrap_ports.append(str(bootstrap_port))
-                node_ip_list.append(pod_ip)
-            decode_keyword = "decode-0" if is_multi_node_decode_instance else "decode"
-            if decode_keyword in pod_name:
-                decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                node_ip_list.append(pod_ip)
+                continue
+            pod_index = int(last_part)
+
+            if "prefill" in pod_name:
+                if is_multi_node_prefill_instance:
+                    if prefill_nnodes is not None and prefill_nnodes > 1:
+                        if pod_index % prefill_nnodes == 0:
+                            prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                            bootstrap_ports.append(
+                                str(bootstrap_init_port + pod_index // prefill_nnodes)
+                            )
+                            node_ip_list.append(pod_ip)
+                    elif prefill_nnodes is not None and prefill_nnodes == 1:
+                        prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                        bootstrap_ports.append(str(bootstrap_init_port + pod_index))
+                        node_ip_list.append(pod_ip)
+                    else:
+                        if pod_index == 0:
+                            prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                            bootstrap_ports.append(str(bootstrap_init_port))
+                            node_ip_list.append(pod_ip)
+                else:
+                    prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                    bootstrap_ports.append(str(bootstrap_init_port + pod_index))
+                    node_ip_list.append(pod_ip)
+
+            if "decode" in pod_name:
+                if is_multi_node_decode_instance:
+                    if decode_nnodes is not None and decode_nnodes > 1:
+                        if pod_index % decode_nnodes == 0:
+                            decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                            node_ip_list.append(pod_ip)
+                    elif decode_nnodes is not None and decode_nnodes == 1:
+                        decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                        node_ip_list.append(pod_ip)
+                    else:
+                        if pod_index == 0:
+                            decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                            node_ip_list.append(pod_ip)
+                else:
+                    decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
+                    node_ip_list.append(pod_ip)
+
         if prefill_url and decode_url:
             is_ready = True
         else:
@@ -679,7 +857,7 @@ def wait_server_ready(url, timeout=LOCAL_TIMEOUT):
                 logger.info(
                     f"Server {url} returned status code: {response.status_code}"
                 )
-        except Exception as e:
+        except Exception:
             # logger.error(f"Server {url} request error: {e}, retrying...")
             pass
 
@@ -691,7 +869,7 @@ def wait_server_ready(url, timeout=LOCAL_TIMEOUT):
         time.sleep(check_interval)
 
 
-class TestAscendMultiNodePdMixTestCaseBase(CustomTestCase):
+class TestNpuMultiNodePdMixTestCaseBase(CustomTestCase):
     model_config = None
 
     @classmethod
@@ -795,7 +973,7 @@ class TestAscendMultiNodePdMixTestCaseBase(CustomTestCase):
         )
 
 
-class TestAscendMultiNodePdSepTestCaseBase(CustomTestCase):
+class TestNpuMultiNodePdSepTestCaseBase(CustomTestCase):
     model_config = None
 
     @classmethod
