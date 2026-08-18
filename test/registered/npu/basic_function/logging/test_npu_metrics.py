@@ -735,10 +735,22 @@ class TestNPUStatLoggersDIRecording(CustomTestCase):
 
 
 if __name__ == "__main__":
-    # ``unittest.main()`` auto-discovers all TestCase subclasses defined in
-    # this module. The previous ``defaultTest=suite`` form breaks on
-    # Python 3.12+ where ``unittest.main`` treats ``defaultTest`` items as
-    # dotted module names and calls ``name.split('.')`` on each, raising
-    # ``AttributeError: 'X' object has no attribute 'split'`` against the
-    # TestSuite's TestCase children.
-    unittest.main(verbosity=2)
+    # Run TestCase classes in explicit order. Python 3.12+
+    # unittest.main() treats ``defaultTest`` items as dotted module names
+    # and calls ``name.split('.')`` on each -- passing a TestSuite (or its
+    # TestCase children) raises ``AttributeError: 'X' object has no
+    # attribute 'split'``. Pass the class names via ``argv`` so
+    # unittest.main runs the specified classes in the given order without
+    # string-parsing TestSuite objects.
+    unittest.main(
+        verbosity=2,
+        argv=[
+            "",
+            "TestNPUMetricsMFUDisabled",
+            "TestNPUMetricsMFUEnabled",
+            "TestNPUMetrics2NPU",
+            "TestNPUMetricsExtraLabels",
+            "TestNPUStatLoggersDI",
+            "TestNPUStatLoggersDIRecording",
+        ],
+    )

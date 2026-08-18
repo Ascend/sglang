@@ -274,10 +274,19 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
 
 
 if __name__ == "__main__":
-    # ``unittest.main()`` auto-discovers all TestCase subclasses defined in
-    # this module. The previous ``defaultTest=suite`` form breaks on
-    # Python 3.12+ where ``unittest.main`` treats ``defaultTest`` items as
-    # dotted module names and calls ``name.split('.')`` on each, raising
-    # ``AttributeError: 'X' object has no attribute 'split'`` against the
-    # TestSuite's TestCase children.
-    unittest.main(verbosity=2)
+    # Run TestCase classes in explicit order: functional first writes
+    # benchmark_ctx.cp_enabled_ttft, ttft-compare second consumes it.
+    # Python 3.12+ unittest.main() treats ``defaultTest`` items as dotted
+    # module names and calls ``name.split('.')`` on each -- passing a
+    # TestSuite (or its TestCase children) raises
+    # ``AttributeError: 'X' object has no attribute 'split'``. Pass the
+    # class names via ``argv`` so unittest.main runs the specified classes
+    # in the given order without string-parsing TestSuite objects.
+    unittest.main(
+        verbosity=2,
+        argv=[
+            "",
+            "TestDeepSeekV32W8A8PdSepCpNoMtpFunctional",
+            "TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare",
+        ],
+    )
