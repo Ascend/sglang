@@ -337,7 +337,7 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
             stream=False,
             tools=tools,
         )
-
+        print(response.model_dump_json(indent=2))
         self.assertEqual(response.choices[0].finish_reason, "tool_calls")
 
 
