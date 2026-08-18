@@ -21,7 +21,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 
 
 class TestApiRelatedToolCallParserLlama(CustomTestCase):
@@ -256,10 +256,10 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
     )
 
     tool_call_parser = "qwen"
+    model = QWEN3_32B_WEIGHTS_PATH
 
     @classmethod
     def setUpClass(cls):
-        cls.model = QWEN3_32B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.api_key = "sk-123456"
         other_args = [
@@ -267,7 +267,7 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
             "--mem-fraction-static",
             "0.8",
             "--tp-size",
-            2,
+            4,
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",

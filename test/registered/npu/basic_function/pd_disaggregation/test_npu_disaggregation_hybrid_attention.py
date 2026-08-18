@@ -16,6 +16,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_PATH = "/home/weights/Qwen3-Next-80B-A3B-Instruct"
 
 
 class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
@@ -61,6 +62,10 @@ class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
             cls.prefill_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=prefill_args,
+            env={
+                "ASCEND_USE_FIA": "1",
+                "GDN_USE_MEGA_GDN": "1",
+            },
         )
 
     @classmethod
@@ -78,6 +83,10 @@ class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
             cls.decode_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=decode_args,
+            env={
+                "ASCEND_USE_FIA": "1",
+                "GDN_USE_MEGA_GDN": "1",
+            },
         )
 
     @classmethod
