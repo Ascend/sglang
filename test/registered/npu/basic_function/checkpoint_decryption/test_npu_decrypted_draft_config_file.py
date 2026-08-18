@@ -73,9 +73,7 @@ class TestDraftConfigFile(CustomTestCase):
                     "--dtype",
                     "bfloat16",
                     "--decrypted-config-file",
-                    os.path.join(
-                        os.path.dirname(__file__), "Qwen3-8B", "config.json"
-                    ),
+                    os.path.join(os.path.dirname(__file__), "Qwen3-8B", "config.json"),
                     "--decrypted-draft-config-file",
                     os.path.join(
                         os.path.dirname(__file__), "Qwen3-8B_eagle3", "config.json"

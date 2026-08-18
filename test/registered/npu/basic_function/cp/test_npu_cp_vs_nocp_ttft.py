@@ -274,22 +274,10 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
 
 
 if __name__ == "__main__":
-    loader = unittest.TestLoader()
-
-    suite = unittest.TestSuite()
-    suite.addTest(
-        loader.loadTestsFromTestCase(TestDeepSeekV32W8A8PdSepCpNoMtpFunctional)
-    )
-    suite.addTest(
-        loader.loadTestsFromTestCase(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare)
-    )
-
-    # Python 3.12+ unittest.main() treats ``defaultTest`` items as dotted
-    # module names and calls ``name.split('.')`` on each -- passing a
-    # TestSuite (or its TestCase children) raises
-    # ``AttributeError: 'X' object has no attribute 'split'``. Use
-    # ``TestRunner.run`` directly to avoid the string-parsing path.
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-    unittest_main_exit_code = 0 if result.wasSuccessful() else 1
-    raise SystemExit(unittest_main_exit_code)
+    # ``unittest.main()`` auto-discovers all TestCase subclasses defined in
+    # this module. The previous ``defaultTest=suite`` form breaks on
+    # Python 3.12+ where ``unittest.main`` treats ``defaultTest`` items as
+    # dotted module names and calls ``name.split('.')`` on each, raising
+    # ``AttributeError: 'X' object has no attribute 'split'`` against the
+    # TestSuite's TestCase children.
+    unittest.main(verbosity=2)
