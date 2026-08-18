@@ -24,9 +24,7 @@ from sglang.test.test_utils import (
     read_output,
 )
 
-# Disable the fast input-logprobs path so this suite exercises the reference
-# log-softmax path. Servers launched here (and the spawned workers) inherit
-# this from os.environ.
+# Disable the fast input-logprobs path; use the reference log-softmax path.
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 # Mirror the temp-file names used by sglang.test.test_utils so that the
