@@ -110,6 +110,7 @@ RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
     mkdir -p /usr/local/Ascend/cann-${CANN_VERSION}/lib64 && \
     ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/$(arch)-linux/devlib/device/libascend_hal.so /usr/local/Ascend/cann-${CANN_VERSION}/lib64/libascend_hal.so && \
+    ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/$(arch)-linux/devlib/device/libascend_hal.so /usr/local/Ascend/cann-${CANN_VERSION}/lib64/device/lib64/libascend_hal.so
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
