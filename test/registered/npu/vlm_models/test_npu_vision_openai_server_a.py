@@ -147,6 +147,7 @@ class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
         "ascend",
     ]
 
+
 class TestGemma4itServer(ImageOpenAITestMixin):
     model = GEMMA_4_31B_WEIGHTS_PATH
     extra_args = [
