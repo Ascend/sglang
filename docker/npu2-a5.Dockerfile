@@ -106,16 +106,9 @@ RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
-ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
-
-ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
-
-
-RUN ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device/libascend_hal.so \
-    /usr/local/Ascend/cann-${CANN_VERSION}/lib64/libascend_hal.so
-
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
+    export LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/$(arch)-linux/devlib/device${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}} && \
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
