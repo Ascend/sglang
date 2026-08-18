@@ -735,13 +735,9 @@ class TestNPUStatLoggersDIRecording(CustomTestCase):
 
 
 if __name__ == "__main__":
-    # Run TestCase classes in explicit order. Python 3.12+
-    # unittest.main() treats ``defaultTest`` items as dotted module names
-    # and calls ``name.split('.')`` on each -- passing a TestSuite (or its
-    # TestCase children) raises ``AttributeError: 'X' object has no
-    # attribute 'split'``. Pass the class names via ``argv`` so
-    # unittest.main runs the specified classes in the given order without
-    # string-parsing TestSuite objects.
+    # Run classes in definition order. Python 3.12+ unittest.main() breaks on
+    # ``defaultTest=suite`` (calls name.split('.') on TestCase objects), so
+    # pass class names via ``argv`` (argv[0] is a program-name placeholder).
     unittest.main(
         verbosity=2,
         argv=[
