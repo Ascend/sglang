@@ -118,7 +118,7 @@ RUN echo "=== ASCEND_HOME_PATH ===" && \
     echo "=== CANN directory ===" && \
     ls -la /usr/local/Ascend/ && \
     echo "=== CANN lib ===" && \
-    find /usr/local/Ascend/cann-${CANN_VERSION} -maxdepth 3 -type f -name "*.so*" 2>/dev/null | head -100}
+    find /usr/local/Ascend/cann-${CANN_VERSION} -maxdepth 3 -type f -name "*.so*" 2>/dev/null | head -100
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
