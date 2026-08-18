@@ -115,7 +115,10 @@ RUN HAL_LIB=$(find ${ASCEND_HOME_PATH} -type f -name "libascend_hal.so" | head -
     echo "Found libascend_hal.so: $HAL_LIB" && \
     echo "$HAL_DIR" > /etc/ld.so.conf.d/ascend-hal.conf && \
     ldconfig && \
-    ldconfig -p | grep libascend_hal
+    export LD_LIBRARY_PATH="$HAL_DIR:$LD_LIBRARY_PATH" && \
+    echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" && \
+    echo "=== libascend_hal.so ===" && \
+    ldconfig -p | grep libascend_hal || true
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
