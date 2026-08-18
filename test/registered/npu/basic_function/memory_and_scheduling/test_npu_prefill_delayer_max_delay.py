@@ -71,6 +71,8 @@ def setUpModule():
     env = os.environ.copy()
     env["SGLANG_PREFILL_DELAYER_DEBUG_LOG"] = "1"
 
+    # Bump max_delay_passes so the pass-count fallback (default 30, ~900ms
+    # on NPU) does not fire before the 5000ms max_delay_ms cap this test asserts.
     other_args = [
         "--attention-backend",
         "ascend",
@@ -80,6 +82,8 @@ def setUpModule():
         str(QUEUE_MIN_RATIO),
         "--prefill-delayer-max-delay-ms",
         str(MAX_DELAY_MS),
+        "--prefill-delayer-max-delay-passes",
+        "10000",
     ]
     GLOBAL_SERVER_PROCESS = popen_launch_server(
         MODEL_PATH,

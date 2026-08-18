@@ -24,6 +24,9 @@ from sglang.test.test_utils import (
     read_output,
 )
 
+# Disable the fast input-logprobs path; use the reference log-softmax path.
+os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
+
 # Mirror the temp-file names used by sglang.test.test_utils so that the
 # streamed output thread can pick them up. We intentionally re-implement the
 # body of run_and_check_memory_leak here because that helper hard-codes
