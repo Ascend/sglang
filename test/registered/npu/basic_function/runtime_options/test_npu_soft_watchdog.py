@@ -1,5 +1,6 @@
 import io
 import logging
+import time
 import unittest
 
 import requests
@@ -141,10 +142,22 @@ class BaseTestDetokenizerWatchdog:
             )
         except requests.exceptions.ReadTimeout as e:
             logger.info(f"requests.post timed out (expected): {e}")
-        logger.info("Start call /generate API", extra={"flush": True})
+        logger.info("End call /generate API", extra={"flush": True})
 
-        # Merge output and verify expected logs
-        combined_output = self.stdout.getvalue() + self.stderr.getvalue()
+        # In Scenario 1, the soft watchdog defaults to 300s in CI while the
+        # HTTP read timed out at 40s. The watchdog has not fired yet at the
+        # point of the timeout -- poll the captured logs until the expected
+        # log line appears or the detokenizer's stuck window elapses.
+        # Scenarios 2-3 set the soft watchdog to 20s and the stuck window to
+        # 30s, so by the 40s HTTP timeout the watchdog has already fired and
+        # the poll loop exits on the first iteration.
+        deadline = time.monotonic() + self.stuck_seconds + 10
+        combined_output = ""
+        while time.monotonic() < deadline:
+            combined_output = self.stdout.getvalue() + self.stderr.getvalue()
+            if self.expected_log in combined_output:
+                break
+            time.sleep(5)
         self.assertIn(
             self.expected_log,
             combined_output,

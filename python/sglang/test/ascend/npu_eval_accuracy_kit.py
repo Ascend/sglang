@@ -33,12 +33,17 @@ def run_npu_pr_smoke(base_url):
     response = requests.post(
         f"{base_url}/generate",
         json={
-            "text": "The capital of France is",
+            "text": "What is the capital of France?",
             "sampling_params": {"temperature": 0, "max_new_tokens": 32},
         },
     )
     assert response.status_code == 200
-    assert "Paris" in response.text
+    # Case-insensitive match: some instruct models emit "paris" or "PARIS"
+    # depending on sampling/tokenization. Matching "paris" in the
+    # lowercased body covers all variants without false positives.
+    assert "paris" in response.text.lower(), (
+        f"Expected 'Paris' (case-insensitive) in response, got: {response.text!r}"
+    )
 
 
 class NPUGSM8KMixin(GSM8KMixin):

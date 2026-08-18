@@ -284,8 +284,12 @@ if __name__ == "__main__":
         loader.loadTestsFromTestCase(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare)
     )
 
-    # Python 3.12+ unittest.main() no longer accepts a callable for
-    # defaultTest (it calls list() on it, raising 'function' object is not
-    # iterable). Pass the TestSuite directly -- it is iterable, and
-    # argv=[""] avoids parsing sys.argv which would override defaultTest.
-    unittest.main(verbosity=2, argv=[""], defaultTest=suite)
+    # Python 3.12+ unittest.main() treats ``defaultTest`` items as dotted
+    # module names and calls ``name.split('.')`` on each -- passing a
+    # TestSuite (or its TestCase children) raises
+    # ``AttributeError: 'X' object has no attribute 'split'``. Use
+    # ``TestRunner.run`` directly to avoid the string-parsing path.
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    unittest_main_exit_code = 0 if result.wasSuccessful() else 1
+    raise SystemExit(unittest_main_exit_code)
