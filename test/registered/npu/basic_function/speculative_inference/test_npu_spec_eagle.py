@@ -3,6 +3,7 @@
 Validates Overlap (Spec v2) and No-overlap (Spec v1) independently against
 the same correctness baseline: output, logprobs, penalties, and stop behavior.
 """
+
 import os
 import unittest
 
@@ -21,6 +22,7 @@ from sglang.test.kits.spec_server_kits import (
     SpecPenaltyKit,
 )
 from sglang.test.server_fixtures.spec_eagle_fixture import Eagle3Base
+
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)

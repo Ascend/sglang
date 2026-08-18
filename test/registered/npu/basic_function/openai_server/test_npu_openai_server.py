@@ -30,6 +30,7 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
+
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 register_npu_ci(est_time=400, suite="stage-b-test-1-npu-a2", nightly=False)
