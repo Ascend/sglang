@@ -26,7 +26,7 @@ GLM_5_2_W4A8_16P_TWO_NODE_ENVS = {
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
     "TRANSFORMERS_VERBOSITY": "error",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "HCCL_BUFFSIZE": "2500",
+    "DEEPEP_HCCL_BUFFSIZE": "2500",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
@@ -49,7 +49,7 @@ GLM_5_2_W4A8_16P_TWO_NODE_OTHER_ARGS = [
     280000,
     "--trust-remote-code",
     "--mem-fraction-static",
-    0.60,
+    0.70,
     "--served-model-name",
     "glm-5",
     "--cuda-graph-max-bs",
@@ -74,6 +74,10 @@ GLM_5_2_W4A8_16P_TWO_NODE_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--reasoning-parser",
+    "glm45",
+    "--tool-call-parser",
+    "glm47",
 ]
 
 GLM_5_2_W4A8_16P_TWO_NODE_MODEL_CONFIG = {
