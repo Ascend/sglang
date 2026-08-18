@@ -71,10 +71,8 @@ def setUpModule():
     env = os.environ.copy()
     env["SGLANG_PREFILL_DELAYER_DEBUG_LOG"] = "1"
 
-    # Bump max_delay_passes (default 30) so the pass-count fallback does not
-    # fire before max_delay_ms. On Qwen3-0.6B NPU each pass is ~30ms, so the
-    # default 30-pass cap releases at ~900ms, racing ahead of the 5000ms
-    # timeout this test asserts on.
+    # Bump max_delay_passes so the pass-count fallback (default 30, ~900ms
+    # on NPU) does not fire before the 5000ms max_delay_ms cap this test asserts.
     other_args = [
         "--attention-backend",
         "ascend",

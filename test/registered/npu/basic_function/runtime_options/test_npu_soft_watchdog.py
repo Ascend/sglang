@@ -124,23 +124,14 @@ class BaseTestDetokenizerWatchdog:
         # Scenarios 1-3: Launch success → call API and verify timeout logs
         self.assertTrue(self.launch_success, "Server launch failed")
         logger.info("Start call /generate API", extra={"flush": True})
-        # The detokenizer is artificially stuck for ``stuck_seconds`` (350s in
-        # Scenario 1 where the default watchdog is 300s; 30s in Scenarios 2-3
-        # where the soft watchdog fires at 20s). With ``timeout=40`` the HTTP
-        # read will time out for Scenario 1 long before the detokenizer
-        # resumes. That is fine: this test only asserts the watchdog log line
-        # was emitted, not that the request completed.
-        try:
-            requests.post(
-                DEFAULT_URL_FOR_TEST + "/generate",
-                json={
-                    "text": "Hello, please repeat this sentence for 1000 times.",
-                    "sampling_params": {"max_new_tokens": 100, "temperature": 0},
-                },
-                timeout=40,
-            )
-        except requests.exceptions.ReadTimeout as e:
-            logger.info(f"requests.post timed out (expected): {e}")
+        requests.post(
+            DEFAULT_URL_FOR_TEST + "/generate",
+            json={
+                "text": "Hello, please repeat this sentence for 1000 times.",
+                "sampling_params": {"max_new_tokens": 100, "temperature": 0},
+            },
+            timeout=40,
+        )
         logger.info("Start call /generate API", extra={"flush": True})
 
         # Merge output and verify expected logs

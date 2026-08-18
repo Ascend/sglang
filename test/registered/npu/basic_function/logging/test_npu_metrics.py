@@ -735,9 +735,7 @@ class TestNPUStatLoggersDIRecording(CustomTestCase):
 
 
 if __name__ == "__main__":
-    # Run classes in definition order. Python 3.12+ unittest.main() breaks on
-    # ``defaultTest=suite`` (calls name.split('.') on TestCase objects), so
-    # pass class names via ``argv`` (argv[0] is a program-name placeholder).
+    # Run classes in definition order. argv[0] is a program-name placeholder.
     unittest.main(
         verbosity=2,
         argv=[

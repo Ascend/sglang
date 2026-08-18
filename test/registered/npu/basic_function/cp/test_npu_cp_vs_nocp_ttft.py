@@ -274,10 +274,8 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
 
 
 if __name__ == "__main__":
-    # Run classes in explicit order: functional writes benchmark_ctx.cp_enabled_ttft,
-    # ttft-compare consumes it. Python 3.12+ unittest.main() breaks on
-    # ``defaultTest=suite`` (calls name.split('.') on TestCase objects), so
-    # pass class names via ``argv`` (argv[0] is a program-name placeholder).
+    # Explicit order: functional writes benchmark_ctx.cp_enabled_ttft,
+    # ttft-compare reads it. argv[0] is a program-name placeholder.
     unittest.main(
         verbosity=2,
         argv=[
