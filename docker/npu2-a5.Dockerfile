@@ -108,9 +108,7 @@ RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
-    mkdir -p /usr/local/Ascend/cann-${CANN_VERSION}/lib64 && \
-    ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/$(arch)-linux/devlib/device/libascend_hal.so /usr/local/Ascend/cann-${CANN_VERSION}/lib64/libascend_hal.so && \
-    ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/$(arch)-linux/devlib/device/libascend_hal.so /usr/local/Ascend/cann-${CANN_VERSION}/lib64/device/lib64/libascend_hal.so && \
+    export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/runtime/lib64/stub:${LD_LIBRARY_PATH} && \
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
