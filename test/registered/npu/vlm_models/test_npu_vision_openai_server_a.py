@@ -32,6 +32,7 @@ register_npu_ci(est_time=3200, suite="full-2-npu-a3", nightly=True)
 
 
 class TestGemma4itServer(ImageOpenAITestMixin):
+    os.environ["ASCEND_USE_FIA"] = "1"
     model = GEMMA_4_31B_WEIGHTS_PATH
     extra_args = [
         "--disable-cuda-graph",
