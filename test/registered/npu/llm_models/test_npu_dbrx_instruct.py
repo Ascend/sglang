@@ -17,12 +17,6 @@ class TestDbrx(GSM8KAscendMixin, CustomTestCase):
 
     model = DBRX_INSTRUCT_WEIGHTS_PATH
     accuracy = 0.735
-    # dbrx-instruct is an instruction-tuned model, but it does not reliably
-    # complete "The capital of France is" with the token "Paris"
-    # when given as a raw completion prompt (it expects chat-template input
-    # with <|im_start|>/<|im_end|> markers). The PR smoke only
-    # asserts HTTP 200 + non-empty body.
-    pr_smoke_expect = None
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
