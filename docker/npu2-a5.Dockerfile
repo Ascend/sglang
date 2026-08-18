@@ -107,18 +107,12 @@ RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-
     ${PIP_INSTALL} -v -e .[all_npu]
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
-ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
-RUN HAL_LIB=$(find ${ASCEND_HOME_PATH} -type f -name "libascend_hal.so" | head -1) && \
-    test -n "$HAL_LIB" && \
-    HAL_DIR=$(dirname "$HAL_LIB") && \
-    echo "Found libascend_hal.so: $HAL_LIB" && \
-    echo "$HAL_DIR" > /etc/ld.so.conf.d/ascend-hal.conf && \
-    ldconfig && \
-    echo "=== ldconfig libascend_hal.so ===" && \
-    ldconfig -p | grep libascend_hal || true && \
-    echo "=== test load ===" && \
-    LD_LIBRARY_PATH="$HAL_DIR:$LD_LIBRARY_PATH" ldconfig -p | grep libascend_hal || true
+ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
+
+
+RUN ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device/libascend_hal.so \
+    /usr/local/Ascend/cann-${CANN_VERSION}/lib64/libascend_hal.so
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
