@@ -9,6 +9,7 @@ import unittest
 import openai
 
 from sglang.test.ascend.test_ascend_utils import (
+    GEMMA_4_31B_WEIGHTS_PATH,
     KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
     LLAVA_ONEVISION_QWEN2_7B_OV_WEIGHTS_PATH,
     MINICPM_O_2_6_WEIGHTS_PATH,
@@ -144,6 +145,16 @@ class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
         "4",
         "--attention-backend",
         "ascend",
+    ]
+
+class TestGemma4itServer(ImageOpenAITestMixin):
+    model = GEMMA_4_31B_WEIGHTS_PATH
+    extra_args = [
+        "--disable-cuda-graph",
+        "--attention-backend",
+        "ascend",
+        "--tp-size",
+        "4",
     ]
 
 
