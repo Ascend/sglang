@@ -38,9 +38,6 @@ def run_npu_pr_smoke(base_url):
         },
     )
     assert response.status_code == 200
-    # Case-insensitive match: some instruct models emit "paris" or "PARIS"
-    # depending on sampling/tokenization. Matching "paris" in the
-    # lowercased body covers all variants without false positives.
     assert "Paris" in response.text
 
 
