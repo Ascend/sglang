@@ -1,5 +1,7 @@
 name: Single Test (NPU) Token Map
-# Temporary validation workflow for test_npu_speculative_token_map.py (tp-size=1 fix).
+# test round: validate --speculative-token-map (FR-Spec/EAGLE2) runs with tp-size=1
+# on CANN 9.1.0 (a3). The FR-Spec token map uses global vocab token IDs which index
+# the TP-split lm_head, so tp-size must be 1 to avoid index out-of-bounds (EE9999).
 # Triggered only when this file itself changes, so it does not disturb
 # .github/workflows/single-test-npu.yml or the main pr-test pipelines.
 
@@ -40,7 +42,7 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 使用时替换为实际的测试用例路径
+          # Test cases
           test_cases=(
             "test/registered/npu/basic_function/speculative_inference/test_npu_speculative_token_map.py"
           )
