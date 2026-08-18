@@ -6,6 +6,9 @@ ARG arch
 
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
+RUN echo "=== libascend_hal.so ===" && \
+    find /usr/local/Ascend /usr -name "libascend_hal.so*" -ls 2>/dev/null || true
+
 # Update pip & apt sources
 ARG TARGETARCH
 ARG CANN_VERSION
