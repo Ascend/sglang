@@ -109,16 +109,16 @@ RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
-
-RUN mkdir cann-custom-ops && \
-    cd cann-custom-ops && \
-    HAL_LIB=$(find /usr/local/Ascend/cann-${CANN_VERSION} -type f -name "libascend_hal.so" | head -1) && \
+RUN HAL_LIB=$(find ${ASCEND_HOME_PATH} -type f -name "libascend_hal.so" | head -1) && \
     test -n "$HAL_LIB" && \
     HAL_DIR=$(dirname "$HAL_LIB") && \
     echo "Found libascend_hal.so: $HAL_LIB" && \
-    echo "Using HAL library directory: $HAL_DIR" && \
-    export LD_LIBRARY_PATH="$HAL_DIR:$LD_LIBRARY_PATH" && \
-    echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" && \
+    echo "$HAL_DIR" > /etc/ld.so.conf.d/ascend-hal.conf && \
+    ldconfig && \
+    ldconfig -p | grep libascend_hal
+
+RUN mkdir cann-custom-ops && \
+    cd cann-custom-ops && \
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     wget https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
