@@ -5,13 +5,11 @@ import openai
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    QWEN3_CODER_NEXT_W8A8_MODEL_PATH,
-)
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
     QWEN3_5_27B_MODEL_WEIGHTS_PATH,
     QWEN3_32B_WEIGHTS_PATH,
+    QWEN3_CODER_480B_A35B_INSTRUCT_W8A8_QUAROT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -21,7 +19,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class TestApiRelatedToolCallParserLlama(CustomTestCase):
@@ -256,10 +254,10 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
     )
 
     tool_call_parser = "qwen"
+    model = QWEN3_32B_WEIGHTS_PATH
 
     @classmethod
     def setUpClass(cls):
-        cls.model = QWEN3_32B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.api_key = "sk-123456"
         other_args = [
@@ -267,7 +265,7 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
             "--mem-fraction-static",
             "0.8",
             "--tp-size",
-            2,
+            16,
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
@@ -279,7 +277,7 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=1800,
             api_key=cls.api_key,
             other_args=other_args,
         )
@@ -343,7 +341,7 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
 
 class TestApiRelatedToolCallParserQwen3Coder(TestApiRelatedToolCallParserQwen):
     tool_call_parser = "qwen3_coder"
-    model = QWEN3_CODER_NEXT_W8A8_MODEL_PATH
+    model = QWEN3_CODER_480B_A35B_INSTRUCT_W8A8_QUAROT_WEIGHTS_PATH
 
 
 class TestApiRelatedAdminApiKey(CustomTestCase):
