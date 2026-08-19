@@ -118,6 +118,8 @@ RUN mkdir cann-custom-ops && \
     ./cann-ops-transformer-custom_linux-$(arch).run --install-path=/usr/local/Ascend/cann-${CANN_VERSION}/opp && \
     source /usr/local/Ascend/cann-${CANN_VERSION}/opp/vendors/customize/bin/set_env.bash && \
     source /usr/local/Ascend/cann-${CANN_VERSION}/opp/vendors/custom_transformer/bin/set_env.bash && \
+    source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh && \
+    source /usr/local/Ascend/nnal/atb/set_env.sh && \
     ${PIP_INSTALL} custom_ops-1.0-cp312-cp312-linux_$(arch).whl && \
     cd .. && rm -rf cann-custom-ops
 
