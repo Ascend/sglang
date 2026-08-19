@@ -277,7 +277,7 @@ class TestApiRelatedToolCallParserQwen(CustomTestCase):
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            timeout=1800,
             api_key=cls.api_key,
             other_args=other_args,
         )
