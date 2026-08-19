@@ -94,21 +94,29 @@ jobs:
       max-parallel: 4
       matrix:
         test_config:
-          - name: test_npu_lora_update
+#          - name: test_npu_lora_update
+#            runner: linux-aarch64-a3-2-
+#            test_case: test/registered/npu/basic_function/lora/test_npu_lora_update.py
+#            test_type: 'function'
+#          - name: test_npu_api_related_tool_call
+#            runner: linux-aarch64-a3-16-
+#            test_case: test/registered/npu/basic_function/api_related/test_npu_api_related_tool_call.py
+#            test_type: 'function'
+#          - name: test_npu_qwen3_next_models
+#            runner: linux-aarch64-a3-4-
+#            test_case: test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models.py
+#            test_type: 'function'
+#          - name: test_npu_disaggregation_hybrid_attention
+#            runner: linux-aarch64-a3-16-
+#            test_case: test/registered/npu/basic_function/pd_disaggregation/test_npu_disaggregation_hybrid_attention.py
+#            test_type: 'function'
+          - name: test_npu_pre_warm_nccl
             runner: linux-aarch64-a3-2-
-            test_case: test/registered/npu/basic_function/lora/test_npu_lora_update.py
+            test_case: test/registered/npu/basic_function/optimization_debug_options/test_npu_pre_warm_nccl.py
             test_type: 'function'
-          - name: test_npu_api_related_tool_call
-            runner: linux-aarch64-a3-16-
-            test_case: test/registered/npu/basic_function/api_related/test_npu_api_related_tool_call.py
-            test_type: 'function'
-          - name: test_npu_qwen3_next_models
-            runner: linux-aarch64-a3-4-
-            test_case: test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models.py
-            test_type: 'function'
-          - name: test_npu_disaggregation_hybrid_attention
-            runner: linux-aarch64-a3-16-
-            test_case: test/registered/npu/basic_function/pd_disaggregation/test_npu_disaggregation_hybrid_attention.py
+          - name: test_npu_prefill_delayer_max_delay
+            runner: linux-aarch64-a3-2-
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_prefill_delayer_max_delay.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:

@@ -1,5 +1,7 @@
 import unittest
 
+import requests
+
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
@@ -47,18 +49,40 @@ class TestPreWarmNccl(CustomTestCase):
         )
         return proc
 
-    def _run_bench(self):
+    def _get_bench_args(self, num_prompts):
         args = get_benchmark_args(
             base_url=self.base_url,
             backend="sglang",
             dataset_name="random",
             tokenizer=self.model,
-            num_prompts=100,
+            num_prompts=num_prompts,
             random_input_len=3500,
             random_output_len=1500,
             request_rate=float("inf"),
         )
         args.warmup_requests = 0
+        return args
+
+    def _run_bench(self):
+        # Warm the kernels with a same-shape mini benchmark before measuring.
+        # Without this, the first server process pays one-time Triton/CANN
+        # prefill-kernel compilation inside the measured TTFT window while the
+        # second process reuses the warm disk cache; that confound makes
+        # --pre-warm-nccl look slower than default even though the regression
+        # is cold-cache, not NCCL. Pre-warming both servers equally isolates
+        # the actual effect of --pre-warm-nccl.
+        run_benchmark(self._get_bench_args(num_prompts=16))
+        # The warmup prompts share prefixes with the first 16 measured
+        # prompts (same seed), so without a flush the measured run would
+        # exercise a different extend-with-cached-prefix kernel path and
+        # recompile on the first server. Flush so both runs use the same
+        # fresh-prefill kernels compiled during warmup.
+        requests.post(
+            self.base_url + "/flush_cache",
+            params={"timeout": 30},
+            timeout=60,
+        ).raise_for_status()
+        args = self._get_bench_args(num_prompts=100)
         res = run_benchmark(args)
         self.assertGreater(res["mean_ttft_ms"], 0, "TTFT must be > 0 ms")
         return res
