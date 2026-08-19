@@ -41,7 +41,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "python/sglang/test/ascend/e2e/generate_lora_reference_data.py"
           )
 
           for test_case in "${test_cases[@]}"; do
