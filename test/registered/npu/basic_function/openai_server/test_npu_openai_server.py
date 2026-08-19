@@ -767,8 +767,8 @@ class TestOpenAIServerv1Responses(CustomTestCase):
         self.assertIn("output", body)
         self.assertIn("status", body)
         if "usage" in body:
-            self.assertIn("prompt_tokens", body["usage"])
-            self.assertIn("total_tokens", body["usage"])
+            self.assertIn("input_tokens", body["usage"])
+            self.assertIn("output_tokens", body["usage"])
 
     def test_response_prefill(self):
         client = openai.Client(api_key=self.api_key, base_url=self.base_url)
