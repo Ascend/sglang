@@ -8,17 +8,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-27B", required=True
-    )
-    parser.add_argument(
-        "/root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora",
-        required=True,
-    )
-    parser.add_argument(
-        "/root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora/compare_sample_train_data.pt",
-        required=True,
-    )
+    parser.add_argument("--model_path", required=True)
+    parser.add_argument("--lora_path",required=True,)
+    parser.add_argument("--output",required=True,)
     parser.add_argument("--prompt", default="The capital of France is")
     args = parser.parse_args()
 

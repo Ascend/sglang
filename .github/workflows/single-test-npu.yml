@@ -43,7 +43,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "python/sglang/test/ascend/e2e/generate_lora_reference_data.py"
+            "python/sglang/test/ascend/e2e/generate_lora_reference_data.py --model_path /root/.cache/modelscope/hub/models/Qwen/Qwen3.6-27B --lora_path /root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora --output /root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora/compare_sample_train_data.pt"
           )
 
           for test_case in "${test_cases[@]}"; do
