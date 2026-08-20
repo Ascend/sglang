@@ -5,23 +5,19 @@ import unittest
 
 import torch
 
-from sglang.test.ascend.test_ascend_utils import (
-    SKYWORK_REWARD_GEMMA_2_27B_V0_2_WEIGHTS_PATH,
-)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.runners import HFRunner, SRTRunner
 from sglang.test.test_utils import CustomTestCase
 
 logger = logging.getLogger(__name__)
-register_npu_ci(
-    est_time=400,
-    suite="full-1-npu-a3",
-    nightly=True,
-    disabled="no longer being monitored",
-)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 MODELS = [
-    (SKYWORK_REWARD_GEMMA_2_27B_V0_2_WEIGHTS_PATH, 1, 4e-2),
+    (
+        "/root/.cache/modelscope/hub/models/AI-ModelScope/Skywork-Reward-Gemma-2-27B-v0.2",
+        1,
+        4e-2,
+    ),
 ]
 TORCH_DTYPES = [torch.bfloat16]
 
@@ -37,12 +33,7 @@ CONVS = [
 ]
 
 
-class TestGemma(CustomTestCase):
-    """Testcase: This test case validates that the reward scores from the AI-ModelScope/Skywork-Reward-Gemma-2-27B-v0.2 model in the SGLang framework are less than 4e-2 different from the Hugging Face implementation.
-
-    [Test Category] Model
-    [Test Target] AI-ModelScope/Skywork-Reward-Gemma-2-27B-v0.2
-    """
+class TestRewardModels(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
