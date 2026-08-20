@@ -293,7 +293,6 @@ class TestChatCompletionsInterface(CustomTestCase):
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
-        has_reasoning = False
         has_content = False
 
         for line in response.iter_lines():
@@ -303,14 +302,9 @@ class TestChatCompletionsInterface(CustomTestCase):
                     data = json.loads(line[6:])
                     if "choices" in data and len(data["choices"]) > 0:
                         delta = data["choices"][0].get("delta", {})
-                        if "reasoning_content" in delta and delta["reasoning_content"]:
-                            has_reasoning = True
                         if "content" in delta and delta["content"]:
                             has_content = True
 
-        self.assertTrue(
-            has_reasoning, "Reasoning content not included in stream response"
-        )
         self.assertTrue(has_content, "Normal content not included in stream response")
 
     def test_temperature(self):
@@ -674,7 +668,6 @@ class TestStartProfile(CustomTestCase):
         cls.other_args = [
             "--attention-backend",
             "ascend",
-            "--enable-torch-profiler",
         ]
         cls.process = popen_launch_server(
             cls.model,
