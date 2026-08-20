@@ -27,6 +27,11 @@ on:
         type: boolean
         default: false
         description: install sglang dependencies (e.g. PyTorch, CANN packages) when using source installation
+      install_sglang_from_source:
+        required: false
+        type: boolean
+        default: false
+        description: import sglang from the checked-out source tree instead of the container image
       device_type_for_deps:
         required: false
         type: string
@@ -79,6 +84,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check PR test health
         uses: actions/github-script@v8
@@ -341,6 +348,19 @@ jobs:
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
           set -u
+
+          if [ "${{ inputs.install_sglang_from_source }}" = "true" ]; then
+            export PYTHONPATH=${sglang_source_path}/python:${PYTHONPATH:-}
+          fi
+          actual_sglang_path=$(${PYTHON_FOR_SGLANG} -c 'import os, sglang; print(os.path.realpath(sglang.__file__))')
+          echo "Checked out commit: $(git rev-parse HEAD)"
+          echo "Imported sglang: ${actual_sglang_path}"
+          if [ "${{ inputs.install_sglang_from_source }}" = "true" ]; then
+            case "${actual_sglang_path}" in
+              "${sglang_source_path}/python/sglang/"*) ;;
+              *) echo "ERROR: sglang was not imported from the checked-out source tree"; exit 1 ;;
+            esac
+          fi
 
           # Nightly log path mirrors the output layout; PR keeps the original {date}/{testcase}.
           if [ "${{ inputs.is_nightly_pipeline_job }}" = "true" ]; then
