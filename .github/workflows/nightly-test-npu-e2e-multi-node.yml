@@ -162,7 +162,7 @@ jobs:
             --image ${{ inputs.image }} \
             --sglang-source-relative-path ${sglang_source_relative_path} \
             --metrics-data-file ${metrics_data_path} \
-            --test-case ${test_case} \
+            --test-case \"${test_case}\" \
             --kube-name-space ${NAMESPACE} \
             --kube-job-type ${kube_job_type} \
             --kube-job-name-prefix ${KUBE_JOB_NAME}"
