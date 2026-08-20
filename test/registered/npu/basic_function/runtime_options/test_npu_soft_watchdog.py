@@ -82,8 +82,12 @@ class BaseTestDetokenizerWatchdog:
                     return_stdout_stderr=(cls.stdout, cls.stderr),
                 )
             cls.launch_success = True
-        except TimeoutError:
-            # Scenario 4 expects timeout, check if target error exists in logs
+        except Exception:
+            # Scenario 4 expects the launch to fail: the detokenizer subprocess
+            # asserts because the stuck tester needs a soft watchdog, and the
+            # whole server then exits (popen_launch_server raises a generic
+            # "exited" Exception) or the launch times out. Either way, check
+            # that the expected AssertionError is present in the logs.
             cls.launch_success = False
             # Scenarios' server environments.
             envs.SGLANG_TEST_STUCK_DETOKENIZER.clear()
@@ -98,7 +102,7 @@ class BaseTestDetokenizerWatchdog:
                 # Print complete logs for troubleshooting
                 logger.info(f"\n[Scenario 4] Complete logs:\n{combined_log}")
             else:
-                # Expected error not found, raise timeout error
+                # Expected error not found, raise the original launch error
                 raise
 
     @classmethod
