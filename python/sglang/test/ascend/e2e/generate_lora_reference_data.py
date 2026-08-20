@@ -8,9 +8,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", required=True)
-    parser.add_argument("--lora_path",required=True,)
-    parser.add_argument("--output",required=True,)
+    parser.add_argument(
+        "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-27B", required=True
+    )
+    parser.add_argument(
+        "/root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora",
+        required=True,
+    )
+    parser.add_argument(
+        "/root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora/compare_sample_train_data.pt",
+        required=True,
+    )
     parser.add_argument("--prompt", default="The capital of France is")
     args = parser.parse_args()
 
@@ -21,14 +29,15 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         args.model_path,
         dtype=torch.bfloat16,
-        # device_map="npu:0",
+        # device="npu:0",
         trust_remote_code=True,
-        low_cpu_mem_usage=True,
+        low_cpu_mem_usage=True
     ).to("npu:0")
 
     print(f"Loading LoRA adapter: {args.lora_path}")
     model = PeftModel.from_pretrained(model, args.lora_path)
     model = model.merge_and_unload()  # Merge LoRA into base model weights
+    model = model.to("npu:0")
     model.eval()
 
     # Tokenize prompt
