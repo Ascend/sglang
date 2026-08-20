@@ -70,7 +70,10 @@ def setUpModule():
     global GLOBAL_SERVER_PROCESS
     env = os.environ.copy()
     env["SGLANG_PREFILL_DELAYER_DEBUG_LOG"] = "1"
+    env["SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE"] = "2000"
 
+    # Bump max_delay_passes so the pass-count fallback (default 30, ~900ms
+    # on NPU) does not fire before the 5000ms max_delay_ms cap this test asserts.
     other_args = [
         "--attention-backend",
         "ascend",
@@ -80,6 +83,8 @@ def setUpModule():
         str(QUEUE_MIN_RATIO),
         "--prefill-delayer-max-delay-ms",
         str(MAX_DELAY_MS),
+        "--prefill-delayer-max-delay-passes",
+        "10000",
     ]
     GLOBAL_SERVER_PROCESS = popen_launch_server(
         MODEL_PATH,
@@ -141,9 +146,9 @@ def _wait_until_stable_running(
     deadline = time.perf_counter() + timeout
     stable_since = None
     while time.perf_counter() < deadline:
-        running, _ = _query_status(base_url, "wait", verbose=False)
+        running, waiting = _query_status(base_url, "wait", verbose=False)
         now = time.perf_counter()
-        if running is not None and running >= target:
+        if running is not None and running >= target and waiting == 0:
             if stable_since is None:
                 stable_since = now
             elif now - stable_since >= stable_secs:
