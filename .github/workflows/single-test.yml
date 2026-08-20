@@ -126,6 +126,10 @@ jobs:
             runner: linux-aarch64-a3-4-
             test_case: test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_enable_waterfill.py
             test_type: 'function'
+          - name: test_npu_api
+            runner: linux-aarch64-a3-2-
+            test_case: test/registered/npu/interface/test_npu_api.py
+            test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
