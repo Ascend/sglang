@@ -274,14 +274,13 @@ class TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare(
 
 
 if __name__ == "__main__":
-    loader = unittest.TestLoader()
-
-    suite = unittest.TestSuite()
-    suite.addTest(
-        loader.loadTestsFromTestCase(TestDeepSeekV32W8A8PdSepCpNoMtpFunctional)
+    # Explicit order: functional writes benchmark_ctx.cp_enabled_ttft,
+    # ttft-compare reads it. argv[0] is a program-name placeholder.
+    unittest.main(
+        verbosity=2,
+        argv=[
+            "",
+            "TestDeepSeekV32W8A8PdSepCpNoMtpFunctional",
+            "TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare",
+        ],
     )
-    suite.addTest(
-        loader.loadTestsFromTestCase(TestDeepSeekV32W8A8PdSepCpVsNoCpTtftCompare)
-    )
-
-    unittest.main(verbosity=2, defaultTest=lambda: suite)

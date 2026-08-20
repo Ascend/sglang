@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import time
 import unittest
@@ -21,6 +22,8 @@ from sglang.test.test_utils import (
     popen_launch_server,
     run_logprob_check,
 )
+
+os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
