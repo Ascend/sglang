@@ -122,9 +122,9 @@ class TestOpenAIServer(CustomTestCase):
         assert response.id
         assert response.created
         assert (
-            response.usage.input_tokens == num_prompt_tokens
-        ), f"{response.usage.input_tokens} vs {num_prompt_tokens}"
-        assert response.usage.output_tokens > 0
+            response.usage.prompt_tokens == num_prompt_tokens
+        ), f"{response.usage.prompt_tokens} vs {num_prompt_tokens}"
+        assert response.usage.completion_tokens > 0
         assert response.usage.total_tokens > 0
 
     def run_completion_stream(
@@ -167,8 +167,8 @@ class TestOpenAIServer(CustomTestCase):
             print(f"{response=}")
             usage = response.usage
             if usage is not None:
-                assert usage.input_tokens > 0, f"usage.input_tokens was zero"
-                assert usage.output_tokens > 0, f"usage.output_tokens was zero"
+                assert usage.prompt_tokens > 0, f"usage.prompt_tokens was zero"
+                assert usage.completion_tokens > 0, f"usage.completion_tokens was zero"
                 assert usage.total_tokens > 0, f"usage.total_tokens was zero"
                 continue
 
@@ -238,8 +238,8 @@ class TestOpenAIServer(CustomTestCase):
         assert isinstance(response.choices[0].message.content, str)
         assert response.id
         assert response.created
-        assert response.usage.input_tokens > 0
-        assert response.usage.output_tokens > 0
+        assert response.usage.prompt_tokens > 0
+        assert response.usage.completion_tokens > 0
         assert response.usage.total_tokens > 0
 
     def run_chat_completion_stream(self, logprobs, parallel_sample_num=1):
@@ -264,8 +264,8 @@ class TestOpenAIServer(CustomTestCase):
         for response in generator:
             usage = response.usage
             if usage is not None:
-                assert usage.input_tokens > 0, f"usage.input_tokens was zero"
-                assert usage.output_tokens > 0, f"usage.output_tokens was zero"
+                assert usage.prompt_tokens > 0, f"usage.prompt_tokens was zero"
+                assert usage.completion_tokens > 0, f"usage.completion_tokens was zero"
                 assert usage.total_tokens > 0, f"usage.total_tokens was zero"
                 continue
 
@@ -1068,12 +1068,12 @@ class TestOpenAIV1Score(CustomTestCase):
 
         # Verify usage
         self.assertIn("usage", response, "Response should have a 'usage' field")
-        self.assertGreater(response["usage"]["input_tokens"], 0)
+        self.assertGreater(response["usage"]["prompt_tokens"], 0)
         self.assertEqual(
-            response["usage"]["input_tokens"], response["usage"]["total_tokens"]
+            response["usage"]["prompt_tokens"], response["usage"]["total_tokens"]
         )
         self.assertEqual(
-            response["usage"]["output_tokens"],
+            response["usage"]["completion_tokens"],
             0,
             "output_tokens should be 0 for /v1/score",
         )
@@ -1130,12 +1130,12 @@ class TestOpenAIV1Score(CustomTestCase):
 
         # Verify usage
         self.assertIn("usage", response, "Response should have a 'usage' field")
-        self.assertGreater(response["usage"]["input_tokens"], 0)
+        self.assertGreater(response["usage"]["prompt_tokens"], 0)
         self.assertEqual(
-            response["usage"]["input_tokens"], response["usage"]["total_tokens"]
+            response["usage"]["prompt_tokens"], response["usage"]["total_tokens"]
         )
         self.assertEqual(
-            response["usage"]["output_tokens"],
+            response["usage"]["completion_tokens"],
             0,
             "output_tokens should be 0 for /v1/score",
         )
