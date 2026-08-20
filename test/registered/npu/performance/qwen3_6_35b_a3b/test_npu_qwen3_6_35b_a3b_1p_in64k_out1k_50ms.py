@@ -8,12 +8,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(
-    est_time=3600,
-    suite="full-2-npu-a3",
-    nightly=True,
-    disabled="performance testcase",
-)
+register_npu_ci(est_time=3600, suite="nightly-perf-2-npu-a3", nightly=True)
 
 QWEN3_6_35B_A3B_64K_1K_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -84,13 +79,12 @@ class TestNPUQwen3_6_35BA3B_1P_In64k_Out1k_50ms(TestNpuPerformanceTestCaseBase):
     """Test NPU performance for Qwen3.6-35B-A3B 1p in64k out1k 50ms"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    dataset_type = AISBENCHMARK_DATASET_DEFAULT
+    aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     model = QWEN3_6_35B_A3B_MODEL_PATH
     other_args = QWEN3_6_35B_A3B_64K_1K_OTHER_ARGS
     envs = QWEN3_6_35B_A3B_64K_1K_ENVS
     dataset_name = "random"
     max_concurrency = 10
-    warmup_requests = max_concurrency
     num_prompts = 40
     input_len = 64000
     output_len = 1000

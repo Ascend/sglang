@@ -9,6 +9,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-2-npu-a3")
+register_npu_ci(est_time=3600, suite="nightly-perf-4-npu-a3", nightly=True)
 
 QWEN3_6_27B_64K_1K_ENVS = {
     "STREAMS_PER_DEVICE": "32",
@@ -81,7 +82,6 @@ class TestNPUQwen3_6_27B_2P_In64k_Out1k_50ms(TestNpuPerformanceTestCaseBase):
     input_len = 64000
     output_len = 1000
     random_range_ratio = 1
-    seed = 1
     tpot = 50
     output_token_throughput = 57.85
 
