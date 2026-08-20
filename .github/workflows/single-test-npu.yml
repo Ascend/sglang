@@ -47,8 +47,9 @@ jobs:
           )
 
           for test_case in "${test_cases[@]}"; do
-            if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-              echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
+            script_path="${test_case%% *}"
+            if [ ! -f "${sglang_source_path}/${script_path}" ]; then
+              echo "The testcase does not exit: ${sglang_source_path}/${script_path}"
               exit 1
             fi
           done
@@ -85,7 +86,8 @@ jobs:
           echo "Log path: ${log_path}"
 
           for test_case in "${test_cases[@]}"; do
-            tc_name=$(basename ${test_case} .py)
+            script_path="${test_case%% *}"
+            tc_name=$(basename ${script_path} .py)
             echo "Running test case ${test_case}"
             python -u ${sglang_source_path}/${test_case}
             echo "Finished test case ${test_case}"
