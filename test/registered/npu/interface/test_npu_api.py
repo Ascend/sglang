@@ -443,10 +443,12 @@ class TestChatCompletionsInterface(CustomTestCase):
                 "model": self.model,
                 "messages": [{"role": "user", "content": "Hello"}],
                 "stop_token_ids": [1, 13],
+                "logit_bias": {"13": 100},
             },
         )
         self.assertEqual(response.status_code, 200, f"Failed with: {response.text}")
         self.assertEqual(response.json()["choices"][0]["matched_stop"], 13)
+        self.assertEqual(response.json()["choices"][0]["finish_reason"], "stop")
 
     def test_rid(self):
         response = requests.post(
