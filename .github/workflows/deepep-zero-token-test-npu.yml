@@ -19,19 +19,11 @@ permissions:
 
 jobs:
   deepep-zero-token:
-    name: DeepEP layout with idle DP ranks (${{ matrix.cann }})
+    name: DeepEP layout with idle DP ranks (CANN 9.0.0)
     runs-on: linux-aarch64-a3-16-
     timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - cann: CANN 9.0.0 (2026-08-20 nightly)
-            image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
-          - cann: CANN 9.1.0 (2026-08-20)
-            image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260820
     container:
-      image: ${{ matrix.image }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
     steps:
       - name: Checkout SGLang
         uses: actions/checkout@v4
