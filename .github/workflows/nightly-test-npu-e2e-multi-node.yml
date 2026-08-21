@@ -128,19 +128,31 @@ jobs:
           sglang_source_path=/root/.cache/${sglang_source_relative_path}
           echo "Source code path: ${sglang_source_path}"
 
-          test_case="${{ inputs.test_case }}"
-          if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-            echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
-            exit 1
-          fi
+                    test_case="${{ inputs.test_case }}"
+          # Pre-check: support both single-case and batch (space-separated) modes.
+          for tc in ${test_case}; do
+            if [ ! -f "${sglang_source_path}/${tc}" ]; then
+              echo "The testcase does not exist: ${sglang_source_path}/${tc}"
+              exit 1
+            fi
+          done
 
           # prepare for output data
           current_date=$(date +%Y%m%d)
           test_data_output_path=/root/.cache/tests/output/${{ inputs.test_type }}/${current_date}
           mkdir -p ${test_data_output_path}
-          tc_name=${test_case##*/}
-          tc_name=${tc_name%.*}
-          metrics_data_path=${test_data_output_path}/${tc_name}
+          # For batch (multiple space-separated cases) use the matrix config name as
+          # the base dir; for single-case keep the legacy per-case filename dir.
+          case "${test_case}" in
+            *" "*)
+              metrics_data_path=${test_data_output_path}/${{ inputs.test_config_name }}
+              ;;
+            *)
+              tc_name=${test_case##*/}
+              tc_name=${tc_name%.*}
+              metrics_data_path=${test_data_output_path}/${tc_name}
+              ;;
+          esac
           mkdir -p ${metrics_data_path}
           echo "Metrics file path: ${metrics_data_path}"
 
