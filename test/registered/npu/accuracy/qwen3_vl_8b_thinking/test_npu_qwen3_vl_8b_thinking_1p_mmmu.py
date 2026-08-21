@@ -10,6 +10,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-2-npu-a3")
+register_npu_ci(est_time=6500, suite="nightly-acc-2-npu-a3", nightly=True)
 
 _is_pr_pipeline = os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
 
@@ -19,7 +20,7 @@ ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "DEEPEP_HCCL_BUFFSIZE": "2000",
+    "HCCL_BUFFSIZE": "2000",
 }
 
 OTHER_ARGS = [
