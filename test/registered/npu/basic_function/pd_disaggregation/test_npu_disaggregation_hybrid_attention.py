@@ -61,6 +61,10 @@ class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
             cls.prefill_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=prefill_args,
+            env={
+                "ASCEND_USE_FIA": "1",
+                "GDN_USE_MEGA_GDN": "1",
+            },
         )
 
     @classmethod
@@ -78,6 +82,10 @@ class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
             cls.decode_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=decode_args,
+            env={
+                "ASCEND_USE_FIA": "1",
+                "GDN_USE_MEGA_GDN": "1",
+            },
         )
 
     @classmethod
