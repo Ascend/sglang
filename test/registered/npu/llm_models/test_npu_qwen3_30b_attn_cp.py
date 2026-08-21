@@ -42,7 +42,11 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
         "--enable-prefill-context-parallel",
     ]
 
-    env = {**os.environ, "ASCEND_USE_FIA": "1"}
+    env = {
+        **os.environ,
+        "ASCEND_USE_FIA": "1",
+        "SGLANG_ENABLE_CP_V2": "0",
+    }
 
     # GSM8K Configs
     accuracy = 0.92  # GSM8K accuracy ≥0.92
