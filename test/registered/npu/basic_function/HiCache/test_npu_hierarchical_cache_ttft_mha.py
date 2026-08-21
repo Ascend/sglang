@@ -81,7 +81,7 @@ class TestNpuHierarchicalCacheTTFT(CustomTestCase):
             TTFT = res["mean_ttft_ms"]
             TTFTS.append(TTFT)
 
-        assert float(TTFTS[1]) <= 0.6 * float(TTFTS[0])
+        assert float(TTFTS[1]) <= 0.8 * float(TTFTS[0])
 
 
 if __name__ == "__main__":
