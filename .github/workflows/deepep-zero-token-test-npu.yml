@@ -20,7 +20,7 @@ permissions:
 jobs:
   deepep-zero-token:
     name: DeepEP layout with idle DP ranks (CANN 9.0.0)
-    runs-on: linux-aarch64-a3-16-
+    runs-on: linux-aarch64-a3-800t-16
     timeout-minutes: 360
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
