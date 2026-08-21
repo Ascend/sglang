@@ -5,7 +5,7 @@ import torch
 import torch.distributed as dist
 import torch_npu  # noqa: F401
 
-os.environ.setdefault("DEEP_USE_MODE", "alltoall")
+os.environ.setdefault("DEEP_USE_MODE", "default")
 
 
 WORLD_SIZE = 16
@@ -30,8 +30,8 @@ def _run_rank(local_rank: int, world_size: int) -> None:
             0,
             low_latency_mode=False,
             num_qps_per_rank=1,
-            normal_strategy="alltoall",
-            low_latency_strategy="alltoall",
+            normal_strategy="default",
+            low_latency_strategy="default",
         )
 
         # This matches SGLang's DP-attention idle path: only the active DP rank
@@ -56,7 +56,7 @@ def _run_rank(local_rank: int, world_size: int) -> None:
         ) = buffer.get_dispatch_layout(topk_idx, NUM_EXPERTS)
 
         assert num_tokens_per_rdma_rank is None
-        assert event is None
+        assert isinstance(event, deep_ep.EventOverlap)
         assert tuple(num_tokens_per_rank.shape) == (world_size,)
         assert tuple(is_token_in_rank.shape) == (num_tokens, world_size)
 

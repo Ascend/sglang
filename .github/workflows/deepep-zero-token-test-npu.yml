@@ -66,7 +66,7 @@ jobs:
           MASTER_ADDR: 127.0.0.1
           MASTER_PORT: "29567"
           HCCL_CONNECT_TIMEOUT: "600"
-          DEEP_USE_MODE: alltoall
+          DEEP_USE_MODE: default
         run: |
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh || true
