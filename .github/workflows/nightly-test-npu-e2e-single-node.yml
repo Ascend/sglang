@@ -59,6 +59,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check npu info
         run: |
@@ -150,7 +152,7 @@ jobs:
           install_sglang_from_source=${{ inputs.install_sglang_from_source }}
           if [ "$install_sglang_from_source" = "true" ] || [ "$install_sglang_from_source" = "True" ];then
             echo "Install sglang from source"
-            commit_id=${{ github.sha }}
+            commit_id=$(git rev-parse HEAD)
             echo "commit id: ${commit_id}" > ${test_data_output_path}/commit_id
             export PYTHONPATH=${sglang_source_path}/python:$PYTHONPATH
           else
@@ -166,6 +168,14 @@ jobs:
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
           source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
+
+          actual_sglang_path=$(${PYTHON_FOR_SGLANG} -c 'import os, sglang; print(os.path.realpath(sglang.__file__))')
+          echo "Checked out commit: $(git rev-parse HEAD)"
+          echo "Imported sglang: ${actual_sglang_path}"
+          case "${actual_sglang_path}" in
+            "${sglang_source_path}/python/sglang/"*) ;;
+            *) echo "ERROR: sglang was not imported from the checked-out source tree"; exit 1 ;;
+          esac
 
           # Set environment of cann
           log_path="/root/.cache/tests/logs/log/${current_date}/${tc_name}/${HOSTNAME}"
