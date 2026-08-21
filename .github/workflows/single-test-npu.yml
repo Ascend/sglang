@@ -26,6 +26,7 @@ jobs:
       - name: Check npu info
         run: |
           npu-smi info
+
       - name: Run test
         timeout-minutes: 120
         env:
