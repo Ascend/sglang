@@ -64,9 +64,9 @@ class BaseTestDetokenizerWatchdog:
         if cls.set_soft_watchdog:
             other_args.extend(["--soft-watchdog-timeout", str(cls.soft_watchdog_value)])
 
-        # Scenario 4 timeout set to 20 seconds (ensure complete log printing)
+        # Scenario 4 timeout set to 60 seconds (ensure complete log printing)
         timeout = (
-            120
+            60
             if (cls.ci_mode is False and cls.set_soft_watchdog is False)
             else DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
         )
@@ -83,11 +83,10 @@ class BaseTestDetokenizerWatchdog:
                 )
             cls.launch_success = True
         except Exception:
-            # Scenario 4 expects the launch to fail: the detokenizer subprocess
-            # asserts because the stuck tester needs a soft watchdog, and the
-            # whole server then exits (popen_launch_server raises a generic
-            # "exited" Exception) or the launch times out. Either way, check
-            # that the expected AssertionError is present in the logs.
+            # Scenario 4 expects the launch to fail: either the launch times
+            # out, or the detokenizer subprocess asserts and the server exits
+            # (code -9). Both surface as a generic Exception. Verify the
+            # expected AssertionError is present in the logs below.
             cls.launch_success = False
             # Scenarios' server environments.
             envs.SGLANG_TEST_STUCK_DETOKENIZER.clear()
