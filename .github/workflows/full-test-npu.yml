@@ -675,7 +675,7 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-      - full-1-npu-a3
+      - full-8-npu-a3
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
