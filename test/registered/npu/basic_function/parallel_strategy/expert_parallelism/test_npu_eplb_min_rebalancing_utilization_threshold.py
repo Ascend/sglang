@@ -51,7 +51,6 @@ class TestEplbMinRebalancingUtilizationThresholdBase(CustomTestCase):
         50,
         "--expert-distribution-recorder-buffer-size",
         50,
-        "--expert-balancedness-report-mode",
         "--eplb-rebalance-layers-per-chunk",
         "1",
     ]
