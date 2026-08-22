@@ -94,17 +94,9 @@ jobs:
       max-parallel: 4
       matrix:
         test_config:
-          - name: test_npu_qwq_32b_w8a8
+          - name: test_npu_baichuan2_13b_chat
             runner: linux-aarch64-a3-2-
-            test_case: test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
-            test_type: 'function'
-          - name: test_npu_qwq_32b_w8a8
-            runner: linux-aarch64-a3-2-
-            test_case: test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
-            test_type: 'function'
-          - name: test_npu_qwq_32b_w8a8
-            runner: linux-aarch64-a3-2-
-            test_case: test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
+            test_case: test/registered/npu/llm_models/test_npu_baichuan2_13b_chat.py
             test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
