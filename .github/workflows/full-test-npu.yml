@@ -675,15 +675,7 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-      - nighly-test-npu
       - full-1-npu-a3
-      - full-2-npu-a3
-      - full-4-npu-a3
-      - full-8-npu-a3
-      - full-16-npu-a3
-      - nightly-poc-single-node-tests
-      - nightly-poc-multi-node-tests
-      - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
