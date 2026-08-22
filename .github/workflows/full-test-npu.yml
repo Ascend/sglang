@@ -924,6 +924,7 @@ jobs:
 #            node_size: 2
 #            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
+#
           - name: glm_5_2_w4a8_16p_gpqa
             node_size: 2
             test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w4a8_16p_gpqa.py
