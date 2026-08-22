@@ -123,9 +123,9 @@ jobs:
       skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
     secrets: inherit
 
-  full-1-npu-a3:
+  full-8-npu-a3:
     needs: [ set-image-config ]
-    runs-on: linux-aarch64-a3-2-
+    runs-on: linux-aarch64-a3-8-
     strategy:
       fail-fast: false
       matrix:
