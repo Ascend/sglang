@@ -1,13 +1,13 @@
 name: Full Test (NPU)
 
 on:
-  pull_request:
-    branches:
-      - main
-      - testcases
-      - testcases-260813
-    paths:
-      - ".github/workflows/full-test-npu.yml"
+#  pull_request:
+#    branches:
+#      - main
+#      - testcases
+#      - testcases-260813
+#    paths:
+#      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -29,7 +29,7 @@ on:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260820'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
@@ -93,7 +93,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260813" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -110,371 +110,401 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
-#  nighly-test-npu:
-#    needs: [ set-image-config ]
-#    name: nightly-test-npu
-#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' }}
-#    uses: ./.github/workflows/nightly-test-npu.yml
-#    with:
-#      ref: ${{ needs.set-image-config.outputs.ref }}
-#      job_filter: ${{ needs.set-image-config.outputs.job_filter }}
-#      image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
-#      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
-#      skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
-#    secrets: inherit
+  nighly-test-npu:
+    needs: [ set-image-config ]
+    name: nightly-test-npu
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' }}
+    uses: ./.github/workflows/nightly-test-npu.yml
+    with:
+      ref: ${{ needs.set-image-config.outputs.ref }}
+      job_filter: ${{ needs.set-image-config.outputs.job_filter }}
+      image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
+      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
+      skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
+    secrets: inherit
 
-#  full-1-npu-a3:
-#    needs: [ set-image-config ]
-#    runs-on: linux-aarch64-a3-2-
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        part: [0, 1]
-#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
-#    container:
-#      image: ${{ needs.set-image-config.outputs.image_a3 }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#        with:
-#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-#      - name: Install dependencies
-#        env:
-#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-#        run: |
+  full-1-npu-a3:
+    needs: [ set-image-config ]
+    runs-on: linux-aarch64-a3-2-
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1]
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+        run: |
           # speed up by using infra cache services
-#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-#          pip config set global.trusted-host "${CACHING_URL}"
-#          sglang_source_path=$(pwd)
-#          echo "Source code path: ${sglang_source_path}"
-#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
-#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-#          else
-#            sglang_pkg_path=/sgl-workspace/sglang/python
-#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-#            mkdir -p ${ascend_test_util_path}
-#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-#          fi
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          else
+            sglang_pkg_path=/sgl-workspace/sglang/python
+            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+            mkdir -p ${ascend_test_util_path}
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+          fi
 
           # copy required file from our daily cache
-#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-#          cp ~/.cache/modelscope/hub/datasets/hellaswag_val.jsonl /tmp
-#      - name: Print Log Information
-#        run: bash scripts/ci/npu/npu_log_print.sh
-#      - name: Run test
-#        timeout-minutes: 960
-#        env:
-#          SGLANG_USE_MODELSCOPE: true
-#          SGLANG_IS_IN_CI: true
-#          HF_ENDPOINT: https://hf-mirror.com
-#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-#          STREAMS_PER_DEVICE: 32
-#          TRANSFORMERS_VERBOSITY: "error"
-#          GDN_ATTN_BACKEND_TRITON: 1
-#        run: |
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          cp ~/.cache/modelscope/hub/datasets/hellaswag_val.jsonl /tmp
+      - name: Print Log Information
+        run: bash scripts/ci/npu/npu_log_print.sh
+      - name: Run test
+        timeout-minutes: 960
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
+        run: |
           # speed up by using infra cache services
-#          pip install sglang_router
-#          hf download lmms-lab/MMMU --repo-type dataset
-#          pip install fastokens
-#          pip install mindstudio-probe --pre
-#          pip install sentence_transformers torchaudio==2.10.0
-#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
-#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv granian
-#          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
-#          pip install msgpack
-#          pip install watchfiles
-#          pip install torchao==0.16.0
-#          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
-#          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-#          cd ./lmms-eval
-#          nohup pip install . > lmmslog.txt 2>&1 &
-#          sleep 120
-#          export PYTHONPATH=$PYTHONPATH:$(pwd)
-#          cd ../
-#          cd test
-#          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+          pip install sglang_router
+          hf download lmms-lab/MMMU --repo-type dataset
+          pip install fastokens
+          pip install mindstudio-probe --pre
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv granian
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+          pip install msgpack
+          pip install watchfiles
+          pip install torchao==0.16.0
+          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          cd ./lmms-eval
+          nohup pip install . > lmmslog.txt 2>&1 &
+          sleep 120
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          cd ../
+          cd test
+          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
 
-#  full-2-npu-a3:
-#    needs: [ set-image-config ]
-#    runs-on: linux-aarch64-a3-2-
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        part: [0, 1]
-#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
-#    container:
-#      image: ${{ needs.set-image-config.outputs.image_a3 }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#        with:
-#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-#      - name: Install dependencies
-#        env:
-#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-#        run: |
-#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-#          pip config set global.trusted-host "${CACHING_URL}"
-#          sglang_source_path=$(pwd)
-#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
-#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-#          else
-#            sglang_pkg_path=/sgl-workspace/sglang/python
-#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-#            mkdir -p ${ascend_test_util_path}
-#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-#          fi
-#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-#      - name: Print Log Information
-#        run: bash scripts/ci/npu/npu_log_print.sh
-#      - name: Run test
-#        timeout-minutes: 960
-#        env:
-#          SGLANG_USE_MODELSCOPE: true
-#          SGLANG_IS_IN_CI: true
-#          HF_ENDPOINT: https://hf-mirror.com
-#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-#          STREAMS_PER_DEVICE: 32
-#          TRANSFORMERS_VERBOSITY: "error"
-#          GDN_ATTN_BACKEND_TRITON: 1
-#        run: |
-#          pip install sglang_router
-#          hf download lmms-lab/MMMU --repo-type dataset
-#          pip install sentence_transformers torchaudio==2.10.0
-#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
-#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
-#          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
-#          pip install websocket-client websockets uvicorn==0.49.0
-#          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-#          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
-#          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
-#          cd ./lmms-eval
-#          nohup pip install . > lmmslog.txt 2>&1 &
-#          sleep 120
-#          export PYTHONPATH=$PYTHONPATH:$(pwd)
-#          cd ../
-#          cd test
-#          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+  full-2-npu-a3:
+    needs: [ set-image-config ]
+    runs-on: linux-aarch64-a3-2-
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1]
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+        run: |
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+          sglang_source_path=$(pwd)
+          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          else
+            sglang_pkg_path=/sgl-workspace/sglang/python
+            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+            mkdir -p ${ascend_test_util_path}
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+          fi
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Print Log Information
+        run: bash scripts/ci/npu/npu_log_print.sh
+      - name: Run test
+        timeout-minutes: 960
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
+        run: |
+          pip install sglang_router
+          hf download lmms-lab/MMMU --repo-type dataset
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+          pip install websocket-client websockets uvicorn==0.49.0
+          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+          cd ./lmms-eval
+          nohup pip install . > lmmslog.txt 2>&1 &
+          sleep 120
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          cd ../
+          cd test
+          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
 
-#  full-4-npu-a3:
-#    needs: [ set-image-config ]
-#    runs-on: linux-aarch64-a3-4-
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        part: [0, 1]
-#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
-#    container:
-#      image: ${{ needs.set-image-config.outputs.image_a3 }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#        with:
-#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-#      - name: Install dependencies
-#        env:
-#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-#        run: |
-#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-#          pip config set global.trusted-host "${CACHING_URL}"
-#          sglang_source_path=$(pwd)
-#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
-#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-#          else
-#            sglang_pkg_path=/sgl-workspace/sglang/python
-#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-#            mkdir -p ${ascend_test_util_path}
-#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-#          fi
-#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-#      - name: Print Log Information
-#        run: bash scripts/ci/npu/npu_log_print.sh
-#      - name: Run test
-#        timeout-minutes: 960
-#        env:
-#          SGLANG_USE_MODELSCOPE: true
-#          SGLANG_IS_IN_CI: true
-#          HF_ENDPOINT: https://hf-mirror.com
-#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-#          STREAMS_PER_DEVICE: 32
-#          TRANSFORMERS_VERBOSITY: "error"
-#          GDN_ATTN_BACKEND_TRITON: 1
-#        run: |
-#          pip install sglang_router
-#          hf download lmms-lab/MMMU --repo-type dataset
-#          pip install sentence_transformers torchaudio==2.10.0
-#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
-#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
-#          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
-#          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-#          cd ./lmms-eval
-#          nohup pip install . > lmmslog.txt 2>&1 &
-#          sleep 120
-#          export PYTHONPATH=$PYTHONPATH:$(pwd)
-#          cd ../
-#          cd test
-#          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+  full-4-npu-a3:
+    needs: [ set-image-config ]
+    runs-on: linux-aarch64-a3-4-
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1]
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+        run: |
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+          sglang_source_path=$(pwd)
+          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          else
+            sglang_pkg_path=/sgl-workspace/sglang/python
+            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+            mkdir -p ${ascend_test_util_path}
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+          fi
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Print Log Information
+        run: bash scripts/ci/npu/npu_log_print.sh
+      - name: Run test
+        timeout-minutes: 960
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
+        run: |
+          pip install sglang_router
+          hf download lmms-lab/MMMU --repo-type dataset
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          cd ./lmms-eval
+          nohup pip install . > lmmslog.txt 2>&1 &
+          sleep 120
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          cd ../
+          cd test
+          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
 
-#  full-8-npu-a3:
-#    needs: [ set-image-config ]
-#    runs-on: linux-aarch64-a3-8-
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        part: [0, 1]
-#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
-#    container:
-#      image: ${{ needs.set-image-config.outputs.image_a3 }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#        with:
-#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-#      - name: Install dependencies
-#        env:
-#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-#        run: |
-#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-#          pip config set global.trusted-host "${CACHING_URL}"
-#          sglang_source_path=$(pwd)
-#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
-#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-#          else
-#            sglang_pkg_path=/sgl-workspace/sglang/python
-#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-#            mkdir -p ${ascend_test_util_path}
-#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-#          fi
-#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-#      - name: Print Log Information
-#        run: bash scripts/ci/npu/npu_log_print.sh
-#      - name: Run test
-#        timeout-minutes: 960
-#        env:
-#          SGLANG_USE_MODELSCOPE: true
-#          SGLANG_IS_IN_CI: true
-#          HF_ENDPOINT: https://hf-mirror.com
-#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-#          STREAMS_PER_DEVICE: 32
-#          TRANSFORMERS_VERBOSITY: "error"
-#          GDN_ATTN_BACKEND_TRITON: 1
-#        run: |
-#          pip install sglang_router
-#          hf download lmms-lab/MMMU --repo-type dataset
-#          pip install sentence_transformers torchaudio==2.10.0
-#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
-#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
-#          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-#          cd ./lmms-eval
-#          nohup pip install . > lmmslog.txt 2>&1 &
-#          sleep 120
-#          export PYTHONPATH=$PYTHONPATH:$(pwd)
-#          cd ../
-#          cd test
-#          python3 run_suite.py --hw npu --suite full-8-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+  full-8-npu-a3:
+    needs: [ set-image-config ]
+    runs-on: linux-aarch64-a3-8-
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1]
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+        run: |
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+          sglang_source_path=$(pwd)
+          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          else
+            sglang_pkg_path=/sgl-workspace/sglang/python
+            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+            mkdir -p ${ascend_test_util_path}
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+          fi
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Print Log Information
+        run: bash scripts/ci/npu/npu_log_print.sh
+      - name: Run test
+        timeout-minutes: 960
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
+        run: |
+          pip install sglang_router
+          hf download lmms-lab/MMMU --repo-type dataset
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          cd ./lmms-eval
+          nohup pip install . > lmmslog.txt 2>&1 &
+          sleep 120
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          cd ../
+          cd test
+          python3 run_suite.py --hw npu --suite full-8-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
 
-#  full-16-npu-a3:
-#    needs: [ set-image-config ]
-#    runs-on: linux-aarch64-a3-16-
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        part: [0, 1]
-#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
-#    container:
-#      image: ${{ needs.set-image-config.outputs.image_a3 }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#        with:
-#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-#      - name: Install dependencies
-#        env:
-#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-#        run: |
-#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-#          pip config set global.trusted-host "${CACHING_URL}"
-#          sglang_source_path=$(pwd)
-#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
-#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-#          else
-#            sglang_pkg_path=/sgl-workspace/sglang/python
-#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-#            mkdir -p ${ascend_test_util_path}
-#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-#          fi
-#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-#      - name: Print Log Information
-#        run: bash scripts/ci/npu/npu_log_print.sh
-#      - name: Run test
-#        timeout-minutes: 960
-#        env:
-#          SGLANG_USE_MODELSCOPE: true
-#          SGLANG_IS_IN_CI: true
-#          HF_ENDPOINT: https://hf-mirror.com
-#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-#          STREAMS_PER_DEVICE: 32
-#          TRANSFORMERS_VERBOSITY: "error"
-#          GDN_ATTN_BACKEND_TRITON: 1
-#        run: |
-#          pip install sglang_router
-#          hf download lmms-lab/MMMU --repo-type dataset
-#          pip install sentence_transformers torchaudio==2.10.0
-#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
-#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
-#          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-#          cd ./lmms-eval
-#          nohup pip install . > lmmslog.txt 2>&1 &
-#          sleep 120
-#          export PYTHONPATH=$PYTHONPATH:$(pwd)
-#          cd ../
-#          cd test
-#          python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+  full-16-npu-a3:
+    needs: [ set-image-config ]
+    runs-on: linux-aarch64-a3-16-
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1]
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+        run: |
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+          sglang_source_path=$(pwd)
+          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          else
+            sglang_pkg_path=/sgl-workspace/sglang/python
+            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+            mkdir -p ${ascend_test_util_path}
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+          fi
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+      - name: Print Log Information
+        run: bash scripts/ci/npu/npu_log_print.sh
+      - name: Run test
+        timeout-minutes: 960
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
+        run: |
+          pip install sglang_router
+          hf download lmms-lab/MMMU --repo-type dataset
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          cd ./lmms-eval
+          nohup pip install . > lmmslog.txt 2>&1 &
+          sleep 120
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          cd ../
+          cd test
+          python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
 
   nightly-poc-single-node-tests:
     name: single-node-poc
@@ -485,173 +515,153 @@ jobs:
       max-parallel: 3
       matrix:
         test_config:
-#          - name: qwen3_6_35b_a3b_2p_in984k_out1k
-#            runner: linux-aarch64-a3-4
-#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k.py
-#            test_type: 'perf'
-#          - name: qwen3_6_35b_a3b_1p_in254k_out1k
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in254k_out1k.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#          - name: kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms.py
-#            test_type: 'perf'
-#          - name: kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py
-#            test_type: 'perf'
-          - name: minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms
-            runner: linux-aarch64-a3-8
-            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py
+          - name: qwen3_6_35b_a3b_2p_in984k_out1k
+            runner: linux-aarch64-a3-4
+            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k.py
             test_type: 'perf'
-#          - name: qwen3_next_80b_w8a8_2p_in6k_out1k5_bs16
-#            runner: linux-aarch64-a3-4
-#            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_2p_in6k_out1k5_bs16.py
-#            test_type: 'perf'
-#          - name: qwen3_6_27b_2p_in64k_out1k_prefix90_50ms
-#            runner: linux-aarch64-a3-4
-#            test_case: test/registered/npu/performance/qwen3_6_27b/test_npu_qwen3_6_27b_2p_in64k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_6_27b_1p_gpqa
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/accuracy/qwen3_6_27b/test_npu_qwen3_6_27b_1p_gpqa.py
-#            test_type: 'accuracy'
-#          - name: qwen3_30b_bf16_1p_in1k_out100
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_bf16_1p_in1k_out100.py
-#            test_type: 'perf'
-#          - name: qwen3_30b_w8a8_1p_in3k5_out1k5_10ms
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in3k5_out1k5_10ms.py
-#            test_type: 'perf'
-#          - name: qwen3_30b_w8a8_1p_in6k_out1k5_bs16
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in6k_out1k5_bs16.py
-#            test_type: 'perf'
-#          - name: qwen3_next_80b_w8a8_1p_in3k5_out1k5_20ms
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_1p_in3k5_out1k5_20ms.py
-#            test_type: 'perf'
-#          - name: qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms.py
-#            test_type: 'perf'
-#          - name: deepseek_r1_w4a8_8p_in3k5_out1k5_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_8p_in3k5_out1k5_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_235b_bf16_8p_in11k_out1k5_8ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_bf16_8p_in11k_out1k5_8ms.py
-#            test_type: 'perf'
-#          - name: qwen3_235b_w8a8_8p_in3k5_out1k5_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_w8a8_8p_in3k5_out1k5_50ms.py
-#            test_type: 'perf'
-#          - name: kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms.py
-#            test_type: 'perf'
-#          - name: kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms.py
-#            test_type: 'perf'
-#          - name: minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
-#            test_type: 'perf'
-#          - name: minimax_m2_5_w8a8_4p_in32k_out1k_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in32k_out1k_50ms.py
-#            test_type: 'perf'
-#          - name: minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_8p_aime26
-#            runner: linux-aarch64-a3-16-
-#            test_case: test/registered/npu/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_aime26.py
-#            test_type: 'accuracy'
-#          - name: qwen3_5_397b_8p_gpqa
-#            runner: linux-aarch64-a3-16-
-#            test_case: test/registered/npu/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_gpqa.py
-#            test_type: 'accuracy'
-#          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_20ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in16k_out1k_20ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_20ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in16k_out1k_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_20ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_20ms.py
-#            test_type: 'perf'
-#          - name: qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in128k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in64k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#          - name: qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms.py
-#            test_type: 'perf'
-#          - name: deepseek_v4_flash_w8a8_8p_gpqa
-#            runner: linux-aarch64-a3-16-
-#            test_case: test/registered/npu/accuracy/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_gpqa.py
-#            test_type: 'accuracy'
+          - name: qwen3_6_35b_a3b_1p_in254k_out1k
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in254k_out1k.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms.py
+            test_type: 'perf'
+          - name: kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+          - name: kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py
+            test_type: 'perf'
+          - name: qwen3_8b_w8a8_1p_in3k5_out1k5_5ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in3k5_out1k5_5ms.py
+            test_type: 'perf'
+          - name: qwen3_30b_bf16_1p_in1k_out100
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_bf16_1p_in1k_out100.py
+            test_type: 'perf'
+          - name: qwen3_30b_w8a8_1p_in3k5_out1k5_10ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in3k5_out1k5_10ms.py
+            test_type: 'perf'
+          - name: qwen3_30b_w8a8_1p_in6k_out1k5_bs16
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in6k_out1k5_bs16.py
+            test_type: 'perf'
+          - name: qwen3_next_80b_w8a8_1p_in3k5_out1k5_20ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_1p_in3k5_out1k5_20ms.py
+            test_type: 'perf'
+          - name: qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+          - name: deepseek_r1_w4a8_8p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_8p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+          - name: qwen3_235b_bf16_8p_in11k_out1k5_8ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_bf16_8p_in11k_out1k5_8ms.py
+            test_type: 'perf'
+          - name: qwen3_235b_w8a8_8p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_w8a8_8p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+          - name: kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms.py
+            test_type: 'perf'
+          - name: kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms.py
+            test_type: 'perf'
+          - name: minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
+            test_type: 'perf'
+          - name: minimax_m2_5_w8a8_4p_in32k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in32k_out1k_50ms.py
+            test_type: 'perf'
+          - name: minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_8p_aime26
+            runner: linux-aarch64-a3-16-
+            test_case: test/registered/npu/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_aime26.py
+            test_type: 'accuracy'
+          - name: qwen3_5_397b_8p_gpqa
+            runner: linux-aarch64-a3-16-
+            test_case: test/registered/npu/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_gpqa.py
+            test_type: 'accuracy'
+          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in16k_out1k_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_20ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in16k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_50ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_20ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_20ms.py
+            test_type: 'perf'
+          - name: qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
+            test_type: 'perf'
+          - name: qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms.py
+            test_type: 'perf'
+          - name: deepseek_v4_flash_w8a8_8p_gpqa
+            runner: linux-aarch64-a3-16-
+            test_case: test/registered/npu/accuracy/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_gpqa.py
+            test_type: 'accuracy'
           # deepseek_v4_flash performance tests
-#          - name: deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py
-#            test_type: 'perf'
+          - name: deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py
+            test_type: 'perf'
           # deepseek_v4_flash performance tests
-#          - name: deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms.py
-#            test_type: 'perf'
+          - name: deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms.py
+            test_type: 'perf'
           #glm_5_2_w4a8_8p_gpqa accuracy tests
-#          - name: glm_5_2_w4a8_8p_gpqa
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w4a8_8p_gpqa.py
-#            test_type: 'accuracy'
+          - name: glm_5_2_w4a8_8p_gpqa
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w4a8_8p_gpqa.py
+            test_type: 'accuracy'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
@@ -707,13 +717,13 @@ jobs:
           #  decode_size: 1
           #  router_size: 1
           # ===== DeepSeek R1 W4A8 1p1d_16p PD separation =====
-#          - name: deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
 #          # # ===== DeepSeek R1 W8A8 2p1d_32p PD separation =====
 #          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_16ms
 #            prefill_size: 2
@@ -772,155 +782,155 @@ jobs:
 ##            test_case: test/registered/npu/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8.py
 ##            test_type: 'perf'
 ##            prefill_decode_deployment: 'separation'
-#          - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms
+          - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-#          - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
-#            prefill_size: 4
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
-#            prefill_size: 4
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
-#            prefill_size: 2
-#            decode_size: 4
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: test_npu_cp_vs_nocp_ttft
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
-#          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
+            prefill_size: 4
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
+            prefill_size: 4
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
+            prefill_size: 2
+            decode_size: 4
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: test_npu_cp_vs_nocp_ttft
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           # deepseek_v4_flash performance tests
-#          - name: deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms
-#            prefill_size: 1
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           # glm5.2 performance tests
-#          - name: glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
-#            prefill_size: 4
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
+            prefill_size: 4
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           # glm5.2 performance tests
-#          - name: glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           # glm5.2 performance tests
-#          - name: glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           # glm5.2 performance tests
-#          - name: glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms
-#            prefill_size: 3
-#            decode_size: 1
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms
+            prefill_size: 3
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           # glm5.2 performance tests
-#          - name: glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms
-#            prefill_size: 4
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms
+            prefill_size: 4
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
-      runner: linux-amd64-cpu-4
+      runner: linux-amd64-cpu-8
       test_type: ${{ matrix.test_config.test_type }}
       test_config_name: ${{ matrix.test_config.name }}
       prefill_size: ${{ matrix.test_config.prefill_size }}
@@ -932,88 +942,88 @@ jobs:
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
 
-#  nightly-poc-multi-node-mix-tests:
-#    name: multi-node-mix-poc
-#    needs: [ set-image-config, nightly-poc-single-node-tests, nightly-poc-multi-node-tests ]
-#    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
-#    strategy:
-#      fail-fast: false
-#      max-parallel: 1
-#      matrix:
-#        test_config:
-#          - name: glm5_1_w4a8_16p_in3k5_out1k5_50ms
-#            node_size: 2
-#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
-#            test_type: 'perf'
-#    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
-#    with:
-#      runner: linux-amd64-cpu-4
-#      test_type: 'perf'
-#      test_config_name: ${{ matrix.test_config.name }}
-#      node_size: ${{ matrix.test_config.node_size }}
-#      test_case: ${{ matrix.test_config.test_case }}
-#      image: ${{ needs.set-image-config.outputs.image_a3 }}
-#      install_sglang_from_source: false
-#      prefill_decode_deployment: 'mix'
-#      transformers_version: ''
+  nightly-poc-multi-node-mix-tests:
+    name: multi-node-mix-poc
+    needs: [ set-image-config, nightly-poc-single-node-tests, nightly-poc-multi-node-tests ]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_config:
+          - name: glm5_1_w4a8_16p_in3k5_out1k5_50ms
+            node_size: 2
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
+            test_type: 'perf'
+    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
+    with:
+      runner: linux-amd64-cpu-8
+      test_type: 'perf'
+      test_config_name: ${{ matrix.test_config.name }}
+      node_size: ${{ matrix.test_config.node_size }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+      install_sglang_from_source: false
+      prefill_decode_deployment: 'mix'
+      transformers_version: ''
 
-#  check-all-jobs:
-#    needs:
-#      - set-image-config
-#      - nighly-test-npu
-#      - full-1-npu-a3
-#      - full-2-npu-a3
-#      - full-4-npu-a3
-#      - full-8-npu-a3
-#      - full-16-npu-a3
-#      - nightly-poc-single-node-tests
-#      - nightly-poc-multi-node-tests
-#      - nightly-poc-multi-node-mix-tests
-#    runs-on: ubuntu-latest
-#    if: ${{ !cancelled() }}
-#    steps:
-#      - name: Download all metrics
-#        uses: actions/download-artifact@v4
-#        with:
-#          pattern: metrics-*
-#          path: /tmp/metrics
-#          merge-multiple: false
+  check-all-jobs:
+    needs:
+      - set-image-config
+      - nighly-test-npu
+      - full-1-npu-a3
+      - full-2-npu-a3
+      - full-4-npu-a3
+      - full-8-npu-a3
+      - full-16-npu-a3
+      - nightly-poc-single-node-tests
+      - nightly-poc-multi-node-tests
+      - nightly-poc-multi-node-mix-tests
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Download all metrics
+        uses: actions/download-artifact@v4
+        with:
+          pattern: metrics-*
+          path: /tmp/metrics
+          merge-multiple: false
 
-#      - name: Generate results table
-#        run: |
-#          echo "## Per-Test Metrics" >> $GITHUB_STEP_SUMMARY
-#          echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Generate results table
+        run: |
+          echo "## Per-Test Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-#          has_metrics=false
-#          for dir in /tmp/metrics/metrics-*/; do
-#            file="${dir}metrics.json"
-#            if [ -f "$file" ]; then
-#              has_metrics=true
-#              echo "import json" > /tmp/parse_metrics.py
-#              echo "with open('$file') as f:" >> /tmp/parse_metrics.py
-#              echo "    d = json.load(f)" >> /tmp/parse_metrics.py
-#              echo "tc = d.get('test_case', '-')" >> /tmp/parse_metrics.py
-#              echo "tp = d.get('test_type', '-')" >> /tmp/parse_metrics.py
-#              echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
-#              echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
-#              echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
-#              echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
-#              echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
-#              echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
-#              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
-#              python3 /tmp/parse_metrics.py
-#            fi
-#          done > /tmp/metrics_table.txt
+          has_metrics=false
+          for dir in /tmp/metrics/metrics-*/; do
+            file="${dir}metrics.json"
+            if [ -f "$file" ]; then
+              has_metrics=true
+              echo "import json" > /tmp/parse_metrics.py
+              echo "with open('$file') as f:" >> /tmp/parse_metrics.py
+              echo "    d = json.load(f)" >> /tmp/parse_metrics.py
+              echo "tc = d.get('test_case', '-')" >> /tmp/parse_metrics.py
+              echo "tp = d.get('test_type', '-')" >> /tmp/parse_metrics.py
+              echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
+              echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
+              echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
+              echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
+              echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
+              echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
+              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
+              python3 /tmp/parse_metrics.py
+            fi
+          done > /tmp/metrics_table.txt
 
-#          if [ "${has_metrics}" = "true" ]; then
-#            echo "| Test Case | Type | Status | Metrics | Baseline |" >> $GITHUB_STEP_SUMMARY
-#            echo "|-----------|------|--------|---------|----------|" >> $GITHUB_STEP_SUMMARY
-#            cat /tmp/metrics_table.txt >> $GITHUB_STEP_SUMMARY
-#          else
-#            echo "No per-test metrics available (artifacts not found)." >> $GITHUB_STEP_SUMMARY
-#          fi
-#          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${has_metrics}" = "true" ]; then
+            echo "| Test Case | Type | Status | Metrics | Baseline |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|------|--------|---------|----------|" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/metrics_table.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No per-test metrics available (artifacts not found)." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-#          FAIL=0
-#          ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
-#          exit $FAIL
+          FAIL=0
+          ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
+          exit $FAIL
