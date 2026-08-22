@@ -94,15 +94,15 @@ jobs:
       max-parallel: 4
       matrix:
         test_config:
-          - name: test_npu_qwq_32b_w8a8
+          - name: test_npu_qwq_32b_w8a8-1
             runner: linux-aarch64-a3-2-
             test_case: test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
             test_type: 'function'
-          - name: test_npu_qwq_32b_w8a8
+          - name: test_npu_qwq_32b_w8a8-2
             runner: linux-aarch64-a3-2-
             test_case: test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
             test_type: 'function'
-          - name: test_npu_qwq_32b_w8a8
+          - name: test_npu_qwq_32b_w8a8-3
             runner: linux-aarch64-a3-2-
             test_case: test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
             test_type: 'function'
