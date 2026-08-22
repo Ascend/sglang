@@ -1,0 +1,106 @@
+name: DeepEP Zero-token Test (NPU)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - testcases
+    paths:
+      - ".github/workflows/deepep-zero-token-test-npu.yml"
+      - "scripts/ci/npu/patches/sgl-kernel-npu-deepep-zero-token.patch"
+      - "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_zero_token.py"
+
+concurrency:
+  group: deepep-zero-token-npu-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deepep-zero-token:
+    name: Kimi 50ms with patched kernel (CANN 9.1.0, kernel 2026.8.18)
+    runs-on: linux-aarch64-a3-16
+    timeout-minutes: 360
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260820
+    steps:
+      - name: Checkout SGLang
+        uses: actions/checkout@v4
+
+      - name: Check NPU topology
+        run: npu-smi info
+
+      - name: Checkout sgl-kernel-npu 2026.8.18
+        uses: actions/checkout@v4
+        with:
+          repository: sgl-project/sgl-kernel-npu
+          ref: 2026.8.18
+          path: sgl-kernel-npu
+
+      - name: Apply DeepEP zero-token fix
+        shell: bash
+        run: |
+          cd sgl-kernel-npu
+          git apply "${GITHUB_WORKSPACE}/scripts/ci/npu/patches/sgl-kernel-npu-deepep-zero-token.patch"
+
+      - name: Build and install patched DeepEP 2026.8.18
+        timeout-minutes: 90
+        shell: bash
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh || true
+          cd sgl-kernel-npu
+          python3 -m pip install --no-cache-dir \
+            wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil
+          VERSION=2026.8.18 ./build.sh -a deepep Ascend910_9382
+          python3 -m pip install --force-reinstall --no-deps output/deep_ep*.whl
+          python3 -c "import deep_ep; print(f'Using patched DeepEP 2026.8.18 from {deep_ep.__file__}')"
+
+      - name: Run zero-token regression test directly
+        timeout-minutes: 20
+        shell: bash
+        env:
+          MASTER_ADDR: 127.0.0.1
+          MASTER_PORT: "29567"
+          HCCL_CONNECT_TIMEOUT: "600"
+          DEEP_USE_MODE: default
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh || true
+          python3 -u test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_zero_token.py
+
+      - name: Run Kimi K2.6 3k5/1k5/50ms
+        timeout-minutes: 300
+        shell: bash
+        env:
+          SGLANG_USE_MODELSCOPE: "true"
+          SGLANG_IS_IN_CI: "true"
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: "32"
+          TRANSFORMERS_VERBOSITY: error
+          GDN_ATTN_BACKEND_TRITON: "1"
+          SGLANG_TEST_MAX_RETRY: "0"
+          SGLANG_SET_CPU_AFFINITY: "1"
+          DEEP_USE_MODE: default
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
+          source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
+
+          sglang_source_path="${GITHUB_WORKSPACE}"
+          ln -sfn "${sglang_source_path}" /root/sglang
+          sglang_pkg_path=/sgl-workspace/sglang/python
+          ascend_test_util_path="${sglang_pkg_path}/sglang/test/ascend"
+          if [ -d "${ascend_test_util_path}" ]; then
+            mv "${ascend_test_util_path}" "${ascend_test_util_path}_image"
+          fi
+          cp -r "${sglang_source_path}/python/sglang/test/ascend" "${ascend_test_util_path}"
+
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+
+          python3 -u test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms.py
