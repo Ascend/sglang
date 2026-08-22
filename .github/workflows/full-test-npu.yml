@@ -849,13 +849,13 @@ jobs:
 #            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
-#          - name: test_npu_cp_vs_nocp_ttft
-#            prefill_size: 2
-#            decode_size: 2
-#            router_size: 1
-#            test_case: test/registered/npu/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
-#            test_type: 'perf'
-#            prefill_decode_deployment: 'separation'
+          - name: test_npu_cp_vs_nocp_ttft
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
 #          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s
 #            prefill_size: 1
 #            decode_size: 1
