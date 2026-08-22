@@ -1,9 +1,9 @@
 name: Full Test (NPU)
-
+#1
 on:
   pull_request:
     branches:
-#      - main
+      - main
       - testcases
       - testcases-260813
     paths:
