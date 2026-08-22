@@ -19,8 +19,8 @@ permissions:
 
 jobs:
   deepep-zero-token:
-    name: Kimi 50ms with historical prefill window (CANN 9.0.0, kernel 2026.8.10)
-    runs-on: linux-aarch64-a3-16-
+    name: Kimi 50ms on original runner pool (CANN 9.0.0, kernel 2026.8.10)
+    runs-on: linux-aarch64-a3-16
     timeout-minutes: 360
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
@@ -78,7 +78,6 @@ jobs:
           GDN_ATTN_BACKEND_TRITON: "1"
           SGLANG_TEST_MAX_RETRY: "0"
           SGLANG_SET_CPU_AFFINITY: "1"
-          SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE: "64"
           DEEP_USE_MODE: default
         run: |
           source /usr/local/Ascend/cann/set_env.sh || true
