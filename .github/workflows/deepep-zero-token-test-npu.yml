@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   deepep-zero-token:
-    name: DeepEP layout with idle DP ranks (CANN 9.0.0, kernel 2026.8.10)
+    name: Historical Kimi 20ms baseline (CANN 9.0.0, kernel 2026.8.10)
     runs-on: linux-aarch64-a3-16-
     timeout-minutes: 360
     container:
@@ -64,7 +64,7 @@ jobs:
           source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh || true
           python3 -u test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_zero_token.py
 
-      - name: Run Kimi K2.6 3k5/1k5/50ms test directly
+      - name: Run historical Kimi K2.6 3k5/1k5/20ms test directly
         timeout-minutes: 300
         shell: bash
         env:
@@ -78,6 +78,7 @@ jobs:
           GDN_ATTN_BACKEND_TRITON: "1"
           SGLANG_TEST_MAX_RETRY: "0"
           SGLANG_SET_CPU_AFFINITY: "1"
+          SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE: "64"
           DEEP_USE_MODE: default
         run: |
           source /usr/local/Ascend/cann/set_env.sh || true
@@ -97,4 +98,4 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
 
-          python3 -u test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms.py
+          python3 -u test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py
