@@ -68,7 +68,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260820" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260723" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -94,53 +94,17 @@ jobs:
       max-parallel: 4
       matrix:
         test_config:
-#          - name: test_npu_lora_update
-#            runner: linux-aarch64-a3-2-
-#            test_case: test/registered/npu/basic_function/lora/test_npu_lora_update.py
-#            test_type: 'function'
-#          - name: test_npu_api_related_tool_call
-#            runner: linux-aarch64-a3-16-
-#            test_case: test/registered/npu/basic_function/api_related/test_npu_api_related_tool_call.py
-#            test_type: 'function'
-#          - name: test_npu_qwen3_next_models
-#            runner: linux-aarch64-a3-4-
-#            test_case: test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models.py
-#            test_type: 'function'
-#          - name: test_npu_disaggregation_hybrid_attention
-#            runner: linux-aarch64-a3-16-
-#            test_case: test/registered/npu/basic_function/pd_disaggregation/test_npu_disaggregation_hybrid_attention.py
-#            test_type: 'function'
-#          - name: test_npu_pre_warm_nccl
-#            runner: linux-aarch64-a3-2-
-#            test_case: test/registered/npu/basic_function/optimization_debug_options/test_npu_pre_warm_nccl.py
-#            test_type: 'function'
-#          - name: test_npu_prefill_delayer_max_delay
-#            runner: linux-aarch64-a3-2-
-#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_prefill_delayer_max_delay.py
-#            test_type: 'function'
-#          - name: test_npu_deepep_dispatcher_output_dtype
-#            runner: linux-aarch64-a3-4-
-#            test_case: test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_dispatcher_output_dtype.py
-#            test_type: 'function'
-#          - name: test_npu_enable_waterfill
-#            runner: linux-aarch64-a3-4-
-#            test_case: test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_enable_waterfill.py
-#            test_type: 'function'
-          - name: test_npu_api
+          - name: test_npu_qwq_32b_w8a8
             runner: linux-aarch64-a3-2-
-            test_case: test/registered/npu/interface/test_npu_api.py
+            test_case: test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
             test_type: 'function'
-#          - name: test_npu_hierarchical_cache_ttft_mha
-#            runner: linux-aarch64-a3-2-
-#            test_case: test/registered/npu/basic_function/HiCache/test_npu_hierarchical_cache_ttft_mha.py
-#            test_type: 'function'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
       test_type: ${{ matrix.test_config.test_type }}
       test_config_name: ${{ matrix.test_config.name }}
       test_case: ${{ matrix.test_config.test_case }}
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260820
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260723
       install_sglang_from_source: false
       transformers_version: ''
 
