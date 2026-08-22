@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   deepep-zero-token:
-    name: Kimi 50ms on original runner pool (CANN 9.0.0, kernel 2026.8.10)
+    name: Kimi 50ms with patched kernel (CANN 9.0.0, kernel 2026.8.18)
     runs-on: linux-aarch64-a3-16
     timeout-minutes: 360
     container:
@@ -31,14 +31,20 @@ jobs:
       - name: Check NPU topology
         run: npu-smi info
 
-      - name: Checkout sgl-kernel-npu 2026.8.10
+      - name: Checkout sgl-kernel-npu 2026.8.18
         uses: actions/checkout@v4
         with:
           repository: sgl-project/sgl-kernel-npu
-          ref: 2026.8.10
+          ref: 2026.8.18
           path: sgl-kernel-npu
 
-      - name: Build and install DeepEP 2026.8.10
+      - name: Apply DeepEP zero-token fix
+        shell: bash
+        run: |
+          cd sgl-kernel-npu
+          git apply "${GITHUB_WORKSPACE}/scripts/ci/npu/patches/sgl-kernel-npu-deepep-zero-token.patch"
+
+      - name: Build and install patched DeepEP 2026.8.18
         timeout-minutes: 90
         shell: bash
         run: |
@@ -47,9 +53,9 @@ jobs:
           cd sgl-kernel-npu
           python3 -m pip install --no-cache-dir \
             wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil
-          VERSION=2026.8.10 ./build.sh -a deepep Ascend910_9382
+          VERSION=2026.8.18 ./build.sh -a deepep Ascend910_9382
           python3 -m pip install --force-reinstall --no-deps output/deep_ep*.whl
-          python3 -c "import deep_ep; print(f'Using DeepEP 2026.8.10 from {deep_ep.__file__}')"
+          python3 -c "import deep_ep; print(f'Using patched DeepEP 2026.8.18 from {deep_ep.__file__}')"
 
       - name: Run zero-token regression test directly
         timeout-minutes: 20
@@ -64,7 +70,7 @@ jobs:
           source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh || true
           python3 -u test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_zero_token.py
 
-      - name: Run Kimi K2.6 3k5/1k5/50ms with historical prefill window
+      - name: Run Kimi K2.6 3k5/1k5/50ms
         timeout-minutes: 300
         shell: bash
         env:
