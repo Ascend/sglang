@@ -9,9 +9,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="nightly-perf-4-npu-a3",
     nightly=True,
-    disabled="performance testcase",
 )
 
 QWEN3_6_27B_64K_PREFIX_ENVS = {
@@ -23,7 +22,6 @@ QWEN3_6_27B_64K_PREFIX_ENVS = {
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
-    "GDN_USE_MEGA_GDN": "1",
     "GDN_ATTN_BACKEND_TRITON": "1",
 }
 
