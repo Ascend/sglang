@@ -19,11 +19,11 @@ permissions:
 
 jobs:
   deepep-zero-token:
-    name: Kimi 50ms with patched kernel (CANN 9.0.0, kernel 2026.8.18)
+    name: Kimi 50ms with patched kernel (CANN 9.1.0, kernel 2026.8.18)
     runs-on: linux-aarch64-a3-16
     timeout-minutes: 360
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260820
     steps:
       - name: Checkout SGLang
         uses: actions/checkout@v4
