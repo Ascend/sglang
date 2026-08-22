@@ -54,6 +54,7 @@ jobs:
   e2e:
     name: ${{ inputs.test_config_name }}
     runs-on: ${{ inputs.runner }}
+    timeout-minutes: 2880
     container:
       image: ${{ inputs.image }}
     steps:
