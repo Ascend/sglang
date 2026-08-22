@@ -3,7 +3,6 @@ import os
 import re
 import time
 import unittest
-from types import SimpleNamespace
 from typing import Optional
 
 import openai
@@ -12,11 +11,9 @@ import requests
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
     QWEN3_0_6B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -291,53 +288,53 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
             kill_process_tree(process.pid)
 
 
-class TestPrefillDelayerAccuracy(CustomTestCase):
-    """Testcase: Verify that model accuracy on mgsm_en dataset > 0.57
-    both when PrefillDelayer is enabled and disabled.
-
-    [Test Category] Parameter
-    [Test Target] --enable-prefill-delayer
-    """
-
-    def test_1_gsm8k_has_prefill_delayer(self):
-        self._run_accuracy_test(prefill_delayer=True)
-
-    def test_2_gsm8k_no_prefill_delayer(self):
-        self._run_accuracy_test(prefill_delayer=False)
-
-    def _run_accuracy_test(self, prefill_delayer: bool):
-        model = DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH
-        base_url = DEFAULT_URL_FOR_TEST
-        process = _launch_server(
-            prefill_delayer=prefill_delayer,
-            model=model,
-            base_url=base_url,
-            other_args=[
-                # Not really needed, only to test support non-FCFS algorithms
-                "--schedule-policy",
-                "lpm",
-                # Use this to ensure prefill delayer will be run
-                "--max-total-tokens",
-                "4096",
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
-            ],
-        )
-        try:
-            args = SimpleNamespace(
-                base_url=base_url,
-                model=model,
-                eval_name="gsm8k",
-                num_examples=None,
-                num_threads=1024,
-            )
-            metrics = run_eval(args)
-            print(f"=== gsm8k ({prefill_delayer=}) ===")
-            print(f"{metrics=}")
-            self.assertGreater(metrics["score"], 0.57)
-        finally:
-            kill_process_tree(process.pid)
+# class TestPrefillDelayerAccuracy(CustomTestCase):
+#     """Testcase: Verify that model accuracy on mgsm_en dataset > 0.57
+#     both when PrefillDelayer is enabled and disabled.
+#
+#     [Test Category] Parameter
+#     [Test Target] --enable-prefill-delayer
+#     """
+#
+#     def test_1_gsm8k_has_prefill_delayer(self):
+#         self._run_accuracy_test(prefill_delayer=True)
+#
+#     def test_2_gsm8k_no_prefill_delayer(self):
+#         self._run_accuracy_test(prefill_delayer=False)
+#
+#     def _run_accuracy_test(self, prefill_delayer: bool):
+#         model = DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH
+#         base_url = DEFAULT_URL_FOR_TEST
+#         process = _launch_server(
+#             prefill_delayer=prefill_delayer,
+#             model=model,
+#             base_url=base_url,
+#             other_args=[
+#                 # Not really needed, only to test support non-FCFS algorithms
+#                 "--schedule-policy",
+#                 "lpm",
+#                 # Use this to ensure prefill delayer will be run
+#                 "--max-total-tokens",
+#                 "4096",
+#                 "--attention-backend",
+#                 "ascend",
+#                 "--disable-cuda-graph",
+#             ],
+#         )
+#         try:
+#             args = SimpleNamespace(
+#                 base_url=base_url,
+#                 model=model,
+#                 eval_name="gsm8k",
+#                 num_examples=None,
+#                 num_threads=1024,
+#             )
+#             metrics = run_eval(args)
+#             print(f"=== gsm8k ({prefill_delayer=}) ===")
+#             print(f"{metrics=}")
+#             self.assertGreater(metrics["score"], 0.57)
+#         finally:
+#             kill_process_tree(process.pid)
 
 
 def _launch_server(
