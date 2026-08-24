@@ -440,7 +440,7 @@ jobs:
 #  nightly-poc-single-node-tests:
 #    name: single-node-poc
 #    needs: [ set-image-config ]
-#    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+#    if: ${{ !cancelled() }}
 #    strategy:
 #      fail-fast: false
 #      max-parallel: 3
@@ -626,7 +626,7 @@ jobs:
   nightly-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -771,8 +771,8 @@ jobs:
 
   nightly-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    needs: [ set-image-config, nightly-poc-single-node-tests, nightly-poc-multi-node-tests ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+    needs: [ set-image-config, nightly-poc-multi-node-tests ]
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       max-parallel: 1
