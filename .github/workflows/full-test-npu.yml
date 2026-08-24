@@ -118,11 +118,13 @@ jobs:
           fi
 
           # ============ LOCAL-ONLY smoke mode (not committed) ============
-          # 本地验证覆盖率生成：强制只跑 full-1-npu-a3 的 1 个用例，
-          # 其余重型任务（full-2/4/8/16、nightly、poc 单/多节点）全部跳过。
+          # 本地验证覆盖率生成：只跑 full-1-npu-a3 的 1 个用例 + 1 个多节点用例，
+          # 其余重型任务（full-2/4/8/16、nightly、poc 单节点）全部跳过。
+          # 注意 test_scope=all：full-1-npu-a3 的 if 要求 all/func/no_nightly，poc 会跳过它。
           # 恢复完整测试时，取消下方被注释分支即可。
           echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
           echo "part_list=[0]" >> $GITHUB_OUTPUT
+          echo "test_scope=all" >> $GITHUB_OUTPUT
           # if [ "${{ inputs.verify_coverage_smoke }}" == "true" ]; then
           #   echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
           #   echo "part_list=[0]" >> $GITHUB_OUTPUT
@@ -751,9 +753,11 @@ jobs:
     name: multi-node-poc
     needs: [ set-image-config, nightly-poc-single-node-tests ]
     # ============ LOCAL-ONLY smoke mode (not committed) ============
-    # 本地只跑 multi-node 的 1 个配置验证多节点覆盖率生成（其余 matrix 实例被跳过）。
-    # 恢复完整测试时，改回下方被注释的原始 if 即可。
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && matrix.test_config.name == 'glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms' }}
+    # 本地只跑 multi-node 的 1 个配置验证多节点覆盖率生成。
+    # 注意：job 级 if 不能引用 matrix（GitHub 报 Unrecognized named-value: 'matrix'），
+    # 过滤已移到 nightly-test-npu-e2e-multi-node.yml 的 e2e job 级 if。
+    # 恢复完整测试时，改回下方被注释的原始 if，并删除模板里的过滤 if。
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     # if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     strategy:
       fail-fast: false
@@ -1105,7 +1109,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           FAIL=0
-          ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
+          # LOCAL-ONLY smoke: nighly-test-npu 已从 needs 注释掉，引用它会是空串导致误报失败。
+          # 恢复完整测试（把 nighly-test-npu 加回 needs）时取消注释下行即可。
+          # ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
           exit $FAIL
 
   coverage-report:
