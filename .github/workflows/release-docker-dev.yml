@@ -67,7 +67,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: docker
-          file: docker/npu_kvtc.Dockerfile
+          file: docker/npu1.Dockerfile
           platforms: linux/arm64, linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -75,7 +75,7 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=2026.7.27
+            SGLANG_KERNEL_NPU_TAG=2026.8.21
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
 
@@ -95,6 +95,6 @@ jobs:
         device_type: ["a3", "910b"]
     with:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
-      dockerfile: docker/npu_kvtc.Dockerfile
+      dockerfile: docker/npu1.Dockerfile
       artifact_name: image-manifest-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       deploy_pages: 'true'
