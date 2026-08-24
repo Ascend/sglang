@@ -123,9 +123,9 @@ jobs:
       skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
     secrets: inherit
 
-  full-8-npu-a3:
+  full-4-npu-a3:
     needs: [ set-image-config ]
-    runs-on: linux-aarch64-a3-8-
+    runs-on: linux-aarch64-a3-4-
     strategy:
       fail-fast: false
       matrix:
@@ -209,7 +209,7 @@ jobs:
           cd test
           # Only run the selected test files for this suite via --files.
           # suite/nightly filtering is bypassed when --files is provided.
-          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/memory_and_scheduling/test_npu_prefill_delayer.py"
+          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"
 
   nightly-poc-single-node-tests:
     name: single-node-poc
@@ -675,7 +675,7 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-      - full-8-npu-a3
+      - full-4-npu-a3
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
