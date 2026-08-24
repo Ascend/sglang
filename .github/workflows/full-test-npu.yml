@@ -20,11 +20,6 @@ on:
         required: false
         type: string
         default: 'all'
-      image_a2:
-        description: 'The a2 running docker image of the test task.'
-        required: false
-        type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-910b'
       image_a3:
         description: 'The a3 running docker image of the test task.'
         required: false
@@ -34,18 +29,7 @@ on:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
         type: string
-        default: ''
-      test_scope:
-        description: 'Test scope: all / func / poc / no_nightly / poc_no_nightly'
-        required: true
-        type: choice
-        options:
-          - all
-          - func
-          - poc
-          - no_nightly
-          - poc_no_nightly
-        default: 'poc'
+        default: 'false'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -57,23 +41,13 @@ jobs:
     outputs:
       ref: ${{ steps.set-vars.outputs.ref }}
       job_filter: ${{ steps.set-vars.outputs.job_filter }}
-      image_a2: ${{ steps.set-vars.outputs.image_a2 }}
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
-      test_scope: ${{ steps.set-vars.outputs.test_scope }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
         id: set-vars
         run: |
-          echo "========== INPUT PARAMETERS =========="
-          echo "inputs.ref            = ${{ inputs.ref }}"
-          echo "inputs.job_filter     = ${{ inputs.job_filter }}"
-          echo "inputs.image_a2        = ${{ inputs.image_a2 }}"
-          echo "inputs.image_a3        = ${{ inputs.image_a3 }}"
-          echo "inputs.skip_install_flag = ${{ inputs.skip_install_flag }}"
-          echo "inputs.test_scope      = ${{ inputs.test_scope }}"
-          echo "======================================="
           if [ -z "${{ inputs.ref }}" ]; then
             echo "ref=" >> $GITHUB_OUTPUT
           else
@@ -84,12 +58,6 @@ jobs:
             echo "job_filter=all" >> $GITHUB_OUTPUT
           else
             echo "job_filter=${{ inputs.job_filter }}" >> $GITHUB_OUTPUT
-          fi
-
-          if [ -z "${{ inputs.image_a2 }}" ]; then
-            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-910b" >> $GITHUB_OUTPUT
-          else
-            echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
@@ -104,21 +72,14 @@ jobs:
             echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
           fi
 
-          if [ -z "${{ inputs.test_scope }}" ]; then
-            echo "test_scope=poc" >> $GITHUB_OUTPUT
-          else
-            echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
-          fi
-
   nighly-test-npu:
-    needs: [ set-image-config ]
+    needs: [set-image-config]
     name: nightly-test-npu
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
-      ref: ${{ needs.set-image-config.outputs.ref }}
+      ref:  ${{ needs.set-image-config.outputs.ref }}
       job_filter: ${{ needs.set-image-config.outputs.job_filter }}
-      image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
       skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
     secrets: inherit
@@ -834,8 +795,8 @@ jobs:
       transformers_version: ''
 
   check-all-jobs:
+    if: github.repository == 'sgl-project/sglang' && always()
     needs:
-      - set-image-config
       - nighly-test-npu
 #      - full-1-npu-a3
 #      - full-2-npu-a3
@@ -846,50 +807,17 @@ jobs:
       - nightly-poc-multi-node-tests
       - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
-    if: ${{ !cancelled() }}
+    container:
+      image: docker.m.daocloud.io/ubuntu:22.04
     steps:
-      - name: Download all metrics
-        uses: actions/download-artifact@v4
-        with:
-          pattern: metrics-*
-          path: /tmp/metrics
-          merge-multiple: false
-
-      - name: Generate results table
+      - name: Check if any job failed
         run: |
-          echo "## Per-Test Metrics" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          has_metrics=false
-          for dir in /tmp/metrics/metrics-*/; do
-            file="${dir}metrics.json"
-            if [ -f "$file" ]; then
-              has_metrics=true
-              echo "import json" > /tmp/parse_metrics.py
-              echo "with open('$file') as f:" >> /tmp/parse_metrics.py
-              echo "    d = json.load(f)" >> /tmp/parse_metrics.py
-              echo "tc = d.get('test_case', '-')" >> /tmp/parse_metrics.py
-              echo "tp = d.get('test_type', '-')" >> /tmp/parse_metrics.py
-              echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
-              echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
-              echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
-              echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
-              echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
-              echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
-              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
-              python3 /tmp/parse_metrics.py
-            fi
-          done > /tmp/metrics_table.txt
-
-          if [ "${has_metrics}" = "true" ]; then
-            echo "| Test Case | Type | Status | Metrics | Baseline |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|------|--------|---------|----------|" >> $GITHUB_STEP_SUMMARY
-            cat /tmp/metrics_table.txt >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No per-test metrics available (artifacts not found)." >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "One or more nightly test jobs failed"
+            exit 1
           fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          FAIL=0
-          ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
-          exit $FAIL
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more nightly test jobs were cancelled"
+            exit 1
+          fi
+          echo "All nightly test jobs passed"

@@ -9,9 +9,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="nightly-perf-2-npu-a3",
     nightly=True,
-    disabled="performance testcase",
 )
 
 QWEN3_6_35B_A3B_128K_PREFIX_ENVS = {
@@ -102,7 +101,6 @@ class TestNPUQwen3_6_35BA3B_1P_In128k_Out1k_Prefix90_50ms(
     output_len = 1000
     random_range_ratio = 1
     repeat_rate = 0.9
-    warmup_requests = max_concurrency
     seed = 1
     tpot = 50
     request_rate = float("inf")
