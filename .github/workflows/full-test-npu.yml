@@ -565,146 +565,151 @@ jobs:
         test_config:
 #          - name: qwen3_6_35b_a3b_2p_in984k_out1k
 #            runner: linux-aarch64-a3-4
-#            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k.py
+#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_2p_in984k_out1k.py
 #            test_type: 'perf'
 #          - name: qwen3_6_35b_a3b_1p_in254k_out1k
 #            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in254k_out1k.py
+#            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in254k_out1k.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_50ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_prefix90_50ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms.py
 #            test_type: 'perf'
           - name: qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms.py
+            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_prefix90_50ms.py
             test_type: 'perf'
 #          - name: kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #          - name: kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in3k5_out1k5_20ms.py
 #            test_type: 'perf'
 #          - name: qwen3_8b_w8a8_1p_in3k5_out1k5_5ms
 #            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/performance/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in3k5_out1k5_5ms.py
+#            test_case: test/registered/npu/performance/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in3k5_out1k5_5ms.py
 #            test_type: 'perf'
 #          - name: qwen3_30b_bf16_1p_in1k_out100
 #            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/performance/qwen3_30b_a3b/test_npu_qwen3_30b_bf16_1p_in1k_out100.py
+#            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_bf16_1p_in1k_out100.py
 #            test_type: 'perf'
 #          - name: qwen3_30b_w8a8_1p_in3k5_out1k5_10ms
 #            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in3k5_out1k5_10ms.py
+#            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in3k5_out1k5_10ms.py
 #            test_type: 'perf'
 ##          - name: qwen3_30b_w8a8_1p_in6k_out1k5_bs16
 ##            runner: linux-aarch64-a3-2
-##            test_case: test/registered/ascend/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in6k_out1k5_bs16.py
+##            test_case: test/registered/npu/performance/qwen3_30b_a3b/test_npu_qwen3_30b_w8a8_1p_in6k_out1k5_bs16.py
 ##            test_type: 'perf'
 #          - name: qwen3_next_80b_w8a8_1p_in3k5_out1k5_20ms
 #            runner: linux-aarch64-a3-2
-#            test_case: test/registered/ascend/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_1p_in3k5_out1k5_20ms.py
+#            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_1p_in3k5_out1k5_20ms.py
 #            test_type: 'perf'
 #          - name: qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_2p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #          - name: deepseek_r1_w4a8_8p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_8p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_8p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #          - name: qwen3_235b_bf16_8p_in11k_out1k5_8ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_235b_a22b/test_npu_qwen3_235b_bf16_8p_in11k_out1k5_8ms.py
+#            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_bf16_8p_in11k_out1k5_8ms.py
 #            test_type: 'perf'
 #          - name: qwen3_235b_w8a8_8p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_235b_a22b/test_npu_qwen3_235b_w8a8_8p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_w8a8_8p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #          - name: kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1024x1024_30_out1024_50ms.py
 #            test_type: 'perf'
 #          - name: kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_8p_in1080p_30_out256_50ms.py
 #            test_type: 'perf'
 #          - name: minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
+#            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in128k_out1k_prefix90_20ms.py
 #            test_type: 'perf'
 #          - name: minimax_m2_5_w8a8_4p_in32k_out1k_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in32k_out1k_50ms.py
+#            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in32k_out1k_50ms.py
 #            test_type: 'perf'
 #          - name: minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
+#            test_case: test/registered/npu/performance/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_20ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_8p_aime26
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_aime26.py
+#            test_case: test/registered/npu/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_aime26.py
 #            test_type: 'accuracy'
 #          - name: qwen3_5_397b_8p_gpqa
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_gpqa.py
+#            test_case: test/registered/npu/accuracy/qwen3_5_397b/test_npu_qwen3_5_397b_8p_gpqa.py
 #            test_type: 'accuracy'
 #          - name: qwen3_5_397b_w4a8_8p_in128k_out1k_20ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in16k_out1k_20ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_20ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_20ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in16k_out1k_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_50ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_50ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in64k_out1k_20ms
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_20ms.py
+#            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in64k_out1k_20ms.py
 #            test_type: 'perf'
           - name: qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms
             runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
+            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1024x1024_30_out1024_50ms.py
             test_type: 'perf'
           - name: qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms
             runner: linux-aarch64-a3-2
-            test_case: test/registered/ascend/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms.py
+            test_case: test/registered/npu/performance/qwen3_6_35b_a3b/test_npu_qwen3_6_35b_a3b_1p_in1080p_30_out256_50ms.py
             test_type: 'perf'
 #          - name: deepseek_v4_flash_w8a8_8p_gpqa
 #            runner: linux-aarch64-a3-16
-#            test_case: test/registered/ascend/accuracy/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_gpqa.py
+#            test_case: test/registered/npu/accuracy/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_gpqa.py
 #            test_type: 'accuracy'
           # deepseek_v4_flash performance tests
           - name: deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py
+            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py
             test_type: 'perf'
           # deepseek_v4_flash performance tests
           - name: deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms
             runner: linux-aarch64-a3-16
-            test_case: test/registered/ascend/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms.py
+            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in32k_out1k_50ms.py
             test_type: 'perf'
+          #glm_5_2_w4a8_8p_gpqa accuracy tests
+          - name: glm_5_2_w4a8_8p_gpqa
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w4a8_8p_gpqa.py
+            test_type: 'accuracy'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}
@@ -726,35 +731,35 @@ jobs:
       matrix:
         test_config:
           #- name: prefill_policy_bucket_balance
-          #  test_case: test/registered/ascend/basic_function/wip/test_npu_prefill_policy_bucket_balance.py
+          #  test_case: test/registered/npu/basic_function/wip/test_npu_prefill_policy_bucket_balance.py
           #  test_type: 'perf'
           #  prefill_decode_deployment: 'separation'
           #  prefill_size: 3
           #  decode_size: 1
           #  router_size: 1
           #- name: hierarchical_cache
-          #  test_case: test/registered/ascend/basic_function/wip/test_npu_hierarchical_cache.py
+          #  test_case: test/registered/npu/basic_function/wip/test_npu_hierarchical_cache.py
           #  test_type: 'func'
           #  prefill_decode_deployment: 'separation'
           #  prefill_size: 1
           #  decode_size: 1
           #  router_size: 1
           #- name: fusion_operator
-          #  test_case: test/registered/ascend/basic_function/wip/test_npu_fusion_operator.py
+          #  test_case: test/registered/npu/basic_function/wip/test_npu_fusion_operator.py
           #  test_type: 'func'
           #  prefill_decode_deployment: 'separation'
           #  prefill_size: 1
           #  decode_size: 2
           #  router_size: 1
           #- name: bucket_adjust_interval_secs
-          #  test_case: test/registered/ascend/basic_function/wip/test_npu_bucket_adjust_interval_secs.py
+          #  test_case: test/registered/npu/basic_function/wip/test_npu_bucket_adjust_interval_secs.py
           #  test_type: 'func'
           #  prefill_decode_deployment: 'separation'
           #  prefill_size: 3
           #  decode_size: 1
           #  router_size: 1
           #- name: bucket_adjust_interval_secs_concurrency
-          #  test_case: test/registered/ascend/basic_function/parallel_strategy/test_npu_bucket_adjust_interval_secs_concurrency.py
+          #  test_case: test/registered/npu/basic_function/parallel_strategy/test_npu_bucket_adjust_interval_secs_concurrency.py
           #  test_type: 'func'
           #  prefill_decode_deployment: 'separation'
           #  prefill_size: 3
@@ -765,7 +770,7 @@ jobs:
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w4a8_1p1d_16p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          # # ===== DeepSeek R1 W8A8 2p1d_32p PD separation =====
@@ -773,35 +778,35 @@ jobs:
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_16ms.py
+#            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_16ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 ##          - name: deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms
 ##            prefill_size: 2
 ##            decode_size: 2
 ##            router_size: 1
-##            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms.py
+##            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k5_out1k_20ms.py
 ##            test_type: 'perf'
 ##            prefill_decode_deployment: 'separation'
 ##          - name: deepseek_r1_w8a8_2p1d_32p_in3k9_out1k_20ms
 ##            prefill_size: 2
 ##            decode_size: 2
 ##            router_size: 1
-##            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k9_out1k_20ms.py
+##            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in3k9_out1k_20ms.py
 ##            test_type: 'perf'
 ##            prefill_decode_deployment: 'separation'
 ##          - name: deepseek_r1_w8a8_2p1d_32p_in6k_out1k6_15ms
 ##            prefill_size: 2
 ##            decode_size: 2
 ##            router_size: 1
-##            test_case: test/registered/ascend/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in6k_out1k6_15ms.py
+##            test_case: test/registered/npu/performance/deepseek_r1/test_npu_deepseek_r1_w8a8_2p1d_32p_in6k_out1k6_15ms.py
 ##            test_type: 'perf'
 ##            prefill_decode_deployment: 'separation'
 ##          # ===== DeepSeek V3.2 W8A8 1p1d_32p PD separation =====
@@ -809,119 +814,119 @@ jobs:
 ##            prefill_size: 2
 ##            decode_size: 2
 ##            router_size: 1
-##            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_26ms.py
+##            test_case: test/registered/npu/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_26ms.py
 ##            test_type: 'perf'
 ##            prefill_decode_deployment: 'separation'
 ##          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs16
 ##            prefill_size: 2
 ##            decode_size: 2
 ##            router_size: 1
-##            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs16.py
+##            test_case: test/registered/npu/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs16.py
 ##            test_type: 'perf'
 ##            prefill_decode_deployment: 'separation'
 ##          - name: deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8
 ##            prefill_size: 2
 ##            decode_size: 2
 ##            router_size: 1
-##            test_case: test/registered/ascend/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8.py
+##            test_case: test/registered/npu/performance/deepseek_v3_2/test_npu_deepseek_v3_2_w8a8_1p1d_32p_in128k_out1k_bs8.py
 ##            test_type: 'perf'
 ##            prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
 #          - name: glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms
 #            prefill_size: 4
 #            decode_size: 2
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms.py
+#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_2p1d_48p_in128k_out1k_prefix90_50ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
 #            prefill_size: 4
 #            decode_size: 2
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
+#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms
 #            prefill_size: 2
 #            decode_size: 4
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
+#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_48p_in65k_out1k5_prefix100_33ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
 #          - name: kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
+#            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: test_npu_cp_vs_nocp_ttft
 #            prefill_size: 2
 #            decode_size: 2
 #            router_size: 1
-#            test_case: test/registered/ascend/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
+#            test_case: test/registered/npu/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
 #          - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s
 #            prefill_size: 1
 #            decode_size: 1
 #            router_size: 1
-#            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s.py
+#            test_case: test/registered/npu/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1_ttft_5s.py
 #            test_type: 'perf'
 #            prefill_decode_deployment: 'separation'
           - name: test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms
             prefill_size: 1
             decode_size: 1
             router_size: 1
-            test_case: test/registered/ascend/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms.py
+            test_case: test/registered/npu/performance/mimo_v2_flash/test_npu_mimo_v2_flash_1p1d_12p_in32k_out1k_tpot_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           # deepseek_v4_flash performance tests
@@ -929,47 +934,47 @@ jobs:
             prefill_size: 1
             decode_size: 1
             router_size: 1
-            test_case: test/registered/ascend/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms.py
+            test_case: test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          # gkm5.2 performance tests
+          # glm5.2 performance tests
           - name: glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
             prefill_size: 4
-            decode_size: 1
+            decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          # gkm5.2 performance tests
+          # glm5.2 performance tests
           - name: glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms
             prefill_size: 2
-            decode_size: 1
+            decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          # gkm5.2 performance tests
+          # glm5.2 performance tests
           - name: glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms
             prefill_size: 2
-            decode_size: 1
+            decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          # gkm5.2 performance tests
+          # glm5.2 performance tests
           - name: glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms
             prefill_size: 3
             decode_size: 1
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          # gkm5.2 performance tests
+          # glm5.2 performance tests
           - name: glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms
             prefill_size: 4
-            decode_size: 1
+            decode_size: 2
             router_size: 1
-            test_case: test/registered/ascend/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms.py
+            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
@@ -998,7 +1003,7 @@ jobs:
 #        test_config:
 #          - name: glm5_1_w4a8_16p_in3k5_out1k5_50ms
 #            node_size: 2
-#            test_case: test/registered/ascend/performance/glm5_1/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
+#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
 #            test_type: 'perf'
 #    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
 #    with:

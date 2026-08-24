@@ -109,7 +109,7 @@ class FusedMoEMethodBase(QuantizeMethodBase):
     ) -> CombineInput:
         raise NotImplementedError
 
-    def get_triton_quant_info(self, layer: torch.nn.Module) -> "TritonMoeQuantInfo":
+    def get_triton_quant_info(self, layer: torch.nn.Module) -> TritonMoeQuantInfo:
         """Return a ``TritonMoeQuantInfo`` describing the quantisation state
         stored on *layer*.
 
@@ -130,6 +130,9 @@ class QuantizationConfig(ABC):
         super().__init__()
         # mapping is updated by models as they initialize
         self.packed_modules_mapping: Dict[str, List[str]] = dict()
+
+    def update_packed_modules_mapping(self, mapping: Dict[str, List[str]]) -> None:
+        self.packed_modules_mapping = mapping
 
     @abstractmethod
     def get_name(self) -> str:
@@ -160,7 +163,7 @@ class QuantizationConfig(ABC):
 
     @classmethod
     @abstractmethod
-    def from_config(cls, config: Dict[str, Any]) -> "QuantizationConfig":
+    def from_config(cls, config: Dict[str, Any]) -> QuantizationConfig:
         """Create a config class from the model's quantization config."""
         raise NotImplementedError()
 
@@ -187,7 +190,9 @@ class QuantizationConfig(ABC):
 
         # If user specified generic "modelopt", auto-detect the specific method
         if user_quant == "modelopt":
-            if "FP8" in quant_algo:
+            if quant_algo == "MXFP8":
+                return "mxfp8"
+            elif quant_algo == "FP8":
                 return "modelopt_fp8"
             elif "NVFP4" in quant_algo or "FP4" in quant_algo:
                 return "modelopt_fp4"
@@ -243,7 +248,7 @@ class QuantizationConfig(ABC):
         raise NotImplementedError()
 
     def apply_weight_name_mapper(
-        self, hf_to_sglang_mapper: "WeightsMapper"
+        self, hf_to_sglang_mapper: WeightsMapper
     ):  # noqa: B027
         """
         Interface for models to update module names referenced in

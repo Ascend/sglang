@@ -125,6 +125,9 @@ fi
 # set environment of cann
 . /usr/local/Ascend/cann/set_env.sh
 . /usr/local/Ascend/nnal/atb/set_env.sh
+# Adapt DeepSeek-V4-Flash test cases with additional environment variables.
+source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
+source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
 echo "Running test case ${test_case}"
 tc_name=${test_case##*/}

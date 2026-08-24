@@ -26,7 +26,7 @@ from typing import Awaitable, Callable, List, NamedTuple, Optional
 
 import requests
 
-from sglang.bench_serving import run_benchmark
+from sglang.benchmark.serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -56,7 +56,7 @@ BAICHUAN2_13B_CHAT_WEIGHTS_PATH = os.path.join(
 C4AI_COMMAND_R_V01_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "CohereForAI/c4ai-command-r-v01"
 )
-C4AI_COMMAND_R_V01_CHAT_TEMPLATE_PATH = "/__w/sglang/sglang/test/registered/ascend/llm_models/tool_chat_template_c4ai_command_r_v01.jinja"
+C4AI_COMMAND_R_V01_CHAT_TEMPLATE_PATH = "/__w/sglang/sglang/test/registered/npu/llm_models/tool_chat_template_c4ai_command_r_v01.jinja"
 CHATGLM2_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/chatglm2-6b")
 DBRX_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "AI-ModelScope/dbrx-instruct"
@@ -77,6 +77,12 @@ DEEPSEEK_CODER_1_3_B_BASE_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "deepseek-ai/deepseek-coder-1.3b-base"
 )
 DOTS_OCR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "rednote-hilab/dots.ocr")
+ECO_TECH_QWEN3_32B_W4A4_LAOS_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3-32B-w4a4-LAOS"
+)
+ECO_TECH_QWEN3_30B_A3B_W4A4_LAOS_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3-30B-A3B-w4a4-LAOS"
+)
 ERNIE_4_5_21B_A3B_PT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "baidu/ERNIE-4.5-21B-A3B-PT"
 )
@@ -84,6 +90,12 @@ EXAONE_3_5_7_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct"
 )
 GEMMA_3_4B_IT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "google/gemma-3-4b-it")
+GEMMA_4_E2B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "google/gemma-4-E2B-it")
+GEMMA_4_E4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "google/gemma-4-E4B-it")
+GEMMA_4_26B_A4B_IT_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "google/gemma-4-26B-A4B-it"
+)
+GEMMA_4_31B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "google/gemma-4-31B-it")
 GLM_4_9B_CHAT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/glm-4-9b-chat")
 GLM_5_1_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/GLM-5.1-w4a8")
 GPT_J_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "EleutherAI/gpt-j-6b")
@@ -109,6 +121,7 @@ KIMI_K2_5_EAGLE3_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "lightseekorg/kimi-k2.5-eagle3"
 )
 LING_LITE_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "inclusionAI/Ling-lite")
+LLAMA_2_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "LLM-Research/Llama-2-7B")
 LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "AI-ModelScope/Llama-3.1-8B-Instruct"
 )
@@ -154,6 +167,8 @@ META_LLAMA_3_1_8B_INSTRUCT = os.path.join(
     MODEL_WEIGHTS_DIR, "LLM-Research/Meta-Llama-3.1-8B-Instruct"
 )
 MIMO_7B_RL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "XiaomiMiMo/MiMo-7B-RL")
+MIMO_V2_FLASH_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "XiaomiMiMo/MiMo-V2-Flash")
+MIMO_V2_5_W8A8_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "solinliu/MiMo-V2.5-W8A8")
 MINICPM3_4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "OpenBMB/MiniCPM3-4B")
 MISTRAL_7B_INSTRUCT_V0_2_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "mistralai/Mistral-7B-Instruct-v0.2"
@@ -186,6 +201,7 @@ QWEN3_6_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-2
 QWEN3_6_27B_CYBERSECURITY_LORA_MODEL_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "hotdogs/qwen3.6-27b-cybersecurity-lora"
 )
+QWEN3_6_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-35B-A3B")
 QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-1.7B-GPTQ-Int8"
 )
@@ -337,9 +353,6 @@ DEEPSEEK_R1_DISTILL_QWEN_7B_WEIGHTS_PATH = os.path.join(
 DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "DeepSeek-R1-0528-w4a8-per-channel"
 )
-DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH = os.path.join(
-    MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-R1-0528-W8A8"
-)
 QWEN3_30B_MODELSLIM_INT4_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3-30B-A3B-w4a4-LAOS"
 )
@@ -439,8 +452,6 @@ IMAGES_023_PATH = os.path.join(IMAGES_DIR, "023.jpg")
 IMAGES_MAN_PATH = os.path.join(IMAGES_DIR, "man.png")
 IMAGES_LOGO_PATH = os.path.join(IMAGES_DIR, "logo.png")
 IMAGES_1_1_PATH = os.path.join(IMAGES_DIR, "1x1.png")
-IMAGE_MAN_IRONING_PATH = os.path.join(IMAGES_DIR, "man_ironing_on_back_of_suv.png")
-IMAGE_SGL_LOGO_PATH = os.path.join(IMAGES_DIR, "sgl_logo.png")
 VIDEO_JOBS_PATH = os.path.join(VIDEO_DIR, "jobs.mp4")
 AUDIO_TRUMP_WEF_PATH = os.path.join(VIDEO_DIR, "audios_Trump_WEF_2018_10s.mp3")
 VIDEO_JOBS_PRESENTING_IPOD_PATH = os.path.join(VIDEO_DIR, "jobs_presenting_ipod.mp4")
@@ -451,13 +462,13 @@ INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
 # fmt: on
 
 # Other
-DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/ascend/basic_function/parameter/deepseek_coder.json"
+DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/npu/basic_function/parameter/deepseek_coder.json"
 FR_SPEC_TOKEN_MAP_PATH = "/root/.cache/sglang/FR-Spec/freq_32768.pt"
 HOT_MAP_PT = "/root/.cache/sglang/hot_map/expert_distribution_recorder.pt"
 HOT_MAP_JSON = "/root/.cache/sglang/hot_map/expert_distribution_recorder.json"
 HOT_MAP_STRING = "/root/.cache/sglang/hot_map/qwen3_30b_a3b_random_no_redundant.json"
 CONFIG_YAML_PATH = (
-    "/__w/sglang/sglang/test/registered/ascend/basic_function/config/config.yaml"
+    "/__w/sglang/sglang/test/registered/npu/basic_function/config/config.yaml"
 )
 
 
