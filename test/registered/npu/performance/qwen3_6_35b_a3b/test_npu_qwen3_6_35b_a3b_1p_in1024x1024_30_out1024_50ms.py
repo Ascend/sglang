@@ -80,10 +80,6 @@ QWEN3_6_35B_A3B_1024_OTHER_ARGS = [
     "qwen3",
     "--tool-call-parser",
     "qwen3_coder",
-    "--soft-watchdog-timeout",
-    "1800",
-    "--watchdog-timeout",
-    "3600",
 ]
 
 
