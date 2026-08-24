@@ -214,6 +214,48 @@ def delete_pod(yaml_file, namespace):
             raise f"delete resource {kind} error: {e}"
 
 
+def collect_coverage_data(
+    kube_job_type, kube_job_prefix_name, namespace, coverage_run_id, local_dir
+):
+    """Pull coverage data written by the job pod on shared storage back to the runner.
+
+    The multi-node job pods write coverage data to the shared disk path
+    `/data/ascend-ci-share-pkking-sglang/coverage_data/{coverage_run_id}/`, which is
+    not accessible from the runner container. We use `kubectl cp` from a still-running
+    pod to copy the data into the runner-local directory so it can be uploaded as an
+    artifact by the caller workflow.
+    """
+    if not coverage_run_id:
+        return
+
+    # Coverage data is written to a shared disk path that is mounted by all pods.
+    # All pods now set COVERAGE_FILE and thus run the keep-alive in
+    # run_npu_testcase.sh, so any pod could serve the data. We pull from the
+    # prefill pod (first worker) before the pods are deleted; the shared disk is
+    # visible from every pod, so pulling one directory gets all pods' data.
+    monitor_pod_name = {
+        KUBE_JOB_SINGLE: f"{kube_job_prefix_name}-pod-0",
+        KUBE_JOB_MULTI_PD_MIX: f"{kube_job_prefix_name}-sglang-node-0",
+        KUBE_JOB_MULTI_PD_SEPARATION: f"{kube_job_prefix_name}-sglang-prefill-0",
+    }.get(kube_job_type)
+    if not monitor_pod_name:
+        logger.warning(f"Unknown kube_job_type {kube_job_type}, skip coverage collection")
+        return
+
+    os.makedirs(local_dir, exist_ok=True)
+    remote_dir = f"/data/ascend-ci-share-pkking-sglang/coverage_data/{coverage_run_id}"
+    cmd = [
+        "kubectl", "cp", "-n", namespace,
+        f"{monitor_pod_name}:{remote_dir}/.", f"{local_dir}/",
+    ]
+    logger.info(f"Collecting coverage data: {' '.join(cmd)}")
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
+        logger.info("Coverage data collected successfully")
+    except Exception as e:
+        logger.warning(f"Failed to collect coverage data: {e}")
+
+
 def check_parent_process():
     """Check parent process is alive or not."""
     try:
@@ -713,6 +755,14 @@ def run_npu_e2e_test_case(
                 except Exception as e:
                     logger.error(f"Failed to generate metrics JSON: {e}", exc_info=True)
     finally:
+        if coverage_run_id:
+            collect_coverage_data(
+                kube_job_type,
+                final_kube_job_name,
+                kube_name_space,
+                coverage_run_id,
+                "/tmp/coverage_data",
+            )
         if os.path.exists(kube_yaml_file):
             # Don't delete pod when trouble_shotting is enabled
             if not trouble_shotting:

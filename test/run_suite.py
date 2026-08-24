@@ -348,6 +348,9 @@ def run_a_suite(args):
             ci_tests, auto_partition_id, auto_partition_size, live_est=live_est
         )
 
+    if args.max_tests is not None and args.max_tests > 0:
+        ci_tests = ci_tests[: args.max_tests]
+
     pretty_print_tests(args, ci_tests, skipped_tests)
 
     # None hands the per-file budget over to est_time (see run_unittest_files).
@@ -416,6 +419,13 @@ def main():
         "--auto-partition-size",
         type=int,
         help="Use auto load balancing. The number of parts.",
+    )
+    parser.add_argument(
+        "--max-tests",
+        type=int,
+        default=None,
+        help="Run at most N test files (first N after filtering/partitioning). "
+        "Useful for quick smoke verification of the coverage pipeline.",
     )
     parser.add_argument(
         "--enable-retry",

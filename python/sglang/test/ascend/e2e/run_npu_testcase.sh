@@ -167,3 +167,13 @@ if [ -d "$source_plog_path" ];then
     mkdir -p "${target_plog_path}"
     cp ${source_plog_path}/* "${target_plog_path}"
 fi
+
+# Keep the pod alive briefly after the test so the runner can pull coverage data
+# via `kubectl cp` before deleting the pod. Only active when coverage is enabled
+# and not already in trouble-shooting keep-alive mode.
+if [ -n "${COVERAGE_FILE}" ]; then
+    if [ "${TROUBLE_SHOTTING}" != "true" ] && [ "${TROUBLE_SHOTTING}" != "True" ];then
+        echo "Coverage enabled, keeping pod alive for 180s to allow coverage data collection."
+        sleep 180
+    fi
+fi

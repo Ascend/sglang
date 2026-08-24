@@ -45,6 +45,11 @@ on:
           - no_nightly
           - poc_no_nightly
         default: 'poc'
+      verify_coverage_smoke:
+        description: 'Smoke mode: only run ONE test case in full-1-npu-a3 to verify that coverage data files are generated (faster than running the full suite).'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -60,6 +65,8 @@ jobs:
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
       test_scope: ${{ steps.set-vars.outputs.test_scope }}
+      verify_coverage_smoke: ${{ steps.set-vars.outputs.verify_coverage_smoke }}
+      part_list: ${{ steps.set-vars.outputs.part_list }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
@@ -72,6 +79,7 @@ jobs:
           echo "inputs.image_a3        = ${{ inputs.image_a3 }}"
           echo "inputs.skip_install_flag = ${{ inputs.skip_install_flag }}"
           echo "inputs.test_scope      = ${{ inputs.test_scope }}"
+          echo "inputs.verify_coverage_smoke = ${{ inputs.verify_coverage_smoke }}"
           echo "======================================="
           if [ -z "${{ inputs.ref }}" ]; then
             echo "ref=" >> $GITHUB_OUTPUT
@@ -109,10 +117,24 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
+          # ============ LOCAL-ONLY smoke mode (not committed) ============
+          # 本地验证覆盖率生成：强制只跑 full-1-npu-a3 的 1 个用例，
+          # 其余重型任务（full-2/4/8/16、nightly、poc 单/多节点）全部跳过。
+          # 恢复完整测试时，取消下方被注释分支即可。
+          echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
+          echo "part_list=[0]" >> $GITHUB_OUTPUT
+          # if [ "${{ inputs.verify_coverage_smoke }}" == "true" ]; then
+          #   echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
+          #   echo "part_list=[0]" >> $GITHUB_OUTPUT
+          # else
+          #   echo "verify_coverage_smoke=false" >> $GITHUB_OUTPUT
+          #   echo "part_list=[0,1]" >> $GITHUB_OUTPUT
+          # fi
+
   nighly-test-npu:
     needs: [ set-image-config ]
     name: nightly-test-npu
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' }}
+    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
       ref: ${{ needs.set-image-config.outputs.ref }}
@@ -129,7 +151,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [0, 1]
+        part: ${{ fromJson(needs.set-image-config.outputs.part_list) }}
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
@@ -209,7 +231,11 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+          # ============ LOCAL-ONLY smoke mode (not committed) ============
+          # 只跑 1 个用例验证覆盖率文件生成。
+          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --max-tests 1
+          # 恢复完整测试时改回：
+          # python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
       - name: Upload coverage data
         if: always()
         uses: actions/upload-artifact@v4
@@ -226,7 +252,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -313,7 +339,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -397,7 +423,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -479,7 +505,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -557,7 +583,7 @@ jobs:
   nightly-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -724,7 +750,11 @@ jobs:
   nightly-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config, nightly-poc-single-node-tests ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+    # ============ LOCAL-ONLY smoke mode (not committed) ============
+    # 本地只跑 multi-node 的 1 个配置验证多节点覆盖率生成（其余 matrix 实例被跳过）。
+    # 恢复完整测试时，改回下方被注释的原始 if 即可。
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && matrix.test_config.name == 'glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms' }}
+    # if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -1020,13 +1050,13 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-      - nighly-test-npu
+#      - nighly-test-npu
       - full-1-npu-a3
-      - full-2-npu-a3
-      - full-4-npu-a3
-      - full-8-npu-a3
-      - full-16-npu-a3
-      - nightly-poc-single-node-tests
+#      - full-2-npu-a3
+#      - full-4-npu-a3
+#      - full-8-npu-a3
+#      - full-16-npu-a3
+#      - nightly-poc-single-node-tests
       - nightly-poc-multi-node-tests
 #      - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
@@ -1082,15 +1112,15 @@ jobs:
     needs:
       [
         set-image-config,
-        nighly-test-npu,
-        # full-1-npu-a3,
-        # full-2-npu-a3,
-        # full-4-npu-a3,
-        # full-8-npu-a3,
-        # full-16-npu-a3,
-        # nightly-poc-single-node-tests,
-        # nightly-poc-multi-node-tests,
-        # nightly-poc-multi-node-mix-tests,
+#        nighly-test-npu,
+         full-1-npu-a3,
+#         full-2-npu-a3,
+#         full-4-npu-a3,
+#         full-8-npu-a3,
+#         full-16-npu-a3,
+#         nightly-poc-single-node-tests,
+         nightly-poc-multi-node-tests,
+#         nightly-poc-multi-node-mix-tests,
       ]
     if: always()
     runs-on: linux-aarch64-a3-2
@@ -1112,6 +1142,16 @@ jobs:
           pattern: coverage-*
           path: /tmp/coverage_data
           merge-multiple: true
+
+      - name: Upload all raw coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-all-data-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/coverage_data/.coverage*
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Combine and generate report
         run: |
