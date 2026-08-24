@@ -1,0 +1,211 @@
+name: Generate Image Dependency Manifest
+
+# Reusable workflow. Called from the release-docker-*.yml workflows after an
+# image has been built & pushed. It:
+#   1. runs the built image to dump the *resolved* dependency inventory
+#      (pip list, sglang git commit, OS / CANN info),
+#   2. statically parses the Dockerfile for *declared* build args / pip pins,
+#   3. merges both into a single JSON manifest and uploads it as an artifact.
+#
+# Usage (from a caller workflow):
+#   manifest:
+#     needs: build
+#     uses: ./.github/workflows/generate-image-manifest.yml
+#     secrets: inherit
+#     with:
+#       image: <registry/repo:tag>
+#       dockerfile: docker/npu_kvtc.Dockerfile
+#       artifact_name: image-manifest-cann9.0.0-a3-B021
+#       deploy_pages: 'true'   # also commit the manifest to gh-pages
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: 'Full image reference (registry/repo:tag) to inspect'
+        required: true
+        type: string
+      dockerfile:
+        description: 'Path to the Dockerfile used to build the image (static analysis)'
+        required: false
+        type: string
+        default: ''
+      sglang_dir:
+        description: 'Path to the sglang repo inside the image'
+        required: false
+        type: string
+        default: '/sgl-workspace/sglang'
+      artifact_name:
+        description: 'Name for the uploaded manifest artifact'
+        required: false
+        type: string
+        default: 'image-manifest'
+      deploy_pages:
+        description: 'Commit the manifest to the gh-pages branch for the dashboard'
+        required: false
+        type: string
+        default: 'false'
+    outputs:
+      manifest_artifact:
+        description: 'Name of the uploaded manifest artifact'
+        value: ${{ jobs.generate.outputs.manifest_artifact }}
+      sglang_commit:
+        description: 'sglang commit recorded inside the image'
+        value: ${{ jobs.generate.outputs.sglang_commit }}
+
+jobs:
+  generate:
+    runs-on: ubuntu-22.04-arm
+    outputs:
+      manifest_artifact: ${{ steps.manifest.outputs.artifact_name }}
+      sglang_commit: ${{ steps.manifest.outputs.sglang_commit }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log into SWR (pull access for private images)
+        uses: docker/login-action@v3
+        if: ${{ github.repository == 'Ascend/sglang' }}
+        with:
+          registry: swr.cn-southwest-2.myhuaweicloud.com
+          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
+          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Extract runtime dependencies from image
+        id: extract
+        env:
+          IMAGE: ${{ inputs.image }}
+          SGLANG_DIR: ${{ inputs.sglang_dir }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+
+          # In-container extraction script: emits a JSON snapshot of the
+          # resolved environment (pip inventory, sglang git state, OS, CANN).
+          cat > extract_image_data.py <<'PY'
+          import json, subprocess, sys
+
+          def sh(cmd):
+              r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+              return r.stdout.strip()
+
+          sglang_dir = sys.argv[1]
+          data = {}
+
+          # Resolved pip inventory
+          try:
+              data["pip"] = json.loads(sh("python3 -m pip list --format=json"))
+          except Exception:
+              data["pip"] = []
+
+          # sglang git state -> the exact commit baked into this image
+          data["sglang"] = {
+              "dir": sglang_dir,
+              "remote": sh(f"git -C {sglang_dir} remote get-url origin 2>/dev/null"),
+              "branch": sh(f"git -C {sglang_dir} branch --show-current 2>/dev/null"),
+              "commit": sh(f"git -C {sglang_dir} rev-parse HEAD 2>/dev/null"),
+              "describe": sh(f"git -C {sglang_dir} describe --tags --always 2>/dev/null"),
+              "commit_date": sh(f"git -C {sglang_dir} log -1 --format=%cI 2>/dev/null"),
+          }
+
+          # OS info
+          data["os"] = {
+              "distro": sh("grep '^PRETTY_NAME=' /etc/os-release | cut -d= -f2 | tr -d '\"'"),
+              "kernel": sh("uname -r"),
+              "arch": sh("uname -m"),
+          }
+
+          # Ascend CANN toolkit info
+          data["cann"] = {
+              "toolkit": sh("ls -1 /usr/local/Ascend/ascend-toolkit/ 2>/dev/null | head -20 | tr '\n' ' '"),
+              "version_files": sh("find /usr/local/Ascend -maxdepth 2 -name 'version.info' 2>/dev/null | head -5 | tr '\n' ' '"),
+          }
+
+          print(json.dumps(data, ensure_ascii=False))
+          PY
+
+          # Stream the script to the container via stdin; capture its JSON to host.
+          docker run --rm -i --entrypoint /bin/bash "$IMAGE" -c "python3 - '$SGLANG_DIR'" \
+            < extract_image_data.py > image-data.json
+
+          echo "::group::image-data.json"
+          cat image-data.json
+          echo "::endgroup::"
+
+      - name: Generate merged manifest
+        id: manifest
+        env:
+          IMAGE: ${{ inputs.image }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        run: |
+          python3 .github/scripts/generate_image_manifest.py \
+            --image "$IMAGE" \
+            --dockerfile "$DOCKERFILE" \
+            --image-data image-data.json \
+            --output image-manifest.json
+
+          SGLANG_COMMIT="$(python3 -c 'import json;print(json.load(open("image-manifest.json"))["sglang"].get("commit",""))')"
+          echo "sglang_commit=${SGLANG_COMMIT}" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
+
+          echo "::group::image-manifest.json"
+          cat image-manifest.json
+          echo "::endgroup::"
+
+      - name: Upload manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.manifest.outputs.artifact_name }}
+          path: image-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish manifest to GitHub Pages
+        if: ${{ inputs.deploy_pages == 'true' }}
+        env:
+          IMAGE: ${{ inputs.image }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Tag used only for the commit message (single-file manifest now).
+          SAFE_TAG="$(printf '%s' "$IMAGE" | sed 's|.*:||' | sed 's|[^A-Za-z0-9._-]|_|g')"
+
+          publish() {
+            # Fresh shallow clone each attempt: always base off the latest
+            # gh-pages state, so concurrent matrix jobs never fight over a
+            # stale working tree.
+            rm -rf /tmp/gh-pages
+            git clone --depth 1 --branch gh-pages \
+              "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
+            mkdir -p /tmp/gh-pages/manifests
+            # Append (or replace by image tag) into the single manifests.json.
+            # No automatic pruning — cleanup is done manually on the file.
+            python3 "$GITHUB_WORKSPACE/.github/scripts/upsert_manifest.py" \
+              /tmp/gh-pages/manifests/manifests.json \
+              "$GITHUB_WORKSPACE/image-manifest.json"
+            git -C /tmp/gh-pages add manifests/
+            git -C /tmp/gh-pages commit -m "chore(pages): publish manifest ${SAFE_TAG}" --allow-empty
+            git -C /tmp/gh-pages push origin gh-pages
+          }
+
+          for attempt in 1 2 3 4 5; do
+            echo "::group::Deploy attempt ${attempt}"
+            if publish; then
+              echo "::endgroup::"
+              echo "Deployed ${SAFE_TAG} to gh-pages"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "::warning::Deploy attempt ${attempt} failed, retrying..."
+            sleep 3
+          done
+
+          echo "::error::Failed to publish manifest to gh-pages after 5 attempts"
+          exit 1

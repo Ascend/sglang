@@ -8,6 +8,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04-arm
@@ -75,3 +78,23 @@ jobs:
             SGLANG_KERNEL_NPU_TAG=2026.7.27
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
+
+  # Record the image dependency manifest (pip packages, sglang commit, ...)
+  # into a JSON artifact by inspecting the freshly built & pushed image.
+  manifest:
+    needs: build
+    if: ${{ github.repository == 'Ascend/sglang' }}
+    uses: ./.github/workflows/generate-image-manifest.yml
+    secrets: inherit
+    concurrency:
+      group: manifest-deploy
+      cancel-in-progress: false
+    strategy:
+      matrix:
+        cann_version: ["9.0.0"]
+        device_type: ["a3", "910b"]
+    with:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+      dockerfile: docker/npu_kvtc.Dockerfile
+      artifact_name: image-manifest-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+      deploy_pages: 'true'
