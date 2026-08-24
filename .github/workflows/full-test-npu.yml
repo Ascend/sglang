@@ -625,7 +625,7 @@ jobs:
 
   nightly-poc-multi-node-tests:
     name: multi-node-poc
-    needs: [ set-image-config ]
+    needs: [ set-image-config, nighly-test-npu ]
     if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
