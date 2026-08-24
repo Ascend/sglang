@@ -9,10 +9,13 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=3600,
-    suite="",
+    # Measured ~45min/round in CI (2026-08-17 nightly-acc-2-npu-a3).
+    # est_time = 2x single-round so derive_timeout_per_file (1.5x est)
+    # reserves ~3 rounds of budget for accuracy retries.
+    # Normalized to the shared 6500 ladder value for ~42-54min cases.
+    est_time=6500,
+    suite="nightly-acc-2-npu-a3",
     nightly=True,
-    disabled="performance testcase",
 )
 
 QWEN3_6_27B_64K_PREFIX_ENVS = {
@@ -24,7 +27,6 @@ QWEN3_6_27B_64K_PREFIX_ENVS = {
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "ASCEND_USE_FIA": "1",
-    "GDN_USE_MEGA_GDN": "1",
     "GDN_ATTN_BACKEND_TRITON": "1",
 }
 

@@ -152,11 +152,20 @@ NIGHTLY_SUITES = {
     ],
     HWBackend.CPU: [],
     HWBackend.NPU: [
+        "nightly-1-npu-a2",
         "nightly-1-npu-a3",
         "nightly-2-npu-a3",
         "nightly-4-npu-a3",
         "nightly-8-npu-a3",
         "nightly-16-npu-a3",
+        "nightly-acc-2-npu-a3",
+        "nightly-acc-4-npu-a3",
+        "nightly-acc-8-npu-a3",
+        "nightly-acc-16-npu-a3",
+        "nightly-perf-2-npu-a3",
+        "nightly-perf-4-npu-a3",
+        "nightly-perf-8-npu-a3",
+        "nightly-perf-16-npu-a3",
         "full-1-npu-a3",
         "full-2-npu-a3",
         "full-4-npu-a3",
@@ -319,10 +328,9 @@ def run_a_suite(args):
         for f in glob.glob(
             os.path.join(script_dir, "registered", "**", "*.py"), recursive=True
         )
-        if not f.endswith("/conftest.py")
-        and not f.endswith("/__init__.py")
-        and not f.endswith("/cpu/utils.py")
-        and not f.endswith("/run_tests.py")
+        # conftest.py / __init__.py are pytest+package structure, never
+        # registered tests, and must not be executed as one.
+        if os.path.basename(f) not in ("conftest.py", "__init__.py")
     ]
 
     # Strict: all discovered files must have proper registration

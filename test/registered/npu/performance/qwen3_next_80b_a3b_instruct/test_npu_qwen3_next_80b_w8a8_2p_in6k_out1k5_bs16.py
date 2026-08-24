@@ -8,6 +8,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-4-npu-a3")
+register_npu_ci(est_time=3600, suite="nightly-perf-4-npu-a3", nightly=True)
 
 QWEN3_NEXT_80B_A3B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -21,7 +22,6 @@ QWEN3_NEXT_80B_A3B_ENVS = {
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "TASK_QUEUE_ENABLE": "1",
     "ASCEND_USE_FIA": "1",
-    "GDN_USE_MEGA_GDN": "1",
     "SGLANG_NPU_USE_MULTI_STREAM": "0",
     "SGLANG_WARMUP_TIMEOUT": "3600",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
