@@ -239,14 +239,20 @@ def collect_coverage_data(
         KUBE_JOB_MULTI_PD_SEPARATION: f"{kube_job_prefix_name}-sglang-prefill-0",
     }.get(kube_job_type)
     if not monitor_pod_name:
-        logger.warning(f"Unknown kube_job_type {kube_job_type}, skip coverage collection")
+        logger.warning(
+            f"Unknown kube_job_type {kube_job_type}, skip coverage collection"
+        )
         return
 
     os.makedirs(local_dir, exist_ok=True)
     remote_dir = f"/data/ascend-ci-share-pkking-sglang/coverage_data/{coverage_run_id}"
     cmd = [
-        "kubectl", "cp", "-n", namespace,
-        f"{monitor_pod_name}:{remote_dir}/.", f"{local_dir}/",
+        "kubectl",
+        "cp",
+        "-n",
+        namespace,
+        f"{monitor_pod_name}:{remote_dir}/.",
+        f"{local_dir}/",
     ]
     logger.info(f"Collecting coverage data: {' '.join(cmd)}")
     try:
