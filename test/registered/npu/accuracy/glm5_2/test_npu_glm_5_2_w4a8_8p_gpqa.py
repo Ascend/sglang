@@ -10,7 +10,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=3600,
+    est_time=10800,
     suite="",
     nightly=True,
     disabled="accuracy testcase",
@@ -20,16 +20,12 @@ GLM_5_2_W4A8_8P_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "DEEPEP_HCCL_BUFFSIZE": "1000",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "TRANSFORMERS_VERBOSITY": "error",
-    "SGLANG_NPU_PROFILING": "0",
-    "SGLANG_NPU_PROFILING_BS": "16",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
@@ -74,11 +70,11 @@ GLM_5_2_W4A8_8P_OTHER_ARGS = [
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
-    4,
+    3,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    5,
+    4,
 ]
 
 
@@ -91,8 +87,8 @@ class TestNPUGLM5_2_W4A8_8P_GPQA(TestNpuAccuracyTestCaseBase):
     envs = GLM_5_2_W4A8_8P_ENVS
     accuracy = 0.912
     datasets = ["gpqa_diamond"]
-    eval_batch_size = 64
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
+    eval_batch_size = 8
+    generation_config = {"max_tokens": 65536, "temperature": 1.0, "timeout": 1800, "stream": True}
 
     def test_npu_glm_5_2_w4a8_8p_gpqa(self):
         """Run NPU accuracy test for GLM-5.2-w4a8 8p single node on gpqa_diamond"""

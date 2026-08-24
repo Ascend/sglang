@@ -928,7 +928,7 @@ jobs:
 #
           - name: glm_5_2_w4a8_16p_gpqa
             node_size: 2
-            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w4a8_16p_gpqa.py
+            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w4a8_8p_gpqa.py
             test_type: 'accuracy'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
