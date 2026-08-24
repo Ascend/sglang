@@ -79,10 +79,6 @@ GLM_5_2_W4A8_8P_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     5,
-    # 临时诊断项: 稀疏注意力 kernel 挂死后留 30min 窗口, 便于登录机器
-    # 手动 py-spy dump 全部 scheduler 进程 (定位 glm5.2 共性问题.md 试验 1)
-    "--watchdog-timeout",
-    1800,
 ]
 
 
