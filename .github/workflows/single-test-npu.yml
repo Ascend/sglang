@@ -43,7 +43,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/basic_function/memory_and_scheduling/test_npu_prefill_delayer_max_delay.py"
+            "test/registered/npu/vlm_models/test_npu_vision_openai_server_a.py"
           )
 
           for test_case in "${test_cases[@]}"; do
