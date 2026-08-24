@@ -100,7 +100,7 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "in-seq-split",
     "--attn-cp-size",
     8,
-    "--disable-radix-cache"
+    "--disable-radix-cache",
     "--enable-dp-lm-head",
     "--moe-dense-tp",
     1,
