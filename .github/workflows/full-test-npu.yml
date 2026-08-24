@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - testcases
-      - testcases-260813
+#      - testcases-260813
     paths:
       - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
