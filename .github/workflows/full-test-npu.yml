@@ -1159,6 +1159,7 @@ jobs:
           name: coverage-all-data-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             /tmp/coverage_data/.coverage*
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
 
