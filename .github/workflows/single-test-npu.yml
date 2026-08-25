@@ -26,8 +26,6 @@ jobs:
       - name: Check npu info
         run: |
           npu-smi info
-      - name: Install dependencies
-        run: pip install tabulate
 
       - name: Run test
         timeout-minutes: 120
