@@ -10,13 +10,14 @@ import unittest
 import openai
 
 from sglang.test.ascend.test_ascend_utils import (
+    GEMMA_4_31B_WEIGHTS_PATH,
     KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
     LLAVA_ONEVISION_QWEN2_7B_OV_WEIGHTS_PATH,
     MINICPM_O_2_6_WEIGHTS_PATH,
     MINICPM_V_2_6_WEIGHTS_PATH,
     QWEN2_VL_2B_INSTRUCT_WEIGHTS_PATH,
     QWEN3_VL_8B_INSTRUCT_WEIGHTS_PATH,
-    QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH, GEMMA_4_31B_WEIGHTS_PATH,
+    QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ascend.vlm_utils import *
 from sglang.test.ascend.vlm_utils import (
@@ -29,6 +30,7 @@ from sglang.test.ascend.vlm_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True)
+
 
 class TestLlavaServer(ImageOpenAITestMixin):
     model = LLAVA_ONEVISION_QWEN2_7B_OV_WEIGHTS_PATH
@@ -157,7 +159,6 @@ class TestGemma4itServer(ImageOpenAITestMixin):
         "--tp-size",
         "4",
     ]
-
 
 
 class TestKimiVLServer(ImageOpenAITestMixin):
