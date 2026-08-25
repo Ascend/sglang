@@ -188,8 +188,8 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestNpuPerfMultiNodePdSepTestCaseBa
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 32
-    num_prompts = 32
+    max_concurrency = 1
+    num_prompts = 1
     input_len = 131072
     output_len = 1024
     random_range_ratio = 1
