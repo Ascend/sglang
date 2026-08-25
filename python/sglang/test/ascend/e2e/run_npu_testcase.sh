@@ -154,3 +154,12 @@ if [ -d "$source_plog_path" ];then
     mkdir -p "${target_plog_path}"
     cp ${source_plog_path}/* "${target_plog_path}"
 fi
+
+echo "ZBAL/AI Core diagnostic matches:"
+diagnostic_paths=("${log_path}")
+if [ -d "${target_plog_path:-}" ]; then
+    diagnostic_paths+=("${target_plog_path}")
+fi
+grep -RniE -B 20 -A 40 \
+    "intranode_dispatch|507057|EZ9999|aivec error|invalid GM address|cross-device memory access" \
+    "${diagnostic_paths[@]}" 2>/dev/null || true
