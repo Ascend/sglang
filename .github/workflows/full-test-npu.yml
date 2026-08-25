@@ -224,7 +224,10 @@ jobs:
           pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
           pip install msgpack
           pip install watchfiles
-          pip install torchao==0.16.0
+          # NOTE: must match python/pyproject.toml pin (torchao==0.17.0); a mismatch
+          # makes the background `pip install .` rewrite site-packages/torchao while the
+          # test imports it, causing duplicate operator registration in torchao/ops.py.
+          pip install torchao==0.17.0
           pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp311-cp311-linux_aarch64.whl
           git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
           cd ./lmms-eval
