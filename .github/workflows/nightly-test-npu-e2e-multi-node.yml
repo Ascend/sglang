@@ -110,6 +110,8 @@ jobs:
           rm -rf ${target_path}
           mkdir -p ${target_path}
           cp -r ${current_path}/* ${target_path}/
+          # `*` glob does not match dotfiles, so copy hidden files (.coveragerc etc.) explicitly.
+          cp -f ${current_path}/.coveragerc ${target_path}/.coveragerc 2>/dev/null || true
 
       - name: Clear resources
         run: |
