@@ -168,7 +168,7 @@ jobs:
         if: ${{ inputs.deploy_pages == 'true' }}
         env:
           IMAGE: ${{ inputs.image }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
         run: |
           set -euo pipefail
           git config --global user.name "github-actions[bot]"
