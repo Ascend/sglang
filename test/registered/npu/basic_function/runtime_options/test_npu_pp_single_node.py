@@ -49,7 +49,7 @@ class TestPPAccuracy(unittest.TestCase):
                 "--attention-backend",
                 "ascend",
                 "--mem-fraction-static",
-                "0.8",
+                "0.65",
                 "--disable-cuda-graph",
             ],
         )
@@ -127,7 +127,7 @@ class TestDPAttentionDP2PP2(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--mem-fraction-static",
-                "0.8",
+                "0.65",
                 "--max-running-requests",
                 "32",
                 "--context-length",
@@ -180,7 +180,7 @@ class TestPPMixedChunk(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--mem-fraction-static",
-                "0.8",
+                "0.65",
                 "--disable-cuda-graph",
             ],
         )
@@ -234,7 +234,7 @@ class TestFixedBugs(unittest.TestCase):
             "--attention-backend",
             "ascend",
             "--mem-fraction-static",
-            "0.8",
+            "0.65",
             "--disable-cuda-graph",
         ]
         run_bench_one_batch_server(
