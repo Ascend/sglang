@@ -1,0 +1,142 @@
+{
+  "manifests": [
+    {
+      "schema_version": 1,
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-B021",
+      "dockerfile": "docker/npu_kvtc.Dockerfile",
+      "generated_at": "2026-08-24T03:05:45+00:00",
+      "build_args": {
+        "CANN_VERSION": "9.0.0",
+        "DEVICE_TYPE": "a3",
+        "OS": "ubuntu22.04",
+        "PYTHON_VERSION": "py3.11",
+        "PIP_INDEX_URL": "https://pypi.org/simple/",
+        "PYTORCH_VERSION": "2.10.0",
+        "TORCHVISION_VERSION": "0.25.0",
+        "TORCHAUDIO_VERSION": "2.10.0",
+        "SGLANG_TAG": "kvtc-rfc-dev",
+        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
+        "SGLANG_KERNEL_NPU_TAG": "2026.7.27"
+      },
+      "git_clones": [
+        {
+          "remote": "https://github.com/jfckm/sglang-kvtc.git",
+          "branch": "kvtc-rfc-dev",
+          "dir": "/sgl-workspace/sglang"
+        }
+      ],
+      "declared_pip_installs": [
+        "RUN ${PIP_INSTALL} memfabric-hybrid==1.0.8",
+        "RUN ${PIP_INSTALL} memfabric-zbal==1.2.0",
+        "RUN ${PIP_INSTALL} sglang-router",
+        "RUN ${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION}",
+        "RUN ${PIP_INSTALL} triton-ascend==3.2.1.dev20260530",
+        "RUN ${PIP_INSTALL} -v -e .[all_npu]",
+        "RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil"
+      ],
+      "declared_pip_pins": [
+        "memfabric-hybrid==1.0.8",
+        "memfabric-zbal==1.2.0",
+        "torch==2.10.0",
+        "torchvision==0.25.0",
+        "torchaudio==2.10.0",
+        "triton-ascend==3.2.1.dev20260530",
+        "wheel==0.45.1"
+      ],
+      "sglang": {
+        "dir": "/sgl-workspace/sglang",
+        "remote": "https://github.com/jfckm/sglang-kvtc.git",
+        "branch": "kvtc-rfc-dev",
+        "commit": "9d8c2f14b6a3e7f1c05d9e8a2b4f6c1d3a5e7b90",
+        "describe": "kvtc-rfc-dev-12-g9d8c2f1",
+        "commit_date": "2026-07-27T10:00:00+08:00"
+      },
+      "os": {
+        "distro": "Ubuntu 22.04.3 LTS",
+        "kernel": "5.15.0-101-generic",
+        "arch": "aarch64"
+      },
+      "cann": {
+        "toolkit": "latest",
+        "version_files": "/usr/local/Ascend/ascend-toolkit/latest/version.info"
+      },
+      "pip": {
+        "count": 18,
+        "packages": [
+          {
+            "name": "torch",
+            "version": "2.10.0"
+          },
+          {
+            "name": "torchvision",
+            "version": "0.25.0"
+          },
+          {
+            "name": "torchaudio",
+            "version": "2.10.0"
+          },
+          {
+            "name": "torch_npu",
+            "version": "2.10.0"
+          },
+          {
+            "name": "triton-ascend",
+            "version": "3.2.1.dev20260530"
+          },
+          {
+            "name": "memfabric-hybrid",
+            "version": "1.0.8"
+          },
+          {
+            "name": "memfabric-zbal",
+            "version": "1.2.0"
+          },
+          {
+            "name": "sglang-router",
+            "version": "0.1.0"
+          },
+          {
+            "name": "sglang",
+            "version": "0.4.6.dev0"
+          },
+          {
+            "name": "deep-ep",
+            "version": "0.1.0"
+          },
+          {
+            "name": "sgl-kernel-npu",
+            "version": "0.1.0"
+          },
+          {
+            "name": "custom_ops",
+            "version": "1.0"
+          },
+          {
+            "name": "lm-eval",
+            "version": "0.4.6"
+          },
+          {
+            "name": "numpy",
+            "version": "1.26.4"
+          },
+          {
+            "name": "pybind11",
+            "version": "2.13.6"
+          },
+          {
+            "name": "pyyaml",
+            "version": "6.0.2"
+          },
+          {
+            "name": "scipy",
+            "version": "1.14.1"
+          },
+          {
+            "name": "wheel",
+            "version": "0.45.1"
+          }
+        ]
+      }
+    }
+  ]
+}
