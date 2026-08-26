@@ -310,7 +310,8 @@ class TestLoadWeightsFromRemoteInstance(CustomTestCase):
 
         # Test cases with different backends
         test_suits = [
-            (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, "transfer_engine"),
+            (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, "nccl"),
+            (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, "modelexpress"),
         ]
 
         # Weight validation configuration
