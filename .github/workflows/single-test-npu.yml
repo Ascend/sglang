@@ -1,11 +1,10 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# test round : <测试用例描述>
 
 on:
   pull_request:
     branches:
       - testcases
-      - testcases-260813
     paths:
       - ".github/workflows/single-test-npu.yml"
 
@@ -18,7 +17,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,6 +25,10 @@ jobs:
       - name: Check npu info
         run: |
           npu-smi info
+
+      - name: Install dependencies
+        run: |
+          pip install tabulate
 
       - name: Run test
         timeout-minutes: 120
@@ -41,7 +44,9 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/ascend/basic_function/Custom_weight_loader/test_npu_remote_instance_weight_loader.py"
+            #"test/registered/ascend/basic_function/sessions/test_npu_session_latency.py"
+            #"test/registered/ascend/basic_function/sessions/test_npu_streaming_session_swa.py"
           )
 
           for test_case in "${test_cases[@]}"; do
