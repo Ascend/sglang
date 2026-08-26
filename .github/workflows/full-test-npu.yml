@@ -117,14 +117,17 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
-          # ============ LOCAL-ONLY smoke mode (not committed) ============
-          # 本地验证覆盖率生成：只跑 full-1-npu-a3 的 1 个用例 + 1 个多节点用例，
-          # 其余重型任务（full-2/4/8/16、nightly、poc 单节点）全部跳过。
-          # 注意 test_scope=all：full-1-npu-a3 的 if 要求 all/func/no_nightly，poc 会跳过它。
+          # ============ LOCAL-ONLY smoke mode (not committed) ============    
+          # 本地验证覆盖率生成：只跑 nighly-test-npu → nightly-test-npu.yml 的 multi-node-poc
+          # （用例 glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms 已在该 workflow 矩阵中，模板过滤只跑它）。
+          # job_filter=multi-node-poc 使 nightly-test-npu.yml 只执行该 job，单节点 POC、mix 均跳过。
+          # full 类 job（full-1/2/4/8/16）与内联 single/multi-node POC 全部跳过。
+          # 注意 test_scope=poc：full-1-npu-a3 的 if 要求 all/func/no_nightly，poc 会跳过它。
           # 恢复完整测试时，取消下方被注释分支即可。
           echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
           echo "part_list=[0]" >> $GITHUB_OUTPUT
-          echo "test_scope=all" >> $GITHUB_OUTPUT
+          echo "test_scope=poc" >> $GITHUB_OUTPUT
+          echo "job_filter=multi-node-poc" >> $GITHUB_OUTPUT
           # if [ "${{ inputs.verify_coverage_smoke }}" == "true" ]; then
           #   echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
           #   echo "part_list=[0]" >> $GITHUB_OUTPUT
@@ -136,7 +139,8 @@ jobs:
   nighly-test-npu:
     needs: [ set-image-config ]
     name: nightly-test-npu
-    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    # LOCAL-ONLY smoke mode：冒烟时也跑（job_filter 收窄到 multi-node-poc）；恢复完整测试时保持此条件即可。
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' }}
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
       ref: ${{ needs.set-image-config.outputs.ref }}
@@ -234,11 +238,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          # ============ LOCAL-ONLY smoke mode (not committed) ============
-          # 只跑 1 个用例验证覆盖率文件生成。
-          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --max-tests 1
-          # 恢复完整测试时改回：
-          # python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
       - name: Upload coverage data
         if: always()
         uses: actions/upload-artifact@v4
@@ -753,13 +753,9 @@ jobs:
   nightly-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config, nightly-poc-single-node-tests ]
-    # ============ LOCAL-ONLY smoke mode (not committed) ============
-    # 本地只跑 multi-node 的 1 个配置验证多节点覆盖率生成。
-    # 注意：job 级 if 不能引用 matrix（GitHub 报 Unrecognized named-value: 'matrix'），
-    # 过滤已移到 nightly-test-npu-e2e-multi-node.yml 的 e2e job 级 if。
-    # 恢复完整测试时，改回下方被注释的原始 if，并删除模板里的过滤 if。
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
-    # if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    # 冒烟（verify_coverage_smoke=true）时跳过本内联 multi-node-poc：
+    # 多节点覆盖率已由 nighly-test-npu → nightly-test-npu.yml 的 multi-node-poc 采集，无需重复执行。
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -1119,14 +1115,14 @@ jobs:
     needs:
       [
         set-image-config,
-#        nighly-test-npu,
-         full-1-npu-a3,
+        nighly-test-npu,
+#        full-1-npu-a3,
 #         full-2-npu-a3,
 #         full-4-npu-a3,
 #         full-8-npu-a3,
 #         full-16-npu-a3,
 #         nightly-poc-single-node-tests,
-         nightly-poc-multi-node-tests,
+#         nightly-poc-multi-node-tests,
 #         nightly-poc-multi-node-mix-tests,
       ]
     if: always()
@@ -1169,6 +1165,8 @@ jobs:
           if ls "$DATA_DIR"/.coverage* 1>/dev/null 2>&1; then
             python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
             coverage combine "$DATA_DIR"
+            # 诊断：combine 后生成的合并数据文件（存在但为 0 字节 = 无有效测量数据）。
+            ls -la ./.coverage 2>/dev/null || echo "combine produced no .coverage file"
             coverage report -m
             coverage html
           else
