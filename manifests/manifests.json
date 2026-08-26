@@ -2,6 +2,922 @@
   "manifests": [
     {
       "schema_version": 1,
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260826.post1",
+      "dockerfile": "docker/npu1.Dockerfile",
+      "generated_at": "2026-08-26T07:32:43.391446+00:00",
+      "build_args": {
+        "CANN_VERSION": "",
+        "DEVICE_TYPE": "",
+        "OS": "ubuntu22.04",
+        "PYTHON_VERSION": "py3.11",
+        "TARGETARCH": "",
+        "PIP_INDEX_URL": "https://pypi.org/simple/",
+        "APTMIRROR": "",
+        "PYTORCH_VERSION": "2.10.0",
+        "TORCHVISION_VERSION": "0.25.0",
+        "TORCHAUDIO_VERSION": "2.10.0",
+        "PTA_URL_ARM64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl",
+        "PTA_URL_AMD64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "SGLANG_TAG": "qwen_optimize",
+        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
+        "SGLANG_KERNEL_NPU_TAG": "2026.08.21",
+        "PIP_INSTALL": "python3 -m pip install --no-cache-dir"
+      },
+      "git_clones": [
+        {
+          "remote": "https://github.com/sgl-project/sglang",
+          "branch": "$SGLANG_TAG",
+          "dir": "/sgl-workspace/sglang"
+        }
+      ],
+      "declared_pip_installs": [
+        "RUN ${PIP_INSTALL} memfabric-hybrid==1.0.8",
+        "RUN ${PIP_INSTALL} memfabric-zbal==1.2.0",
+        "RUN ${PIP_INSTALL} sglang-router",
+        "(${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \\",
+        "&& (${PIP_INSTALL} ${PTA_URL})",
+        "RUN (${PIP_INSTALL} pybind11) && \\",
+        "(${PIP_INSTALL} triton-ascend==3.2.1.dev20260530 --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly --trusted-host triton-ascend.osinfra.cn)",
+        "${PIP_INSTALL} -v -e .[all_npu]",
+        "${PIP_INSTALL} custom_ops-1.0-cp311-cp311-linux_$(arch).whl && \\",
+        "RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \\",
+        "&& ${PIP_INSTALL} deep_ep*.whl sgl_kernel_npu*.whl \\"
+      ],
+      "declared_pip_pins": [
+        "memfabric-hybrid==1.0.8",
+        "memfabric-zbal==1.2.0",
+        "torch==2.10.0",
+        "torchvision==0.25.0",
+        "torchaudio==2.10.0",
+        "triton-ascend==3.2.1.dev20260530",
+        "wheel==0.45.1"
+      ],
+      "sglang": {
+        "dir": "/sgl-workspace/sglang",
+        "remote": "https://github.com/sgl-project/sglang",
+        "branch": "qwen_optimize",
+        "commit": "cebbaacae45ebf669101dde3aac4817ecbb038e0",
+        "describe": "gateway-v0.3.1-8235-gcebbaacae4",
+        "commit_date": "2026-08-23T00:13:33+08:00"
+      },
+      "os": {
+        "distro": "Ubuntu 22.04.5 LTS",
+        "kernel": "6.8.0-1064-azure",
+        "arch": "aarch64"
+      },
+      "cann": {
+        "toolkit": "latest set_env.sh",
+        "version_files": ""
+      },
+      "pip": {
+        "count": 210,
+        "packages": [
+          {
+            "name": "absl-py",
+            "version": "2.4.0"
+          },
+          {
+            "name": "addict",
+            "version": "2.4.0"
+          },
+          {
+            "name": "aiohappyeyeballs",
+            "version": "2.7.1"
+          },
+          {
+            "name": "aiohttp",
+            "version": "3.14.3"
+          },
+          {
+            "name": "aiosignal",
+            "version": "1.4.0"
+          },
+          {
+            "name": "airportsdata",
+            "version": "20260803"
+          },
+          {
+            "name": "annotated-doc",
+            "version": "0.0.5"
+          },
+          {
+            "name": "annotated-types",
+            "version": "0.8.0"
+          },
+          {
+            "name": "anthropic",
+            "version": "1.0.0"
+          },
+          {
+            "name": "anyio",
+            "version": "4.14.2"
+          },
+          {
+            "name": "apache-tvm-ffi",
+            "version": "0.1.13.post3"
+          },
+          {
+            "name": "asc_op_compile_base",
+            "version": "0.1.0"
+          },
+          {
+            "name": "asc_opc_tool",
+            "version": "0.1.0"
+          },
+          {
+            "name": "asttokens",
+            "version": "3.0.2"
+          },
+          {
+            "name": "attrs",
+            "version": "24.2.0"
+          },
+          {
+            "name": "auto_tune",
+            "version": "0.1.0"
+          },
+          {
+            "name": "av",
+            "version": "18.1.0"
+          },
+          {
+            "name": "blobfile",
+            "version": "3.0.0"
+          },
+          {
+            "name": "build",
+            "version": "1.5.0"
+          },
+          {
+            "name": "cache_dit",
+            "version": "1.3.5"
+          },
+          {
+            "name": "cannsim",
+            "version": "0.1.0"
+          },
+          {
+            "name": "certifi",
+            "version": "2026.4.22"
+          },
+          {
+            "name": "cffi",
+            "version": "2.0.0"
+          },
+          {
+            "name": "charset-normalizer",
+            "version": "3.4.7"
+          },
+          {
+            "name": "click",
+            "version": "8.4.2"
+          },
+          {
+            "name": "cloudpickle",
+            "version": "3.1.2"
+          },
+          {
+            "name": "compressed-tensors",
+            "version": "0.18.0"
+          },
+          {
+            "name": "custom_ops",
+            "version": "1.0"
+          },
+          {
+            "name": "Cython",
+            "version": "3.2.4"
+          },
+          {
+            "name": "dataflow",
+            "version": "0.0.1"
+          },
+          {
+            "name": "datasets",
+            "version": "5.0.1"
+          },
+          {
+            "name": "decorator",
+            "version": "5.1.1"
+          },
+          {
+            "name": "decord2",
+            "version": "3.4.0"
+          },
+          {
+            "name": "deep_ep",
+            "version": "1.0.0+f425bdf1.cann.9.0.0.b250"
+          },
+          {
+            "name": "diffusers",
+            "version": "0.37.0"
+          },
+          {
+            "name": "dill",
+            "version": "0.4.1"
+          },
+          {
+            "name": "diskcache",
+            "version": "5.6.3"
+          },
+          {
+            "name": "distro",
+            "version": "1.9.0"
+          },
+          {
+            "name": "docstring_parser",
+            "version": "0.18.0"
+          },
+          {
+            "name": "easydict",
+            "version": "1.13"
+          },
+          {
+            "name": "einops",
+            "version": "0.8.2"
+          },
+          {
+            "name": "es_cv",
+            "version": "1.0.0"
+          },
+          {
+            "name": "es_math",
+            "version": "1.0.0"
+          },
+          {
+            "name": "es_nn",
+            "version": "1.0.0"
+          },
+          {
+            "name": "execnet",
+            "version": "2.1.2"
+          },
+          {
+            "name": "executing",
+            "version": "2.2.1"
+          },
+          {
+            "name": "fastapi",
+            "version": "0.141.1"
+          },
+          {
+            "name": "filelock",
+            "version": "3.32.3"
+          },
+          {
+            "name": "frozenlist",
+            "version": "1.8.0"
+          },
+          {
+            "name": "fsspec",
+            "version": "2026.6.0"
+          },
+          {
+            "name": "ge-py",
+            "version": "0.0.1"
+          },
+          {
+            "name": "gguf",
+            "version": "0.19.0"
+          },
+          {
+            "name": "grpcio",
+            "version": "1.83.0"
+          },
+          {
+            "name": "grpcio-health-checking",
+            "version": "1.83.0"
+          },
+          {
+            "name": "grpcio-reflection",
+            "version": "1.83.0"
+          },
+          {
+            "name": "h11",
+            "version": "0.16.0"
+          },
+          {
+            "name": "hccl",
+            "version": "0.1.0"
+          },
+          {
+            "name": "hf_transfer",
+            "version": "0.1.9"
+          },
+          {
+            "name": "hf-xet",
+            "version": "1.6.0"
+          },
+          {
+            "name": "httpcore",
+            "version": "1.0.9"
+          },
+          {
+            "name": "httpcore2",
+            "version": "2.12.0"
+          },
+          {
+            "name": "httpx",
+            "version": "0.28.1"
+          },
+          {
+            "name": "httpx2",
+            "version": "2.12.0"
+          },
+          {
+            "name": "huggingface_hub",
+            "version": "1.28.0"
+          },
+          {
+            "name": "idna",
+            "version": "3.19"
+          },
+          {
+            "name": "imageio",
+            "version": "2.36.0"
+          },
+          {
+            "name": "imageio-ffmpeg",
+            "version": "0.5.1"
+          },
+          {
+            "name": "importlib_metadata",
+            "version": "9.0.0"
+          },
+          {
+            "name": "iniconfig",
+            "version": "2.3.0"
+          },
+          {
+            "name": "interegular",
+            "version": "0.3.3"
+          },
+          {
+            "name": "ipython",
+            "version": "9.16.1"
+          },
+          {
+            "name": "ipython_pygments_lexers",
+            "version": "1.1.1"
+          },
+          {
+            "name": "jedi",
+            "version": "0.20.0"
+          },
+          {
+            "name": "Jinja2",
+            "version": "3.1.6"
+          },
+          {
+            "name": "jiter",
+            "version": "0.16.0"
+          },
+          {
+            "name": "jsonschema",
+            "version": "4.26.0"
+          },
+          {
+            "name": "jsonschema-specifications",
+            "version": "2025.9.1"
+          },
+          {
+            "name": "lark",
+            "version": "1.3.1"
+          },
+          {
+            "name": "lazy-loader",
+            "version": "0.5"
+          },
+          {
+            "name": "llguidance",
+            "version": "1.8.0"
+          },
+          {
+            "name": "llm_datadist",
+            "version": "0.0.1"
+          },
+          {
+            "name": "llm_datadist_v1",
+            "version": "0.0.1"
+          },
+          {
+            "name": "loguru",
+            "version": "0.7.3"
+          },
+          {
+            "name": "lxml",
+            "version": "6.1.2"
+          },
+          {
+            "name": "markdown-it-py",
+            "version": "4.2.0"
+          },
+          {
+            "name": "MarkupSafe",
+            "version": "3.0.3"
+          },
+          {
+            "name": "matplotlib-inline",
+            "version": "0.2.2"
+          },
+          {
+            "name": "mdurl",
+            "version": "0.1.2"
+          },
+          {
+            "name": "memfabric_hybrid",
+            "version": "1.0.8"
+          },
+          {
+            "name": "memfabric_zbal",
+            "version": "1.2.0"
+          },
+          {
+            "name": "mindstudio-kl",
+            "version": "26.0.0"
+          },
+          {
+            "name": "mindstudio-kpp",
+            "version": "0.0.0.dev0"
+          },
+          {
+            "name": "mindstudio-opgen",
+            "version": "26.0.0"
+          },
+          {
+            "name": "mindstudio-opst",
+            "version": "26.0.0"
+          },
+          {
+            "name": "mistral_common",
+            "version": "1.11.7"
+          },
+          {
+            "name": "modelscope",
+            "version": "1.39.1"
+          },
+          {
+            "name": "modelscope-hub",
+            "version": "0.2.0"
+          },
+          {
+            "name": "moviepy",
+            "version": "2.2.1"
+          },
+          {
+            "name": "mpmath",
+            "version": "1.3.0"
+          },
+          {
+            "name": "ms_service_profiler",
+            "version": "26.0.0"
+          },
+          {
+            "name": "msgspec",
+            "version": "0.21.1"
+          },
+          {
+            "name": "msobjdump",
+            "version": "0.1.0"
+          },
+          {
+            "name": "mspti",
+            "version": "26.0.0"
+          },
+          {
+            "name": "multidict",
+            "version": "6.7.1"
+          },
+          {
+            "name": "multiprocess",
+            "version": "0.70.19"
+          },
+          {
+            "name": "nest-asyncio",
+            "version": "1.6.0"
+          },
+          {
+            "name": "networkx",
+            "version": "3.6.1"
+          },
+          {
+            "name": "ninja",
+            "version": "1.13.0"
+          },
+          {
+            "name": "npu_ops_transformer",
+            "version": "1.0.0"
+          },
+          {
+            "name": "numpy",
+            "version": "1.26.4"
+          },
+          {
+            "name": "op_compile_tool",
+            "version": "0.1.0"
+          },
+          {
+            "name": "opc_tool",
+            "version": "0.1.0"
+          },
+          {
+            "name": "openai",
+            "version": "2.6.1"
+          },
+          {
+            "name": "openai-harmony",
+            "version": "0.0.4"
+          },
+          {
+            "name": "opencv-python",
+            "version": "4.10.0.84"
+          },
+          {
+            "name": "orjson",
+            "version": "3.12.0"
+          },
+          {
+            "name": "outlines",
+            "version": "0.1.11"
+          },
+          {
+            "name": "outlines_core",
+            "version": "0.1.26"
+          },
+          {
+            "name": "packaging",
+            "version": "26.3"
+          },
+          {
+            "name": "pandas",
+            "version": "3.0.5"
+          },
+          {
+            "name": "parso",
+            "version": "0.8.7"
+          },
+          {
+            "name": "partial-json-parser",
+            "version": "0.2.1.1.post7"
+          },
+          {
+            "name": "pathlib2",
+            "version": "2.3.7.post1"
+          },
+          {
+            "name": "pexpect",
+            "version": "4.9.0"
+          },
+          {
+            "name": "pillow",
+            "version": "11.3.0"
+          },
+          {
+            "name": "pip",
+            "version": "26.1.1"
+          },
+          {
+            "name": "pluggy",
+            "version": "1.6.0"
+          },
+          {
+            "name": "proglog",
+            "version": "0.1.12"
+          },
+          {
+            "name": "prometheus_client",
+            "version": "0.26.0"
+          },
+          {
+            "name": "prompt_toolkit",
+            "version": "3.0.53"
+          },
+          {
+            "name": "propcache",
+            "version": "0.5.2"
+          },
+          {
+            "name": "protobuf",
+            "version": "7.36.0"
+          },
+          {
+            "name": "psutil",
+            "version": "7.2.2"
+          },
+          {
+            "name": "ptyprocess",
+            "version": "0.7.0"
+          },
+          {
+            "name": "pure_eval",
+            "version": "0.2.3"
+          },
+          {
+            "name": "py-spy",
+            "version": "0.4.2"
+          },
+          {
+            "name": "pyarrow",
+            "version": "25.0.1"
+          },
+          {
+            "name": "pybase64",
+            "version": "1.5.0"
+          },
+          {
+            "name": "pybind11",
+            "version": "3.1.0"
+          },
+          {
+            "name": "pycountry",
+            "version": "26.2.16"
+          },
+          {
+            "name": "pycparser",
+            "version": "3.0"
+          },
+          {
+            "name": "pycryptodomex",
+            "version": "3.23.0"
+          },
+          {
+            "name": "pydantic",
+            "version": "2.13.4"
+          },
+          {
+            "name": "pydantic_core",
+            "version": "2.46.4"
+          },
+          {
+            "name": "pydantic-extra-types",
+            "version": "2.11.1"
+          },
+          {
+            "name": "Pygments",
+            "version": "2.21.0"
+          },
+          {
+            "name": "pyproject_hooks",
+            "version": "1.2.0"
+          },
+          {
+            "name": "pytest",
+            "version": "8.3.2"
+          },
+          {
+            "name": "pytest-xdist",
+            "version": "3.6.1"
+          },
+          {
+            "name": "python-dateutil",
+            "version": "2.9.0.post0"
+          },
+          {
+            "name": "python-dotenv",
+            "version": "1.2.3"
+          },
+          {
+            "name": "python-multipart",
+            "version": "0.0.32"
+          },
+          {
+            "name": "PyYAML",
+            "version": "6.0.1"
+          },
+          {
+            "name": "pyzmq",
+            "version": "27.2.0"
+          },
+          {
+            "name": "referencing",
+            "version": "0.37.0"
+          },
+          {
+            "name": "regex",
+            "version": "2026.7.19"
+          },
+          {
+            "name": "remote-pdb",
+            "version": "2.1.0"
+          },
+          {
+            "name": "requests",
+            "version": "2.34.0"
+          },
+          {
+            "name": "rich",
+            "version": "15.0.0"
+          },
+          {
+            "name": "rpds-py",
+            "version": "2026.6.3"
+          },
+          {
+            "name": "safetensors",
+            "version": "0.8.0"
+          },
+          {
+            "name": "schedule_search",
+            "version": "0.0.1"
+          },
+          {
+            "name": "scikit-image",
+            "version": "0.25.2"
+          },
+          {
+            "name": "scipy",
+            "version": "1.13.1"
+          },
+          {
+            "name": "sentencepiece",
+            "version": "0.2.2"
+          },
+          {
+            "name": "setproctitle",
+            "version": "1.3.7"
+          },
+          {
+            "name": "setuptools",
+            "version": "79.0.1"
+          },
+          {
+            "name": "sgl_kernel_npu",
+            "version": "2026.6.1"
+          },
+          {
+            "name": "sglang",
+            "version": "0.5.19.dev187+gcebbaacae",
+            "editable_project_location": "/sgl-workspace/sglang/python"
+          },
+          {
+            "name": "sglang-router",
+            "version": "0.3.2"
+          },
+          {
+            "name": "shellingham",
+            "version": "1.5.4"
+          },
+          {
+            "name": "show_kernel_debug_data",
+            "version": "0.1.0"
+          },
+          {
+            "name": "six",
+            "version": "1.17.0"
+          },
+          {
+            "name": "smg-grpc-proto",
+            "version": "0.4.15"
+          },
+          {
+            "name": "smg-grpc-servicer",
+            "version": "0.9.0"
+          },
+          {
+            "name": "sniffio",
+            "version": "1.3.1"
+          },
+          {
+            "name": "soundfile",
+            "version": "0.13.1"
+          },
+          {
+            "name": "stack-data",
+            "version": "0.6.3"
+          },
+          {
+            "name": "starlette",
+            "version": "1.6.0"
+          },
+          {
+            "name": "superkernel",
+            "version": "0.1.0"
+          },
+          {
+            "name": "sympy",
+            "version": "1.14.0"
+          },
+          {
+            "name": "te",
+            "version": "0.4.0"
+          },
+          {
+            "name": "tifffile",
+            "version": "2026.3.3"
+          },
+          {
+            "name": "tiktoken",
+            "version": "0.14.0"
+          },
+          {
+            "name": "timm",
+            "version": "1.0.16"
+          },
+          {
+            "name": "tokenizers",
+            "version": "0.22.2"
+          },
+          {
+            "name": "torch",
+            "version": "2.10.0+cpu"
+          },
+          {
+            "name": "torch_npu",
+            "version": "2.10.0"
+          },
+          {
+            "name": "torchaudio",
+            "version": "2.10.0+cpu"
+          },
+          {
+            "name": "torchvision",
+            "version": "0.25.0+cpu"
+          },
+          {
+            "name": "tqdm",
+            "version": "4.70.0"
+          },
+          {
+            "name": "traitlets",
+            "version": "5.16.1"
+          },
+          {
+            "name": "transformers",
+            "version": "5.12.1"
+          },
+          {
+            "name": "trimesh",
+            "version": "5.0.0"
+          },
+          {
+            "name": "triton",
+            "version": "3.5.0"
+          },
+          {
+            "name": "triton_ascend",
+            "version": "3.2.1.dev20260530"
+          },
+          {
+            "name": "truststore",
+            "version": "0.10.4"
+          },
+          {
+            "name": "typer",
+            "version": "0.27.1"
+          },
+          {
+            "name": "typing_extensions",
+            "version": "4.16.0"
+          },
+          {
+            "name": "typing-inspection",
+            "version": "0.4.4"
+          },
+          {
+            "name": "urllib3",
+            "version": "2.7.0"
+          },
+          {
+            "name": "uvicorn",
+            "version": "0.52.4"
+          },
+          {
+            "name": "uvloop",
+            "version": "0.22.1"
+          },
+          {
+            "name": "wcwidth",
+            "version": "0.8.2"
+          },
+          {
+            "name": "wheel",
+            "version": "0.45.1"
+          },
+          {
+            "name": "xatlas",
+            "version": "0.0.11"
+          },
+          {
+            "name": "xgrammar",
+            "version": "0.2.1"
+          },
+          {
+            "name": "xxhash",
+            "version": "4.0.1"
+          },
+          {
+            "name": "yarl",
+            "version": "1.24.5"
+          },
+          {
+            "name": "zipp",
+            "version": "4.1.0"
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260826.post1",
       "dockerfile": "docker/npu1.Dockerfile",
       "generated_at": "2026-08-26T07:18:29.742795+00:00",
