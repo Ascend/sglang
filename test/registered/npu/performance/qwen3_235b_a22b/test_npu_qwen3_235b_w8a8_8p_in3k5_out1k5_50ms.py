@@ -7,9 +7,6 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     QWEN3_235B_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
 )
-
-
-
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-16-npu-a3")
@@ -24,7 +21,7 @@ QWEN3_235B_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "40",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "38",
     "SGLANG_NPU_PROFILING": "0",
     "SGLANG_NPU_PROFILING_BS": "27",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "188416",
