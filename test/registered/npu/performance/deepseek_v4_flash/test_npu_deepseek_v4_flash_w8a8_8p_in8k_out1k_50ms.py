@@ -8,12 +8,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(
-    est_time=3600,
-    suite="",
-    nightly=True,
-    disabled="performance testcase",
-)
+register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
@@ -26,7 +21,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_NPU_USE_MULTI_STREAM": "1",
     # deepep
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
     # zbal
     "HCCL_BUFFSIZE": "8",
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
@@ -126,10 +121,10 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     dataset_name = "random"
-    dataset_path = "/root/.cache/modelscope/hub/datasets/gsm8k_deepseekv4/cache0_8000/formal_run1_320_8000_cache0.json"
+    dataset_path = "/root/.cache/modelscope/hub/datasets/gsm8k_deepseekv4/cache0_8000/formal_run1_160_8000_cache0.json"
     input_len = 8000
     output_len = 1000
-    num_prompts = 320
+    num_prompts = 160
     max_concurrency = 160
     random_range_ratio = 1
     warmup_requests = 0
