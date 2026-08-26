@@ -5,7 +5,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -115,7 +115,7 @@ class TestNPUDeepSeekV4FlashW8A88PGPQAHigh(TestNpuAccuracyTestCaseBase):
     """Test NPU accuracy for DeepSeek-V4-Flash W8A8 8p GPQA High mode."""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    model = DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH
+    model = DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     accuracy = 0.874
