@@ -7,10 +7,6 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     QWEN3_235B_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
 )
-
-QWEN3_235B_W8A8_MODEL_PATH = "/mnt/paas/weights/Qwen3-235B-A22B-W8A8"
-QWEN3_235B_A22B_EAGLE_MODEL_PATH = "/mnt/paas/weights/Qwen3-235B-A22B-Eagle3"
-
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-16-npu-a3")
@@ -60,7 +56,7 @@ QWEN3_235B_OTHER_ARGS = [
     "--ep-dispatch-algorithm",
     "static",
     "--init-expert-location",
-    "/home/z30066929/run_scripts/qwen3_235b/235B_3_5k_decode.pt",
+    "/root/.cache/modelscope/hub/models/hot_map/235B_3_5k_decode.pt",
     "--disable-radix-cache",
     "--moe-a2a-backend",
     "ascend_fuseep",
