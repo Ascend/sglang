@@ -40,6 +40,12 @@ register_npu_ci(
     nightly=True,
 )
 
+register_npu_ci(
+    est_time=400,
+    suite="full-test-npu",
+    nightly=True,
+)
+
 # Test configuration
 SUBSET = "clean"
 SPLIT = "test"
