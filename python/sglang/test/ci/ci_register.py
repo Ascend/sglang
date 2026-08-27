@@ -342,6 +342,8 @@ def ut_parse_one_file(filename: str) -> Tuple[List[CIRegistry], bool]:
     with a call in its body -- required for `python3 file.py` to actually
     run tests (the CI runner's invocation pattern).
     """
+    # [coverage] Unrelated fix, commented out to keep only coverage changes.
+    # with open(filename, "r", encoding="utf-8-sig") as f:
     with open(filename, "r") as f:
         file_content = f.read()
     tree = ast.parse(file_content, filename=filename)

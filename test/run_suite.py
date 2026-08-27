@@ -417,6 +417,14 @@ def main():
         type=int,
         help="Use auto load balancing. The number of parts.",
     )
+    # [coverage] Unrelated force-test-case option, commented out.
+    # parser.add_argument(
+    #     "--max-tests",
+    #     type=int,
+    #     default=None,
+    #     help="Run at most N test files (first N after filtering/partitioning). "
+    #     "Useful for quick smoke verification of the coverage pipeline.",
+    # )
     parser.add_argument(
         "--enable-retry",
         action="store_true",

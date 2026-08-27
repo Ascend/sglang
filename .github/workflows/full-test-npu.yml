@@ -1,12 +1,12 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#      - testcases
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - main
+      - testcases
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -120,6 +120,7 @@ jobs:
       image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
       skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-1-npu-a3:
@@ -165,6 +166,11 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
           cp ~/.cache/modelscope/hub/datasets/hellaswag_val.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -178,6 +184,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           # speed up by using infra cache services
           pip install sglang_router
@@ -201,6 +210,14 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-1-npu-a3-part${{ matrix.part }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
 
   full-2-npu-a3:
     needs: [ set-image-config ]
@@ -240,6 +257,11 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -253,6 +275,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -272,6 +297,14 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-2-npu-a3-part${{ matrix.part }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
 
   full-4-npu-a3:
     needs: [ set-image-config ]
@@ -311,6 +344,11 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -324,6 +362,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -340,6 +381,14 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-4-npu-a3-part${{ matrix.part }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
 
   full-8-npu-a3:
     needs: [ set-image-config ]
@@ -379,6 +428,11 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -392,6 +446,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -407,6 +464,13 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-8-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-8-npu-a3-part${{ matrix.part }}
+          path: /tmp/coverage_data/.coverage*
+          retention-days: 7
 
   full-16-npu-a3:
     needs: [ set-image-config ]
@@ -446,6 +510,11 @@ jobs:
           fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
       - name: Print Log Information
         run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
@@ -459,6 +528,9 @@ jobs:
           STREAMS_PER_DEVICE: 32
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -474,6 +546,13 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }}
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-16-npu-a3-part${{ matrix.part }}
+          path: /tmp/coverage_data/.coverage*
+          retention-days: 7
 
   nightly-poc-single-node-tests:
     name: single-node-poc
@@ -640,6 +719,7 @@ jobs:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       install_sglang_from_source: false
       transformers_version: ''
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
 
   nightly-poc-multi-node-tests:
     name: multi-node-poc
@@ -910,6 +990,7 @@ jobs:
       install_sglang_from_source: false
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
 
 #  nightly-poc-multi-node-mix-tests:
 #    name: multi-node-mix-poc
@@ -996,3 +1077,74 @@ jobs:
           FAIL=0
           ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
           exit $FAIL
+
+  coverage-report:
+    needs:
+      [
+        set-image-config,
+        nighly-test-npu,
+        full-1-npu-a3,
+        full-2-npu-a3,
+        full-4-npu-a3,
+        full-8-npu-a3,
+        full-16-npu-a3,
+        nightly-poc-single-node-tests,
+        nightly-poc-multi-node-tests,
+#        nightly-poc-multi-node-mix-tests,
+      ]
+    if: always()
+    runs-on: linux-aarch64-a3-2
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+
+      - name: Mark repository safe
+        run: |
+          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: /tmp/coverage_data
+          merge-multiple: true
+
+      - name: Upload all raw coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-all-data-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Combine and generate report
+        run: |
+          DATA_DIR=/tmp/coverage_data
+          echo "=== Coverage data files ==="
+          ls -la "$DATA_DIR"/.coverage* 2>/dev/null || echo "No .coverage files found"
+          if ls "$DATA_DIR"/.coverage* 1>/dev/null 2>&1; then
+            python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+            coverage combine "$DATA_DIR"
+            # 诊断：combine 后生成的合并数据文件（存在但为 0 字节 = 无有效测量数据）。
+            ls -la ./.coverage 2>/dev/null || echo "combine produced no .coverage file"
+            coverage report -m
+            coverage html
+          else
+            echo "No coverage data found, skipping report generation."
+            mkdir -p htmlcov
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: htmlcov/
+          retention-days: 30
