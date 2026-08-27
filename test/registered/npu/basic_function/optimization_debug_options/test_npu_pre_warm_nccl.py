@@ -43,10 +43,18 @@ class TestPreWarmNccl(CustomTestCase):
     Three warmers must be disabled to expose this gap:
     1. /health_generate → SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION=false
     2. popen_launch_server's health check → use raw subprocess.Popen
-    3. HCCL port conflicts → HCCL_HOST/NPU_SOCKET_PORT_RANGE=auto
+    3. HCCL port conflicts → HCCL_PORT/NPU_SOCKET_PORT_RANGE=auto
     """
 
     model = QWEN3_0_6B_WEIGHTS_PATH
+
+    def _close(self, *streams):
+        for s in streams:
+            if s is not None:
+                try:
+                    s.close()
+                except OSError:
+                    pass
 
     def _get_base_cmd(self, pre_warm: bool) -> list[str]:
         cmd = [
@@ -99,11 +107,14 @@ class TestPreWarmNccl(CustomTestCase):
         if capture_logs:
 
             def _pipe(src, dst):
-                for line in src:
-                    dst.write(line)
-                    dst.flush()
-                    sys.__stdout__.write(line)
-                    sys.__stdout__.flush()
+                try:
+                    for line in src:
+                        dst.write(line)
+                        dst.flush()
+                        sys.__stdout__.write(line)
+                        sys.__stdout__.flush()
+                except (ValueError, OSError):
+                    pass
 
             threading.Thread(
                 target=_pipe, args=(proc.stdout, stdout), daemon=True
@@ -134,6 +145,7 @@ class TestPreWarmNccl(CustomTestCase):
         if proc is None:
             return
         kill_process_tree(proc.pid, wait_timeout=60)
+        self._close(proc.stdin, proc.stdout, proc.stderr)
         for _ in range(3):
             try:
                 proc.wait(timeout=10)
