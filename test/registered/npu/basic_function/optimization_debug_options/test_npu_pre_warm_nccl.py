@@ -5,6 +5,7 @@ import subprocess
 import threading
 import time
 import unittest
+import io
 
 import psutil
 import requests
@@ -151,10 +152,13 @@ class TestPreWarmNcclColocated(unittest.TestCase):
         drain_deadline = time.perf_counter() + 120
         while time.perf_counter() < drain_deadline:
             alive = []
-            for p in psutil.process_iter(["pid", "name"]):
+            for p in psutil.process_iter(["pid", "name", "status"]):
                 try:
                     n = p.info["name"] or ""
+                    st = p.info["status"] or ""
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+                if st == psutil.STATUS_ZOMBIE:
                     continue
                 if n.startswith("sglang"):
                     alive.append((p.info["pid"], n))
@@ -164,9 +168,6 @@ class TestPreWarmNcclColocated(unittest.TestCase):
         else:
             print(f"Warning: sglang procs still alive after 120s: {alive}")
         t_drain = time.perf_counter()
-        # Brief grace for NPU driver cleanup (SMEM/HCCL resources). The
-        # 15s from the PD variant was overkill for colocated single-
-        # process mode where there is no SMEM group; 3s is sufficient.
         time.sleep(8)
         t_sleep = time.perf_counter()
         print(f"  teardown: kill={t_kill-t0:.1f}s port={t_port-t_kill:.1f}s "
