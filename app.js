@@ -93,14 +93,12 @@ function renderList() {
     const tag = (e.image || '').split(':').pop() || ('#' + gi);
     const sglang = e.sglang || {};
     const commit = sglang.commit ? short(sglang.commit) : '';
-    const pipCount = e.pip ? e.pip.count : 0;
     return (
       '<div class="manifest-item" data-idx="' + gi + '">' +
         '<div class="img">' + esc(tag) + '</div>' +
         '<div class="meta">' +
           (commit ? '<span class="commit">' + esc(commit) + '</span>' : '') +
           (sglang.branch ? '<span class="tag">' + esc(sglang.branch) + '</span>' : '') +
-          '<span class="tag">' + (pipCount != null ? pipCount + ' pkgs' : '') + '</span>' +
           (e.generated_at ? '<span class="date">' + esc(fmtDate(e.generated_at)) + '</span>' : '') +
         '</div>' +
       '</div>'
@@ -127,8 +125,6 @@ function renderDetail(d, el) {
   const sglang = d.sglang || {};
   const os = d.os || {};
   const cann = d.cann || {};
-  const pip = d.pip || {};
-  const packages = pip.packages || [];
   const args = d.build_args || {};
   const pins = d.declared_pip_pins || [];
   const clones = d.git_clones || [];
@@ -138,7 +134,6 @@ function renderDetail(d, el) {
   el.innerHTML =
     headerCard(d) +
     sglangCard(sglang, commitHref) +
-    pipCard(packages, pip.count) +
     buildArgsCard(args) +
     pinsCard(pins, clones) +
     envCard(os, cann);
@@ -150,17 +145,6 @@ function renderDetail(d, el) {
         () => toast('已复制 commit'),
         () => toast('复制失败')
       );
-    });
-  }
-
-  const search = el.querySelector('[data-search]');
-  const tbody = el.querySelector('[data-pip-tbody]');
-  if (search && tbody) {
-    search.addEventListener('input', () => {
-      const q = search.value.trim().toLowerCase();
-      tbody.querySelectorAll('tr').forEach((tr) => {
-        tr.style.display = tr.dataset.needle.includes(q) ? '' : 'none';
-      });
     });
   }
 }
@@ -205,31 +189,6 @@ function sglangCard(s, href) {
   );
 }
 
-function pipCard(packages, count) {
-  const rows = packages.map((p) => {
-    const needle = (p.name + ' ' + p.version).toLowerCase();
-    return (
-      '<tr data-needle="' + esc(needle) + '">' +
-        '<td class="mono">' + esc(p.name) + '</td>' +
-        '<td class="mono">' + esc(p.version) + '</td>' +
-      '</tr>'
-    );
-  }).join('');
-
-  return (
-    '<div class="card">' +
-      '<h3><span class="n">2</span>Python 依赖 <span class="pip-count">共 ' + (count != null ? count : packages.length) + ' 个</span></h3>' +
-      '<input class="search" data-search type="text" placeholder="搜索依赖名或版本…">' +
-      '<div style="max-height:420px;overflow-y:auto">' +
-        '<table>' +
-          '<thead><tr><th>Package</th><th>Version</th></tr></thead>' +
-          '<tbody data-pip-tbody>' + (rows || '<tr><td colspan="2">无</td></tr>') + '</tbody>' +
-        '</table>' +
-      '</div>' +
-    '</div>'
-  );
-}
-
 function buildArgsCard(args) {
   const keys = Object.keys(args);
   if (!keys.length) return '';
@@ -238,7 +197,7 @@ function buildArgsCard(args) {
   ).join('');
   return (
     '<div class="card">' +
-      '<h3><span class="n">3</span>构建参数（ARG）</h3>' +
+      '<h3><span class="n">2</span>构建参数（ARG）</h3>' +
       '<table><thead><tr><th>参数</th><th>值</th></tr></thead><tbody>' + rows + '</tbody></table>' +
     '</div>'
   );
@@ -251,9 +210,9 @@ function pinsCard(pins, clones) {
   ).join('');
   return (
     '<div class="card">' +
-      '<h3><span class="n">4</span>声明依赖（Dockerfile 固定版本）</h3>' +
+      '<h3><span class="n">3</span>声明依赖（Dockerfile 固定版本）</h3>' +
       (pinChips ? '<div class="chips">' + pinChips + '</div>' : '<p class="pip-count">无固定版本</p>') +
-      (cloneChips ? '<h3 style="margin-top:20px"><span class="n">5</span>git clone 来源</h3><div class="chips">' + cloneChips + '</div>' : '') +
+      (cloneChips ? '<h3 style="margin-top:20px"><span class="n">4</span>git clone 来源</h3><div class="chips">' + cloneChips + '</div>' : '') +
     '</div>'
   );
 }
@@ -271,7 +230,7 @@ function envCard(os, cann) {
   ).join('');
   return (
     '<div class="card">' +
-      '<h3><span class="n">6</span>运行环境</h3>' +
+      '<h3><span class="n">5</span>运行环境</h3>' +
       '<div class="stat-grid">' + items + '</div>' +
     '</div>'
   );

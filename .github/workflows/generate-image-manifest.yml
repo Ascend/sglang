@@ -95,7 +95,8 @@ jobs:
           docker pull "$IMAGE"
 
           # In-container extraction script: emits a JSON snapshot of the
-          # resolved environment (pip inventory, sglang git state, OS, CANN).
+          # resolved environment (sglang git state, OS, CANN). The pip package
+          # inventory is intentionally not collected — it outgrew the manifest.
           cat > extract_image_data.py <<'PY'
           import json, subprocess, sys
 
@@ -105,12 +106,6 @@ jobs:
 
           sglang_dir = sys.argv[1]
           data = {}
-
-          # Resolved pip inventory
-          try:
-              data["pip"] = json.loads(sh("python3 -m pip list --format=json"))
-          except Exception:
-              data["pip"] = []
 
           # sglang git state -> the exact commit baked into this image
           data["sglang"] = {

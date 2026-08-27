@@ -6,10 +6,11 @@ This script merges two sources of truth:
   1. ``--image-data``: a JSON file produced by running the built image
      (see ``.github/workflows/generate-image-manifest.yml``). It contains the
      *resolved* dependency inventory:
-       - ``pip``        -> ``python3 -m pip list --format=json``
        - ``sglang``     -> git remote / branch / commit / describe / commit date
        - ``os``         -> distro / kernel / arch
        - ``cann``       -> Ascend toolkit path & version files
+     (the full ``pip`` package inventory is no longer collected — it was the
+     main cause of the manifest outgrowing storage.)
 
   2. ``--dockerfile``: static analysis of the Dockerfile itself. It records the
      *declared* build configuration even when the image cannot be inspected:
@@ -111,7 +112,7 @@ def parse_dockerfile(path, overrides=None):
     declared pins (e.g. ``torch==${PYTORCH_VERSION}``) are recorded with their
     concrete values.
     """
-    declared = {"args": {}, "git_clones": [], "pip_installs": [], "pip_pins": []}
+    declared = {"args": {}, "git_clones": [], "pip_pins": []}
     if not path or not os.path.exists(path):
         declared["args"].update(overrides or {})
         return declared
@@ -151,7 +152,12 @@ def parse_dockerfile(path, overrides=None):
             text,
         )
 
-    # Pass 2: git clones and pip installs (skip ARG/ENV/LABEL definitions).
+    # Pass 2: git clones and pip pins (skip ARG/ENV/LABEL definitions).
+    #
+    # Full pip install commands and the runtime package inventory are no longer
+    # recorded — they ballooned the manifest to the point of breaking storage.
+    # Only the *pinned* versions (`torch==2.10.0`) are kept, which is what the
+    # dashboard surfaces anyway.
     for line in lines:
         s = line.strip()
         if s.startswith(("ARG ", "ENV ", "LABEL ")):
@@ -164,7 +170,6 @@ def parse_dockerfile(path, overrides=None):
             )
         # pip install (via ${PIP_INSTALL} or literal "pip install")
         if "${PIP_INSTALL}" in s or re.search(r"\bpip3?\s+install\b", s):
-            declared["pip_installs"].append(s)
             for pin in _PIN_RE.findall(resolve(s)):
                 if pin not in declared["pip_pins"]:
                     declared["pip_pins"].append(pin)
@@ -185,8 +190,6 @@ def build_manifest(args):
         sglang.setdefault("branch", clone["branch"])
         sglang.setdefault("dir", clone["dir"])
 
-    pip_packages = image_data.get("pip", [])
-
     reported_args = {
         k: v for k, v in declared["args"].items() if k not in _HIDDEN_BUILD_ARGS
     }
@@ -198,15 +201,10 @@ def build_manifest(args):
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "build_args": reported_args,
         "git_clones": declared["git_clones"],
-        "declared_pip_installs": declared["pip_installs"],
         "declared_pip_pins": declared["pip_pins"],
         "sglang": sglang,
         "os": image_data.get("os", {}),
         "cann": image_data.get("cann", {}),
-        "pip": {
-            "count": len(pip_packages),
-            "packages": pip_packages,
-        },
     }
     return manifest
 
@@ -239,7 +237,7 @@ def main(argv=None):
 
     print(f"Wrote manifest to {args.output}")
     print(f"  image         : {manifest['image']}")
-    print(f"  pip packages  : {manifest['pip']['count']}")
+    print(f"  pip pins      : {len(manifest['declared_pip_pins'])}")
     print(f"  sglang commit : {manifest['sglang'].get('commit', '<unknown>')}")
     build_args = manifest["build_args"]
     print(f"  cann/device   : {build_args.get('CANN_VERSION') or '<empty>'}"
