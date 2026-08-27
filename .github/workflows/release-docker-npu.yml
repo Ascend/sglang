@@ -1,4 +1,4 @@
-name: Release Docker Images Nightly (NPU)
+name: Release Docker Images (NPU)
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         cann_version: ["9.0.0"]
-        device_type: ["910b", "a3"]
+        device_type: ["910b", "a3", "950"]
 
     steps:
       - name: Checkout repository
@@ -69,6 +69,6 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=20260826
+            SGLANG_KERNEL_NPU_TAG=2026.8.27
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
