@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.4
+
 ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=a3
 ARG OS=ubuntu22.04
@@ -23,8 +25,6 @@ ARG SGLANG_KERNEL_NPU_TAG=20260826
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 
-
-
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
       echo "Using x86_64 dependencies"; \
       echo "export PTA_URL=$PTA_URL_AMD64" >> /etc/environment_new; \
@@ -34,7 +34,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     else \
       echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1; \
     fi
- 
+
 WORKDIR /workspace
 
 # Define environments
@@ -72,21 +72,19 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-
 ### Install MemFabric
 RUN ${PIP_INSTALL} memfabric-hybrid==1.1.4
 
 ### Install memfabric-zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.1.3 -i https://pypi.org/simple/
+
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
-
 
 ### Install PyTorch and PTA
 RUN . /etc/environment_new && \
     (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
     && (${PIP_INSTALL} ${PTA_URL})
-
 
 ## Install triton-ascend
 RUN . /etc/environment_new && \
@@ -101,18 +99,19 @@ RUN . /etc/environment_new && \
     fi
 
 # Install SGLang
-RUN git clone https://gitcode.com/pengxingchen0810/glmx --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
-    cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
+RUN --mount=type=secret,id=gitcode_token \
+    git clone https://pengxingchen0810:$(cat /run/secrets/gitcode_token)@gitcode.com/pengxingchen0810/glmx --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+    cd /sgl-workspace/sglang && \
+    git remote set-url origin https://gitcode.com/pengxingchen0810/glmx && \
+    cd python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 
 ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
-
 RUN ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device/libascend_hal.so \
     /usr/local/Ascend/cann-${CANN_VERSION}/lib64/libascend_hal.so
-
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
