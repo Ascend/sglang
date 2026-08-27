@@ -7,8 +7,6 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     QWEN3_235B_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
 )
-
-
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-16-npu-a3")
