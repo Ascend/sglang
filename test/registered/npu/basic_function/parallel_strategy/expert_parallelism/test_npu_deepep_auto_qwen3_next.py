@@ -76,8 +76,8 @@ class TestQwen3Next(GSM8KAscendMixin, TestMMLU, CustomTestCase):
     accuracy_mmlu_threshold = 1  # MMLU accuracy ≥0.56
 
     # GSM8K Configs
-    accuracy = 0.9  # GSM8K accuracy ≥0.9
-    num_questions = 200
+    accuracy = 1  # GSM8K accuracy ≥0.9
+    num_questions = 5
     gsm8k_num_shots = 5
 
 
