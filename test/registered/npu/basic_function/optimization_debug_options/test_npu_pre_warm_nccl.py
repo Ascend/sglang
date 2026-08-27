@@ -2,6 +2,7 @@ import io
 import os
 import re
 import subprocess
+import sys
 import threading
 import time
 import unittest
@@ -98,7 +99,8 @@ class TestPreWarmNccl(CustomTestCase):
                 for line in src:
                     dst.write(line)
                     dst.flush()
-                src.close()
+                    sys.__stdout__.write(line)
+                    sys.__stdout__.flush()
 
             threading.Thread(
                 target=_pipe, args=(proc.stdout, stdout), daemon=True
@@ -138,10 +140,13 @@ class TestPreWarmNccl(CustomTestCase):
         drain_deadline = time.perf_counter() + 120
         while time.perf_counter() < drain_deadline:
             alive = []
-            for p in psutil.process_iter(["pid", "name"]):
+            for p in psutil.process_iter(["pid", "name", "status"]):
                 try:
                     n = p.info["name"] or ""
+                    st = p.info["status"] or ""
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+                if st == psutil.STATUS_ZOMBIE:
                     continue
                 if n.startswith("sglang"):
                     alive.append((p.info["pid"], n))
