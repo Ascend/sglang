@@ -15,6 +15,9 @@ name: Generate Image Dependency Manifest
 #     with:
 #       image: <registry/repo:tag>
 #       dockerfile: docker/npu_kvtc.Dockerfile
+#       build_args: |            # same block passed to docker/build-push-action
+#         CANN_VERSION=9.0.0
+#         DEVICE_TYPE=a3
 #       artifact_name: image-manifest-cann9.0.0-a3-B021
 #       deploy_pages: 'true'   # also commit the manifest to gh-pages
 
@@ -27,6 +30,14 @@ on:
         type: string
       dockerfile:
         description: 'Path to the Dockerfile used to build the image (static analysis)'
+        required: false
+        type: string
+        default: ''
+      build_args:
+        description: |
+          KEY=VALUE build args (one per line) that were passed to docker build.
+          These override the Dockerfile ARG defaults in the manifest, so pass
+          the same block you gave to docker/build-push-action.
         required: false
         type: string
         default: ''
@@ -141,11 +152,21 @@ jobs:
           IMAGE: ${{ inputs.image }}
           DOCKERFILE: ${{ inputs.dockerfile }}
           ARTIFACT_NAME: ${{ inputs.artifact_name }}
+          BUILD_ARGS: ${{ inputs.build_args }}
         run: |
+          # The args the build really used; they override the ARG defaults that
+          # static Dockerfile parsing can only guess at.
+          printf '%s\n' "$BUILD_ARGS" > build-args.txt
+
+          echo "::group::build-args.txt"
+          cat build-args.txt
+          echo "::endgroup::"
+
           python3 .github/scripts/generate_image_manifest.py \
             --image "$IMAGE" \
             --dockerfile "$DOCKERFILE" \
             --image-data image-data.json \
+            --build-args-file build-args.txt \
             --output image-manifest.json
 
           SGLANG_COMMIT="$(python3 -c 'import json;print(json.load(open("image-manifest.json"))["sglang"].get("commit",""))')"
