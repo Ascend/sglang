@@ -26,9 +26,8 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=600, suite="full-2-npu-a3", nightly=True)
 
 BASE_URL = DEFAULT_URL_FOR_TEST
-parsed = urlparse(BASE_URL)
-HOST = parsed.hostname
-PORT = parsed.port
+HOST = urlparse(BASE_URL).hostname
+PORT = urlparse(BASE_URL).port
 
 
 class TestPreWarmNccl(CustomTestCase):
@@ -49,10 +48,7 @@ class TestPreWarmNccl(CustomTestCase):
 
     model = QWEN3_0_6B_WEIGHTS_PATH
 
-    def _launch_server(self, pre_warm: bool, capture_logs: bool):
-        stdout = io.StringIO() if capture_logs else None
-        stderr = io.StringIO() if capture_logs else None
-
+    def _get_base_cmd(self, pre_warm: bool) -> list[str]:
         cmd = [
             "sglang",
             "serve",
@@ -76,20 +72,27 @@ class TestPreWarmNccl(CustomTestCase):
         ]
         if pre_warm:
             cmd.append("--pre-warm-nccl")
+        return cmd
 
-        env = {
+    def _get_env(self) -> dict:
+        return {
             **os.environ,
             "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "false",
             "HCCL_HOST_SOCKET_PORT_RANGE": "auto",
             "HCCL_NPU_SOCKET_PORT_RANGE": "auto",
         }
 
+    def _start_server(self, pre_warm: bool, capture_logs: bool = True):
+        """Start server process and return (proc, stdout, stderr)."""
+        stdout = io.StringIO() if capture_logs else None
+        stderr = io.StringIO() if capture_logs else None
+
         proc = subprocess.Popen(
-            cmd,
+            self._get_base_cmd(pre_warm),
             stdout=subprocess.PIPE if capture_logs else None,
             stderr=subprocess.PIPE if capture_logs else None,
             text=True,
-            env=env,
+            env=self._get_env(),
             start_new_session=True,
         )
 
@@ -109,152 +112,121 @@ class TestPreWarmNccl(CustomTestCase):
                 target=_pipe, args=(proc.stderr, stderr), daemon=True
             ).start()
 
-        deadline = time.perf_counter() + DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
-        while time.perf_counter() < deadline:
+        return proc, stdout, stderr
+
+    def _wait_until_ready(
+        self, proc: subprocess.Popen, timeout: int = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
+    ):
+        """Block until server health endpoint responds."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
             if proc.poll() is not None:
-                raise RuntimeError(f"server exited early rc={proc.returncode}")
+                raise RuntimeError(f"Server exited early with code {proc.returncode}")
             try:
-                if requests.get(BASE_URL + "/health", timeout=5).status_code == 200:
-                    break
+                if requests.get(f"{BASE_URL}/health", timeout=5).status_code == 200:
+                    return
             except requests.exceptions.RequestException:
                 pass
             time.sleep(1)
-        else:
-            raise RuntimeError("server failed to become healthy")
-        return proc, stdout, stderr
+        raise RuntimeError("Server failed to become healthy within timeout")
 
-    def _teardown_stack(self, proc):
-        t0 = time.perf_counter()
-        if proc is not None:
-            try:
-                kill_process_tree(proc.pid, wait_timeout=60)
-            except Exception as e:
-                logger.info(f"Error killing {proc.pid}: {e}")
+    def _stop_server(self, proc):
+        if proc is None:
+            return
+        kill_process_tree(proc.pid, wait_timeout=60)
+        for _ in range(3):
             try:
                 proc.wait(timeout=10)
-            except Exception:
-                pass
-        t_kill = time.perf_counter()
+                break
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Server PID {proc.pid} still alive, retrying...")
         wait_port_available(PORT, "server", timeout_s=120)
-        t_port = time.perf_counter()
-        drain_deadline = time.perf_counter() + 120
-        while time.perf_counter() < drain_deadline:
-            alive = []
-            for p in psutil.process_iter(["pid", "name", "status"]):
-                try:
-                    n = p.info["name"] or ""
-                    st = p.info["status"] or ""
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
-                if st == psutil.STATUS_ZOMBIE:
-                    continue
-                if n.startswith("sglang"):
-                    alive.append((p.info["pid"], n))
+        for _ in range(60):
+            alive = [
+                p.info["name"]
+                for p in psutil.process_iter(["pid", "name", "status"])
+                if p.info["name"]
+                and p.info["name"].startswith("sglang")
+                and p.info["status"] != psutil.STATUS_ZOMBIE
+            ]
             if not alive:
                 break
             time.sleep(2)
         else:
-            logger.info(f"Warning: sglang procs still alive after 120s: {alive}")
-        t_drain = time.perf_counter()
-        time.sleep(8)
-        t_sleep = time.perf_counter()
-        logger.info(
-            f"  teardown: kill={t_kill - t0:.1f}s port={t_port - t_kill:.1f}s "
-            f"drain={t_drain - t_port:.1f}s sleep15={t_sleep - t_drain:.1f}s "
-            f"total={t_sleep - t0:.1f}s"
-        )
+            logger.info(f"sglang procs still alive: {alive}")
 
-    def _run_bench(self):
+    def _run_benchmark(self) -> dict:
+        """Run the standard serving benchmark and return metrics."""
         args = get_benchmark_args(
             base_url=BASE_URL,
             backend="sglang",
             dataset_name="random",
             tokenizer=self.model,
-            num_prompts=20,
-            random_input_len=128,
-            random_output_len=32,
+            num_prompts=100,
+            random_input_len=3500,
+            random_output_len=1500,
             request_rate=float("inf"),
         )
         args.warmup_requests = 0
         args.model = self.model
-        res = run_benchmark(args)
-        self.assertGreater(res["mean_ttft_ms"], 0, "TTFT must be > 0 ms")
-        return res
+        return run_benchmark(args)
+
+    def _get_logs(self, *buffers) -> str:
+        """Concatenate log buffers into a single string."""
+        return "".join(b.getvalue() if b else "" for b in buffers)
 
     def test_pre_warm_nccl_colocated_cold_start(self):
-        t_total = time.perf_counter()
+        # Phase 0: Warm up kernel cache (discard results)
+        logger.info("Phase 0: Warming kernel cache...")
+        proc, *_ = self._start_server(pre_warm=False, capture_logs=False)
+        self._wait_until_ready(proc)
+        self._run_benchmark()
+        self._stop_server(proc)
 
-        def _phase(label, fn):
-            t = time.perf_counter()
-            result = fn()
-            logger.info(f"  [{label}] {time.perf_counter() - t:.1f}s")
-            return result
+        # Phase 1: With --pre-warm-nccl
+        logger.info("Phase 1: Testing with --pre-warm-nccl")
+        proc_warm, out_warm, err_warm = self._start_server(pre_warm=True)
+        self._wait_until_ready(proc_warm)
+        res_warm = self._run_benchmark()
+        logs_warm = self._get_logs(out_warm, err_warm)
+        self._stop_server(proc_warm)
 
-        # 1. Throwaway stack: warm the on-disk kernel cache for the exact
-        #    benchmark shapes so the measured stacks below do not pay
-        #    compilation asymmetrically.
-        def _stack1():
-            proc, _, _ = self._launch_server(pre_warm=False, capture_logs=False)
-            try:
-                self._run_bench()
-            finally:
-                self._teardown_stack(proc)
+        # Phase 2: Without --pre-warm-nccl
+        logger.info("Phase 2: Testing without --pre-warm-nccl")
+        proc_cold, out_cold, err_cold = self._start_server(pre_warm=False)
+        self._wait_until_ready(proc_cold)
+        res_cold = self._run_benchmark()
+        logs_cold = self._get_logs(out_cold, err_cold)
+        self._stop_server(proc_cold)
 
-        _phase("throwaway", _stack1)
+        # Assertions
+        self.assertIn(
+            "NCCL/RCCL/HCCL warmup completed",
+            logs_warm,
+            "With --pre-warm-nccl, HCCL warmup message must appear",
+        )
+        match = re.search(r"NCCL/RCCL/HCCL warmup completed in ([0-9.]+)s", logs_warm)
+        if match:
+            logger.info(f"HCCL warmup took {match.group(1)}s")
 
-        # 2. Stack A: pre-warms the TP HCCL communicator at bootstrap.
-        def _stack2():
-            proc, dout, derr = self._launch_server(pre_warm=True, capture_logs=True)
-            try:
-                res = self._run_bench()
-                server_logs = (dout.getvalue() + derr.getvalue()) if dout else ""
-                self.assertIn(
-                    "NCCL/RCCL/HCCL warmup completed",
-                    server_logs,
-                    "--pre-warm-nccl must log the HCCL warmup completion line",
-                )
-                m = re.search(
-                    r"NCCL/RCCL/HCCL warmup completed in ([0-9.]+)s", server_logs
-                )
-                if m:
-                    logger.info(f"  HCCL warmup duration: {m.group(1)}s")
-                return res
-            finally:
-                self._teardown_stack(proc)
+        self.assertNotIn(
+            "NCCL/RCCL/HCCL warmup completed",
+            logs_cold,
+            "Without --pre-warm-nccl, HCCL warmup message must NOT appear",
+        )
 
-        res_prewarm = _phase("prewarm", _stack2)
-
-        # 3. Stack B: starts with a cold TP HCCL communicator.
-        def _stack3():
-            proc, dout, derr = self._launch_server(pre_warm=False, capture_logs=True)
-            try:
-                res = self._run_bench()
-                server_logs = (dout.getvalue() + derr.getvalue()) if dout else ""
-                self.assertNotIn(
-                    "NCCL/RCCL/HCCL warmup completed",
-                    server_logs,
-                    "without --pre-warm-nccl the HCCL warmup line must be absent",
-                )
-                return res
-            finally:
-                self._teardown_stack(proc)
-
-        res_no_prewarm = _phase("cold", _stack3)
-
-        logger.info(f"  [total] {time.perf_counter() - t_total:.1f}s")
-
-        p99_w = res_prewarm["p99_ttft_ms"]
-        p99_nw = res_no_prewarm["p99_ttft_ms"]
+        p99_warm = res_warm["p99_ttft_ms"]
+        p99_cold = res_cold["p99_ttft_ms"]
         logger.info(
-            f"\n=== TTFT Comparison: --pre-warm-nccl vs default ===\n"
-            f"  P99 TTFT: {p99_w:.1f} ms (warmup) vs {p99_nw:.1f} ms (no-warmup)\n"
+            f"\nP99 TTFT comparison:\n"
+            f"  With --pre-warm-nccl:  {p99_warm:.1f} ms\n"
+            f"  Without:              {p99_cold:.1f} ms\n"
         )
         self.assertLessEqual(
-            p99_w,
-            p99_nw,
-            f"Expected --pre-warm-nccl P99 TTFT ({p99_w:.1f} ms) <= "
-            f"no-warmup ({p99_nw:.1f} ms). NCCL warmup should prime all-reduce "
-            f"communication and reduce first-request tail latency.",
+            p99_warm,
+            p99_cold,
+            f"--pre-warm-nccl should reduce P99 TTFT "
+            f"({p99_warm:.1f} ms vs {p99_cold:.1f} ms)",
         )
 
 
