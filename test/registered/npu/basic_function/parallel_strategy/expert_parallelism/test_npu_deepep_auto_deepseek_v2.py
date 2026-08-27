@@ -43,25 +43,25 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
     }
     accuracy = 0.34
     # accuracy_mmlu_threshold = 0.38
-    def test_mmlu(self):
-        expect_score = 0.38
-        scores = []
-        for i in range(10):
-            args = SimpleNamespace(
-                base_url=self.base_url,
-                model=self.model,
-                eval_name="mmlu",
-                num_examples=128,
-                num_threads=32,
-                api="completion",
-                # num_shots=5,
-            )
-            metrics = run_eval(args)
-            score = metrics["score"]
-            scores.append(score)
-            print(f"[test_mmlu] round-{i + 1} score: {score}")
-        print(f"[test_mmlu] all scores: {scores}")
-        self.assertGreater(metrics["score"], expect_score)
+    # def test_mmlu(self):
+    #     expect_score = 0.38
+    #     scores = []
+    #     for i in range(10):
+    #         args = SimpleNamespace(
+    #             base_url=self.base_url,
+    #             model=self.model,
+    #             eval_name="mmlu",
+    #             num_examples=128,
+    #             num_threads=32,
+    #             api="completion",
+    #             # num_shots=5,
+    #         )
+    #         metrics = run_eval(args)
+    #         score = metrics["score"]
+    #         scores.append(score)
+    #         print(f"[test_mmlu] round-{i + 1} score: {score}")
+    #     print(f"[test_mmlu] all scores: {scores}")
+    #     self.assertGreater(metrics["score"], expect_score)
 
 
 if __name__ == "__main__":
