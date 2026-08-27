@@ -1,12 +1,13 @@
 name: Full Test (NPU)
 
 on:
-  pull_request:
-    branches:
-      - main
-      - testcases
-    paths:
-      - ".github/workflows/full-test-npu.yml"
+#  [coverage] Unrelated PR trigger, commented out to keep only coverage changes.
+#  pull_request:
+#    branches:
+#      - main
+#      - testcases
+#    paths:
+#      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -45,11 +46,6 @@ on:
           - no_nightly
           - poc_no_nightly
         default: 'poc'
-      verify_coverage_smoke:
-        description: 'Smoke mode: only run ONE test case in full-1-npu-a3 to verify that coverage data files are generated (faster than running the full suite).'
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -65,8 +61,6 @@ jobs:
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
       test_scope: ${{ steps.set-vars.outputs.test_scope }}
-      verify_coverage_smoke: ${{ steps.set-vars.outputs.verify_coverage_smoke }}
-      part_list: ${{ steps.set-vars.outputs.part_list }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
@@ -79,7 +73,6 @@ jobs:
           echo "inputs.image_a3        = ${{ inputs.image_a3 }}"
           echo "inputs.skip_install_flag = ${{ inputs.skip_install_flag }}"
           echo "inputs.test_scope      = ${{ inputs.test_scope }}"
-          echo "inputs.verify_coverage_smoke = ${{ inputs.verify_coverage_smoke }}"
           echo "======================================="
           if [ -z "${{ inputs.ref }}" ]; then
             echo "ref=" >> $GITHUB_OUTPUT
@@ -117,29 +110,9 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
-          # ============ LOCAL-ONLY smoke mode (not committed) ============    
-          # 本地验证覆盖率生成：只跑 nighly-test-npu → nightly-test-npu.yml 的 multi-node-poc
-          # （用例 glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms 已在该 workflow 矩阵中，模板过滤只跑它）。
-          # job_filter=multi-node-poc 使 nightly-test-npu.yml 只执行该 job，单节点 POC、mix 均跳过。
-          # full 类 job（full-1/2/4/8/16）与内联 single/multi-node POC 全部跳过。
-          # 注意 test_scope=poc：full-1-npu-a3 的 if 要求 all/func/no_nightly，poc 会跳过它。
-          # 恢复完整测试时，取消下方被注释分支即可。
-          echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
-          echo "part_list=[0]" >> $GITHUB_OUTPUT
-          echo "test_scope=poc" >> $GITHUB_OUTPUT
-          echo "job_filter=multi-node-poc" >> $GITHUB_OUTPUT
-          # if [ "${{ inputs.verify_coverage_smoke }}" == "true" ]; then
-          #   echo "verify_coverage_smoke=true" >> $GITHUB_OUTPUT
-          #   echo "part_list=[0]" >> $GITHUB_OUTPUT
-          # else
-          #   echo "verify_coverage_smoke=false" >> $GITHUB_OUTPUT
-          #   echo "part_list=[0,1]" >> $GITHUB_OUTPUT
-          # fi
-
   nighly-test-npu:
     needs: [ set-image-config ]
     name: nightly-test-npu
-    # LOCAL-ONLY smoke mode：冒烟时也跑（job_filter 收窄到 multi-node-poc）；恢复完整测试时保持此条件即可。
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' }}
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
@@ -157,7 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: ${{ fromJson(needs.set-image-config.outputs.part_list) }}
+        part: [0, 1]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
@@ -172,7 +145,6 @@ jobs:
           PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
           UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-          RUSTUP_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local:8082"
         run: |
           # speed up by using infra cache services
           CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
@@ -255,7 +227,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -342,7 +314,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -426,7 +398,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -508,7 +480,7 @@ jobs:
       fail-fast: false
       matrix:
         part: [0, 1]
-    if: ${{ (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -586,7 +558,7 @@ jobs:
   nightly-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -753,9 +725,7 @@ jobs:
   nightly-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config, nightly-poc-single-node-tests ]
-    # 冒烟（verify_coverage_smoke=true）时跳过本内联 multi-node-poc：
-    # 多节点覆盖率已由 nighly-test-npu → nightly-test-npu.yml 的 multi-node-poc 采集，无需重复执行。
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.set-image-config.outputs.verify_coverage_smoke != 'true' }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -1051,13 +1021,13 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-#      - nighly-test-npu
+      - nighly-test-npu
       - full-1-npu-a3
-#      - full-2-npu-a3
-#      - full-4-npu-a3
-#      - full-8-npu-a3
-#      - full-16-npu-a3
-#      - nightly-poc-single-node-tests
+      - full-2-npu-a3
+      - full-4-npu-a3
+      - full-8-npu-a3
+      - full-16-npu-a3
+      - nightly-poc-single-node-tests
       - nightly-poc-multi-node-tests
 #      - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
@@ -1106,9 +1076,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           FAIL=0
-          # LOCAL-ONLY smoke: nighly-test-npu 已从 needs 注释掉，引用它会是空串导致误报失败。
-          # 恢复完整测试（把 nighly-test-npu 加回 needs）时取消注释下行即可。
-          # ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
+          ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
           exit $FAIL
 
   coverage-report:
@@ -1116,14 +1084,14 @@ jobs:
       [
         set-image-config,
         nighly-test-npu,
-#        full-1-npu-a3,
-#         full-2-npu-a3,
-#         full-4-npu-a3,
-#         full-8-npu-a3,
-#         full-16-npu-a3,
-#         nightly-poc-single-node-tests,
-#         nightly-poc-multi-node-tests,
-#         nightly-poc-multi-node-mix-tests,
+        full-1-npu-a3,
+        full-2-npu-a3,
+        full-4-npu-a3,
+        full-8-npu-a3,
+        full-16-npu-a3,
+        nightly-poc-single-node-tests,
+        nightly-poc-multi-node-tests,
+#        nightly-poc-multi-node-mix-tests,
       ]
     if: always()
     runs-on: linux-aarch64-a3-2

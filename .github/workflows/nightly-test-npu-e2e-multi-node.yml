@@ -72,10 +72,6 @@ concurrency:
 jobs:
   e2e:
     name: ${{ inputs.test_config_name }}
-    # ============ LOCAL-ONLY smoke mode (not committed) ============
-    # 只跑 glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms 一个配置验证多节点覆盖率生成，
-    # 其余 matrix 实例全部跳过。恢复完整测试时删除本 if 即可。
-    if: ${{ inputs.test_config_name == 'glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms' }}
     runs-on: ${{ inputs.runner }}
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86

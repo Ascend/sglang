@@ -1,4 +1,4 @@
-import json
+﻿import json
 import multiprocessing as mp
 import unittest
 from dataclasses import dataclass

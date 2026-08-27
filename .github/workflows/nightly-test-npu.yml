@@ -110,7 +110,7 @@ jobs:
           fi
   nightly-poc-single-node-a2-tests:
     name: single-node-poc-a2
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || needs.set-image-config.outputs.job_filter == 'single-node-poc-a2') }}
+    if: ${{ !cancelled() }}
     needs: [ set-image-config ]
     strategy:
       fail-fast: false
@@ -137,7 +137,7 @@ jobs:
 
   nightly-poc-single-node-tests:
     name: single-node-poc
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || needs.set-image-config.outputs.job_filter == 'single-node-poc') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config]
     strategy:
       fail-fast: false
@@ -313,7 +313,7 @@ jobs:
 
   nightly-poc-multi-node-tests:
     name: multi-node-poc
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || needs.set-image-config.outputs.job_filter == 'multi-node-poc') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config, nightly-poc-single-node-tests]
     strategy:
       fail-fast: false
@@ -366,7 +366,7 @@ jobs:
 
   nightly-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || needs.set-image-config.outputs.job_filter == 'multi-node-mix-poc') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config, nightly-poc-single-node-tests, nightly-poc-multi-node-tests]
     strategy:
       fail-fast: false
