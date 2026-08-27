@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# test round 1: verify --pre-warm-nccl reduces P99 TTFT cold-start on colocated NPU
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-release20260826
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,10 +38,11 @@ jobs:
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
+          export PYTHONPATH=${sglang_source_path}/python:$PYTHONPATH
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/basic_function/optimization_debug_options/test_npu_pre_warm_nccl.py"
           )
 
           for test_case in "${test_cases[@]}"; do
