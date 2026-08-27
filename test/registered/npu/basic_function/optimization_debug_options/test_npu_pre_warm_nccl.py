@@ -1,55 +1,176 @@
+import io
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
 import unittest
+from urllib.parse import urlparse
+
+import psutil
+import requests
 
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
+from sglang.srt.utils.network import wait_port_available
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH, logger
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     get_benchmark_args,
-    popen_launch_server,
 )
 
 register_npu_ci(est_time=600, suite="full-2-npu-a3", nightly=True)
+
+BASE_URL = DEFAULT_URL_FOR_TEST
+HOST = urlparse(BASE_URL).hostname
+PORT = urlparse(BASE_URL).port
 
 
 class TestPreWarmNccl(CustomTestCase):
     """Testcase: verify --pre-warm-nccl server starts and serves correctly
 
-    [Test Category] Parameter
-    [Test Target] --pre-warm-nccl
+        [Test Category] Parameter
+        [Test Target] --pre-warm-nccl
+
+    HCCL comm creation is lazy (first dist.all_reduce).
+    Without --pre-warm-nccl, this adds ~700-900ms to the first request's TTFT.
+    With --pre-warm-nccl, it happens at bootstrap.
+
+    Three warmers must be disabled to expose this gap:
+    1. /health_generate → SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION=false
+    2. popen_launch_server's health check → use raw subprocess.Popen
+    3. HCCL port conflicts → HCCL_PORT/NPU_SOCKET_PORT_RANGE=auto
     """
 
-    model = QWEN3_8B_WEIGHTS_PATH
-    base_url = DEFAULT_URL_FOR_TEST
-    base_args = [
-        "--trust-remote-code",
-        "--mem-fraction-static",
-        "0.8",
-        "--attention-backend",
-        "ascend",
-        "--disable-cuda-graph",
-        "--tp-size",
-        "2",
-    ]
+    model = QWEN3_0_6B_WEIGHTS_PATH
 
-    def _launch(self, with_warmup):
-        args = list(self.base_args)
-        if with_warmup:
-            args.append("--pre-warm-nccl")
-        proc = popen_launch_server(
+    def _close(self, *streams):
+        for s in streams:
+            if s is not None:
+                try:
+                    s.close()
+                except OSError:
+                    pass
+
+    def _get_base_cmd(self, pre_warm: bool) -> list[str]:
+        cmd = [
+            "sglang",
+            "serve",
+            "--model-path",
             self.model,
-            self.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=args,
-        )
-        return proc
+            "--trust-remote-code",
+            "--tp-size",
+            "2",
+            "--attention-backend",
+            "ascend",
+            "--disable-cuda-graph",
+            "--mem-fraction-static",
+            "0.8",
+            "--skip-server-warmup",
+            "--device",
+            "npu",
+            "--host",
+            HOST,
+            "--port",
+            str(PORT),
+        ]
+        if pre_warm:
+            cmd.append("--pre-warm-nccl")
+        return cmd
 
-    def _run_bench(self):
+    def _get_env(self) -> dict:
+        return {
+            **os.environ,
+            "SGLANG_ENABLE_HEALTH_ENDPOINT_GENERATION": "false",
+            "HCCL_HOST_SOCKET_PORT_RANGE": "auto",
+            "HCCL_NPU_SOCKET_PORT_RANGE": "auto",
+        }
+
+    def _start_server(self, pre_warm: bool, capture_logs: bool = True):
+        """Start server process and return (proc, stdout, stderr)."""
+        stdout = io.StringIO() if capture_logs else None
+        stderr = io.StringIO() if capture_logs else None
+
+        proc = subprocess.Popen(
+            self._get_base_cmd(pre_warm),
+            stdout=subprocess.PIPE if capture_logs else None,
+            stderr=subprocess.PIPE if capture_logs else None,
+            text=True,
+            env=self._get_env(),
+            start_new_session=True,
+        )
+
+        if capture_logs:
+
+            def _pipe(src, dst):
+                try:
+                    for line in src:
+                        dst.write(line)
+                        dst.flush()
+                        sys.__stdout__.write(line)
+                        sys.__stdout__.flush()
+                except (ValueError, OSError):
+                    pass
+
+            threading.Thread(
+                target=_pipe, args=(proc.stdout, stdout), daemon=True
+            ).start()
+            threading.Thread(
+                target=_pipe, args=(proc.stderr, stderr), daemon=True
+            ).start()
+
+        return proc, stdout, stderr
+
+    def _wait_until_ready(
+        self, proc: subprocess.Popen, timeout: int = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
+    ):
+        """Block until server health endpoint responds."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if proc.poll() is not None:
+                raise RuntimeError(f"Server exited early with code {proc.returncode}")
+            try:
+                if requests.get(f"{BASE_URL}/health", timeout=5).status_code == 200:
+                    return
+            except requests.exceptions.RequestException:
+                pass
+            time.sleep(1)
+        raise RuntimeError("Server failed to become healthy within timeout")
+
+    def _stop_server(self, proc):
+        if proc is None:
+            return
+        kill_process_tree(proc.pid, wait_timeout=60)
+        self._close(proc.stdin, proc.stdout, proc.stderr)
+        for _ in range(3):
+            try:
+                proc.wait(timeout=10)
+                break
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Server PID {proc.pid} still alive, retrying...")
+        wait_port_available(PORT, "server", timeout_s=120)
+        for _ in range(60):
+            alive = [
+                p.info["name"]
+                for p in psutil.process_iter(["pid", "name", "status"])
+                if p.info["name"]
+                and p.info["name"].startswith("sglang")
+                and p.info["status"] != psutil.STATUS_ZOMBIE
+            ]
+            if not alive:
+                break
+            time.sleep(2)
+        else:
+            logger.info(f"sglang procs still alive: {alive}")
+
+    def _run_benchmark(self) -> dict:
+        """Run the standard serving benchmark and return metrics."""
         args = get_benchmark_args(
-            base_url=self.base_url,
+            base_url=BASE_URL,
             backend="sglang",
             dataset_name="random",
             tokenizer=self.model,
@@ -59,35 +180,65 @@ class TestPreWarmNccl(CustomTestCase):
             request_rate=float("inf"),
         )
         args.warmup_requests = 0
-        res = run_benchmark(args)
-        self.assertGreater(res["mean_ttft_ms"], 0, "TTFT must be > 0 ms")
-        return res
+        args.model = self.model
+        return run_benchmark(args)
 
-    def test_pre_warm_nccl(self):
-        proc1 = self._launch(with_warmup=True)
-        try:
-            res_warmup = self._run_bench()
-        finally:
-            kill_process_tree(proc1.pid)
+    def _get_logs(self, *buffers) -> str:
+        """Concatenate log buffers into a single string."""
+        return "".join(b.getvalue() if b else "" for b in buffers)
 
-        proc2 = self._launch(with_warmup=False)
-        try:
-            res_no_warmup = self._run_bench()
-        finally:
-            kill_process_tree(proc2.pid)
+    def test_pre_warm_nccl_colocated_cold_start(self):
+        # Phase 0: Warm up kernel cache (discard results)
+        logger.info("Phase 0: Warming kernel cache...")
+        proc, *_ = self._start_server(pre_warm=False, capture_logs=False)
+        self._wait_until_ready(proc)
+        self._run_benchmark()
+        self._stop_server(proc)
 
-        p99_w = res_warmup["p99_ttft_ms"]
-        p99_nw = res_no_warmup["p99_ttft_ms"]
-        print(
-            f"\n=== TTFT Comparison: --pre-warm-nccl vs default ===\n"
-            f"  P99 TTFT: {p99_w:.1f} ms (warmup) vs {p99_nw:.1f} ms (no-warmup)\n"
+        # Phase 1: With --pre-warm-nccl
+        logger.info("Phase 1: Testing with --pre-warm-nccl")
+        proc_warm, out_warm, err_warm = self._start_server(pre_warm=True)
+        self._wait_until_ready(proc_warm)
+        res_warm = self._run_benchmark()
+        logs_warm = self._get_logs(out_warm, err_warm)
+        self._stop_server(proc_warm)
+
+        # Phase 2: Without --pre-warm-nccl
+        logger.info("Phase 2: Testing without --pre-warm-nccl")
+        proc_cold, out_cold, err_cold = self._start_server(pre_warm=False)
+        self._wait_until_ready(proc_cold)
+        res_cold = self._run_benchmark()
+        logs_cold = self._get_logs(out_cold, err_cold)
+        self._stop_server(proc_cold)
+
+        # Assertions
+        self.assertIn(
+            "NCCL/RCCL/HCCL warmup completed",
+            logs_warm,
+            "With --pre-warm-nccl, HCCL warmup message must appear",
+        )
+        match = re.search(r"NCCL/RCCL/HCCL warmup completed in ([0-9.]+)s", logs_warm)
+        if match:
+            logger.info(f"HCCL warmup took {match.group(1)}s")
+
+        self.assertNotIn(
+            "NCCL/RCCL/HCCL warmup completed",
+            logs_cold,
+            "Without --pre-warm-nccl, HCCL warmup message must NOT appear",
+        )
+
+        p99_warm = res_warm["p99_ttft_ms"]
+        p99_cold = res_cold["p99_ttft_ms"]
+        logger.info(
+            f"\nP99 TTFT comparison:\n"
+            f"  With --pre-warm-nccl:  {p99_warm:.1f} ms\n"
+            f"  Without:              {p99_cold:.1f} ms\n"
         )
         self.assertLessEqual(
-            p99_w,
-            p99_nw,
-            f"Expected --pre-warm-nccl P99 TTFT ({p99_w:.1f} ms) <= "
-            f"no-warmup ({p99_nw:.1f} ms). NCCL warmup should prime all-reduce "
-            f"communication and reduce first-request tail latency.",
+            p99_warm,
+            p99_cold,
+            f"--pre-warm-nccl should reduce P99 TTFT "
+            f"({p99_warm:.1f} ms vs {p99_cold:.1f} ms)",
         )
 
 
