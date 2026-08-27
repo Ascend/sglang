@@ -1,5 +1,5 @@
 """Test loading weights from remote instance
-Backend: transfer_engine
+Backend: transfer_engine nccl modelexpress
 """
 
 import gc
@@ -306,10 +306,11 @@ class TestLoadWeightsFromRemoteInstance(CustomTestCase):
     """
 
     def test_load_weights_from_remote_instance(self):
-        """Test remote weight loading with transfer_engine and nccl backends on NPU."""
+        """Test remote weight loading with transfer_engine and nccl and modelexpress backends on NPU."""
 
         # Test cases with different backends
         test_suits = [
+            (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, "transfer_engine"),
             (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, "nccl"),
             (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, "modelexpress"),
         ]
