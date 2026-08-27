@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
-from sglang.test.ascend.run_eval import run_eval as run_ascend_eval
+from sglang.test.run_eval import run_eval
 from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
 # from sglang.test.ascend.test_mmlu import TestMMLU
 from sglang.test.ci.ci_register import register_npu_ci
@@ -56,7 +56,7 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
                 api="completion",
                 # num_shots=5,
             )
-            metrics = run_ascend_eval(args)
+            metrics = run_eval(args)
             score = metrics["score"]
             scores.append(score)
             print(f"[test_mmlu] round-{i + 1} score: {score}")
