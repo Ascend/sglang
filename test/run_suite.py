@@ -331,6 +331,9 @@ def run_a_suite(args):
         # conftest.py / __init__.py are pytest+package structure, never
         # registered tests, and must not be executed as one.
         if os.path.basename(f) not in ("conftest.py", "__init__.py")
+        # cpu/utils.py is a pure helper module (no CI registry / no test
+        # entry); it must not be treated as a registered test.
+        and not f.endswith(os.path.join("cpu", "utils.py"))
     ]
 
     # Strict: all discovered files must have proper registration
