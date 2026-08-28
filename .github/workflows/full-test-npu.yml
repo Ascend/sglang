@@ -197,9 +197,9 @@ jobs:
           # Only run the selected test files for this suite via --files.
           # suite/nightly filtering is bypassed when --files is provided.
           FILES=$(printf '%s,' \
-            test/registered/npu/llm_models/test_npu_granite_4_0_micro.py
-            test/registered/npu/llm_models/test_npu_granite_4_0_micro_5shot.py
-            test/registered/npu/llm_models/test_npu_granite_4_0_micro_no_env.py
+            test/registered/npu/llm_models/test_npu_granite_4_0_micro.py \
+            test/registered/npu/llm_models/test_npu_granite_4_0_micro_5shot.py \
+            test/registered/npu/llm_models/test_npu_granite_4_0_micro_no_env.py \
             test/registered/npu/llm_models/test_npu_granite_4_0_micro_no_env_5shot.py
           )
           #  test/registered/npu/llm_models/test_npu_granite_4_0_h_micro.py
