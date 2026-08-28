@@ -1,0 +1,36 @@
+name: GLM-4.7-Flash Accuracy (NPU)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Docker image for running tests (leave empty for default)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  set-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set.outputs.image }}
+    steps:
+      - id: set
+        run: |
+          if [ -z "${{ inputs.image }}" ]; then
+            echo "image=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-release20260826" >> $GITHUB_OUTPUT
+          else
+            echo "image=${{ inputs.image }}" >> $GITHUB_OUTPUT
+          fi
+
+  accuracy:
+    needs: [set-image]
+    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
+    with:
+      runner: linux-aarch64-a3-800t-16
+      test_type: accuracy
+      test_config_name: glm4_7_flash_aime25_gpqa
+      test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_1p_aime25_gpqa.py
+      image: ${{ needs.set-image.outputs.image }}
+      install_sglang_from_source: false
+    secrets: inherit
