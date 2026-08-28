@@ -15,7 +15,9 @@ jobs:
       matrix:
         include:
           - device_type: a3
-            dockerfile: docker/npu2-test-a3.Dockerfile
+            dockerfile: docker/npu2-a3.Dockerfile
+          - device_type: 950
+            dockerfile: docker/npu2-a5.Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -69,5 +71,3 @@ jobs:
             SGLANG_KERNEL_NPU_TAG=20260826
             CANN_VERSION=9.1.0
             DEVICE_TYPE=${{ matrix.device_type }}
-          secrets: |
-            gitcode_token=${{ secrets.GITCODE_TOKEN }}
