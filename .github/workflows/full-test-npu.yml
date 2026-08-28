@@ -214,7 +214,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [0, 1]
+        part: [0]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
@@ -283,7 +283,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_eplb.py"
+          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_eplb.py"
 
   full-4-npu-a3:
     needs: [ set-image-config ]
@@ -291,7 +291,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [0, 1]
+        part: [0]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
@@ -357,7 +357,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/optimization_debug_options/test_npu_attn_tp_gather_fuseep.py"
+          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/optimization_debug_options/test_npu_attn_tp_gather_fuseep.py"
 
   full-8-npu-a3:
     needs: [ set-image-config ]
@@ -365,7 +365,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [0, 1]
+        part: [0]
     if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
@@ -430,7 +430,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-8-npu-a3 --nightly --continue-on-error --timeout-per-file 7200 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py,test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_235b_a22b_w8a8.py"
+          python3 run_suite.py --hw npu --suite full-8-npu-a3 --nightly --continue-on-error --timeout-per-file 7200 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py,test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_235b_a22b_w8a8.py"
 
   full-16-npu-a3:
     needs: [ set-image-config ]
