@@ -252,9 +252,12 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                         add_generation_prompt=True,
                         enable_thinking=False,
                     )
+                    # Only pass images for multimodal (list) documents; text-only
+                    # documents must not inject image features into the prompt.
+                    images = [IMAGES] if isinstance(doc, list) else None
                     inputs = processor(
                         text=[prompt],
-                        images=[IMAGES],
+                        images=images,
                         return_tensors="pt",
                     ).to(model.device)
                     logits = model(**inputs).logits[:, -1, :]

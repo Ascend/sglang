@@ -422,6 +422,62 @@ class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):
         self.verify_single_image_response(response=response)
         self.verify_speech_recognition_response(text=text)
 
+    def test_image_prefix_cache_reuse(self):
+        """Override the mixin test to use local images (NPU CI has no access
+        to raw.githubusercontent.com). Mirrors vlm_utils.py behavior."""
+        client = openai.Client(api_key=self.api_key, base_url=self.base_url)
+
+        def describe(image_path: str) -> str:
+            response = client.chat.completions.create(
+                model="default",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image_url", "image_url": {"url": image_path}},
+                            {
+                                "type": "text",
+                                "text": "Describe this image in one sentence.",
+                            },
+                        ],
+                    },
+                ],
+                temperature=0,
+                max_tokens=32,
+                **(self.get_vision_request_kwargs()),
+            )
+            assert response.usage.prompt_tokens > 0
+            content = response.choices[0].message.content
+            assert isinstance(content, str) and content
+            return content
+
+        # miss -> compute, then hit -> reuse the identical image's prefix
+        first = describe(IMAGES_MAN_PATH)
+        repeat = describe(IMAGES_MAN_PATH)
+        # a different image must be computed on its own, not reuse `first`'s KV
+        other = describe(IMAGES_LOGO_PATH)
+        # the original image again, after a different one occupied the cache
+        first_again = describe(IMAGES_MAN_PATH)
+
+        self.assertEqual(
+            first,
+            repeat,
+            "Repeating an identical image changed the output; image prefix "
+            "reuse broke greedy determinism.",
+        )
+        self.assertEqual(
+            first,
+            first_again,
+            "The identical image after a different one changed the output; "
+            "image KV was cross-contaminated across requests.",
+        )
+        self.assertNotEqual(
+            first,
+            other,
+            "A different image produced an identical description; a wrong "
+            "image's KV may have been reused from the prefix cache.",
+        )
+
 
 # Delete the mixin classes so that they are not collected by pytest
 del (
