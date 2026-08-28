@@ -1,0 +1,63 @@
+name: Full Test (NPU) - debug
+
+on:
+  pull_request:
+    branches:
+      - main
+      - testcases
+    paths:
+      - ".github/workflows/full-test-npu-debug.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: full-test-npu-debug-${{ github.workflow_ref }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debug-test:
+    runs-on: linux-aarch64-a3-16
+    container:
+      image: "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-0721"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+        run: |
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+          sglang_source_path=$(pwd)
+          sglang_pkg_path=/sgl-workspace/sglang/python
+          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+          mkdir -p ${ascend_test_util_path}
+          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+          cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+
+          pip install ~/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp311-cp311-linux_aarch64.whl
+
+      - name: Print Log Information
+        run: bash scripts/ci/npu/npu_log_print.sh
+      - name: Run test
+        timeout-minutes: 960
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          python3 test/registered/ascend/garbled_detection/test_npu_toolcall_multiturn_garbled_deepseek_v4_flash.py
