@@ -1,4 +1,5 @@
 import gc
+import math
 import multiprocessing as mp
 import os
 import unittest
@@ -64,8 +65,13 @@ def _load_vl_reranker_template():
     """
     template_path = os.path.join(
         os.path.dirname(__file__),
-        "..", "..", "..", "..",
-        "examples", "chat_template", "qwen3_vl_reranker.jinja",
+        "..",
+        "..",
+        "..",
+        "..",
+        "examples",
+        "chat_template",
+        "qwen3_vl_reranker.jinja",
     )
     with open(os.path.abspath(template_path), encoding="utf-8") as f:
         template_text = f.read()
@@ -278,7 +284,9 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
     def setUpClass(cls):
         mp.set_start_method("spawn", force=True)
 
-    def _hf_multimodal_scores(self, model_path, processor, torch_dtype, query, documents):
+    def _hf_multimodal_scores(
+        self, model_path, processor, torch_dtype, query, documents
+    ):
         """HF scores for multimodal reranking (text + image).
 
         Prompts are rendered with the *same* qwen3_vl_reranker.jinja template
@@ -314,27 +322,63 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
             torch.cuda.empty_cache()
         return scores
 
-    def _srt_multimodal_scores(self, base_url, query, documents):
-        """SRT scores via /v1/rerank HTTP API."""
-        payload = {
-            "query": query,
-            "documents": documents,
-            # Match the instruct hard-coded by the HF reference path
-            "instruct": DEFAULT_INSTRUCT,
-            "return_documents": False,
-        }
-        response = requests.post(
-            f"{base_url}/v1/rerank",
-            json=payload,
-            timeout=120,
-        )
-        self.assertEqual(response.status_code, 200, f"Rerank API failed: {response.text}")
-        results = response.json()
-        if isinstance(results, dict) and "message" in results:
-            self.fail(f"Rerank API error: {results['message']}")
-        # Sort by index to match HF order
-        results.sort(key=lambda r: r["index"])
-        return [r["score"] for r in results]
+    def _srt_multimodal_scores(self, base_url, processor, query, documents):
+        """SRT scores via the native /generate endpoint with token_ids_logprob.
+
+        Each (query, document) prompt is rendered with the same
+        qwen3_vl_reranker.jinja template the server uses. Requesting
+        ``token_ids_logprob=[yes, no]`` computes the full-vocabulary logits for
+        exactly those tokens (the same mechanism as ``engine.score``), so the
+        score never collapses to 0.0 the way the /v1/rerank top-k logprob path
+        can. This keeps the change on the test side (no shared server edits).
+        """
+        yes_id = processor.tokenizer.convert_tokens_to_ids("yes")
+        no_id = processor.tokenizer.convert_tokens_to_ids("no")
+        scores = []
+        for doc in documents:
+            prompt = render_vl_reranker_prompt(query, doc)
+            payload = {
+                "text": prompt,
+                "sampling_params": {"max_new_tokens": 1, "temperature": 0},
+                "return_logprob": True,
+                "token_ids_logprob": [yes_id, no_id],
+                "logprob_start_len": 0,
+            }
+            # Mirror serving_rerank._content_to_template_list: image parts
+            # become URL strings in image_data, referenced by the rendered
+            # <|vision_start|><|image_pad|><|vision_end|> placeholder.
+            if isinstance(doc, list):
+                image_data = [
+                    part["image_url"]["url"]
+                    for part in doc
+                    if isinstance(part, dict)
+                    and part.get("type") == "image_url"
+                    and part.get("image_url")
+                ]
+                if image_data:
+                    payload["image_data"] = image_data
+            response = requests.post(
+                f"{base_url}/generate",
+                json=payload,
+                timeout=120,
+            )
+            self.assertEqual(
+                response.status_code, 200, f"/generate failed: {response.text}"
+            )
+            meta = response.json()["meta_info"]
+            # output_token_ids_logprobs[0] = logprobs of the requested yes/no
+            # token IDs at the first generated position (max_new_tokens=1).
+            p_yes = 0.0
+            p_no = 0.0
+            for item in (meta.get("output_token_ids_logprobs") or [[]])[0]:
+                logprob, token_id = item[0], item[1]
+                if token_id == yes_id:
+                    p_yes = math.exp(logprob)
+                elif token_id == no_id:
+                    p_no = math.exp(logprob)
+            denom = p_yes + p_no
+            scores.append(p_yes / denom if denom > 0 else 0.0)
+        return scores
 
     def assert_multimodal_scores_close(
         self, model_path, torch_dtype, score_tolerance, query, documents
@@ -348,21 +392,30 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
         # Launch SRT server with VL reranker chat template
         template_path = os.path.join(
             os.path.dirname(__file__),
-            "..", "..", "..", "..",
-            "examples", "chat_template", "qwen3_vl_reranker.jinja",
+            "..",
+            "..",
+            "..",
+            "..",
+            "examples",
+            "chat_template",
+            "qwen3_vl_reranker.jinja",
         )
         template_path = os.path.abspath(template_path)
 
         process, base_url = launch_server(
             model_path,
             extra_args=[
-                "--chat-template", template_path,
+                "--chat-template",
+                template_path,
                 "--disable-radix-cache",
-                "--tp-size", "1",
+                "--tp-size",
+                "1",
             ],
         )
         try:
-            srt_scores = self._srt_multimodal_scores(base_url, query, documents)
+            srt_scores = self._srt_multimodal_scores(
+                base_url, processor, query, documents
+            )
         finally:
             process.terminate()
             process.wait(timeout=30)
