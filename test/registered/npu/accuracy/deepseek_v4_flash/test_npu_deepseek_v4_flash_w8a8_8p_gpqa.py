@@ -5,19 +5,22 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="nightly-acc-16-npu-a3",
     nightly=True,
-    disabled="accuracy testcase",
+)
+register_npu_ci(
+    est_time=3600,
+    suite="nightly-acc-16-npu-a3-dsv4-gpqa",
+    nightly=True,
 )
 
-# Environment variables for DSV4-Flash single-node PD-mix deployment.
-DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
+DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "INF_NAN_MODE_FORCE_DISABLE": "1",
@@ -25,12 +28,6 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    # deepep
-    "DEEPEP_HCCL_BUFFSIZE": "1000",
-    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     # skip gpu branch
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
@@ -42,13 +39,16 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # MTP (EAGLE) related envs
-    "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    # DSPARK
+    "SGLANG_RAGGED_VERIFY_MODE": "static",
+    "SGLANG_DSPARK_FAST_KERNEL": "0",
+    # deepep
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "HCCL_BUFFSIZE": "1400",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
 }
 
-# Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
-DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
+DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS = [
     "--page-size",
     128,
     "--tp-size",
@@ -61,14 +61,15 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.7,
+    0.62,
     "--prefill-max-requests",
-    2,
-    "--disable-radix-cache",
+    32,
+    "--max-prefill-tokens",
+    131072,
     "--chunked-prefill-size",
-    -1,
+    131072,
     "--max-running-requests",
-    160,
+    96,
     "--dp-size",
     16,
     "--enable-dp-attention",
@@ -81,25 +82,28 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--enable-dp-lm-head",
     "--kv-cache-dtype",
     "bfloat16",
+    "--speculative-algorithm",
+    "DSPARK",
+    "--speculative-draft-model-path",
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
+    "--speculative-draft-model-quantization",
+    "modelslim",
+    "--speculative-draft-attention-backend",
+    "ascend",
+    "--speculative-num-draft-tokens",
+    6,
+    "--speculative-dspark-block-size",
+    5,
+    "--skip-server-warmup",
     "--cuda-graph-bs",
     1,
     2,
     4,
-    8,
-    10,
-    # MTP (EAGLE) configuration.
-    "--speculative-algorithm",
-    "EAGLE",
-    "--speculative-num-steps",
-    2,
-    "--speculative-eagle-topk",
-    1,
-    "--speculative-num-draft-tokens",
-    3,
+    5,
+    6,
 ]
 
-# Generation config for Think High mode (thinking=true, reasoning_effort=high).
-# Official GPQA Diamond baseline: 87.4%.
+
 DEEPSEEK_V4_FLASH_W8A8_GENERATION_CONFIG_HIGH = {
     "max_tokens": 125000,
     "top_p": 1,
@@ -111,13 +115,13 @@ DEEPSEEK_V4_FLASH_W8A8_GENERATION_CONFIG_HIGH = {
 }
 
 
-class TestNPUDeepSeekV4FlashW8A88PGPQAHigh(TestNpuAccuracyTestCaseBase):
-    """Test NPU accuracy for DeepSeek-V4-Flash W8A8 8p GPQA High mode."""
+class TestNPUDeepSeekV4FlashW8A88PGPQA(TestNpuAccuracyTestCaseBase):
+    """Test NPU accuracy for DeepSeek-V4-Flash W8A8 8p DSPARK GPQA."""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    model = DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH
-    other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
-    envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
+    model = DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH
+    other_args = DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS
+    envs = DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS
     accuracy = 0.874
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
@@ -127,8 +131,8 @@ class TestNPUDeepSeekV4FlashW8A88PGPQAHigh(TestNpuAccuracyTestCaseBase):
     timeout = 6000
     seed = 1
 
-    def test_npu_deepseek_v4_flash_w8a8_8p_gpqa_high(self):
-        """Run NPU accuracy test for DeepSeek-V4-Flash W8A8 8p GPQA High mode."""
+    def test_npu_deepseek_v4_flash_w8a8_8p_gpqa(self):
+        """Run NPU accuracy test for DeepSeek-V4-Flash W8A8 8p DSPARK GPQA."""
         self.run_accuracy()
 
 
