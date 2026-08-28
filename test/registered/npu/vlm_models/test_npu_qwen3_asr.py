@@ -152,12 +152,38 @@ _ENGLISH_SPELLING_MAP = {
     "vapours": "vapors",
 }
 
+# Which normalizer won the import-time priority check. whisper_normalizer is
+# preferred (its bundled english.json spelling map matches the OpenAI Whisper
+# reference implementation); if it is not installed (or unusable) in the CI
+# environment, the test falls back to the embedded 56-entry map via
+# transformers, or to the bare transformers normalizer on very old versions.
+_NORMALIZER_SOURCE = "transformers+56subset"
+
 try:
-    _EN_NORMALIZER = EnglishTextNormalizer(
-        _ENGLISH_SPELLING_MAP
-    )  # transformers >= 4.39 (needs spelling map)
-except TypeError:
-    _EN_NORMALIZER = EnglishTextNormalizer()  # older transformers (no spelling-map arg)
+    from whisper_normalizer.english import (
+        EnglishTextNormalizer as _WHISPER_EN_NORMALIZER,
+    )
+
+    _EN_NORMALIZER = _WHISPER_EN_NORMALIZER()
+    _NORMALIZER_SOURCE = "whisper_normalizer"
+except Exception as exc:  # optional dep: fall back on any import/init failure
+    print(f"whisper_normalizer unavailable ({exc!r}); using embedded fallback")
+    try:
+        _EN_NORMALIZER = EnglishTextNormalizer(
+            _ENGLISH_SPELLING_MAP
+        )  # transformers >= 4.39 (needs spelling map)
+    except TypeError:
+        # Very old transformers without the spelling-map argument apply no
+        # spelling standardization, so label the source accordingly. An empty
+        # map is passed explicitly so construction works on both old (spelling
+        # map optional) and new (argument required) transformers versions.
+        _NORMALIZER_SOURCE = "transformers+empty"
+        _EN_NORMALIZER = EnglishTextNormalizer({})
+
+# Log the selected normalizer at import time so CI logs make the active path
+# obvious: "whisper_normalizer" (external package, bundled english.json) or
+# "transformers+56subset" (embedded map via transformers).
+print(f"Normalizer source: {_NORMALIZER_SOURCE}")
 
 
 def normalize_text(text: str, language: str = "en") -> str:
@@ -225,6 +251,10 @@ class TestQwen3ASR(CustomTestCase):
 
     def test_librispeech_asr(self):
         """Run ASR evaluation on LibriSpeech dataset and verify WER."""
+        normalizer_class = (
+            f"{type(_EN_NORMALIZER).__module__}.{type(_EN_NORMALIZER).__name__}"
+        )
+        print(f"Normalizer source: {_NORMALIZER_SOURCE} (class: {normalizer_class})")
         print(
             f"Loading dataset: {AUDIO_DATASETS_LIBRISPEECH_ASR_PATH} [{SUBSET}/{SPLIT}]"
         )
