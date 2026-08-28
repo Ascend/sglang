@@ -27,7 +27,7 @@ jobs:
     needs: [set-image]
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
-      runner: linux-aarch64-a3-800t-16-
+      runner: linux-aarch64-a3-800t-16
       test_type: accuracy
       test_config_name: glm4_7_flash_aime25_gpqa
       test_case: test/registered/ascend/accuracy/glm4_7_flash/test_npu_glm4_7_flash_1p_aime25_gpqa.py
