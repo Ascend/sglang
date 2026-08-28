@@ -9,7 +9,7 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestLFM2512BInstruct(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the mistralai/Mistral-7B-Instruct-v0.2 model on the GSM8K dataset is no less than 0.6452.
+    """Testcase: Verify that the inference accuracy of the LiquidAI/LFM2.5-1.2B-Instruct model on the GSM8K dataset is no less than 0.6452.
 
     [Test Category] Model
     [Test Target] LiquidAI/LFM2.5-1.2B-Instruct

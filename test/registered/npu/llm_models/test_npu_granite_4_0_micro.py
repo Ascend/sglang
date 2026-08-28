@@ -9,7 +9,7 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestGranite40Micro(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the mistralai/Mistral-7B-Instruct-v0.2 model on the GSM8K dataset is no less than 0.8545.
+    """Testcase: Verify that the inference accuracy of the ibm-granite/granite-4.0-micro model on the GSM8K dataset is no less than 0.8545.
 
     [Test Category] Model
     [Test Target] ibm-granite/granite-4.0-micro

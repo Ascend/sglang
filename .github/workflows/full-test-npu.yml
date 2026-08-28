@@ -167,7 +167,30 @@ jobs:
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
         run: |
+          # speed up by using infra cache services
+          pip install sglang_router
+          hf download lmms-lab/MMMU --repo-type dataset
+          pip install fastokens
+          pip install mindstudio-probe --pre
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv granian
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+          pip install msgpack
+          pip install watchfiles
+          pip install torchao==0.16.0
+          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+          cd ../
           cd test
+          # Only run the selected test files for this suite via --files.
+          # suite/nightly filtering is bypassed when --files is provided.
           python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/llm_models/test_npu_granite_4_0_h_micro.py,test/registered/npu/llm_models/test_npu_granite_4_0_micro.py,test/registered/npu/llm_models/test_npu_lfm2_5_1_2b_instruct.py,test/registered/npu/llm_models/test_npu_lfm2_8b_a1b.py"
 
 #  full-2-npu-a3:
@@ -446,6 +469,19 @@ jobs:
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
         run: |
+          pip install sglang_router
+          hf download lmms-lab/MMMU --repo-type dataset
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+          cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/llm_models/test_npu_tele_flm.py"
 

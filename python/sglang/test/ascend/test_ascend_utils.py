@@ -282,6 +282,7 @@ STABLELM_2_1_6B_WEIGHTS_PATH = os.path.join(
 )
 STARCODER2_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "bigcode/starcoder2-7b")
 TELE_FLM_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "FLM/Tele-FLM")
+HY3_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Tencent-Hunyuan/Hy3")
 TRINITY_MINI_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "arcee-ai/Trinity-Mini")
 XVERSE_MOE_A36B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "xverse/XVERSE-MoE-A36B")
 MINIMAX_M2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "cyankiwi/MiniMax-M2-BF16")
