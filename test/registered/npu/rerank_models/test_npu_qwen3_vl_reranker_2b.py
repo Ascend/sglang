@@ -277,6 +277,8 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
         payload = {
             "query": query,
             "documents": documents,
+            # Match the instruct hard-coded by the HF reference path
+            "instruct": DEFAULT_INSTRUCT,
             "return_documents": False,
         }
         response = requests.post(

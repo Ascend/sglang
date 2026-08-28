@@ -49,8 +49,14 @@ register_npu_ci(
 # Test configuration
 SUBSET = "clean"
 SPLIT = "test"
-LIMIT = 20
+LIMIT = 2620
 LANGUAGE = "en"
+
+# Qwen3-ASR-1.7B WER on LibriSpeech test-clean (full set) is 1.63%
+# (Qwen3-ASR Technical Report, arXiv:2601.21337). The CI gate asserts
+# overall_wer < WER_BASELINE + WER_TOLERANCE
+WER_BASELINE = 0.0163
+WER_TOLERANCE = 0.000326
 
 # ---- Self-implemented WER utilities (replacing evalscope) ----
 
@@ -73,10 +79,19 @@ def _edit_distance(ref: list, hyp: list) -> int:
 
 
 def normalize_text(text: str, language: str = "en") -> str:
-    """Normalize text for WER computation: lowercase, remove punctuation, collapse whitespace."""
+    """Normalize text for WER computation.
+
+    Aligned with the standard English text normalization used by the official
+    Qwen3-ASR evaluation (evalscope / Whisper-style): lowercase, preserve
+    apostrophes inside words (e.g. don't, it's) so contractions stay single
+    tokens instead of being merged into "dont", strip the remaining
+    punctuation, and collapse whitespace.
+    """
     text = text.lower()
-    # Remove punctuation except apostrophes within words (e.g. don't, it's)
-    text = re.sub(r"[{}]".format(re.escape(string.punctuation)), " ", text)
+    # Keep apostrophes within words; remove all other punctuation
+    text = re.sub(
+        r"[{}]".format(re.escape(string.punctuation.replace("'", ""))), " ", text
+    )
     # Collapse multiple whitespace
     text = re.sub(r"\s+", " ", text).strip()
     return text
@@ -181,9 +196,11 @@ class TestQwen3ASR(CustomTestCase):
         print(f"Overall WER ({total} samples): {overall_wer:.4f}")
         print(f"{'=' * 60}")
 
-        # Assert WER is within acceptable range
         self.assertLess(
-            overall_wer, 0.05, f"WER {overall_wer:.4f} exceeds threshold 0.05"
+            overall_wer,
+            WER_BASELINE + WER_TOLERANCE,
+            f"WER {overall_wer:.4f} exceeds baseline "
+            f"{WER_BASELINE:.4f} + tolerance {WER_TOLERANCE:.4f}",
         )
 
 
