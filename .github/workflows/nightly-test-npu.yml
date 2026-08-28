@@ -534,7 +534,7 @@ jobs:
     needs:
 #      - nightly-poc-single-node-a2-tests
       - nightly-poc-single-node-tests
-#      - nightly-poc-multi-node-tests
+      - nightly-poc-multi-node-tests
 #      - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
     steps:
