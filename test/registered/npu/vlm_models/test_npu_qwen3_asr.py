@@ -1,11 +1,10 @@
 import io
-import re
-import string
 import unittest
 
 import requests
 from datasets import Audio
 from modelscope import MsDataset
+from transformers.models.whisper.english_normalizer import EnglishTextNormalizer
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
@@ -78,23 +77,23 @@ def _edit_distance(ref: list, hyp: list) -> int:
     return dp[m][n]
 
 
-def normalize_text(text: str, language: str = "en") -> str:
-    """Normalize text for WER computation.
+# Official Qwen3-ASR evaluation normalizes both references and predictions with
+# the Whisper EnglishTextNormalizer (the Open ASR Leaderboard / Qwen3-ASR eval
+# use the exact same class). It lowercases, strips punctuation, expands
+# contractions ("don't" -> "do not", "I'm" -> "I am"), removes filler words
+# (uh/um/mm-hmm) and normalizes numbers, so a correct transcription is never
+# penalized for using a contraction or a period. Naive punctuation removal is
+# NOT aligned with this baseline: "I DON'T KNOW" would become "i don t know"
+# (splitting the contraction) and inflate WER.
+try:
+    _EN_NORMALIZER = EnglishTextNormalizer({})  # transformers >= 4.39 (needs spelling map)
+except TypeError:
+    _EN_NORMALIZER = EnglishTextNormalizer()  # older transformers (no spelling-map arg)
 
-    Aligned with the standard English text normalization used by the official
-    Qwen3-ASR evaluation (evalscope / Whisper-style): lowercase, preserve
-    apostrophes inside words (e.g. don't, it's) so contractions stay single
-    tokens instead of being merged into "dont", strip the remaining
-    punctuation, and collapse whitespace.
-    """
-    text = text.lower()
-    # Keep apostrophes within words; remove all other punctuation
-    text = re.sub(
-        r"[{}]".format(re.escape(string.punctuation.replace("'", ""))), " ", text
-    )
-    # Collapse multiple whitespace
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+
+def normalize_text(text: str, language: str = "en") -> str:
+    """Whisper-style normalization aligned with the official Qwen3-ASR eval."""
+    return _EN_NORMALIZER(text)
 
 
 def wer(references: list, predictions: list, language: str = "en") -> float:

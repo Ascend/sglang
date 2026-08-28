@@ -3,8 +3,10 @@ import multiprocessing as mp
 import os
 import unittest
 
+import jinja2
 import requests
 import torch
+from jinja2.sandbox import ImmutableSandboxedEnvironment
 from transformers import AutoModelForImageTextToText, AutoProcessor
 
 from sglang.srt.utils import get_device
@@ -52,6 +54,62 @@ RERANKER_SYSTEM = (
     "Judge whether the Document meets the requirements based on the Query "
     'and the Instruct provided. Note that the answer can only be "yes" or "no".'
 )
+
+
+def _load_vl_reranker_template():
+    """Load the shared qwen3_vl_reranker.jinja used by the SRT /v1/rerank server.
+
+    Rendering with this template yields byte-identical prompts to what the
+    server produces, so the HF reference and SGLang score the exact same input.
+    """
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "..", "..", "..",
+        "examples", "chat_template", "qwen3_vl_reranker.jinja",
+    )
+    with open(os.path.abspath(template_path), encoding="utf-8") as f:
+        template_text = f.read()
+    env = ImmutableSandboxedEnvironment(
+        loader=jinja2.BaseLoader(),
+        autoescape=False,
+        undefined=jinja2.Undefined,
+    )
+    return env.from_string(template_text)
+
+
+def _to_template_content(content):
+    """Normalize query/document into the template content-part list.
+
+    Mirrors serving_rerank._content_to_template_list so the HF reference and
+    the SRT server render byte-identical prompts (text -> text part,
+    image_url -> image part).
+    """
+    if isinstance(content, str):
+        return [{"type": "text", "text": content}]
+    result = []
+    for part in content:
+        if isinstance(part, dict):
+            part_type = part.get("type")
+            if part_type == "text":
+                result.append({"type": "text", "text": part.get("text", "")})
+            elif part_type == "image_url":
+                result.append({"type": "image"})
+            elif part_type == "video_url":
+                result.append({"type": "video"})
+            else:
+                result.append(part)
+        else:
+            result.append(part)
+    return result
+
+
+def render_vl_reranker_prompt(query, document, instruct=DEFAULT_INSTRUCT):
+    """Render one (query, document) reranker prompt with the shared template."""
+    return _load_vl_reranker_template().render(
+        query=_to_template_content(query),
+        document=_to_template_content(document),
+        instruct=instruct,
+    )
 
 
 def build_rerank_prompts(tokenizer, query, documents, instruct=DEFAULT_INSTRUCT):
@@ -221,7 +279,12 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
         mp.set_start_method("spawn", force=True)
 
     def _hf_multimodal_scores(self, model_path, processor, torch_dtype, query, documents):
-        """HF scores for multimodal reranking (text + image)."""
+        """HF scores for multimodal reranking (text + image).
+
+        Prompts are rendered with the *same* qwen3_vl_reranker.jinja template
+        the SRT /v1/rerank server uses, so the HF reference scores byte-
+        identical input and the comparison is apples-to-apples.
+        """
         model = AutoModelForImageTextToText.from_pretrained(
             model_path, torch_dtype=torch_dtype
         ).to(get_device())
@@ -230,28 +293,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
         try:
             with torch.no_grad():
                 for doc in documents:
-                    # Build messages with image if doc is a list (multimodal content)
-                    if isinstance(doc, list):
-                        content = doc
-                    else:
-                        content = [{"type": "text", "text": doc}]
-
-                    messages = [
-                        {"role": "system", "content": RERANKER_SYSTEM},
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": f"<Instruct>: {DEFAULT_INSTRUCT}\n<Query>: {query}\n<Document>: "},
-                                *content,
-                            ],
-                        },
-                    ]
-                    prompt = processor.apply_chat_template(
-                        messages,
-                        tokenize=False,
-                        add_generation_prompt=True,
-                        enable_thinking=False,
-                    )
+                    prompt = render_vl_reranker_prompt(query, doc)
                     # Only pass images for multimodal (list) documents; text-only
                     # documents must not inject image features into the prompt.
                     images = [IMAGES] if isinstance(doc, list) else None
