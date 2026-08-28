@@ -114,3 +114,9 @@ class GSM8KAscendMixin(ABC):
             self.fail(f"Test failed for {self.model}: {e}")
         finally:
             write_results_to_github_step_summary({self.model: model_metrics})
+
+    def test_gsm8k1(self):
+        self.test_gsm8k()
+
+    def test_gsm8k2(self):
+        self.test_gsm8k()

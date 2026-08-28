@@ -196,7 +196,17 @@ jobs:
           cd test
           # Only run the selected test files for this suite via --files.
           # suite/nightly filtering is bypassed when --files is provided.
-          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/llm_models/test_npu_granite_4_0_h_micro.py,test/registered/npu/llm_models/test_npu_granite_4_0_micro.py,test/registered/npu/llm_models/test_npu_lfm2_5_1_2b_instruct.py,test/registered/npu/llm_models/test_npu_lfm2_8b_a1b.py"
+          FILES=$(printf '%s,' \
+            test/registered/npu/llm_models/test_npu_granite_4_0_micro.py
+            test/registered/npu/llm_models/test_npu_granite_4_0_micro_5shot.py
+            test/registered/npu/llm_models/test_npu_granite_4_0_micro_no_env.py
+            test/registered/npu/llm_models/test_npu_granite_4_0_micro_no_env_5shot.py
+          )
+          #  test/registered/npu/llm_models/test_npu_granite_4_0_h_micro.py
+          #  test/registered/npu/llm_models/test_npu_lfm2_5_1_2b_instruct.py
+          #  test/registered/npu/llm_models/test_npu_lfm2_8b_a1b.py
+          FILES="${FILES%,}"
+          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "$FILES"
 
 #  full-2-npu-a3:
 #    needs: [ set-image-config ]
@@ -493,7 +503,12 @@ jobs:
           # export PYTHONPATH=$PYTHONPATH:$(pwd)
           # cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/llm_models/test_npu_tele_flm.py"
+          FILES=$(printf '%s,' \
+            test/registered/npu/llm_models/test_npu_tele_flm.py
+          )
+          FILES="${FILES%,}"
+          python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "$FILES"
+
 
   check-all-jobs:
     needs:

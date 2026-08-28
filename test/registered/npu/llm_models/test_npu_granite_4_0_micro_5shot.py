@@ -17,7 +17,6 @@ class TestGranite40Micro(GSM8KAscendMixin, CustomTestCase):
 
     model = GRANITE_4_0_MICRO_WEIGHTS_PATH
     accuracy = 0.8545
-    gsm8k_num_shots = 8
     num_questions = 1319
 
 
@@ -30,7 +29,6 @@ class TestGranite40Micro_200(GSM8KAscendMixin, CustomTestCase):
 
     model = GRANITE_4_0_MICRO_WEIGHTS_PATH
     accuracy = 0.8545
-    gsm8k_num_shots = 8
 
 
 if __name__ == "__main__":

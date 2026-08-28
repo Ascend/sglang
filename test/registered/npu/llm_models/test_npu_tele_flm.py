@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -9,7 +10,7 @@ register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class TestAFM(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the FLM/Tele-FLM model on the GSM8K dataset is no less than 0.
+    """Testcase: Verify that the inference accuracy of the FLM/Tele-FLM model on the GSM8K dataset is no less than 0.41.
 
     [Test Category] Model
     [Test Target] FLM/Tele-FLM
@@ -29,6 +30,10 @@ class TestAFM(GSM8KAscendMixin, CustomTestCase):
         "--watchdog-timeout",
         300000,
     ]
+    env = {
+        **os.environ,
+        "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION": "python",
+    }
 
 
 if __name__ == "__main__":

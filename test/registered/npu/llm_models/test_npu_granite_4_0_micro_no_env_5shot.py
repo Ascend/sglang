@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -17,8 +18,10 @@ class TestGranite40Micro(GSM8KAscendMixin, CustomTestCase):
 
     model = GRANITE_4_0_MICRO_WEIGHTS_PATH
     accuracy = 0.8545
-    gsm8k_num_shots = 8
     num_questions = 1319
+    env = {
+        **os.environ,
+    }
 
 
 class TestGranite40Micro_200(GSM8KAscendMixin, CustomTestCase):
@@ -30,7 +33,9 @@ class TestGranite40Micro_200(GSM8KAscendMixin, CustomTestCase):
 
     model = GRANITE_4_0_MICRO_WEIGHTS_PATH
     accuracy = 0.8545
-    gsm8k_num_shots = 8
+    env = {
+        **os.environ,
+    }
 
 
 if __name__ == "__main__":
