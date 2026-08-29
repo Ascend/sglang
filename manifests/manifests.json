@@ -2,12 +2,12 @@
   "manifests": [
     {
       "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260826.post1",
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260826.post1",
       "dockerfile": "docker/npu1.Dockerfile",
-      "generated_at": "2026-08-29T10:42:24.806281+00:00",
+      "generated_at": "2026-08-29T10:53:07.378466+00:00",
       "build_args": {
         "CANN_VERSION": "9.0.0",
-        "DEVICE_TYPE": "a3",
+        "DEVICE_TYPE": "910b",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.11",
         "PIP_INDEX_URL": "https://pypi.org/simple/",
@@ -57,12 +57,12 @@
     },
     {
       "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260826.post1",
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260826.post1",
       "dockerfile": "docker/npu1.Dockerfile",
-      "generated_at": "2026-08-29T08:56:20.637367+00:00",
+      "generated_at": "2026-08-29T10:42:24.806281+00:00",
       "build_args": {
         "CANN_VERSION": "9.0.0",
-        "DEVICE_TYPE": "910b",
+        "DEVICE_TYPE": "a3",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.11",
         "PIP_INDEX_URL": "https://pypi.org/simple/",
@@ -96,9 +96,9 @@
         "dir": "/sgl-workspace/sglang",
         "remote": "https://github.com/sgl-project/sglang",
         "branch": "main",
-        "commit": "0a585d5bb108cab8f0922b483d7f55812f05e245",
-        "describe": "gateway-v0.3.1-8690-g0a585d5bb1",
-        "commit_date": "2026-08-29T00:43:10-07:00"
+        "commit": "a328c19c81894b2093211bc089215048faa4320a",
+        "describe": "gateway-v0.3.1-8691-ga328c19c81",
+        "commit_date": "2026-08-29T01:51:47-07:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",
