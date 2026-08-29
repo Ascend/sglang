@@ -11,7 +11,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="235b-nightly-perf-16-npu-a3",
+    suite="",
     nightly=True,
     disabled="performance testcase",
 )
