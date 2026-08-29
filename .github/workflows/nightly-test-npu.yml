@@ -290,14 +290,13 @@ jobs:
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/npu/accuracy/qwen3_vl_8b_thinking/test_npu_qwen3_vl_8b_thinking_1p_mmmu.py
 #          # qwen3_vl_30b_a3b_thinking accuracy tests
-#          - name: qwen3_vl_30b_a3b_thinking_1p_mmmu
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/accuracy/qwen3_vl_30b_a3b_thinking/test_npu_qwen3_vl_30b_a3b_thinking_1p_mmmu.py
-#
-          - name: qwen3_235b_w8a8_8p_in3k5_out1k5_50ms
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_w8a8_8p_in3k5_out1k5_50ms.py
-            test_type: 'perf'
+          - name: qwen3_vl_30b_a3b_thinking_1p_mmmu
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/accuracy/qwen3_vl_30b_a3b_thinking/test_npu_qwen3_vl_30b_a3b_thinking_1p_mmmu.py
+#          - name: qwen3_235b_w8a8_8p_in3k5_out1k5_50ms
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_w8a8_8p_in3k5_out1k5_50ms.py
+#            test_type: 'perf'
 #          - name: qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms
 #            runner: linux-aarch64-a3-16
 #            test_case: test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_50ms.py
