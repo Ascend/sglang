@@ -126,6 +126,7 @@ KIMI_K2_5_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/Kimi-K2.5-
 KIMI_K2_5_EAGLE3_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "lightseekorg/kimi-k2.5-eagle3"
 )
+LAGUNA_XS_2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "poolside/Laguna-XS.2")
 LFM2_5_1_2B_Instruct_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "LiquidAI/LFM2.5-1.2B-Instruct"
 )
@@ -304,6 +305,7 @@ JANUS_PRO_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "deepseek-ai/Janus-P
 KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "moonshotai/Kimi-VL-A3B-Instruct"
 )
+LFM2_5_VL_1_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "LiquidAI/LFM2.5-VL-1.6B")
 LLAMA_3_2_11B_VISION_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "LLM-Research/Llama-3.2-11B-Vision-Instruct"
 )

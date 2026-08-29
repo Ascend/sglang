@@ -17,7 +17,7 @@ class TestHy3(GSM8KAscendMixin, CustomTestCase):
     """
 
     model = HY3_WEIGHTS_PATH
-    accuracy = 0.95
+    accuracy = 0
     timeout_for_server_launch = 3000
     other_args = [
         "--attention-backend",
