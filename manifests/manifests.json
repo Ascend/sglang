@@ -2,12 +2,12 @@
   "manifests": [
     {
       "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260826.post1",
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260826.post1",
       "dockerfile": "docker/npu1.Dockerfile",
-      "generated_at": "2026-08-29T08:43:50.354109+00:00",
+      "generated_at": "2026-08-29T08:56:20.637367+00:00",
       "build_args": {
         "CANN_VERSION": "9.0.0",
-        "DEVICE_TYPE": "a3",
+        "DEVICE_TYPE": "910b",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.11",
         "PIP_INDEX_URL": "https://pypi.org/simple/",
@@ -916,12 +916,12 @@
     },
     {
       "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260826.post1",
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260826.post1",
       "dockerfile": "docker/npu1.Dockerfile",
-      "generated_at": "2026-08-26T09:54:44.945076+00:00",
+      "generated_at": "2026-08-29T08:43:50.354109+00:00",
       "build_args": {
         "CANN_VERSION": "9.0.0",
-        "DEVICE_TYPE": "910b",
+        "DEVICE_TYPE": "a3",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.11",
         "PIP_INDEX_URL": "https://pypi.org/simple/",
@@ -968,9 +968,9 @@
         "dir": "/sgl-workspace/sglang",
         "remote": "https://github.com/sgl-project/sglang",
         "branch": "main",
-        "commit": "2511743bd784e69e5a81ca3d926a000711dae4ab",
-        "describe": "gateway-v0.3.1-8494-g2511743bd7",
-        "commit_date": "2026-08-26T02:06:32-07:00"
+        "commit": "0a585d5bb108cab8f0922b483d7f55812f05e245",
+        "describe": "gateway-v0.3.1-8690-g0a585d5bb1",
+        "commit_date": "2026-08-29T00:43:10-07:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",
@@ -1018,7 +1018,7 @@
           },
           {
             "name": "anthropic",
-            "version": "1.0.0"
+            "version": "1.2.0"
           },
           {
             "name": "anyio",
@@ -1058,7 +1058,7 @@
           },
           {
             "name": "build",
-            "version": "1.5.0"
+            "version": "1.6.0"
           },
           {
             "name": "cache_dit",
@@ -1082,7 +1082,7 @@
           },
           {
             "name": "click",
-            "version": "8.4.2"
+            "version": "8.5.0"
           },
           {
             "name": "cloudpickle",
@@ -1194,15 +1194,15 @@
           },
           {
             "name": "grpcio",
-            "version": "1.83.0"
+            "version": "1.83.1"
           },
           {
             "name": "grpcio-health-checking",
-            "version": "1.83.0"
+            "version": "1.83.1"
           },
           {
             "name": "grpcio-reflection",
-            "version": "1.83.0"
+            "version": "1.83.1"
           },
           {
             "name": "h11",
@@ -1238,7 +1238,7 @@
           },
           {
             "name": "huggingface_hub",
-            "version": "1.28.0"
+            "version": "1.29.0"
           },
           {
             "name": "idna",
@@ -1254,7 +1254,7 @@
           },
           {
             "name": "importlib_metadata",
-            "version": "9.0.0"
+            "version": "9.0.1"
           },
           {
             "name": "iniconfig",
@@ -1266,7 +1266,7 @@
           },
           {
             "name": "ipython",
-            "version": "9.16.1"
+            "version": "9.17.0"
           },
           {
             "name": "ipython_pygments_lexers",
@@ -1370,7 +1370,7 @@
           },
           {
             "name": "modelscope-hub",
-            "version": "0.2.0"
+            "version": "0.3.0"
           },
           {
             "name": "moviepy",
@@ -1554,11 +1554,11 @@
           },
           {
             "name": "pydantic",
-            "version": "2.13.4"
+            "version": "2.13.5"
           },
           {
             "name": "pydantic_core",
-            "version": "2.46.4"
+            "version": "2.46.5"
           },
           {
             "name": "pydantic-extra-types",
@@ -1658,7 +1658,7 @@
           },
           {
             "name": "sglang",
-            "version": "0.5.19.dev446+g2511743bd",
+            "version": "0.5.19.dev642+g0a585d5bb",
             "editable_project_location": "/sgl-workspace/sglang/python"
           },
           {
@@ -1775,7 +1775,7 @@
           },
           {
             "name": "typer",
-            "version": "0.27.1"
+            "version": "0.27.2"
           },
           {
             "name": "typing_extensions",
@@ -1799,7 +1799,7 @@
           },
           {
             "name": "wcwidth",
-            "version": "0.8.2"
+            "version": "0.8.3"
           },
           {
             "name": "wheel",
