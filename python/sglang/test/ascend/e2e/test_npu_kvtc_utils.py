@@ -19,11 +19,11 @@ from openai import AsyncOpenAI
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     EVALSCOPE,
-    TestNpuAccuracyTestCaseBase,
+    TestAscendAccuracyTestCaseBase,
     run_evalscope,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    TestNpuPerformanceTestCaseBase,
+    TestAscendPerformanceTestCaseBase,
     run_aisbench,
 )
 from sglang.test.kits.lm_eval_kit import LMEvalMixin
@@ -323,6 +323,8 @@ class _AscendKvtcTestCaseBase:
                     str(cls.kvtc_calibration_params["niter"]),
                     "--sampling-policy",
                     "relaxed",
+                    "--svd-cache-policy",
+                    "reuse",
                 ],
                 check=True,
                 capture_output=True,
@@ -443,26 +445,26 @@ class _AscendKvtcTestCaseBase:
 
 
 class TestAscendPerformanceKvtcTestCaseBase(
-    _AscendKvtcTestCaseBase, TestNpuPerformanceTestCaseBase
+    _AscendKvtcTestCaseBase, TestAscendPerformanceTestCaseBase
 ):
     pass
 
 
 class TestAscendAccuracyKvtcTestCaseBase(
-    _AscendKvtcTestCaseBase, TestNpuAccuracyTestCaseBase
+    _AscendKvtcTestCaseBase, TestAscendAccuracyTestCaseBase
 ):
     pass
 
 
 class TestAscendPerformanceKvtcTestCaseLME(
-    _AscendKvtcTestCaseBase, TestNpuPerformanceTestCaseBase
+    _AscendKvtcTestCaseBase, TestAscendPerformanceTestCaseBase
 ):
     model = None
     batch_size = 16
     backend = "local-completions"
     metadata = {}
     num_fewshot = 0
-    limit = None
+    benchmark_size_limit = None
     apply_chat_template = False
     fewshot_as_multiturn = False
     gen_kwargs = None
@@ -490,7 +492,7 @@ class TestAscendPerformanceKvtcTestCaseLME(
                 tasks=[task["name"] for task in self.task_list],
                 task_manager=lm_eval.tasks.TaskManager(metadata=self.metadata),
                 num_fewshot=self.num_fewshot,
-                limit=self.limit,
+                limit=self.benchmark_size_limit,
                 apply_chat_template=self.apply_chat_template,
                 fewshot_as_multiturn=self.fewshot_as_multiturn,
                 gen_kwargs=self.gen_kwargs,
@@ -521,7 +523,7 @@ class TestAscendPerformanceKvtcTestCaseLME(
                 datasets=datasets,
                 dataset_args=dataset_args,
                 eval_batch_size=self.batch_size,
-                limit=self.limit,
+                limit=self.benchmark_size_limit,
                 generation_config=generation_config,
                 dataset_dir=dataset_dir,
                 stream=stream,
