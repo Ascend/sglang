@@ -161,6 +161,8 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+            mkdir -p /sgl-workspace/sglang/scripts
+            cp ${sglang_source_path}/scripts/kvtc_calibrate.py /sgl-workspace/sglang/scripts/
           fi
 
           source /usr/local/Ascend/cann/set_env.sh || true
