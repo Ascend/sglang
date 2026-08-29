@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 ARG CANN_VERSION=9.1.0
-ARG DEVICE_TYPE=a3
+ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
 ARG arch
@@ -19,7 +19,7 @@ ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
 ARG PTA_URL_ARM64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_aarch64.whl"
 ARG PTA_URL_AMD64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_x86_64.whl"
-ARG SGLANG_TAG=glmx-lwm-0826
+ARG SGLANG_TAG=glmx-lwm-0826-A5
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=20260826
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
