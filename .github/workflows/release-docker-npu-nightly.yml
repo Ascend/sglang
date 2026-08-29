@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - device_type: a3
+          - device_type: 950
             dockerfile: docker/npu2-test-950.Dockerfile
     steps:
       - name: Checkout repository
