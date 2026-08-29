@@ -4,10 +4,10 @@
       "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260826.post1",
       "dockerfile": "docker/npu1.Dockerfile",
-      "generated_at": "2026-08-26T07:32:43.391446+00:00",
+      "generated_at": "2026-08-29T08:56:20.637367+00:00",
       "build_args": {
-        "CANN_VERSION": "",
-        "DEVICE_TYPE": "",
+        "CANN_VERSION": "9.0.0",
+        "DEVICE_TYPE": "910b",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.11",
         "PIP_INDEX_URL": "https://pypi.org/simple/",
@@ -16,7 +16,7 @@
         "TORCHAUDIO_VERSION": "2.10.0",
         "PTA_URL_ARM64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl",
         "PTA_URL_AMD64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_x86_64.whl",
-        "SGLANG_TAG": "qwen_optimize",
+        "SGLANG_TAG": "main",
         "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
         "SGLANG_KERNEL_NPU_TAG": "2026.08.21",
         "PIP_INSTALL": "python3 -m pip install --no-cache-dir"
@@ -24,7 +24,7 @@
       "git_clones": [
         {
           "remote": "https://github.com/sgl-project/sglang",
-          "branch": "$SGLANG_TAG",
+          "branch": "main",
           "dir": "/sgl-workspace/sglang"
         }
       ],
@@ -40,10 +40,10 @@
       "sglang": {
         "dir": "/sgl-workspace/sglang",
         "remote": "https://github.com/sgl-project/sglang",
-        "branch": "qwen_optimize",
-        "commit": "cebbaacae45ebf669101dde3aac4817ecbb038e0",
-        "describe": "gateway-v0.3.1-8235-gcebbaacae4",
-        "commit_date": "2026-08-23T00:13:33+08:00"
+        "branch": "main",
+        "commit": "0a585d5bb108cab8f0922b483d7f55812f05e245",
+        "describe": "gateway-v0.3.1-8690-g0a585d5bb1",
+        "commit_date": "2026-08-29T00:43:10-07:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",
@@ -59,10 +59,10 @@
       "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260826.post1",
       "dockerfile": "docker/npu1.Dockerfile",
-      "generated_at": "2026-08-26T07:18:29.742795+00:00",
+      "generated_at": "2026-08-29T08:43:50.354109+00:00",
       "build_args": {
-        "CANN_VERSION": "",
-        "DEVICE_TYPE": "",
+        "CANN_VERSION": "9.0.0",
+        "DEVICE_TYPE": "a3",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.11",
         "PIP_INDEX_URL": "https://pypi.org/simple/",
@@ -71,7 +71,7 @@
         "TORCHAUDIO_VERSION": "2.10.0",
         "PTA_URL_ARM64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl",
         "PTA_URL_AMD64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_x86_64.whl",
-        "SGLANG_TAG": "qwen_optimize",
+        "SGLANG_TAG": "main",
         "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
         "SGLANG_KERNEL_NPU_TAG": "2026.08.21",
         "PIP_INSTALL": "python3 -m pip install --no-cache-dir"
@@ -79,7 +79,7 @@
       "git_clones": [
         {
           "remote": "https://github.com/sgl-project/sglang",
-          "branch": "$SGLANG_TAG",
+          "branch": "main",
           "dir": "/sgl-workspace/sglang"
         }
       ],
@@ -95,10 +95,10 @@
       "sglang": {
         "dir": "/sgl-workspace/sglang",
         "remote": "https://github.com/sgl-project/sglang",
-        "branch": "qwen_optimize",
-        "commit": "cebbaacae45ebf669101dde3aac4817ecbb038e0",
-        "describe": "gateway-v0.3.1-8235-gcebbaacae4",
-        "commit_date": "2026-08-23T00:13:33+08:00"
+        "branch": "main",
+        "commit": "0a585d5bb108cab8f0922b483d7f55812f05e245",
+        "describe": "gateway-v0.3.1-8690-g0a585d5bb1",
+        "commit_date": "2026-08-29T00:43:10-07:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",

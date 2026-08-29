@@ -3,7 +3,7 @@ name: Generate Image Dependency Manifest
 # Reusable workflow. Called from the release-docker-*.yml workflows after an
 # image has been built & pushed. It:
 #   1. runs the built image to dump the *resolved* dependency inventory
-#      (pip list, sglang git commit, OS / CANN info),
+#      (sglang git commit, OS / CANN info),
 #   2. statically parses the Dockerfile for *declared* build args / pip pins,
 #   3. merges both into a single JSON manifest and uploads it as an artifact.
 #
