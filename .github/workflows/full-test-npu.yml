@@ -1,4 +1,4 @@
-name: Full Test (NPU)
+name: Full Test (NPU )
 
 on:
   pull_request:
