@@ -451,12 +451,12 @@ class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):
             assert isinstance(content, str) and content
             return content
 
-        # miss -> compute, then hit -> reuse the identical image's prefix
+        # First call computes; the second must reuse the identical prefix.
         first = describe(IMAGES_MAN_PATH)
         repeat = describe(IMAGES_MAN_PATH)
-        # a different image must be computed on its own, not reuse `first`'s KV
+        # A different image must not reuse `first`'s KV.
         other = describe(IMAGES_LOGO_PATH)
-        # the original image again, after a different one occupied the cache
+        # The original image again must still match after a different one.
         first_again = describe(IMAGES_MAN_PATH)
 
         self.assertEqual(

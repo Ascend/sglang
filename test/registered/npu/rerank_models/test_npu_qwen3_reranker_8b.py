@@ -29,18 +29,11 @@ MODELS = [
 ATTENTION_BACKEND = ["ascend"]
 TORCH_DTYPES = [torch.bfloat16]
 
-# Qwen3-Reranker is a *generative* reranker (a CausalLM, not a
-# SequenceClassification cross-encoder). It scores a (query, document) pair by
-# reading the next-token logits of the "yes"/"no" tokens after a chat-template
-# prompt, then normalising: score = sigmoid(yes_logit - no_logit).
-#
-# NOTE: this model's config.json declares architectures=["Qwen3ForCausalLM"]
-# (vocab_size=151669). Routing it through the SRTRunner "cross_encoder" path
-# (engine.rerank -> EmbeddingReqInput) returns the full-vocabulary logits as a
-# long list per pair instead of a scalar, which previously caused:
-#   TypeError: unsupported operand type(s) for -: 'float' and 'list'
-# The correct SGLang path is engine.score() with label_token_ids=[yes, no],
-# mirroring serving_rerank's "text_decoder" backend.
+# Qwen3-Reranker is a generative (CausalLM) reranker, not a
+# SequenceClassification cross-encoder: score = sigmoid(yes_logit - no_logit)
+# from the next-token logits of the "yes"/"no" tokens. It must be scored via
+# engine.score() with label_token_ids=[yes, no]; the SRTRunner "cross_encoder"
+# path returns full-vocabulary logits per pair (a list, not a scalar).
 
 DEFAULT_INSTRUCT = (
     "Given a web search query, retrieve relevant passages that answer the query"
@@ -76,10 +69,8 @@ def build_rerank_prompts(tokenizer, query, documents, instruct=DEFAULT_INSTRUCT)
 class TestQwen3Reranker8B(CustomTestCase):
     """Validate Qwen3-Reranker-8B scores from SGLang against HuggingFace.
 
-    Unlike BAAI/bge-reranker (a true SequenceClassification cross-encoder),
-    Qwen3-Reranker is a generative (CausalLM) reranker. It must be scored
-    through the decoder logprob path (engine.score with yes/no label tokens),
-    not the cross-encoder embedding path.
+    Qwen3-Reranker is a generative (CausalLM) reranker, so it is scored through
+    the decoder logprob path (engine.score with yes/no label tokens).
 
     [Test Category] Model
     [Test Target] Qwen/Qwen3-Reranker-8B
@@ -122,8 +113,7 @@ class TestQwen3Reranker8B(CustomTestCase):
         attention_backend,
     ):
         """SGLang scores via engine.score() (decoder logprob path)."""
-        # model_type="generation" -> is_embedding=False, so the engine runs in
-        # generation mode and engine.score uses next-token logprobs.
+        # model_type="generation" makes engine.score use next-token logprobs.
         with SRTRunner(
             model_path,
             torch_dtype=torch_dtype,
@@ -139,8 +129,7 @@ class TestQwen3Reranker8B(CustomTestCase):
                 label_token_ids=[yes_id, no_id],
                 apply_softmax=True,
             )
-        # apply_softmax=True over [yes, no] logprobs -> [p_yes, p_no] (sums to 1).
-        # p_yes == p_yes / (p_yes + p_no) == the Qwen3-Reranker score.
+        # p_yes (apply_softmax over [yes, no]) is the Qwen3-Reranker score.
         return [row[0] for row in result.scores]
 
     def assert_scores_close(
@@ -160,8 +149,7 @@ class TestQwen3Reranker8B(CustomTestCase):
         no_id = tokenizer.convert_tokens_to_ids("no")
         prompts = build_rerank_prompts(tokenizer, query, documents)
 
-        # HF first, then SRT: load them sequentially so NPU memory is released
-        # between the two backends.
+        # Run HF first, then SRT, to release NPU memory between backends.
         hf_scores = self._hf_scores(
             model_path, tokenizer, prompts, yes_id, no_id, torch_dtype
         )

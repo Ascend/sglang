@@ -80,25 +80,15 @@ def _edit_distance(ref: list, hyp: list) -> int:
     return dp[m][n]
 
 
-# Official Qwen3-ASR evaluation normalizes both references and predictions with
-# the Whisper EnglishTextNormalizer (the Qwen3-ASR / reference evals use the
-# exact same class). It lowercases, strips punctuation, expands contractions
-# ("don't" -> "do not", "I'm" -> "I am"), removes filler words (uh/um/mm-hmm),
-# normalizes numbers and standardizes British->American spellings, so a correct
-# transcription is never penalized for using a contraction, a period, or an
-# -our/-re spelling. Naive punctuation removal is NOT aligned with this
-# baseline: "I DON'T KNOW" would become "i don t know" (splitting the
-# contraction) and inflate WER.
+# Normalize references and predictions with Whisper's EnglishTextNormalizer,
+# matching the official Qwen3-ASR eval: it lowercases, strips punctuation,
+# expands contractions and standardizes spellings. Naive punctuation removal
+# would split contractions ("I DON'T KNOW" -> "i don t know") and inflate WER.
 #
-# The official Qwen3-ASR / evalscope evaluation uses the whisper_normalizer
-# package's EnglishTextNormalizer, which loads the full 1739-entry Whisper
-# english.json spelling map at construction time (no argument needed). The CI
-# workflow installs whisper_normalizer (see _npu-single-node-test-stage.yml),
-# so using it here keeps spelling standardization exactly aligned with the
-# reference eval.
-
-# whisper_normalizer's EnglishTextNormalizer needs no argument and loads the
-# full 1739-entry Whisper english.json spelling map itself.
+# EnglishTextNormalizer needs no argument: it loads the full 1739-entry Whisper
+# english.json spelling map itself. The CI workflow installs whisper_normalizer
+# (see _npu-single-node-test-stage.yml), keeping spelling standardization
+# aligned with the reference eval.
 _NORMALIZER_SOURCE = "whisper_normalizer+full"
 
 _EN_NORMALIZER = EnglishTextNormalizer()
@@ -108,9 +98,6 @@ logger.info(
     _NORMALIZER_SOURCE,
     _SPELLING_MAP_SIZE,
 )
-
-# Log the selected normalizer at import time so CI logs make the active path
-# obvious.
 logger.info("Normalizer source: %s", _NORMALIZER_SOURCE)
 
 
@@ -236,7 +223,9 @@ class TestQwen3ASR(CustomTestCase):
             predictions.append(norm_pred)
 
             sample_wer = wer([norm_ref], [norm_pred], LANGUAGE)
-            print(f"[{i + 1}/{total}] WER: {sample_wer:.4f}")
+            # Print per-sample WER every 100 samples to keep CI logs readable.
+            if (i + 1) % 100 == 0:
+                print(f"[{i + 1}/{total}] WER: {sample_wer:.4f}")
 
         logger.info(
             "Normalization modified text in %d/%d refs and %d/%d preds",

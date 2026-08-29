@@ -40,12 +40,9 @@ TORCH_DTYPES = [torch.bfloat16]
 
 IMAGES = IMAGES_023_PATH
 
-# Qwen3-VL-Reranker is a *generative* reranker (a CausalLM, not a
-# SequenceClassification cross-encoder). It scores a (query, document) pair by
-# reading the next-token logits of the "yes"/"no" tokens after a chat-template
-# prompt, then normalising: score = sigmoid(yes_logit - no_logit).
-#
-# The correct SGLang path is engine.score() with label_token_ids=[yes, no],
+# Qwen3-VL-Reranker is a generative (CausalLM) reranker: score = sigmoid(yes_logit
+# - no_logit) from the next-token logits of the "yes"/"no" tokens after a
+# chat-template prompt. Score via engine.score() with label_token_ids=[yes, no],
 # mirroring serving_rerank's "text_decoder" backend.
 
 DEFAULT_INSTRUCT = (
@@ -60,8 +57,7 @@ RERANKER_SYSTEM = (
 def _load_vl_reranker_template():
     """Load the shared qwen3_vl_reranker.jinja used by the SRT /v1/rerank server.
 
-    Rendering with this template yields byte-identical prompts to what the
-    server produces, so the HF reference and SGLang score the exact same input.
+    Ensures the HF reference and SGLang score byte-identical prompts.
     """
     template_path = os.path.join(
         os.path.dirname(__file__),
@@ -87,8 +83,7 @@ def _to_template_content(content):
     """Normalize query/document into the template content-part list.
 
     Mirrors serving_rerank._content_to_template_list so the HF reference and
-    the SRT server render byte-identical prompts (text -> text part,
-    image_url -> image part).
+    the SRT server render byte-identical prompts.
     """
     if isinstance(content, str):
         return [{"type": "text", "text": content}]
@@ -143,10 +138,8 @@ def build_rerank_prompts(tokenizer, query, documents, instruct=DEFAULT_INSTRUCT)
 class TestQwen3VLReranker2B(CustomTestCase):
     """Validate Qwen3-VL-Reranker-2B scores from SGLang against HuggingFace.
 
-    Unlike BAAI/bge-reranker (a true SequenceClassification cross-encoder),
-    Qwen3-VL-Reranker is a generative (CausalLM) reranker. It must be scored
-    through the decoder logprob path (engine.score with yes/no label tokens),
-    not the cross-encoder embedding path.
+    Qwen3-VL-Reranker is a generative (CausalLM) reranker, so it is scored
+    through the decoder logprob path (engine.score with yes/no label tokens).
 
     [Test Category] Model
     [Test Target] Qwen/Qwen3-VL-Reranker-2B
@@ -191,8 +184,7 @@ class TestQwen3VLReranker2B(CustomTestCase):
         attention_backend,
     ):
         """SGLang scores via engine.score() (decoder logprob path)."""
-        # model_type="generation" -> is_embedding=False, so the engine runs in
-        # generation mode and engine.score uses next-token logprobs.
+        # model_type="generation" makes engine.score use next-token logprobs.
         with SRTRunner(
             model_path,
             torch_dtype=torch_dtype,
@@ -208,8 +200,7 @@ class TestQwen3VLReranker2B(CustomTestCase):
                 label_token_ids=[yes_id, no_id],
                 apply_softmax=True,
             )
-        # apply_softmax=True over [yes, no] logprobs -> [p_yes, p_no] (sums to 1).
-        # p_yes == p_yes / (p_yes + p_no) == the Qwen3-VL-Reranker score.
+        # p_yes (apply_softmax over [yes, no]) is the Qwen3-VL-Reranker score.
         return [row[0] for row in result.scores]
 
     def assert_scores_close(
@@ -229,8 +220,7 @@ class TestQwen3VLReranker2B(CustomTestCase):
         no_id = processor.tokenizer.convert_tokens_to_ids("no")
         prompts = build_rerank_prompts(processor.tokenizer, query, documents)
 
-        # HF first, then SRT: load them sequentially so NPU memory is released
-        # between the two backends.
+        # Run HF first, then SRT, to release NPU memory between backends.
         hf_scores = self._hf_scores(
             model_path, processor, prompts, yes_id, no_id, torch_dtype
         )
@@ -289,9 +279,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
     ):
         """HF scores for multimodal reranking (text + image).
 
-        Prompts are rendered with the *same* qwen3_vl_reranker.jinja template
-        the SRT /v1/rerank server uses, so the HF reference scores byte-
-        identical input and the comparison is apples-to-apples.
+        Prompts use the same qwen3_vl_reranker.jinja template as the SRT server.
         """
         model = AutoModelForImageTextToText.from_pretrained(
             model_path, torch_dtype=torch_dtype
@@ -302,8 +290,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
             with torch.no_grad():
                 for doc in documents:
                     prompt = render_vl_reranker_prompt(query, doc)
-                    # Only pass images for multimodal (list) documents; text-only
-                    # documents must not inject image features into the prompt.
+                    # Pass images only for multimodal (list) documents.
                     images = [IMAGES] if isinstance(doc, list) else None
                     inputs = processor(
                         text=[prompt],
@@ -325,12 +312,9 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
     def _srt_multimodal_scores(self, base_url, processor, query, documents):
         """SRT scores via the native /generate endpoint with token_ids_logprob.
 
-        Each (query, document) prompt is rendered with the same
-        qwen3_vl_reranker.jinja template the server uses. Requesting
-        ``token_ids_logprob=[yes, no]`` computes the full-vocabulary logits for
-        exactly those tokens (the same mechanism as ``engine.score``), so the
-        score never collapses to 0.0 the way the /v1/rerank top-k logprob path
-        can. This keeps the change on the test side (no shared server edits).
+        ``token_ids_logprob=[yes, no]`` computes full-vocabulary logits for
+        exactly those tokens (same mechanism as ``engine.score``), avoiding the
+        score collapse seen with the /v1/rerank top-k logprob path.
         """
         yes_id = processor.tokenizer.convert_tokens_to_ids("yes")
         no_id = processor.tokenizer.convert_tokens_to_ids("no")
@@ -344,8 +328,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                 "token_ids_logprob": [yes_id, no_id],
                 "logprob_start_len": 0,
             }
-            # Mirror serving_rerank._content_to_template_list: image parts
-            # become URL strings in image_data, referenced by the rendered
+            # Image parts become URL strings in image_data for the rendered
             # <|vision_start|><|image_pad|><|vision_end|> placeholder.
             if isinstance(doc, list):
                 image_data = [
@@ -366,12 +349,8 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                 response.status_code, 200, f"/generate failed: {response.text}"
             )
             meta = response.json()["meta_info"]
-            # output_token_ids_logprobs[0] = logprobs of the requested yes/no
-            # token IDs at the last prompt position. With max_new_tokens=0 the
-            # request is prefill-only, so the logprobs come from the prefill
-            # forward (full-context attention), matching the engine.score
-            # single-item path used by test_rerank (which passes on NPU) rather
-            # than the less precise decode forward.
+            # With max_new_tokens=0 (prefill-only), the yes/no logprobs come
+            # from the full-context prefill forward, matching engine.score.
             p_yes = 0.0
             p_no = 0.0
             for item in (meta.get("output_token_ids_logprobs") or [[]])[0]:
@@ -450,7 +429,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                         query="How many people live in Berlin?",
                         documents=[
                             "Berlin had a population of 3,520,031 registered inhabitants in an area of 891.82 square kilometers.",
-                            "Berlin is well known for its museums.",
+                            "The Eiffel Tower is located in Paris, France and stands 330 meters tall.",
                         ],
                     )
 
