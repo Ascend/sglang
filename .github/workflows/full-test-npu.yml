@@ -100,7 +100,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-  
+
   full-test-npu-perf-4:
     name: full-test-npu
     if: ${{ !cancelled() }}
@@ -334,7 +334,6 @@ jobs:
   #         cd test
   #         python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
 
-  
   # full-16-npu-a3:
   #   needs: [set-image-config]
   #   if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}

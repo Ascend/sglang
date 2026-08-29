@@ -117,9 +117,7 @@ logger.info("Normalizer source: %s", _NORMALIZER_SOURCE)
 def normalize_text(text: str, language: str = "en") -> str:
     """Whisper-style normalization aligned with the official Qwen3-ASR eval."""
     normalized = _EN_NORMALIZER(text)
-    logger.debug(
-        "normalize_text(language=%s): %r -> %r", language, text, normalized
-    )
+    logger.debug("normalize_text(language=%s): %r -> %r", language, text, normalized)
     return normalized
 
 
