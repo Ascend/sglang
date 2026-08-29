@@ -28,7 +28,7 @@ register_npu_ci(
 
 register_npu_ci(
     est_time=400,
-    suite="full-test-npu",
+    suite="full-test-npu-perf-1",
     nightly=True,
 )
 
@@ -339,7 +339,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
             prompt = render_vl_reranker_prompt(query, doc)
             payload = {
                 "text": prompt,
-                "sampling_params": {"max_new_tokens": 1, "temperature": 0},
+                "sampling_params": {"max_new_tokens": 0, "temperature": 0},
                 "return_logprob": True,
                 "token_ids_logprob": [yes_id, no_id],
                 "logprob_start_len": 0,
@@ -367,7 +367,11 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
             )
             meta = response.json()["meta_info"]
             # output_token_ids_logprobs[0] = logprobs of the requested yes/no
-            # token IDs at the first generated position (max_new_tokens=1).
+            # token IDs at the last prompt position. With max_new_tokens=0 the
+            # request is prefill-only, so the logprobs come from the prefill
+            # forward (full-context attention), matching the engine.score
+            # single-item path used by test_rerank (which passes on NPU) rather
+            # than the less precise decode forward.
             p_yes = 0.0
             p_no = 0.0
             for item in (meta.get("output_token_ids_logprobs") or [[]])[0]:

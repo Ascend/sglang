@@ -1,10 +1,11 @@
 import io
+import logging
 import unittest
 
 import requests
 from datasets import Audio
 from modelscope import MsDataset
-from transformers.models.whisper.english_normalizer import EnglishTextNormalizer
+from whisper_normalizer.english import EnglishTextNormalizer
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
@@ -19,6 +20,8 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
+logger = logging.getLogger(__name__)
+
 try:
     import datasets.features.features as _dff
 
@@ -30,8 +33,8 @@ try:
         return _orig_generate_from_dict(obj)
 
     _dff.generate_from_dict = _generate_from_dict_with_default_dtype
-except Exception:
-    pass
+except Exception as e:  # pragma: no cover
+    logger.debug("datasets.features.generate_from_dict patch failed: %s", e)
 
 register_npu_ci(
     est_time=400,
@@ -41,7 +44,7 @@ register_npu_ci(
 
 register_npu_ci(
     est_time=400,
-    suite="full-test-npu",
+    suite="full-test-npu-perf-1",
     nightly=True,
 )
 
@@ -87,108 +90,37 @@ def _edit_distance(ref: list, hyp: list) -> int:
 # baseline: "I DON'T KNOW" would become "i don t know" (splitting the
 # contraction) and inflate WER.
 #
-# transformers' EnglishTextNormalizer requires the spelling map to be passed
-# explicitly (it has no built-in default). The map below is the subset of
-# Whisper's english.json keys that actually occur in LibriSpeech test-clean;
-# it is verified to produce identical normalization to the full 1739-entry map
-# on all 2620 references, so it reproduces the official spelling
-# standardization without embedding the entire table.
-_ENGLISH_SPELLING_MAP = {
-    "accoutrements": "accouterments",
-    "analogue": "analog",
-    "ardour": "ardor",
-    "armour": "armor",
-    "axe": "ax",
-    "bannister": "banister",
-    "battleax": "battleaxe",
-    "behaviour": "behavior",
-    "behaviourist": "behaviorist",
-    "centre": "center",
-    "centred": "centered",
-    "colour": "color",
-    "coloured": "colored",
-    "colours": "colors",
-    "counselled": "counseled",
-    "defence": "defense",
-    "demeanour": "demeanor",
-    "dialogue": "dialog",
-    "dialogues": "dialogs",
-    "discoloured": "discolored",
-    "dishonoured": "dishonored",
-    "draught": "draft",
-    "encyclopaedia": "encyclopedia",
-    "endeavour": "endeavor",
-    "endeavoured": "endeavored",
-    "favourite": "favorite",
-    "grey": "gray",
-    "greys": "grays",
-    "honour": "honor",
-    "honourable": "honorable",
-    "honourably": "honorably",
-    "honoured": "honored",
-    "humour": "humor",
-    "labour": "labor",
-    "lustre": "luster",
-    "manoeuvring": "maneuvering",
-    "marshalled": "marshaled",
-    "marvelled": "marveled",
-    "neighbour": "neighbor",
-    "omelette": "omelet",
-    "pencilled": "penciled",
-    "practise": "practice",
-    "practised": "practiced",
-    "pretence": "pretense",
-    "programme": "program",
-    "recognised": "recognized",
-    "saviour": "savior",
-    "scepticism": "skepticism",
-    "shrivelled": "shriveled",
-    "sombre": "somber",
-    "specialised": "specialized",
-    "theatre": "theater",
-    "theatres": "theaters",
-    "towelling": "toweling",
-    "tranquillity": "tranquility",
-    "vapours": "vapors",
-}
+# The official Qwen3-ASR / evalscope evaluation uses the whisper_normalizer
+# package's EnglishTextNormalizer, which loads the full 1739-entry Whisper
+# english.json spelling map at construction time (no argument needed). The CI
+# workflow installs whisper_normalizer (see _npu-single-node-test-stage.yml),
+# so using it here keeps spelling standardization exactly aligned with the
+# reference eval.
 
-# Which normalizer won the import-time priority check. whisper_normalizer is
-# preferred (its bundled english.json spelling map matches the OpenAI Whisper
-# reference implementation); if it is not installed (or unusable) in the CI
-# environment, the test falls back to the embedded 56-entry map via
-# transformers, or to the bare transformers normalizer on very old versions.
-_NORMALIZER_SOURCE = "transformers+56subset"
+# whisper_normalizer's EnglishTextNormalizer needs no argument and loads the
+# full 1739-entry Whisper english.json spelling map itself.
+_NORMALIZER_SOURCE = "whisper_normalizer+full"
 
-try:
-    from whisper_normalizer.english import (
-        EnglishTextNormalizer as _WHISPER_EN_NORMALIZER,
-    )
-
-    _EN_NORMALIZER = _WHISPER_EN_NORMALIZER()
-    _NORMALIZER_SOURCE = "whisper_normalizer"
-except Exception as exc:  # optional dep: fall back on any import/init failure
-    print(f"whisper_normalizer unavailable ({exc!r}); using embedded fallback")
-    try:
-        _EN_NORMALIZER = EnglishTextNormalizer(
-            _ENGLISH_SPELLING_MAP
-        )  # transformers >= 4.39 (needs spelling map)
-    except TypeError:
-        # Very old transformers without the spelling-map argument apply no
-        # spelling standardization, so label the source accordingly. An empty
-        # map is passed explicitly so construction works on both old (spelling
-        # map optional) and new (argument required) transformers versions.
-        _NORMALIZER_SOURCE = "transformers+empty"
-        _EN_NORMALIZER = EnglishTextNormalizer({})
+_EN_NORMALIZER = EnglishTextNormalizer()
+_SPELLING_MAP_SIZE = len(_EN_NORMALIZER.standardize_spellings.mapping)
+logger.info(
+    "Built EnglishTextNormalizer (source=%s, %d-entry spelling map)",
+    _NORMALIZER_SOURCE,
+    _SPELLING_MAP_SIZE,
+)
 
 # Log the selected normalizer at import time so CI logs make the active path
-# obvious: "whisper_normalizer" (external package, bundled english.json) or
-# "transformers+56subset" (embedded map via transformers).
-print(f"Normalizer source: {_NORMALIZER_SOURCE}")
+# obvious.
+logger.info("Normalizer source: %s", _NORMALIZER_SOURCE)
 
 
 def normalize_text(text: str, language: str = "en") -> str:
     """Whisper-style normalization aligned with the official Qwen3-ASR eval."""
-    return _EN_NORMALIZER(text)
+    normalized = _EN_NORMALIZER(text)
+    logger.debug(
+        "normalize_text(language=%s): %r -> %r", language, text, normalized
+    )
+    return normalized
 
 
 def wer(references: list, predictions: list, language: str = "en") -> float:
@@ -254,9 +186,17 @@ class TestQwen3ASR(CustomTestCase):
         normalizer_class = (
             f"{type(_EN_NORMALIZER).__module__}.{type(_EN_NORMALIZER).__name__}"
         )
-        print(f"Normalizer source: {_NORMALIZER_SOURCE} (class: {normalizer_class})")
-        print(
-            f"Loading dataset: {AUDIO_DATASETS_LIBRISPEECH_ASR_PATH} [{SUBSET}/{SPLIT}]"
+        logger.info(
+            "Normalizer source: %s (class: %s, map entries: %d)",
+            _NORMALIZER_SOURCE,
+            normalizer_class,
+            _SPELLING_MAP_SIZE,
+        )
+        logger.info(
+            "Loading dataset: %s [%s/%s]",
+            AUDIO_DATASETS_LIBRISPEECH_ASR_PATH,
+            SUBSET,
+            SPLIT,
         )
         dataset = MsDataset.load(
             dataset_name=AUDIO_DATASETS_LIBRISPEECH_ASR_PATH,
@@ -268,10 +208,12 @@ class TestQwen3ASR(CustomTestCase):
             dataset = dataset.to_hf_dataset()
         dataset = dataset.cast_column("audio", Audio(decode=False))
         total = min(LIMIT, len(dataset))
-        print(f"Total samples: {total}")
+        logger.info("Total samples: %d", total)
 
         references = []
         predictions = []
+        modified_refs = 0
+        modified_preds = 0
 
         for i in range(total):
             record = dataset[i]
@@ -282,6 +224,15 @@ class TestQwen3ASR(CustomTestCase):
 
             norm_ref = normalize_text(reference, LANGUAGE)
             norm_pred = normalize_text(prediction, LANGUAGE)
+            if norm_ref != reference:
+                modified_refs += 1
+            if norm_pred != prediction:
+                modified_preds += 1
+            if i == 0:
+                logger.info("First sample raw ref:   %r", reference)
+                logger.info("First sample norm ref:  %r", norm_ref)
+                logger.info("First sample raw pred:  %r", prediction)
+                logger.info("First sample norm pred: %r", norm_pred)
 
             references.append(norm_ref)
             predictions.append(norm_pred)
@@ -289,10 +240,18 @@ class TestQwen3ASR(CustomTestCase):
             sample_wer = wer([norm_ref], [norm_pred], LANGUAGE)
             print(f"[{i + 1}/{total}] WER: {sample_wer:.4f}")
 
+        logger.info(
+            "Normalization modified text in %d/%d refs and %d/%d preds",
+            modified_refs,
+            total,
+            modified_preds,
+            total,
+        )
+
         overall_wer = wer(references, predictions, LANGUAGE)
-        print(f"\n{'=' * 60}")
-        print(f"Overall WER ({total} samples): {overall_wer:.4f}")
-        print(f"{'=' * 60}")
+        logger.info("=" * 60)
+        logger.info("Overall WER (%d samples): %.4f", total, overall_wer)
+        logger.info("=" * 60)
 
         self.assertLess(
             overall_wer,

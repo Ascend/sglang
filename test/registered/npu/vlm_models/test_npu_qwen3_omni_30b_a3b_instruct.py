@@ -20,7 +20,7 @@ from sglang.test.vlm_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
-register_npu_ci(est_time=400, suite="full-test-npu", nightly=True)
+register_npu_ci(est_time=400, suite="full-test-npu-perf-4", nightly=True)
 
 
 class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):

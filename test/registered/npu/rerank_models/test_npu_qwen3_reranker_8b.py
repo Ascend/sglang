@@ -19,7 +19,7 @@ register_npu_ci(
 
 register_npu_ci(
     est_time=400,
-    suite="full-test-npu",
+    suite="full-test-npu-perf-1",
     nightly=True,
 )
 
