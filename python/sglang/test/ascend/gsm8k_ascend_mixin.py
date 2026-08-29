@@ -27,6 +27,7 @@ class GSM8KAscendMixin(ABC):
         "--disable-cuda-graph",
     ]
     server_cmd = ""
+    max_tokens = 512
     gsm8k_num_shots = 5
     num_questions = 200
     gsm8k_parallel = 128
@@ -86,7 +87,7 @@ class GSM8KAscendMixin(ABC):
 
         try:
             args = SimpleNamespace(
-                max_tokens=512,
+                max_tokens=self.max_tokens,
                 base_url=self.base_url,
                 model=self.model,
                 eval_name="gsm8k",

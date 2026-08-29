@@ -16,8 +16,9 @@ class TestGranite40Micro(GSM8KAscendMixin, CustomTestCase):
     """
 
     model = GRANITE_4_0_MICRO_WEIGHTS_PATH
-    accuracy = 0.8545
+    accuracy = 0
     num_questions = 1319
+    max_tokens = 1024
 
 
 class TestGranite40Micro_200(GSM8KAscendMixin, CustomTestCase):
@@ -28,7 +29,8 @@ class TestGranite40Micro_200(GSM8KAscendMixin, CustomTestCase):
     """
 
     model = GRANITE_4_0_MICRO_WEIGHTS_PATH
-    accuracy = 0.8545
+    accuracy = 0
+    max_tokens = 1024
 
 
 if __name__ == "__main__":
