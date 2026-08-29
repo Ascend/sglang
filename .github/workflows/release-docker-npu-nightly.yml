@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - device_type: a3
-            dockerfile: docker/npu2-test-a3.Dockerfile
+            dockerfile: docker/npu2-test-950.Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
