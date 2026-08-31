@@ -1,19 +1,8 @@
-"""
-Tests for the serving-level ``--default-chat-template-kwargs`` argument.
+"""Test the serving-level --default-chat-template-kwargs argument.
 
-The argument injects default chat-template kwargs into every request that does
-not override them per-request. This test covers:
-
-- 用例1: default thinking on/off + per-request precedence on Qwen3
-  (``enable_thinking`` + ``qwen3`` parser), a 2x2 combination of
-  {default false/true} x {default request / per-request override}.
-- 用例2: the same ``enable_thinking`` key across two model families:
-  Qwen3 (``qwen3`` parser, toggleable) and DeepSeek-R1-Distill-Qwen
-  (``deepseek-r1`` parser, always-on reasoning).
-
-Observation point (agreed with developer): whether the response contains
-``reasoning_content`` (non-empty = thinking on, empty/None = thinking off).
-All assertions are positive; no log-based negative assertion.
+Covers default thinking on/off and per-request chat_template_kwargs
+precedence on Qwen3, plus the same enable_thinking key on
+DeepSeek-R1-Distill-Qwen. Thinking is on iff reasoning_content is non-empty.
 """
 
 import unittest
@@ -41,8 +30,7 @@ _THINKING_PROMPT = "How many r's are in the word 'strawberry'? Think step by ste
 
 
 class _DefaultChatTemplateKwargsBase(CustomTestCase):
-    """Launch a server with a fixed default chat-template kwarg and provide
-    helpers to send a chat completion and read back ``reasoning_content``."""
+    """Launch a server with a fixed default chat-template kwarg."""
 
     model = None
     reason_parser = None
@@ -89,59 +77,52 @@ class _DefaultChatTemplateKwargsBase(CustomTestCase):
         return message.get("reasoning_content") or ""
 
     def assert_thinking_off(self, reasoning):
-        self.assertEqual(
-            reasoning, "", "expected reasoning_content to be empty/None"
-        )
+        self.assertEqual(reasoning, "", "expected reasoning_content to be empty/None")
 
     def assert_thinking_on(self, reasoning):
         self.assertTrue(reasoning, "expected non-empty reasoning_content")
 
 
 class TestQwen3DefaultThinkingDisabled(_DefaultChatTemplateKwargsBase):
-    """用例1-A: 服务默认 enable_thinking=false(默认关闭) + per-request 开启覆盖。"""
+    """Default enable_thinking=false; per-request override turns it on."""
 
     model = QWEN3_0_6B_WEIGHTS_PATH
     reason_parser = "qwen3"
     default_kwargs = '{"enable_thinking": false}'
 
     def test_default_request_disables_thinking(self):
-        """默认请求(不携带 chat_template_kwargs) => 思维链关闭。"""
         self.assert_thinking_off(self._reasoning_content())
 
     def test_per_request_override_enables_thinking(self):
-        """per-request chat_template_kwargs 覆盖默认 false => 思维链开启。"""
         self.assert_thinking_on(
             self._reasoning_content(chat_template_kwargs={"enable_thinking": True})
         )
 
 
 class TestQwen3DefaultThinkingEnabled(_DefaultChatTemplateKwargsBase):
-    """用例1-B: 服务默认 enable_thinking=true(默认开启) + per-request 关闭覆盖。"""
+    """Default enable_thinking=true; per-request override turns it off."""
 
     model = QWEN3_0_6B_WEIGHTS_PATH
     reason_parser = "qwen3"
     default_kwargs = '{"enable_thinking": true}'
 
     def test_default_request_enables_thinking(self):
-        """默认请求 => 思维链开启。"""
         self.assert_thinking_on(self._reasoning_content())
 
     def test_per_request_override_disables_thinking(self):
-        """per-request chat_template_kwargs 覆盖默认 true => 思维链关闭。"""
         self.assert_thinking_off(
             self._reasoning_content(chat_template_kwargs={"enable_thinking": False})
         )
 
 
 class TestDeepSeekR1DistillDefaultThinkingEnabled(_DefaultChatTemplateKwargsBase):
-    """用例2: DeepSeek-R1-Distill-Qwen + deepseek-r1 解析器, 同一 enable_thinking 键生效。"""
+    """DeepSeek-R1-Distill-Qwen + deepseek-r1 parser."""
 
     model = DEEPSEEK_R1_DISTILL_QWEN_7B_WEIGHTS_PATH
     reason_parser = "deepseek-r1"
     default_kwargs = '{"enable_thinking": true}'
 
     def test_default_request_enables_thinking(self):
-        """默认请求 => 思维链开启(enable_thinking 键在 deepseek-r1 解析器下生效)。"""
         self.assert_thinking_on(self._reasoning_content())
 
 
