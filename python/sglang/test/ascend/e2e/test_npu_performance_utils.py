@@ -1048,6 +1048,14 @@ class TestNpuPerformanceTestCaseBase(CustomTestCase):
     def tearDownClass(cls):
         if hasattr(cls, "process") and cls.process:
             try:
+                import psutil
+
+                parent = psutil.Process(cls.process.pid)
+                parent.terminate()  # SIGTERM: let coverage flush
+                try:
+                    parent.wait(timeout=10)
+                except psutil.TimeoutExpired:
+                    pass
                 kill_process_tree(cls.process.pid)
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
@@ -1300,6 +1308,14 @@ class TestNpuPerfMultiNodePdSepTestCaseBase(CustomTestCase):
         logger.info("Start exec tearDownClass")
         if cls.process:
             try:
+                import psutil
+
+                parent = psutil.Process(cls.process.pid)
+                parent.terminate()  # SIGTERM: let coverage flush
+                try:
+                    parent.wait(timeout=10)
+                except psutil.TimeoutExpired:
+                    pass
                 kill_process_tree(cls.process.pid)
                 for _ in range(60):
                     if cls.process.poll() is not None:
