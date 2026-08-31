@@ -31,8 +31,8 @@ _MM_PROCESS_CONFIG = json.dumps(
             "fps": 2,
             "min_frames": 4,
             "max_frames": 64,
+        }
     }
-}
 )
 
 _COMMON_ARGS = [
