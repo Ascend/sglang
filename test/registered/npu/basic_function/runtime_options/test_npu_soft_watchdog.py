@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Register CI task for NPU environment
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 class BaseTestDetokenizerWatchdog:
@@ -64,9 +64,9 @@ class BaseTestDetokenizerWatchdog:
         if cls.set_soft_watchdog:
             other_args.extend(["--soft-watchdog-timeout", str(cls.soft_watchdog_value)])
 
-        # Scenario 4 timeout set to 20 seconds (ensure complete log printing)
+        # Scenario 4 timeout set to 60 seconds (ensure complete log printing)
         timeout = (
-            20
+            60
             if (cls.ci_mode is False and cls.set_soft_watchdog is False)
             else DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
         )
@@ -82,9 +82,14 @@ class BaseTestDetokenizerWatchdog:
                     return_stdout_stderr=(cls.stdout, cls.stderr),
                 )
             cls.launch_success = True
-        except TimeoutError:
-            # Scenario 4 expects timeout, check if target error exists in logs
+        except Exception:
+            # Scenario 4 expects the launch to fail: either the launch times
+            # out, or the detokenizer subprocess asserts and the server exits
+            # (code -9). Both surface as a generic Exception. Verify the
+            # expected AssertionError is present in the logs below.
             cls.launch_success = False
+            # Scenarios' server environments.
+            envs.SGLANG_TEST_STUCK_DETOKENIZER.clear()
             # Read complete logs
             combined_log = cls.stdout.getvalue() + cls.stderr.getvalue()
             # Check if contains expected AssertionError string
@@ -96,7 +101,7 @@ class BaseTestDetokenizerWatchdog:
                 # Print complete logs for troubleshooting
                 logger.info(f"\n[Scenario 4] Complete logs:\n{combined_log}")
             else:
-                # Expected error not found, raise timeout error
+                # Expected error not found, raise the original launch error
                 raise
 
     @classmethod
@@ -110,6 +115,28 @@ class BaseTestDetokenizerWatchdog:
             cls.stderr.close()
 
     def test_detokenizer_watchdog(self):
+        combined_log = self.stdout.getvalue() + self.stderr.getvalue()
+
+        # Scenario 1 (CI + no flag): verify the CI default (300s) is applied via
+        # server args print and watchdog creation. Firing is covered by scenarios
+        # 2/3 with a short timeout (same code path), so no need to wait 300s.
+        if self.ci_mode is True and self.set_soft_watchdog is False:
+            self.assertTrue(self.launch_success, "Server launch failed")
+            self.assertIn(
+                "soft_watchdog_timeout=300",
+                combined_log,
+                "Scenario 1: CI default soft watchdog (300s) was not applied",
+            )
+            self.assertIn(
+                "Watchdog DetokenizerManager initialized",
+                combined_log,
+                "Scenario 1: real DetokenizerManager watchdog was not created",
+            )
+            logger.info(
+                "[Scenario 1] Test passed: CI default soft watchdog (300s) is applied"
+            )
+            return
+
         # Scenario 4: Non-CI + no soft watchdog → verify AssertionError in logs
         if self.ci_mode is False and self.set_soft_watchdog is False:
             self.assertTrue(
@@ -121,18 +148,23 @@ class BaseTestDetokenizerWatchdog:
             )
             return
 
-        # Scenarios 1-3: Launch success → call API and verify timeout logs
+        # Scenarios 2-3: Launch success → call API and verify timeout logs
         self.assertTrue(self.launch_success, "Server launch failed")
         logger.info("Start call /generate API", extra={"flush": True})
-        requests.post(
-            DEFAULT_URL_FOR_TEST + "/generate",
-            json={
-                "text": "Hello, please repeat this sentence for 1000 times.",
-                "sampling_params": {"max_new_tokens": 100, "temperature": 0},
-            },
-            timeout=40,
-        )
-        logger.info("Start call /generate API", extra={"flush": True})
+        try:
+            requests.post(
+                DEFAULT_URL_FOR_TEST + "/generate",
+                json={
+                    "text": "Hello, please repeat this sentence for 1000 times.",
+                    "sampling_params": {"max_new_tokens": 100, "temperature": 0},
+                },
+                timeout=40,
+            )
+        except requests.exceptions.ReadTimeout as e:
+            # The detokenizer is deliberately stuck, so the request read-timeout
+            # is expected; what matters is the watchdog timeout log below.
+            logger.info(f"requests.post timed out (expected): {e}")
+        logger.info("End call /generate API", extra={"flush": True})
 
         # Merge output and verify expected logs
         combined_output = self.stdout.getvalue() + self.stderr.getvalue()
@@ -151,8 +183,8 @@ class BaseTestDetokenizerWatchdog:
 class TestCIWithoutSoftWatchdog(BaseTestDetokenizerWatchdog, CustomTestCase):
     ci_mode = True
     set_soft_watchdog = False
-    stuck_seconds = 350
-    expected_log = "DetokenizerManager watchdog timeout"
+    stuck_seconds = 0
+    expected_log = None
 
 
 # Scenario 2: CI environment + set soft-watchdog (20s) → block 30s

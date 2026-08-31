@@ -6,6 +6,7 @@ python3 -m unittest openai_server.basic.test_openai_server.TestOpenAIServer.test
 """
 
 import json
+import os
 import random
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +30,8 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
+
+os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 register_npu_ci(est_time=400, suite="stage-b-test-1-npu-a2", nightly=False)
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
@@ -656,8 +659,8 @@ class TestOpenAIServerv1Responses(CustomTestCase):
         )
         if resp.status == "completed":
             assert resp.usage is not None
-            assert resp.usage.prompt_tokens >= 0
-            assert resp.usage.completion_tokens >= 0
+            assert resp.usage.input_tokens >= 0
+            assert resp.usage.output_tokens >= 0
             assert resp.usage.total_tokens >= 0
         if hasattr(resp, "error"):
             assert resp.error is None
@@ -764,8 +767,8 @@ class TestOpenAIServerv1Responses(CustomTestCase):
         self.assertIn("output", body)
         self.assertIn("status", body)
         if "usage" in body:
-            self.assertIn("prompt_tokens", body["usage"])
-            self.assertIn("total_tokens", body["usage"])
+            self.assertIn("input_tokens", body["usage"])
+            self.assertIn("output_tokens", body["usage"])
 
     def test_response_prefill(self):
         client = openai.Client(api_key=self.api_key, base_url=self.base_url)
@@ -1072,7 +1075,7 @@ class TestOpenAIV1Score(CustomTestCase):
         self.assertEqual(
             response["usage"]["completion_tokens"],
             0,
-            "completion_tokens should be 0 for /v1/score",
+            "output_tokens should be 0 for /v1/score",
         )
 
     def test_score_token_input(self):
@@ -1134,7 +1137,7 @@ class TestOpenAIV1Score(CustomTestCase):
         self.assertEqual(
             response["usage"]["completion_tokens"],
             0,
-            "completion_tokens should be 0 for /v1/score",
+            "output_tokens should be 0 for /v1/score",
         )
 
     def test_score_error_handling(self):

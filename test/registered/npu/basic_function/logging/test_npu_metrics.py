@@ -38,6 +38,8 @@ class _BaseTestNPUMetrics(TestNPULoggingBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        if cls.metrics_args is None:
+            cls.metrics_args = ["--enable-metrics"]
         cls.other_args.extend(cls.metrics_args)
         with (
             envs.SGLANG_ENABLE_METRICS_DP_ATTENTION.override(True),
@@ -735,13 +737,16 @@ class TestNPUStatLoggersDIRecording(CustomTestCase):
 
 
 if __name__ == "__main__":
-    loader = unittest.TestLoader()
-    suite = unittest.TestSuite()
-    suite.addTests(loader.loadTestsFromTestCase(TestNPUMetricsMFUDisabled))
-    suite.addTests(loader.loadTestsFromTestCase(TestNPUMetricsMFUEnabled))
-    suite.addTests(loader.loadTestsFromTestCase(TestNPUMetrics2NPU))
-    suite.addTests(loader.loadTestsFromTestCase(TestNPUMetricsExtraLabels))
-    suite.addTests(loader.loadTestsFromTestCase(TestNPUStatLoggersDI))
-    suite.addTests(loader.loadTestsFromTestCase(TestNPUStatLoggersDIRecording))
-
-    unittest.main(verbosity=2, defaultTest=lambda: suite)
+    # Run classes in definition order. argv[0] is a program-name placeholder.
+    unittest.main(
+        verbosity=2,
+        argv=[
+            "",
+            "TestNPUMetricsMFUDisabled",
+            "TestNPUMetricsMFUEnabled",
+            "TestNPUMetrics2NPU",
+            "TestNPUMetricsExtraLabels",
+            "TestNPUStatLoggersDI",
+            "TestNPUStatLoggersDIRecording",
+        ],
+    )

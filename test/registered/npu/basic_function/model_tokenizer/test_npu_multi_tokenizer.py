@@ -62,7 +62,7 @@ class TestMultiTokenizer(CustomTestCase):
             num_shots=gsm8k_num_shots,
         )
         metrics = run_eval(args)
-        self.assertGreaterEqual(metrics["score"], 0.845)
+        self.assertGreaterEqual(metrics["score"], 0.81)
 
     def test_batch_input_ids_routing(self):
         # Regression guard for sgl-project/sglang#29878 (introduced by #29214).

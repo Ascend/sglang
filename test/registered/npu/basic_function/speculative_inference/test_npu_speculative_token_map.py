@@ -115,8 +115,12 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
             "8",
             "--speculative-token-map",
             FR_SPEC_TOKEN_MAP_PATH,
+            # NOTE: --speculative-token-map (FR-Spec) uses global vocab token IDs to
+            # index the lm_head, which is TP-split when tp-size>1, causing an index
+            # out-of-bounds crash (see sgl-project/sglang#4328, unfixed upstream).
+            # Use tp-size=1 so the lm_head is not sharded.
             "--tp-size",
-            "4",
+            "1",
             "--mem-fraction-static",
             "0.7",
             "--disable-cuda-graph",

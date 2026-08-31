@@ -13,7 +13,7 @@ from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH,
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -36,7 +36,7 @@ PROMPTS = [
 ]
 
 MEM_FRACTION_STATIC = 0.8
-BASE_MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+BASE_MODEL = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 
 
 class OperationType(Enum):
