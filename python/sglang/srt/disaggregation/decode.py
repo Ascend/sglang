@@ -86,6 +86,7 @@ from sglang.srt.mem_cache.common import (
 )
 from sglang.srt.mem_cache.deepseek_v4_memory_pool import DeepSeekV4TokenToKVPool
 from sglang.srt.mem_cache.memory_pool import (
+    HybridLinearKVPool,
     HybridReqToTokenPool,
     KVCache,
     ReqToTokenPool,
@@ -189,9 +190,9 @@ class DecodeReqToTokenPool:
         # Indices of reqs that already have a req_pool_idx and will reuse
         # their existing slot (e.g. chunked prefill continuing across chunks).
         reusing = [i for i, r in enumerate(reqs) if r.kv.req_pool_idx is not None]
-        assert (
-            len(reusing) <= 1
-        ), "only one chunked request may reuse req_pool_idx in a batch"
+        assert len(reusing) <= 1, (
+            "only one chunked request may reuse req_pool_idx in a batch"
+        )
         assert all(
             reqs[i].inflight_middle_chunks > 0 or reqs[i].kv.kv_committed_len > 0
             for i in reusing
@@ -542,12 +543,21 @@ class DecodePreallocQueue(DecodeHiCachePreallocMixin):
             kv_data_lens += device_kv_data_lens[c4_layer_num:]
             kv_item_lens += device_kv_item_lens[c4_layer_num:]
             kv_data_mem_kinds += ["VRAM"] * len(device_kv_data_ptrs[c4_layer_num:])
+        draft_kv_as_state = (
+            self.scheduler.spec_algorithm.is_dspark()
+            and _is_npu
+            and isinstance(self.token_to_kv_pool, HybridLinearKVPool)
+            and self.is_mla_backend
+        )
+        if draft_kv_as_state and self.draft_token_to_kv_pool is None:
+            raise RuntimeError("PD dSparK Decode requires an allocated draft KV pool.")
+        draft_kv_pool = None if draft_kv_as_state else self.draft_token_to_kv_pool
         num_draft_entries = 0
-        if self.draft_token_to_kv_pool is not None:
+        if draft_kv_pool is not None:
             # We should also transfer draft model kv cache. The indices are
             # always shared with a target model.
             draft_kv_data_ptrs, draft_kv_data_lens, draft_kv_item_lens = (
-                self.draft_token_to_kv_pool.get_contiguous_buf_infos()
+                draft_kv_pool.get_contiguous_buf_infos()
             )
             kv_data_ptrs += draft_kv_data_ptrs
             kv_data_lens += draft_kv_data_lens
@@ -560,7 +570,7 @@ class DecodePreallocQueue(DecodeHiCachePreallocMixin):
         kv_args.kv_item_lens = kv_item_lens
         kv_args.kv_layer_ids = build_kv_layer_ids(
             token_to_kv_pool=self.token_to_kv_pool,
-            draft_token_to_kv_pool=self.draft_token_to_kv_pool,
+            draft_token_to_kv_pool=draft_kv_pool,
             num_draft_entries=num_draft_entries,
             num_hidden_layers=self.scheduler.model_config.num_hidden_layers,
         )
@@ -578,6 +588,7 @@ class DecodePreallocQueue(DecodeHiCachePreallocMixin):
             self.draft_token_to_kv_pool,
             total_kv_layers=self.scheduler.model_config.num_hidden_layers,
             req_to_token_pool=getattr(self, "req_to_token_pool", None),
+            draft_kv_as_state=draft_kv_as_state,
         )
 
         kv_args.ib_device = get_disagg().disaggregation_ib_device
@@ -1454,6 +1465,7 @@ class DecodePreallocQueue(DecodeHiCachePreallocMixin):
                 StateType.MINIMAX_INDEX_K: _full_kv_pages_payload,
                 StateType.SWA_RING: _swa_ring_payload,
                 StateType.C128_STATE: _c128_state_payload,
+                StateType.DRAFT_KV: _full_kv_pages_payload,
                 StateType.BLOCK_SCALE: _full_kv_pages_payload,
                 StateType.BLOCK_SCALE_SWA: _swa_payload,
             }
@@ -1778,9 +1790,9 @@ class DecodePreallocQueue(DecodeHiCachePreallocMixin):
 
         req_pool_indices = self.req_to_token_pool.alloc([req])
 
-        assert (
-            req_pool_indices is not None
-        ), "req_pool_indices is full! There is a bug in memory estimation."
+        assert req_pool_indices is not None, (
+            "req_pool_indices is full! There is a bug in memory estimation."
+        )
 
         fill_len = self._pre_alloc_fill_len(req)
         req.kv.kv_committed_len = fill_len
@@ -2194,9 +2206,9 @@ class DecodeTransferQueue(DecodeHiCacheTransferMixin):
                 ].tolist()
             )
         if decode_req.req.return_sampling_mask:
-            assert (
-                output_token_sampling_mask_idx is not None
-            ), "sampling mask buffer disabled on decode side"
+            assert output_token_sampling_mask_idx is not None, (
+                "sampling mask buffer disabled on decode side"
+            )
             sampling_mask_len = int(output_token_sampling_mask_len[0].item())
             if sampling_mask_len < 0:
                 decode_req.req.output_token_sampling_mask.append(None)
