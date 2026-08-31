@@ -1055,9 +1055,7 @@ class KimiK3MoE(nn.Module):
                 if self._shared_experts_attn_tp_comm:
                     group = get_parallel().attn_tp_group
                     gathered_for_shared = get_local_dp_buffer(group)
-                    attn_tp_all_gather_into_tensor(
-                        gathered_for_shared, hidden_states
-                    )
+                    attn_tp_all_gather_into_tensor(gathered_for_shared, hidden_states)
                     shared_compute_input = gathered_for_shared.clone()
                 else:
                     shared_compute_input = hidden_states.clone()
@@ -1079,9 +1077,7 @@ class KimiK3MoE(nn.Module):
                 wait_share_stream()
                 if self._shared_experts_attn_tp_comm:
                     shared_output = torch.empty_like(hidden_states)
-                    attn_tp_reduce_scatter_tensor(
-                        shared_output, npu_shared_gathered
-                    )
+                    attn_tp_reduce_scatter_tensor(shared_output, npu_shared_gathered)
                 else:
                     shared_output = npu_shared_gathered
             elif shared_event is not None:
