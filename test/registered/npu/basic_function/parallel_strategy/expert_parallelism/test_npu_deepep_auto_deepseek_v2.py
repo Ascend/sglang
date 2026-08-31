@@ -12,8 +12,8 @@ register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 
 class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
-    accuracy = 0.34
     model = DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
+    accuracy = 0.34
     other_args = [
         "--trust-remote-code",
         "--attention-backend",
