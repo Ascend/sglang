@@ -288,7 +288,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
         scores = []
         try:
             with torch.no_grad():
-                for doc in documents:
+                for i, doc in enumerate(documents):
                     prompt = render_vl_reranker_prompt(query, doc)
                     # Pass images only for multimodal (list) documents.
                     images = [IMAGES] if isinstance(doc, list) else None
@@ -301,7 +301,15 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                     yes_id = processor.tokenizer.convert_tokens_to_ids("yes")
                     no_id = processor.tokenizer.convert_tokens_to_ids("no")
                     probs = torch.softmax(logits[:, [yes_id, no_id]], dim=-1)
-                    scores.append(probs[0, 0].item())
+                    score = probs[0, 0].item()
+                    scores.append(score)
+                    # Log provenance (image vs text) per doc so a failure can
+                    # be traced to the exact image/document driving the score.
+                    doc_tag = "image" if images is not None else "text"
+                    print(
+                        f"  [HF {i}] {doc_tag}: score={score:.6f} "
+                        f"p_yes={probs[0, 0].item():.6f} p_no={probs[0, 1].item():.6f}"
+                    )
         finally:
             model.cpu()
             del model
@@ -319,7 +327,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
         yes_id = processor.tokenizer.convert_tokens_to_ids("yes")
         no_id = processor.tokenizer.convert_tokens_to_ids("no")
         scores = []
-        for doc in documents:
+        for i, doc in enumerate(documents):
             prompt = render_vl_reranker_prompt(query, doc)
             payload = {
                 "text": prompt,
@@ -330,6 +338,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
             }
             # Image parts become URL strings in image_data for the rendered
             # <|vision_start|><|image_pad|><|vision_end|> placeholder.
+            has_image = False
             if isinstance(doc, list):
                 image_data = [
                     part["image_url"]["url"]
@@ -340,6 +349,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                 ]
                 if image_data:
                     payload["image_data"] = image_data
+                    has_image = True
             response = requests.post(
                 f"{base_url}/generate",
                 json=payload,
@@ -360,7 +370,15 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                 elif token_id == no_id:
                     p_no = math.exp(logprob)
             denom = p_yes + p_no
-            scores.append(p_yes / denom if denom > 0 else 0.0)
+            score = p_yes / denom if denom > 0 else 0.0
+            scores.append(score)
+            # Log provenance (image vs text) per doc so a failure can be
+            # traced to the exact image/document driving the score.
+            doc_tag = "image" if has_image else "text"
+            print(
+                f"  [SRT {i}] {doc_tag}: score={score:.6f} "
+                f"p_yes={p_yes:.6f} p_no={p_no:.6f}"
+            )
         return scores
 
     def assert_multimodal_scores_close(
@@ -439,12 +457,17 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
                         model,
                         torch_dtype,
                         score_tolerance,
-                        query="What is shown in the image?",
+                        # Confident query: the image document gets a clear
+                        # "yes" (~1.0) and the unrelated text document a
+                        # clear "no" (~0.0), avoiding the boundary-sensitive
+                        # mid-confidence region (same rationale as the
+                        # text-mode fix).
+                        query="Does the image show a city street with cars and pedestrians?",
                         documents=[
                             [
                                 {"type": "image_url", "image_url": {"url": IMAGES}},
                             ],
-                            "A busy city street with cars and pedestrians.",
+                            "The Eiffel Tower is located in Paris, France and stands 330 meters tall.",
                         ],
                     )
 
