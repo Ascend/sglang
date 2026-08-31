@@ -21,17 +21,19 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=600, suite="nightly-4-npu-a3", nightly=True)
 
 # Video processing config matching the reference command
-_MM_PROCESS_CONFIG = json.dumps({
-    "video": {
-        "min_pixels": 76800,
-        "max_pixels": 921600,
-        "resized_height": 448,
-        "resized_width": 448,
-        "fps": 2,
-        "min_frames": 4,
-        "max_frames": 64,
+_MM_PROCESS_CONFIG = json.dumps(
+    {
+        "video": {
+            "min_pixels": 76800,
+            "max_pixels": 921600,
+            "resized_height": 448,
+            "resized_width": 448,
+            "fps": 2,
+            "min_frames": 4,
+            "max_frames": 64,
     }
-})
+}
+)
 
 _COMMON_ARGS = [
     "--attention-backend",
