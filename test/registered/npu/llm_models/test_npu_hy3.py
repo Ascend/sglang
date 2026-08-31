@@ -18,7 +18,7 @@ class TestHy3(GSM8KAscendMixin, CustomTestCase):
 
     model = HY3_WEIGHTS_PATH
     accuracy = 0
-    timeout_for_server_launch = 3000
+    timeout_for_server_launch = 1200
     other_args = [
         "--attention-backend",
         "ascend",
@@ -49,6 +49,7 @@ class TestHy3(GSM8KAscendMixin, CustomTestCase):
     ]
     env = {
         **os.environ,
+        "SGLANG_SET_CPU_AFFINITY": "1",
         "ASCEND_USE_FIA": "1",
         "STREAMS_PER_DEVICE": "32",
         "HCCL_BUFFSIZE": "3000",

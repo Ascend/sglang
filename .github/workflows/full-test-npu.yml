@@ -503,9 +503,9 @@ jobs:
           # cd ../
           cd test
           FILES=$(printf '%s,' \
-            test/registered/npu/llm_models/test_npu_hy3.py
+            test/registered/npu/llm_models/test_npu_hy3.py \
+            test/registered/npu/llm_models/test_npu_tele_flm.py
           )
-          # test/registered/npu/llm_models/test_npu_tele_flm.py
           FILES="${FILES%,}"
           python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "$FILES"
 

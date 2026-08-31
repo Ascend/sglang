@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.test_ascend_utils import (
@@ -27,7 +28,7 @@ class TestLFM25VL16B(TestVLMModels):
         "ascend",
         "--tp-size",
         2,
-        "-chunked-prefill-size",
+        "--chunked-prefill-size",
         "-1",
         "--max-prefill-tokens",
         "16384",
@@ -55,6 +56,24 @@ class TestLFM25VL16B(TestVLMModels):
         24,
         32,
     ]
+    env = {
+        **os.environ,
+        "ASCEND_USE_FIA": "1",
+        "STREAMS_PER_DEVICE": "32",
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "512",
+        "HCCL_BUFFSIZE": "3000",
+        "HCCL_OP_EXPANSION_MODE": "AIV",
+        "SGLANG_NPU_PROFILING": "0",
+        "SGLANG_NPU_PROFILING_STAGE": "prefill",
+        "SGLANG_ENABLE_SPEC_V2": "1",
+        "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
+        "SGLANG_DEEPEP_BF16_DISPATCH": "1",
+        "DEEP_NORMAL_MODE_USE_INT8_QUANT": "0",
+        "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
+        "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
+        "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "3600",
+        "SGLANG_SET_CPU_AFFINITY": "1",
+    }
 
     def test_vlm_mmmu_benchmark(self):
         self._run_vlm_mmmu_test()
