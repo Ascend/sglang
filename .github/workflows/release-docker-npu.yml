@@ -72,3 +72,25 @@ jobs:
             SGLANG_KERNEL_NPU_TAG=20260826
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
+
+  manifest:
+    needs: build
+    if: ${{ github.repository == 'Ascend/sglang' }}
+    uses: ./.github/workflows/generate-image-manifest.yml
+    secrets: inherit
+    concurrency:
+      group: manifest-deploy
+      cancel-in-progress: false
+    strategy:
+      matrix:
+        cann_version: ["9.0.0"]
+        device_type: ["910b", "a3"]
+    with:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix }}-cann${{ matrix.cann_version }}-${{ matrix.device_type }}
+      dockerfile: docker/npu1.Dockerfile
+      build_args: |
+        SGLANG_KERNEL_NPU_TAG=20260826
+        CANN_VERSION=${{ matrix.cann_version }}
+        DEVICE_TYPE=${{ matrix.device_type }}
+      artifact_name: image-manifest-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+      deploy_pages: 'true'
