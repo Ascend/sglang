@@ -8,45 +8,62 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: true
-
 jobs:
+  # 按架构拆分到原生 runner，去掉 QEMU 模拟：
+  # - amd64 在 x64 runner (ubuntu-latest) 上原生构建
+  # - arm64 在 arm64 runner (ubuntu-22.04-arm) 上原生构建
   build:
-    runs-on: ubuntu-22.04-arm
+    name: build ${{ matrix.platform }}-${{ matrix.device_type }}
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
-        cann_version: ["9.0.0"]
-        device_type: ["910b", "a3"]
-
+        include:
+          - cann_version: "9.0.0"
+            device_type: "910b"
+            dockerfile: docker/npu1.Dockerfile
+            platform: amd64
+            runner: ubuntu-latest
+          - cann_version: "9.0.0"
+            device_type: "910b"
+            dockerfile: docker/npu1.Dockerfile
+            platform: arm64
+            runner: ubuntu-22.04-arm
+          - cann_version: "9.0.0"
+            device_type: "a3"
+            dockerfile: docker/npu1.Dockerfile
+            platform: amd64
+            runner: ubuntu-latest
+          - cann_version: "9.0.0"
+            device_type: "a3"
+            dockerfile: docker/npu1.Dockerfile
+            platform: arm64
+            runner: ubuntu-22.04-arm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Free up disk space
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
         with:
           tool-cache: true
           docker-images: false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
+      - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
+
+      # tag 末尾追加平台后缀，避免两个架构的镜像互相覆盖；
+      # 最终不带平台后缀的 tag 由 merge job 合并生成
+      - name: Generate full image tag
+        run: |
+          echo "FULL_TAG=${{ github.event.inputs.tag_suffix }}-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ matrix.platform }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: |
-            swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
-          tags: |
-            type=raw,value=${{ github.event.inputs.tag_suffix }}
-          flavor: |
-            latest=false
-            suffix=-cann${{ matrix.cann_version }}-${{ matrix.device_type }}
+          images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
+          tags: ${{ env.FULL_TAG }}
 
       - name: Log into SWR
         uses: docker/login-action@v3
@@ -57,24 +74,59 @@ jobs:
           password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
 
       - name: Build and push Docker image
-        id: build-and-push
         uses: docker/build-push-action@v6
         with:
           context: docker
-          file: docker/npu1.Dockerfile
-          platforms: linux/arm64,linux/amd64
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           outputs: ${{ github.repository == 'Ascend/sglang' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
+          # 复用 GitHub Actions 缓存，二次构建可跳过大部分层
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
             SGLANG_KERNEL_NPU_TAG=20260826
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
 
-  manifest:
+  # 把两个单架构 tag 合并成最终的多架构 tag（manifest list / index）
+  merge:
+    name: merge multi-arch manifest
     needs: build
+    if: ${{ github.repository == 'Ascend/sglang' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cann_version: ["9.0.0"]
+        device_type: ["910b", "a3"]
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into SWR
+        uses: docker/login-action@v3
+        with:
+          registry: swr.cn-southwest-2.myhuaweicloud.com
+          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
+          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+
+      - name: Create multi-arch manifest
+        env:
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix }}-cann${{ matrix.cann_version }}-${{ matrix.device_type }}
+        run: |
+          docker buildx imagetools create \
+            -t "${IMAGE}" \
+            "${IMAGE}-amd64" \
+            "${IMAGE}-arm64"
+          # 如果 SWR 或下游拉取端不兼容 OCI index，改用 Docker schema2 manifest list：
+          #   docker manifest create "${IMAGE}" "${IMAGE}-amd64" "${IMAGE}-arm64"
+          #   docker manifest push "${IMAGE}"
+
+  manifest:
+    needs: merge
     if: ${{ github.repository == 'Ascend/sglang' }}
     uses: ./.github/workflows/generate-image-manifest.yml
     secrets: inherit
