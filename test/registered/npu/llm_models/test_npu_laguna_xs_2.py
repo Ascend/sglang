@@ -28,7 +28,7 @@ class TestLagunXS2(GSM8KAscendMixin, CustomTestCase):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "tp-size",
+        "--tp-size",
         2,
     ]
 

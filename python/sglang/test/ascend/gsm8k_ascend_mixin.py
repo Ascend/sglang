@@ -121,3 +121,15 @@ class GSM8KAscendMixin(ABC):
 
     def test_gsm8k2(self):
         self.test_gsm8k()
+
+    def test_gsm8k_2048(self):
+        self.max_tokens = 2048
+        self.test_gsm8k()
+
+    def test_gsm8k_2048_1(self):
+        self.max_tokens = 2048
+        self.test_gsm8k()
+
+    def test_gsm8k_2048_2(self):
+        self.max_tokens = 2048
+        self.test_gsm8k()
