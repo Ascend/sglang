@@ -118,5 +118,6 @@ class TestQwen235B(TestNpuPerformanceTestCaseBase):
         self.run_throughput()
 
 
+
 if __name__ == "__main__":
     unittest.main()
