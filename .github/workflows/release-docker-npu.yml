@@ -79,7 +79,9 @@ jobs:
     uses: ./.github/workflows/generate-image-manifest.yml
     secrets: inherit
     concurrency:
-      group: manifest-deploy
+      # Unique per workflow + matrix leg + tag (shared reusable manifest
+      # workflow; see release-docker-dev.yml).
+      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       cancel-in-progress: false
     strategy:
       matrix:

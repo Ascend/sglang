@@ -89,7 +89,12 @@ jobs:
     uses: ./.github/workflows/generate-image-manifest.yml
     secrets: inherit
     concurrency:
-      group: manifest-deploy
+      # Unique per workflow + matrix leg + tag: the reusable manifest workflow
+      # is shared by several release-*.yml files, and each manifest job expands
+      # into one job per device_type. A fixed group name makes them cancel each
+      # other while queued ("Canceling since a higher priority waiting request
+      # for manifest-deploy exists").
+      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       cancel-in-progress: false
     strategy:
       matrix:
