@@ -485,7 +485,7 @@ jobs:
       matrix:
         test_config:
           - name: test_npu_kvtc_qwen3_235b_a22b_1p_gsm8k_evalscope
-            runner: linux-aarch64-a3-800t-16
+            runner: linux-aarch64-a3-16
             test_case: test/registered/ascend/kvtc/qwen3_235b_a22b/test_npu_kvtc_qwen3_235b_a22b_1p_gsm8k_evalscope.py
             test_type: 'accuracy'
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
