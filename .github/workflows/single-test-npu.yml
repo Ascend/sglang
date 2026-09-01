@@ -18,6 +18,7 @@ jobs:
     name: single-node-poc (${{ matrix.image }})
     runs-on: linux-aarch64-a3-16
     strategy:
+      fail-fast: false
       matrix:
         image:
           # Daily build from upstream main: contains sgl-project/sglang#37091
