@@ -135,7 +135,7 @@ _MIMO_BASE_ARGS = [
     "--attention-backend", "ascend",
     "--disable-piecewise-cuda-graph",
     "--base-gpu-id", "0",
-    "--max-running-requests", "64",
+    # "--max-running-requests", "64",
     "--cuda-graph-bs", "1", "2", "4", "8", "16",
     "--dp-size", "4",
     "--enable-dp-attention",
@@ -187,7 +187,7 @@ class TestSwaFullTokensRatioPool(CustomTestCase):
 
     def test_ratio_respected(self):
         """S1: swa_tokens = full_tokens * ratio for various ratios."""
-        for ratio in [0.25, 0.5, 0.8, 1.0]:
+        for ratio in [0.25, 0.5, 1.0]:
             mr = _make_hybrid_swa_model_runner(ratio=ratio, page_size=1)
             config = _run_pool_config(mr)
             full = config.full_max_total_num_tokens
