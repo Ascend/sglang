@@ -21,22 +21,22 @@ jobs:
         include:
           - cann_version: "9.0.0"
             device_type: "910b"
-            dockerfile: docker/npu1.Dockerfile
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: amd64
             runner: ubuntu-latest
           - cann_version: "9.0.0"
             device_type: "910b"
-            dockerfile: docker/npu1.Dockerfile
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: arm64
             runner: ubuntu-22.04-arm
           - cann_version: "9.0.0"
             device_type: "a3"
-            dockerfile: docker/npu1.Dockerfile
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: amd64
             runner: ubuntu-latest
           - cann_version: "9.0.0"
             device_type: "a3"
-            dockerfile: docker/npu1.Dockerfile
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: arm64
             runner: ubuntu-22.04-arm
     steps:
@@ -52,11 +52,13 @@ jobs:
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
 
-      # tag 末尾追加平台后缀，避免两个架构的镜像互相覆盖；
-      # 最终不带平台后缀的 tag 由 merge job 合并生成
+      # tag_suffix 放在基础 tag 之后、平台后缀之前：
+      #   cann9.0.0-910b-20260901-amd64 / cann9.0.0-910b-20260901-arm64
+      # 平台后缀保持在最末尾，避免两个架构的镜像互相覆盖；
+      # 最终不带平台后缀的 tag（cann9.0.0-910b-20260901）由 merge job 合并生成
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=${{ github.event.inputs.tag_suffix }}-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "FULL_TAG=cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}-${{ matrix.platform }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -88,7 +90,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=20260826
+            SGLANG_KERNEL_NPU_TAG=2026.9.1
             CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
 
@@ -115,7 +117,7 @@ jobs:
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix }}-cann${{ matrix.cann_version }}-${{ matrix.device_type }}
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
@@ -140,10 +142,10 @@ jobs:
         cann_version: ["9.0.0"]
         device_type: ["910b", "a3"]
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix }}-cann${{ matrix.cann_version }}-${{ matrix.device_type }}
-      dockerfile: docker/npu1.Dockerfile
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+      dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
       build_args: |
-        SGLANG_KERNEL_NPU_TAG=20260826
+        SGLANG_KERNEL_NPU_TAG=2026.9.1
         CANN_VERSION=${{ matrix.cann_version }}
         DEVICE_TYPE=${{ matrix.device_type }}
       artifact_name: image-manifest-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}

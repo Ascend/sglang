@@ -20,19 +20,19 @@ jobs:
       matrix:
         include:
           - device_type: a3
-            dockerfile: docker/npu2-a3.Dockerfile
+            dockerfile: docker/npu_cann9.1.0_python312_a3.Dockerfile
             platform: amd64
             runner: ubuntu-latest
           - device_type: a3
-            dockerfile: docker/npu2-a3.Dockerfile
+            dockerfile: docker/npu_cann9.1.0_python312_a3.Dockerfile
             platform: arm64
             runner: ubuntu-22.04-arm
           - device_type: 950
-            dockerfile: docker/npu2-a5.Dockerfile
+            dockerfile: docker/npu_cann9.1.0_python312_950.Dockerfile
             platform: amd64
             runner: ubuntu-latest
           - device_type: 950
-            dockerfile: docker/npu2-a5.Dockerfile
+            dockerfile: docker/npu_cann9.1.0_python312_950.Dockerfile
             platform: arm64
             runner: ubuntu-22.04-arm
     steps:
@@ -84,7 +84,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=20260826
+            SGLANG_KERNEL_NPU_TAG=2026.9.1
             CANN_VERSION=9.1.0
             DEVICE_TYPE=${{ matrix.device_type }}
 
@@ -134,14 +134,14 @@ jobs:
       matrix:
         include:
           - device_type: a3
-            dockerfile: docker/npu2-a3.Dockerfile
+            dockerfile: docker/npu_cann9.1.0_python312_a3.Dockerfile
           - device_type: 950
-            dockerfile: docker/npu2-a5.Dockerfile
+            dockerfile: docker/npu_cann9.1.0_python312_950.Dockerfile
     with:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       dockerfile: ${{ matrix.dockerfile }}
       build_args: |
-        SGLANG_KERNEL_NPU_TAG=20260826
+        SGLANG_KERNEL_NPU_TAG=2026.9.1
         CANN_VERSION=9.1.0
         DEVICE_TYPE=${{ matrix.device_type }}
       artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
