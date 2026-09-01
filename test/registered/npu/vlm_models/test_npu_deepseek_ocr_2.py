@@ -38,9 +38,6 @@ class TestDeepSeekOCR2(TestNpuAccuracyTestCaseBase):
         128,
         "--skip-server-warmup",
     ]
-    envs = {
-        "EVALSCOPE_EXTRAS": "omnidoc-bench",
-    }
     accuracy = 0
     datasets = ["omni_doc_bench"]
     generation_config = {"max_tokens": 512}
