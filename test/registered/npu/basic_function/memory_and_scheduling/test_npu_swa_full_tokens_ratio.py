@@ -5,7 +5,7 @@ Only effective on Hybrid SWA models (DeepSeek V4, MiMo, Inkling, etc.).
 
 Two test strategies:
 - Unit test: mock Hybrid SWA model, verify pool size calculation (CPU only)
-- Server test: launch with a common model, verify parameter is accepted
+- Server test: launch a real Hybrid SWA model, verify parameter is accepted
 """
 
 import contextlib
@@ -17,7 +17,12 @@ import requests
 
 from sglang.srt.runtime_context import get_parallel
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import MIMO_V2_FLASH_WEIGHTS_PATH
+from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
+    BENCHMARK_TOOL_DEFAULT,
+)
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    MIMO_V2_FLASH_MODEL_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -26,7 +31,6 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 register_npu_ci(est_time=400, suite="full-1-npu-a3-test-debug", nightly=True)
 
 
@@ -122,6 +126,54 @@ def _run_pool_config(mr, available_bytes=10_000_000):
         return cfg.calculate_pool_sizes(available_bytes, mr.server_args.page_size)
 
 
+_MIMO_BASE_ARGS = [
+    "--tp-size", "16",
+    "--trust-remote-code",
+    "--device", "npu",
+    "--mem-fraction-static", "0.85",
+    "--reasoning-parser", "mimo",
+    "--attention-backend", "ascend",
+    "--disable-piecewise-cuda-graph",
+    "--base-gpu-id", "0",
+    "--max-running-requests", "64",
+    "--cuda-graph-bs", "1", "2", "4", "8", "16",
+    "--dp-size", "4",
+    "--enable-dp-attention",
+    "--enable-dp-lm-head",
+    "--quantization", "modelslim",
+    "--skip-server-warmup",
+    "--speculative-algorithm", "EAGLE",
+    "--speculative-num-steps", "3",
+    "--speculative-eagle-topk", "1",
+    "--speculative-num-draft-tokens", "4",
+    "--enable-multi-layer-eagle",
+    "--speculative-draft-model-quantization", "unquant",
+    "--moe-a2a-backend", "deepep",
+    "--deepep-mode", "auto",
+]
+
+_MIMO_ENVS = {
+    "SGLANG_SET_CPU_AFFINITY": "1",
+    "ASCEND_USE_FIA": "1",
+    "STREAMS_PER_DEVICE": "32",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
+    "HCCL_BUFFSIZE": "800",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "HCCL_SOCKET_IFNAME": "lo",
+    "GLOO_SOCKET_IFNAME": "lo",
+    "SGLANG_NPU_PROFILING": "0",
+    "SGLANG_NPU_PROFILING_STAGE": "prefill",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
+    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24669",
+    "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "3600",
+    "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_DEEPEP_BF16_DISPATCH": "0",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+}
+
+
 class TestSwaFullTokensRatioPool(CustomTestCase):
     """Testcase: Verify --swa-full-tokens-ratio controls SWA pool size
     via pool_configurator (CPU-only, no GPU needed).
@@ -183,32 +235,29 @@ class TestSwaFullTokensRatioPool(CustomTestCase):
 
 class TestSwaFullTokensRatioServer(CustomTestCase):
     """Testcase: Verify --swa-full-tokens-ratio is accepted by the server
-    on a common model (non-Hybrid-SWA) without causing errors.
+    on a real Hybrid SWA model (MiMo V2 Flash).
 
-    On non-Hybrid-SWA models, the parameter is parsed but has no effect
-    on pool configuration. This test verifies the parameter does not break
-    server startup or inference.
+    On Hybrid SWA models, the parameter controls SWA pool allocation.
+    This test verifies the server starts and inference works with the
+    parameter configured.
 
     [Test Category] Parameter
     [Test Target] --swa-full-tokens-ratio
-    [Scenario] S2: parameter accepted on non-Hybrid-SWA model
+    [Scenario] S2: parameter accepted on Hybrid SWA model
     """
 
-    model = MIMO_V2_FLASH_WEIGHTS_PATH
+    model = MIMO_V2_FLASH_MODEL_PATH
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
 
-    _BASE_ARGS = [
-        "--attention-backend",
-        "ascend",
-        "--disable-cuda-graph",
-    ]
-
-    def test_ratio_accepted_no_error(self):
-        """S2: --swa-full-tokens-ratio 0.5 is accepted, server starts and infers."""
+    def _launch_and_verify(self, ratio):
+        """Launch server with given ratio and verify inference works."""
+        args = _MIMO_BASE_ARGS + ["--swa-full-tokens-ratio", ratio]
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=self._BASE_ARGS + ["--swa-full-tokens-ratio", "0.5"],
+            other_args=args,
+            env=_MIMO_ENVS,
         )
         try:
             resp = requests.post(
@@ -217,34 +266,24 @@ class TestSwaFullTokensRatioServer(CustomTestCase):
                     "text": "The capital of France is",
                     "sampling_params": {"temperature": 0, "max_new_tokens": 32},
                 },
-                timeout=60,
+                timeout=120,
             )
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Paris", resp.text)
         finally:
             kill_process_tree(process.pid)
+
+    def test_ratio_default_accepted(self):
+        """S2: Default ratio (0.8) is accepted, server starts and infers."""
+        self._launch_and_verify("0.8")
+
+    def test_ratio_custom_accepted(self):
+        """S2: --swa-full-tokens-ratio 0.5 is accepted."""
+        self._launch_and_verify("0.5")
 
     def test_ratio_max_accepted(self):
         """S2: --swa-full-tokens-ratio 1.0 is accepted."""
-        process = popen_launch_server(
-            self.model,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=self._BASE_ARGS + ["--swa-full-tokens-ratio", "1.0"],
-        )
-        try:
-            resp = requests.post(
-                f"{DEFAULT_URL_FOR_TEST}/generate",
-                json={
-                    "text": "The capital of France is",
-                    "sampling_params": {"temperature": 0, "max_new_tokens": 32},
-                },
-                timeout=60,
-            )
-            self.assertEqual(resp.status_code, 200)
-            self.assertIn("Paris", resp.text)
-        finally:
-            kill_process_tree(process.pid)
+        self._launch_and_verify("1.0")
 
 
 if __name__ == "__main__":

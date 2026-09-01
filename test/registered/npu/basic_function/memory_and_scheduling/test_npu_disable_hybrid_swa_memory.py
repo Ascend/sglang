@@ -5,7 +5,7 @@ disables the separate SWA memory pool and falls back to a unified pool.
 
 Two test strategies:
 - Unit test: mock ModelConfig to verify is_hybrid_swa flag behavior
-- Server test: launch with a real model to verify parameter acceptance
+- Server test: launch a real Hybrid SWA model to verify parameter acceptance
 """
 
 import unittest
@@ -14,8 +14,11 @@ from unittest.mock import patch
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    MIMO_V2_FLASH_WEIGHTS_PATH,
+from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
+    BENCHMARK_TOOL_DEFAULT,
+)
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    MIMO_V2_FLASH_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -25,8 +28,56 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 register_npu_ci(est_time=400, suite="full-1-npu-a3-test-debug", nightly=True)
+
+
+_MIMO_BASE_ARGS = [
+    "--tp-size", "16",
+    "--trust-remote-code",
+    "--device", "npu",
+    "--mem-fraction-static", "0.85",
+    "--swa-full-tokens-ratio", "0.95",
+    "--reasoning-parser", "mimo",
+    "--attention-backend", "ascend",
+    "--disable-piecewise-cuda-graph",
+    "--base-gpu-id", "0",
+    "--max-running-requests", "64",
+    "--cuda-graph-bs", "1", "2", "4", "8", "16",
+    "--dp-size", "4",
+    "--enable-dp-attention",
+    "--enable-dp-lm-head",
+    "--quantization", "modelslim",
+    "--skip-server-warmup",
+    "--speculative-algorithm", "EAGLE",
+    "--speculative-num-steps", "3",
+    "--speculative-eagle-topk", "1",
+    "--speculative-num-draft-tokens", "4",
+    "--enable-multi-layer-eagle",
+    "--speculative-draft-model-quantization", "unquant",
+    "--moe-a2a-backend", "deepep",
+    "--deepep-mode", "auto",
+]
+
+_MIMO_ENVS = {
+    "SGLANG_SET_CPU_AFFINITY": "1",
+    "ASCEND_USE_FIA": "1",
+    "STREAMS_PER_DEVICE": "32",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
+    "HCCL_BUFFSIZE": "800",
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "HCCL_SOCKET_IFNAME": "lo",
+    "GLOO_SOCKET_IFNAME": "lo",
+    "SGLANG_NPU_PROFILING": "0",
+    "SGLANG_NPU_PROFILING_STAGE": "prefill",
+    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
+    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "3584",
+    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24669",
+    "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "3600",
+    "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_DEEPEP_BF16_DISPATCH": "0",
+    "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+}
 
 
 class TestDisableHybridSwaMemoryUnit(CustomTestCase):
@@ -60,7 +111,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
                         return_value=True,
                     ):
                         mc = ModelConfig(
-                            model_path=MIMO_V2_FLASH_WEIGHTS_PATH,
+                            model_path=MIMO_V2_FLASH_MODEL_PATH,
                             trust_remote_code=True,
                             disable_hybrid_swa_memory=False,
                         )
@@ -76,7 +127,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
 
         with patch.object(ModelConfig, "_maybe_pull_model_for_runai"):
             with patch.object(ModelConfig, "_maybe_pull_model_tokenizer_from_remote"):
-                with patch.object(ModelConfig, "get_hf_config") as mock_get_hf_config:
+                with patch.object( ModelConfig, "get_hf_config") as mock_get_hf_config:
                     mock_get_hf_config.return_value = type(
                         "MockHFConfig",
                         (),
@@ -87,7 +138,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
                         return_value=True,
                     ):
                         mc = ModelConfig(
-                            model_path=MIMO_V2_FLASH_WEIGHTS_PATH,
+                            model_path=MIMO_V2_FLASH_MODEL_PATH,
                             trust_remote_code=True,
                             disable_hybrid_swa_memory=True,
                         )
@@ -113,10 +164,9 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
                         "sglang.srt.configs.model_config.is_hybrid_swa_model",
                         return_value=False,
                     ):
-                        # Test both flag values — is_hybrid_swa should always be False
                         for flag in [False, True]:
                             mc = ModelConfig(
-                                model_path=MIMO_V2_FLASH_WEIGHTS_PATH,
+                                model_path=MIMO_V2_FLASH_MODEL_PATH,
                                 trust_remote_code=True,
                                 disable_hybrid_swa_memory=flag,
                             )
@@ -130,11 +180,10 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
 
 class TestDisableHybridSwaMemoryServer(CustomTestCase):
     """Testcase: Verify --disable-hybrid-swa-memory is accepted by the server
-    and does not break inference.
+    on a real Hybrid SWA model (MiMo V2 Flash).
 
-    On non-Hybrid-SWA models (like Llama-3.2-1B), the parameter is a no-op
-    but should be accepted without errors. This test verifies the parameter
-    is properly parsed and does not prevent server startup or inference.
+    On Hybrid SWA models, this flag disables the separate SWA memory pool.
+    This test verifies the server starts and inference works with the flag.
 
     [Test Category] Parameter
     [Test Target] --disable-hybrid-swa-memory
@@ -142,13 +191,8 @@ class TestDisableHybridSwaMemoryServer(CustomTestCase):
     [Scenario] D2: explicit --disable-hybrid-swa-memory
     """
 
-    model = MIMO_V2_FLASH_WEIGHTS_PATH
-
-    _BASE_ARGS = [
-        "--attention-backend",
-        "ascend",
-        "--disable-cuda-graph",
-    ]
+    model = MIMO_V2_FLASH_MODEL_PATH
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
 
     def _send_request(self):
         """Send a simple generation request and verify the response."""
@@ -158,7 +202,7 @@ class TestDisableHybridSwaMemoryServer(CustomTestCase):
                 "text": "The capital of France is",
                 "sampling_params": {"temperature": 0, "max_new_tokens": 32},
             },
-            timeout=60,
+            timeout=120,
         )
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Paris", resp.text)
@@ -169,7 +213,8 @@ class TestDisableHybridSwaMemoryServer(CustomTestCase):
             self.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=self._BASE_ARGS,
+            other_args=_MIMO_BASE_ARGS,
+            env=_MIMO_ENVS,
         )
         try:
             self._send_request()
@@ -182,7 +227,8 @@ class TestDisableHybridSwaMemoryServer(CustomTestCase):
             self.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=self._BASE_ARGS + ["--disable-hybrid-swa-memory"],
+            other_args=_MIMO_BASE_ARGS + ["--disable-hybrid-swa-memory"],
+            env=_MIMO_ENVS,
         )
         try:
             self._send_request()
