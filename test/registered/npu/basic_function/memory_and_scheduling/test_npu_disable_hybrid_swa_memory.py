@@ -15,7 +15,7 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+    MIMO_V2_FLASH_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -66,7 +66,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
                         return_value=True,
                     ):
                         mc = ModelConfig(
-                            model_path=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+                            model_path=MIMO_V2_FLASH_WEIGHTS_PATH,
                             trust_remote_code=True,
                             disable_hybrid_swa_memory=False,
                         )
@@ -95,7 +95,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
                         return_value=True,
                     ):
                         mc = ModelConfig(
-                            model_path=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+                            model_path=MIMO_V2_FLASH_WEIGHTS_PATH,
                             trust_remote_code=True,
                             disable_hybrid_swa_memory=True,
                         )
@@ -126,7 +126,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
                         # Test both flag values — is_hybrid_swa should always be False
                         for flag in [False, True]:
                             mc = ModelConfig(
-                                model_path=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+                                model_path=MIMO_V2_FLASH_WEIGHTS_PATH,
                                 trust_remote_code=True,
                                 disable_hybrid_swa_memory=flag,
                             )
@@ -156,7 +156,7 @@ class TestDisableHybridSwaMemoryServer(CustomTestCase):
     [Scenario] D2: explicit --disable-hybrid-swa-memory
     """
 
-    model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+    model = MIMO_V2_FLASH_WEIGHTS_PATH
 
     _BASE_ARGS = [
         "--attention-backend",
