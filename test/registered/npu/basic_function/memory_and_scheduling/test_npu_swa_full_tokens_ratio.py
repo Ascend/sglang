@@ -30,10 +30,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="full-1-npu-a3-test-debug", nightly=True)
 
 
-# ---------------------------------------------------------------------------
-# Mock helpers (adapted from test_pool_configurator.py)
-# ---------------------------------------------------------------------------
-
 @contextlib.contextmanager
 def _mock_cpu_env(kv_size=2, tp_size=1):
     """Mock GPU-dependent functions for CPU-only testing."""
@@ -126,10 +122,6 @@ def _run_pool_config(mr, available_bytes=10_000_000):
         return cfg.calculate_pool_sizes(available_bytes, mr.server_args.page_size)
 
 
-# ---------------------------------------------------------------------------
-# Unit tests: verify ratio controls SWA pool size (CPU only)
-# ---------------------------------------------------------------------------
-
 class TestSwaFullTokensRatioPool(CustomTestCase):
     """Testcase: Verify --swa-full-tokens-ratio controls SWA pool size
     via pool_configurator (CPU-only, no GPU needed).
@@ -188,10 +180,6 @@ class TestSwaFullTokensRatioPool(CustomTestCase):
             config.full_max_total_num_tokens,
         )
 
-
-# ---------------------------------------------------------------------------
-# Server tests: verify parameter is accepted (common model, parameter no-op)
-# ---------------------------------------------------------------------------
 
 class TestSwaFullTokensRatioServer(CustomTestCase):
     """Testcase: Verify --swa-full-tokens-ratio is accepted by the server

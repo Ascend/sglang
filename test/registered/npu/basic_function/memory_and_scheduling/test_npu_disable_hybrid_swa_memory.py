@@ -29,10 +29,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="full-1-npu-a3-test-debug", nightly=True)
 
 
-# ---------------------------------------------------------------------------
-# Unit tests: verify is_hybrid_swa flag controlled by the parameter
-# ---------------------------------------------------------------------------
-
 class TestDisableHybridSwaMemoryUnit(CustomTestCase):
     """Testcase: Verify --disable-hybrid-swa-memory controls is_hybrid_swa
     in ModelConfig._derive_hybrid_model().
@@ -53,9 +49,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
 
         with patch.object(ModelConfig, "_maybe_pull_model_for_runai"):
             with patch.object(ModelConfig, "_maybe_pull_model_tokenizer_from_remote"):
-                with patch.object(
-                    ModelConfig, "get_hf_config"
-                ) as mock_get_hf_config:
+                with patch.object(ModelConfig, "get_hf_config") as mock_get_hf_config:
                     mock_get_hf_config.return_value = type(
                         "MockHFConfig",
                         (),
@@ -82,9 +76,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
 
         with patch.object(ModelConfig, "_maybe_pull_model_for_runai"):
             with patch.object(ModelConfig, "_maybe_pull_model_tokenizer_from_remote"):
-                with patch.object(
-                    ModelConfig, "get_hf_config"
-                ) as mock_get_hf_config:
+                with patch.object(ModelConfig, "get_hf_config") as mock_get_hf_config:
                     mock_get_hf_config.return_value = type(
                         "MockHFConfig",
                         (),
@@ -111,9 +103,7 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
 
         with patch.object(ModelConfig, "_maybe_pull_model_for_runai"):
             with patch.object(ModelConfig, "_maybe_pull_model_tokenizer_from_remote"):
-                with patch.object(
-                    ModelConfig, "get_hf_config"
-                ) as mock_get_hf_config:
+                with patch.object(ModelConfig, "get_hf_config") as mock_get_hf_config:
                     mock_get_hf_config.return_value = type(
                         "MockHFConfig",
                         (),
@@ -137,10 +127,6 @@ class TestDisableHybridSwaMemoryUnit(CustomTestCase):
                                 f"(disable_hybrid_swa_memory={flag})",
                             )
 
-
-# ---------------------------------------------------------------------------
-# Server tests: verify parameter is accepted by the server
-# ---------------------------------------------------------------------------
 
 class TestDisableHybridSwaMemoryServer(CustomTestCase):
     """Testcase: Verify --disable-hybrid-swa-memory is accepted by the server
