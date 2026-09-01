@@ -70,11 +70,13 @@ class TestImageProcessorBackendParsing(CustomTestCase):
 
     def test_deprecated_conflict(self):
         with self.assertRaises(ValueError):
-            self._parse([
+            self._parse(
+                [
                 "--disable-fast-image-processor",
                 "--image-processor-backend",
                 "torchvision",
-            ])
+                ]
+            )
 
 
 class TestImageProcessorBackendE2E(CustomTestCase):
