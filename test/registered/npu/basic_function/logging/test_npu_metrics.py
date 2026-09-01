@@ -38,6 +38,8 @@ class _BaseTestNPUMetrics(TestNPULoggingBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        if cls.metrics_args is None:
+            cls.metrics_args = ["--enable-metrics"]
         cls.other_args.extend(cls.metrics_args)
         with (
             envs.SGLANG_ENABLE_METRICS_DP_ATTENTION.override(True),
