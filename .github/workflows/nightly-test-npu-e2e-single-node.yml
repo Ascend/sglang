@@ -54,6 +54,7 @@ jobs:
   e2e:
     name: ${{ inputs.test_config_name }}
     runs-on: ${{ inputs.runner }}
+    timeout-minutes: 2880
     container:
       image: ${{ inputs.image }}
     steps:
@@ -82,7 +83,7 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
 
       - name: Run test
-        timeout-minutes: 300
+        timeout-minutes: 2880
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
@@ -160,6 +161,8 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+            mkdir -p /sgl-workspace/sglang/scripts
+            cp ${sglang_source_path}/scripts/kvtc_calibrate.py /sgl-workspace/sglang/scripts/
           fi
 
           source /usr/local/Ascend/cann/set_env.sh || true
