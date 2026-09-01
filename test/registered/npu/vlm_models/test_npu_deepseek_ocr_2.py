@@ -6,9 +6,15 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 from sglang.test.ascend.test_ascend_utils import DEEPSEEK_OCR_2_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
+# register_npu_ci(
+#     est_time=400,
+#     suite="full-1-npu-a3",
+#     nightly=True,
+# )
+
 register_npu_ci(
     est_time=400,
-    suite="full-1-npu-a3",
+    suite="nightly-acc-debug-2-npu-a3",
     nightly=True,
 )
 
