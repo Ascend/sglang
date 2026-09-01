@@ -9,7 +9,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="full-16-npu-a3-test-debug",
     nightly=True,
     disabled="accuracy testcase",
 )
@@ -52,8 +52,6 @@ MIMO_V2_FLASH_W8A8_8P_OTHER_ARGS = [
     "--disable-piecewise-cuda-graph",
     "--base-gpu-id",
     0,
-    "--max-running-requests",
-    64,
     "--cuda-graph-bs",
     1,
     2,
@@ -75,6 +73,8 @@ MIMO_V2_FLASH_W8A8_8P_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
+    "--swa-full-tokens-ratio",
+    0.3,
     "--enable-multi-layer-eagle",
     "--speculative-draft-model-quantization",
     "unquant",
