@@ -149,9 +149,13 @@ for test_case in "${TEST_CASES[@]}";do
         ( ${PYTHON_FOR_SGLANG} -u "${sglang_source_path}/${test_case}" 2>&1 || true ) | tee -a "${log_path}/${tc_name}.log"
         sleep 14400
     else
+        # Use process substitution so bash only waits for the python process.
+        # A plain `python | tee` pipeline hangs forever when a grandchild
+        # (e.g. the smg router spawned via Popen without stdout redirection)
+        # inherits and holds the pipe write end after python exits.
         set +e
-        ${PYTHON_FOR_SGLANG} -u "${sglang_source_path}/${test_case}" 2>&1 | tee -a "${log_path}/${tc_name}.log"
-        case_exit=${PIPESTATUS[0]}
+        ${PYTHON_FOR_SGLANG} -u "${sglang_source_path}/${test_case}" > >(tee -a "${log_path}/${tc_name}.log") 2>&1
+        case_exit=$?
         set -e
         if [ "${case_exit}" != "0" ];then
             OVERALL_SUCCESS=false
