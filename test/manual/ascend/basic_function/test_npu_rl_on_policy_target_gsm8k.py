@@ -40,6 +40,7 @@ OTHER_ARGS = [
     "--enable-deterministic-inference",
     "--rl-on-policy-target",
     "fsdp",
+    "--disable-cuda-graph",
 ]
 
 
