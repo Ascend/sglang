@@ -10,14 +10,14 @@ register_npu_ci(est_time=1200, suite="full-16-npu-a3", nightly=True)
 
 
 class TestHy3(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the Tencent-Hunyuan/Hy3 model on the GSM8K dataset is no less than 0.95.
+    """Testcase: Verify that the inference accuracy of the Tencent-Hunyuan/Hy3 model on the GSM8K dataset is no less than 0.9.
 
     [Test Category] Model
     [Test Target] Tencent-Hunyuan/Hy3
     """
 
     model = HY3_WEIGHTS_PATH
-    accuracy = 0
+    accuracy = 0.9
     timeout_for_server_launch = 1200
     other_args = [
         "--attention-backend",

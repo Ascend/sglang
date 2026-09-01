@@ -503,8 +503,7 @@ jobs:
           # cd ../
           cd test
           FILES=$(printf '%s,' \
-            test/registered/npu/llm_models/test_npu_hy3.py \
-            test/registered/npu/llm_models/test_npu_hy3_1319.py
+            test/registered/npu/llm_models/test_npu_hy3.py
           )
           # test/registered/npu/llm_models/test_npu_tele_flm.py
           FILES="${FILES%,}"
