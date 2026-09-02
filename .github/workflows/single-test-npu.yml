@@ -21,11 +21,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          # Daily build from upstream main: contains sgl-project/sglang#37091
-          # (merged 2026-08-30) -> expected to hit the evict->unevict TypeError (RED).
-          - swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
-          # 2026-08-28 snapshot: predates #37091 -> expected GREEN (control).
-          - swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:20260828-cann9.0.0-a3
+          # 2026-08-28 snapshot + CANN 9.1.0: has the aclnnHcPre (HcPre) op that
+          # DSV4 mHC pre-norm requires (cann9.0.0 lacks it), and does NOT contain
+          # #37091. The bundled sglang is overridden via PYTHONPATH to upstream
+          # main below, so #37091 runs on top of a runnable DSV4 CANN runtime.
+          - swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260828
     container:
       image: ${{ matrix.image }}
     steps:
