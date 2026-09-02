@@ -208,17 +208,31 @@ def run_evalscope(
                     logger.info(
                         f"report_data content: {json.dumps(report_data, indent=2, ensure_ascii=False)}"
                     )
-                for item in report_data:
-                    score = item.get("score")
-                    if score is not None:
-                        metrics["accuracy"] = float(score)
-                        logger.info(f"The Final Accuracy from report: {score}")
-                        break
+                if isinstance(report_data, dict):
+                    for m in report_data.get("metrics", []):
+                        if m.get("name") == "overall_EN":
+                            metrics["accuracy"] = float(m["score"])
+                            logger.info(f"The Final Accuracy from report: {m['score']}")
+                            break
+                    else:
+                        if report_data.get("score") is not None:
+                            metrics["accuracy"] = float(report_data["score"])
+                            logger.info(
+                                f"The Final Accuracy from report: {report_data['score']}"
+                            )
+                else:
+                    for item in report_data:
+                        score = item.get("score")
+                        if score is not None:
+                            metrics["accuracy"] = float(score)
+                            logger.info(f"The Final Accuracy from report: {score}")
+                            break
             except Exception as e:
                 logger.warning(f"Failed to read report file {report_path}: {e}")
 
         if "accuracy" not in metrics:
             accuracy_patterns = [
+                r"overall_EN\s*.*?│\s*\d+\s*│\s*([\d.]+)\s*│",
                 r"mean_acc\s*.*?│\s*\d+\s*│\s*([\d.]+)\s*│",
                 r"│\s+([\d.]+)\s+│\s+\S+\s+│\s*$",
                 r"accuracy\s*[:=]?\s*([\d.]+)",
