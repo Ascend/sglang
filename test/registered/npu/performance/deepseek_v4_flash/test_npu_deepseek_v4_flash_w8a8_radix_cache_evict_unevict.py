@@ -83,8 +83,6 @@ DEEPSEEK_V4_FLASH_W8A8_8P_RADIX_CACHE_ARGS = [
     "--enable-hierarchical-cache",
     "--hicache-ratio",
     1.2,
-    "--hicache-storage-backend",
-    "memory",
     "--enable-cache-report",
     "--prefill-max-requests",
     2,
