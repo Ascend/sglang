@@ -98,21 +98,33 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
 
-  full-16-npu-a3-test-debug:
-    name: full-16-npu-a3
+  nightly-poc-single-node-tests:
+    name: single-node-poc
     if: ${{ !cancelled() }}
     needs: [set-image-config]
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        test_config:
+          - name: mimo_v2_flash_w8a8_8p_gsm8k
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/accuracy/mimo_v2_flash/test_npu_mimo_v2_flash_w8a8_8p_gsm8k.py
+          - name: swa_full_tokens_ratio
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_swa_full_tokens_ratio.py
+          - name: disable_hybrid_swa_memory
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_disable_hybrid_swa_memory.py
+    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
-      runner: linux-aarch64-a3-16
-      test_type: 'perf'
-      test_suite: full-16-npu-a3-test-debug
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
+      runner: ${{ matrix.test_config.runner }}
+      test_type: ${{ matrix.test_config.test_type }}
+      test_config_name: ${{ matrix.test_config.name }}
+      test_case: ${{ matrix.test_config.test_case }}
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      install_sglang_deps: false
-      device_type_for_deps: 'a3'
-
+      install_sglang_from_source: false
+      transformers_version: ''
 
 #  full-1-npu-a3:
 #    needs: [set-image-config]

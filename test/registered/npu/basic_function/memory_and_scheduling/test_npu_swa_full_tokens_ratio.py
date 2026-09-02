@@ -27,16 +27,12 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
 )
-from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
 )
-
-register_npu_ci(est_time=400, suite="full-16-npu-a3-test-debug", nightly=True)
-
 
 KV_SIZE = 2  # bf16
 
