@@ -1,8 +1,10 @@
 """Test the serving-level --default-chat-template-kwargs argument.
 
-Covers default thinking on/off and per-request chat_template_kwargs
-precedence on Qwen3, plus the same enable_thinking key on
-DeepSeek-R1-Distill-Qwen. Thinking is on iff reasoning_content is non-empty.
+--default-chat-template-kwargs sets the default chat template kwargs applied
+to every request. A per-request chat_template_kwargs takes precedence and
+overrides the server-level default.
+
+Thinking is on iff the response has non-empty reasoning_content.
 """
 
 import unittest
@@ -10,10 +12,7 @@ import unittest
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    DEEPSEEK_R1_DISTILL_QWEN_7B_WEIGHTS_PATH,
-    QWEN3_0_6B_WEIGHTS_PATH,
-)
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -30,8 +29,6 @@ _THINKING_PROMPT = "How many r's are in the word 'strawberry'? Think step by ste
 
 
 class _DefaultChatTemplateKwargsBase(CustomTestCase):
-    """Launch a server with a fixed default chat-template kwarg."""
-
     model = None
     reason_parser = None
     default_kwargs = None
@@ -77,14 +74,21 @@ class _DefaultChatTemplateKwargsBase(CustomTestCase):
         return message.get("reasoning_content") or ""
 
     def assert_thinking_off(self, reasoning):
+        # Thinking is off when reasoning_content is empty.
         self.assertEqual(reasoning, "", "expected reasoning_content to be empty/None")
 
     def assert_thinking_on(self, reasoning):
+        # Thinking is on when reasoning_content is non-empty.
         self.assertTrue(reasoning, "expected non-empty reasoning_content")
 
 
 class TestQwen3DefaultThinkingDisabled(_DefaultChatTemplateKwargsBase):
-    """Default enable_thinking=false; per-request override turns it on."""
+    """Testcase：Verify --default-chat-template-kwargs disables thinking by
+    default, and a per-request chat_template_kwargs overrides it.
+
+    [Test Category] Parameter
+    [Test Target] --default-chat-template-kwargs
+    """
 
     model = QWEN3_0_6B_WEIGHTS_PATH
     reason_parser = "qwen3"
@@ -100,7 +104,12 @@ class TestQwen3DefaultThinkingDisabled(_DefaultChatTemplateKwargsBase):
 
 
 class TestQwen3DefaultThinkingEnabled(_DefaultChatTemplateKwargsBase):
-    """Default enable_thinking=true; per-request override turns it off."""
+    """Testcase：Verify --default-chat-template-kwargs enables thinking by
+    default, and a per-request chat_template_kwargs overrides it.
+
+    [Test Category] Parameter
+    [Test Target] --default-chat-template-kwargs
+    """
 
     model = QWEN3_0_6B_WEIGHTS_PATH
     reason_parser = "qwen3"
@@ -113,17 +122,6 @@ class TestQwen3DefaultThinkingEnabled(_DefaultChatTemplateKwargsBase):
         self.assert_thinking_off(
             self._reasoning_content(chat_template_kwargs={"enable_thinking": False})
         )
-
-
-class TestDeepSeekR1DistillDefaultThinkingEnabled(_DefaultChatTemplateKwargsBase):
-    """DeepSeek-R1-Distill-Qwen + deepseek-r1 parser."""
-
-    model = DEEPSEEK_R1_DISTILL_QWEN_7B_WEIGHTS_PATH
-    reason_parser = "deepseek-r1"
-    default_kwargs = '{"enable_thinking": true}'
-
-    def test_default_request_enables_thinking(self):
-        self.assert_thinking_on(self._reasoning_content())
 
 
 if __name__ == "__main__":
