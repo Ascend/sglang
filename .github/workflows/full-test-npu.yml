@@ -126,6 +126,7 @@ jobs:
       install_sglang_from_source: false
       transformers_version: ''
 
+#
 #  full-1-npu-a3:
 #    needs: [set-image-config]
 #    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
