@@ -100,6 +100,14 @@ jobs:
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          # DSV4 mHC fused ops (aclnnHcPre etc.) ship in the custom_transformer /
+          # customize operator packages (see sgl-project/sglang#29794). Source them so
+          # torch.ops.custom.npu_hc_pre resolves; without this capture_decode_graph
+          # fails with 'aclnnHcPre not in libopapi.so'.
+          source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
+          source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
+          echo "--- opp vendors dir ---"
+          ls -la /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/ 2>&1 || true
 
           current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
