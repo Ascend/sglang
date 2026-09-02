@@ -23,7 +23,7 @@ on:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.0.0-a3-ubuntu22.04-py3.11'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
@@ -42,7 +42,6 @@ jobs:
       job_filter: ${{ steps.set-vars.outputs.job_filter }}
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
-      run_start_metadata: ${{ steps.set-vars.outputs.run_start_metadata }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
@@ -61,7 +60,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -98,7 +97,6 @@ jobs:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       install_sglang_deps: false
       device_type_for_deps: 'a3'
-      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
 
   full-16-npu-a3-test-debug:
     name: full-16-npu-a3
@@ -114,7 +112,6 @@ jobs:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       install_sglang_deps: false
       device_type_for_deps: 'a3'
-      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
 
 
 #  full-1-npu-a3:
