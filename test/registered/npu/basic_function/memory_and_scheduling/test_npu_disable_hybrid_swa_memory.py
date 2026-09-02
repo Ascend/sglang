@@ -1,15 +1,18 @@
 """Tests for --disable-hybrid-swa-memory parameter.
 
-On Hybrid SWA models (DeepSeek V4, MiMo V2, Inkling, etc.), this flag
-disables the separate SWA memory pool and falls back to a unified pool.
+When set on a Hybrid SWA model, this flag disables the independent SWA
+memory pool and falls back to a unified pool. The server log shows
+"path=SWA hybrid" only when the independent SWA pool is active.
 
-Two test strategies:
-- Unit test: mock ModelConfig to verify is_hybrid_swa flag behavior
-- Server test: launch a real Hybrid SWA model to verify parameter acceptance
+Test strategy:
+- Launch MiMo V2 Flash model twice (with and without the flag)
+- Verify inference works both times
+- Verify the pool type from server logs
 """
 
+import os
+import tempfile
 import unittest
-from unittest.mock import patch
 
 import requests
 
@@ -99,161 +102,104 @@ _MIMO_ENVS = {
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
 }
 
-
-class TestDisableHybridSwaMemoryUnit(CustomTestCase):
-    """Testcase: Verify --disable-hybrid-swa-memory controls is_hybrid_swa
-    in ModelConfig._derive_hybrid_model().
-
-    On a Hybrid SWA model:
-    - disable_hybrid_swa_memory=False → is_hybrid_swa=True
-    - disable_hybrid_swa_memory=True  → is_hybrid_swa=False
-
-    [Test Category] Parameter
-    [Test Target] --disable-hybrid-swa-memory
-    [Scenario] D1: Hybrid SWA model default behavior
-    [Scenario] D2: Hybrid SWA model with disable flag
-    """
-
-    def test_hybrid_swa_default_is_hybrid_swa_true(self):
-        """D1: On a Hybrid SWA model, is_hybrid_swa=True by default."""
-        from sglang.srt.configs.model_config import ModelConfig
-
-        with patch.object(ModelConfig, "_maybe_pull_model_for_runai"):
-            with patch.object(ModelConfig, "_maybe_pull_model_tokenizer_from_remote"):
-                with patch.object(ModelConfig, "get_hf_config") as mock_get_hf_config:
-                    mock_get_hf_config.return_value = type(
-                        "MockHFConfig",
-                        (),
-                        {"architectures": ["DeepseekV4ForCausalLM"]},
-                    )()
-                    with patch(
-                        "sglang.srt.configs.model_config.is_hybrid_swa_model",
-                        return_value=True,
-                    ):
-                        mc = ModelConfig(
-                            model_path=MIMO_V2_FLASH_MODEL_PATH,
-                            trust_remote_code=True,
-                            disable_hybrid_swa_memory=False,
-                        )
-                        mc._derive_hybrid_model()
-                        self.assertTrue(
-                            mc.is_hybrid_swa,
-                            "is_hybrid_swa should be True when disable_hybrid_swa_memory=False",
-                        )
-
-    def test_hybrid_swa_disable_is_hybrid_swa_false(self):
-        """D2: disable_hybrid_swa_memory=True → is_hybrid_swa=False."""
-        from sglang.srt.configs.model_config import ModelConfig
-
-        with patch.object(ModelConfig, "_maybe_pull_model_for_runai"):
-            with patch.object(ModelConfig, "_maybe_pull_model_tokenizer_from_remote"):
-                with patch.object(ModelConfig, "get_hf_config") as mock_get_hf_config:
-                    mock_get_hf_config.return_value = type(
-                        "MockHFConfig",
-                        (),
-                        {"architectures": ["DeepseekV4ForCausalLM"]},
-                    )()
-                    with patch(
-                        "sglang.srt.configs.model_config.is_hybrid_swa_model",
-                        return_value=True,
-                    ):
-                        mc = ModelConfig(
-                            model_path=MIMO_V2_FLASH_MODEL_PATH,
-                            trust_remote_code=True,
-                            disable_hybrid_swa_memory=True,
-                        )
-                        mc._derive_hybrid_model()
-                        self.assertFalse(
-                            mc.is_hybrid_swa,
-                            "is_hybrid_swa should be False when disable_hybrid_swa_memory=True",
-                        )
-
-    def test_non_hybrid_swa_is_always_false(self):
-        """On a non-Hybrid-SWA model, is_hybrid_swa=False regardless of flag."""
-        from sglang.srt.configs.model_config import ModelConfig
-
-        with patch.object(ModelConfig, "_maybe_pull_model_for_runai"):
-            with patch.object(ModelConfig, "_maybe_pull_model_tokenizer_from_remote"):
-                with patch.object(ModelConfig, "get_hf_config") as mock_get_hf_config:
-                    mock_get_hf_config.return_value = type(
-                        "MockHFConfig",
-                        (),
-                        {"architectures": ["LlamaForCausalLM"]},
-                    )()
-                    with patch(
-                        "sglang.srt.configs.model_config.is_hybrid_swa_model",
-                        return_value=False,
-                    ):
-                        for flag in [False, True]:
-                            mc = ModelConfig(
-                                model_path=MIMO_V2_FLASH_MODEL_PATH,
-                                trust_remote_code=True,
-                                disable_hybrid_swa_memory=flag,
-                            )
-                            mc._derive_hybrid_model()
-                            self.assertFalse(
-                                mc.is_hybrid_swa,
-                                f"is_hybrid_swa should be False on non-SWA model "
-                                f"(disable_hybrid_swa_memory={flag})",
-                            )
+_SWA_HYBRID_LOG_MARKER = "UNIFIED MEMORY POOL ENABLED -- path=SWA hybrid"
 
 
-class TestDisableHybridSwaMemoryServer(CustomTestCase):
-    """Testcase: Verify --disable-hybrid-swa-memory is accepted by the server
-    on a real Hybrid SWA model (MiMo V2 Flash).
+class TestDisableHybridSwaMemory(CustomTestCase):
+    """Verify --disable-hybrid-swa-memory controls independent SWA pool vs unified pool.
 
-    On Hybrid SWA models, this flag disables the separate SWA memory pool.
-    This test verifies the server starts and inference works with the flag.
+    Launches MiMo V2 Flash twice:
+    - Without the flag: independent SWA pool → log contains "path=SWA hybrid"
+    - With the flag: unified pool → log does NOT contain "path=SWA hybrid"
 
     [Test Category] Parameter
     [Test Target] --disable-hybrid-swa-memory
-    [Scenario] D1: default (no flag)
-    [Scenario] D2: explicit --disable-hybrid-swa-memory
+    [Scenario] D1: independent SWA pool (default, no flag)
+    [Scenario] D2: unified pool (--disable-hybrid-swa-memory)
     """
 
     model = MIMO_V2_FLASH_MODEL_PATH
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
 
-    def _send_request(self):
-        """Send a simple generation request and verify the response."""
-        resp = requests.post(
-            f"{DEFAULT_URL_FOR_TEST}/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {"temperature": 0, "max_new_tokens": 32},
-            },
-            timeout=120,
-        )
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("Paris", resp.text)
+    def _launch_and_check_pool(self, extra_args, expect_swa_pool):
+        """Launch server with given extra_args, verify inference and pool type.
 
-    def test_default_without_disable(self):
-        """D1: Server starts normally without --disable-hybrid-swa-memory."""
+        Args:
+            extra_args: Additional CLI args (list or None).
+            expect_swa_pool: True if independent SWA pool is expected,
+                             False if unified pool is expected.
+        """
+        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
+        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
+        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
+        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
+
+        args = _MIMO_BASE_ARGS + (extra_args or [])
+        label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
+
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=_MIMO_BASE_ARGS,
+            other_args=args,
             env=_MIMO_ENVS,
+            return_stdout_stderr=(out_log_file, err_log_file),
         )
         try:
-            self._send_request()
-        finally:
-            kill_process_tree(process.pid)
+            # 1. Verify inference works
+            resp = requests.post(
+                f"{DEFAULT_URL_FOR_TEST}/generate",
+                json={
+                    "text": "The capital of France is",
+                    "sampling_params": {"temperature": 0, "max_new_tokens": 32},
+                },
+                timeout=120,
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Paris", resp.text)
 
-    def test_explicit_disable(self):
-        """D2: Server starts and inference succeeds with --disable-hybrid-swa-memory."""
-        process = popen_launch_server(
-            self.model,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=_MIMO_BASE_ARGS + ["--disable-hybrid-swa-memory"],
-            env=_MIMO_ENVS,
-        )
-        try:
-            self._send_request()
+            # 2. Verify pool type from server logs
+            out_log_file.seek(0)
+            stdout = out_log_file.read()
+            has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
+
+            pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
+            print(
+                f"\n  [Hybrid SWA Memory] {label}: pool_type={pool_type}"
+            )
+
+            if expect_swa_pool:
+                self.assertTrue(
+                    has_swa_pool,
+                    f"{label}: expected independent SWA pool but got unified pool. "
+                    f"Log marker '{_SWA_HYBRID_LOG_MARKER}' not found in server stdout.",
+                )
+            else:
+                self.assertFalse(
+                    has_swa_pool,
+                    f"{label}: expected unified pool but got independent SWA pool. "
+                    f"Log marker '{_SWA_HYBRID_LOG_MARKER}' found in server stdout.",
+                )
         finally:
             kill_process_tree(process.pid)
+            out_log_file.close()
+            err_log_file.close()
+            os.unlink(out_log_path)
+            os.unlink(err_log_path)
+
+    def test_disable_hybrid_swa_memory(self):
+        """D1+D2: Verify --disable-hybrid-swa-memory switches pool type.
+
+        D1 (default): independent SWA pool → "path=SWA hybrid" in logs
+        D2 (disabled): unified pool → no "path=SWA hybrid" in logs
+        """
+        # D1: Without --disable-hybrid-swa-memory → independent SWA pool
+        self._launch_and_check_pool(extra_args=None, expect_swa_pool=True)
+
+        # D2: With --disable-hybrid-swa-memory → unified pool
+        self._launch_and_check_pool(
+            extra_args=["--disable-hybrid-swa-memory"], expect_swa_pool=False
+        )
 
 
 if __name__ == "__main__":
