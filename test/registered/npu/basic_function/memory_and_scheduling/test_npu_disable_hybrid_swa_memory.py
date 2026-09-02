@@ -164,9 +164,7 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 
             pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
-            print(
-                f"\n  [Hybrid SWA Memory] {label}: pool_type={pool_type}"
-            )
+            print(f"\n  [Hybrid SWA Memory] {label}: pool_type={pool_type}")
 
             if expect_swa_pool:
                 self.assertTrue(
