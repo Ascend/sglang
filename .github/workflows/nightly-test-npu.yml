@@ -308,7 +308,7 @@ jobs:
       test_type: 'accuracy'
       test_suite: nightly-acc-debug-2-npu-a3
       is_nightly_pipeline_job: true
-      partitions: '{"size":1,"arr":[0]}'
+      partitions: '{"size":2,"arr":[0,1]}'
       skip_pr_test_health_check: 'true'
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       install_sglang_deps: false

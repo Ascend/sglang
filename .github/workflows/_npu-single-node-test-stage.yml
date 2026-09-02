@@ -385,7 +385,7 @@ jobs:
           # Run NPU test suite with run_suite.py.
           # Capture mode (--enable-retry --max-attempts 1) keeps test subprocesses off the
           # tee pipe, so leftover server processes cannot block the pipeline on exit.
-          ${PYTHON_FOR_SGLANG} -u run_suite.py --hw npu --suite ${test_suite} ${NIGHTLY_FLAG} ${PARTITION_ARGS} ${TIMEOUT_FLAG} --enable-retry --max-attempts 1 --timeout-per-file 7200 --files "test/registered/npu/vlm_models/test_npu_deepseek_ocr_2.py" 2>&1 | tee "${LOG_TEE_TARGETS[@]}" || test_exit_code=$?
+          ${PYTHON_FOR_SGLANG} -u run_suite.py --hw npu --suite ${test_suite} ${NIGHTLY_FLAG} ${PARTITION_ARGS} ${TIMEOUT_FLAG} --enable-retry --max-attempts 1 --timeout-per-file 7200 --files "test/registered/npu/vlm_models/test_npu_deepseek_ocr_2.py,test/registered/npu/vlm_models/test_npu_deepseek_ocr_2_v1_6.py" 2>&1 | tee "${LOG_TEE_TARGETS[@]}" || test_exit_code=$?
 
           echo "Finished test: ${tc_name}"
 
