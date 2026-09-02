@@ -74,6 +74,18 @@ DEEPSEEK_V4_FLASH_W8A8_8P_RADIX_CACHE_ARGS = [
     9000,
     "--mem-fraction-static",
     0.6,
+    # Hierarchical cache: when the device tier fills up, evicted prefixes are
+    # offloaded to the host tier (the node stays in the tree with FULL.device
+    # value set to None -> `node.evicted == True`). Re-hitting such a prefix
+    # runs the unevict path (TreeComponent._unevict_node_on_insert +
+    # recover_after_unevict), which is exactly where #37091's missing `result`
+    # param on C128SidecarComponent should surface as a TypeError.
+    "--enable-hierarchical-cache",
+    "--hicache-ratio",
+    1.2,
+    "--hicache-storage-backend",
+    "memory",
+    "--enable-cache-report",
     "--prefill-max-requests",
     2,
     "--chunked-prefill-size",
@@ -212,6 +224,14 @@ class TestNPUDeepSeekV4FlashW8A8RadixCacheEvictUnevict(CustomTestCase):
         logging.warning(
             "anchor re-send request cached_tokens=%d (evict->unevict path)",
             second_cached,
+        )
+        # The anchor must have been offloaded (not hard-deleted) and re-hit so
+        # the unevict path actually runs. cached_tokens==0 means the scenario was
+        # not constructed and would let the #37091 regression pass silently.
+        self.assertGreater(
+            second_cached,
+            0,
+            "anchor re-send hit 0 cached tokens: evict->unevict was not exercised",
         )
 
 
