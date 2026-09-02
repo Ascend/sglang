@@ -45,7 +45,6 @@ class TestDynamicChunking(CustomTestCase):
         "1024",
     ]
 
-
     def test_dynamic_chunking_pp_size_two(self):
         """C1: pp_size=2 + --enable-dynamic-chunking.
         Dynamic chunking should be enabled and adjust chunk sizes
@@ -101,8 +100,7 @@ class TestDynamicChunking(CustomTestCase):
             #    chunk's size via predict_next_chunk_size() instead of using
             #    the static chunked_prefill_size.
             long_text = (
-                "The history of artificial intelligence is a fascinating story. "
-                * 100
+                "The history of artificial intelligence is a fascinating story. " * 100
             )
             long_resp = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
