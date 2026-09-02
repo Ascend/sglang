@@ -108,7 +108,7 @@ jobs:
     with:
       runner: linux-aarch64-a3-16
       test_type: 'perf'
-      test_suite: full-1-npu-a3-test-debug
+      test_suite: full-16-npu-a3-test-debug
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
       image: ${{ needs.set-image-config.outputs.image_a3 }}
