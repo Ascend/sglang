@@ -10,7 +10,7 @@ from sglang.test.test_utils import CustomTestCase, DEFAULT_URL_FOR_TEST, DEFAULT
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
-QWEN3_0_6B_WEIGHTS_PATH="/home/weights/Qwen3-0.6B"
+
 class TestQwen306B(CustomTestCase):
     """Testcase: Verify that the inference accuracy of the Qwen/Qwen3-0.6B model on the GSM8K dataset is no less than 0.38.
 
@@ -31,6 +31,7 @@ class TestQwen306B(CustomTestCase):
             "--disable-cuda-graph",
             "--enable-session-radix-cache",
             "--model-checksum",
+            "Qwen/Qwen3-0.6B"
         ]
         cls.process = popen_launch_server(
             cls.model,
