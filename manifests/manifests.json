@@ -2,6 +2,61 @@
   "manifests": [
     {
       "schema_version": 1,
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260902",
+      "dockerfile": "docker/npu_cann9.0.0_python311.Dockerfile",
+      "generated_at": "2026-09-02T11:31:00.060778+00:00",
+      "build_args": {
+        "CANN_VERSION": "9.0.0",
+        "DEVICE_TYPE": "a3",
+        "OS": "ubuntu22.04",
+        "PYTHON_VERSION": "py3.11",
+        "PIP_INDEX_URL": "https://pypi.org/simple/",
+        "PYTORCH_VERSION": "2.10.0",
+        "TORCHVISION_VERSION": "0.25.0",
+        "TORCHAUDIO_VERSION": "2.10.0",
+        "PTA_URL_ARM64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl",
+        "PTA_URL_AMD64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "SGLANG_TAG": "main",
+        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
+        "SGLANG_KERNEL_NPU_TAG": "2026.9.1",
+        "PIP_INSTALL": "python3 -m pip install --no-cache-dir"
+      },
+      "git_clones": [
+        {
+          "remote": "https://github.com/sgl-project/sglang",
+          "branch": "main",
+          "dir": "/sgl-workspace/sglang"
+        }
+      ],
+      "declared_pip_pins": [
+        "memfabric-hybrid==1.0.8",
+        "memfabric-zbal==1.2.0",
+        "torch==2.10.0",
+        "torchvision==0.25.0",
+        "torchaudio==2.10.0",
+        "triton-ascend==3.2.1.dev20260530",
+        "wheel==0.45.1"
+      ],
+      "sglang": {
+        "dir": "/sgl-workspace/sglang",
+        "remote": "https://github.com/sgl-project/sglang",
+        "branch": "main",
+        "commit": "99b910955377375a1385122680e0daefcf706f79",
+        "describe": "gateway-v0.3.1-8899-g99b9109553",
+        "commit_date": "2026-09-02T17:51:16+08:00"
+      },
+      "os": {
+        "distro": "Ubuntu 22.04.5 LTS",
+        "kernel": "6.8.0-1064-azure",
+        "arch": "aarch64"
+      },
+      "cann": {
+        "toolkit": "latest set_env.sh",
+        "version_files": ""
+      }
+    },
+    {
+      "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-910b-20260902",
       "dockerfile": "docker/npu_cann9.0.0_python311.Dockerfile",
       "generated_at": "2026-09-02T11:28:41.466671+00:00",
