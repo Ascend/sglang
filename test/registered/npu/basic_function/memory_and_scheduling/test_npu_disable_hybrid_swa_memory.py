@@ -29,6 +29,14 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
+from sglang.test.ci.ci_register import register_npu_ci
+
+register_npu_ci(
+    est_time=3600,
+    suite="",
+    nightly=True,
+    disabled="accuracy testcase",
+)
 
 _MIMO_BASE_ARGS = [
     "--tp-size",
