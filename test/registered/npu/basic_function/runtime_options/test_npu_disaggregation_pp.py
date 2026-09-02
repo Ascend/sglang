@@ -55,7 +55,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
             "prefill",
             "--tp-size",
             "1",
-            "--pp-size",
+            "--pipeline-parallel-size",
             "4",
             "--disable-overlap-schedule",
             "--attention-backend",
