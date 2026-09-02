@@ -204,6 +204,10 @@ def run_evalscope(
             try:
                 with open(report_path, "r") as rf:
                     report_data = json.load(rf)
+                    logger.info(f"report_data type: {type(report_data)}")
+                    logger.info(
+                        f"report_data content: {json.dumps(report_data, indent=2, ensure_ascii=False)}"
+                    )
                 for item in report_data:
                     score = item.get("score")
                     if score is not None:
