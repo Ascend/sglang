@@ -72,9 +72,9 @@ class TestImageProcessorBackendParsing(CustomTestCase):
         with self.assertRaises(ValueError):
             self._parse(
                 [
-                "--disable-fast-image-processor",
-                "--image-processor-backend",
-                "torchvision",
+                    "--disable-fast-image-processor",
+                    "--image-processor-backend",
+                    "torchvision",
                 ]
             )
 
