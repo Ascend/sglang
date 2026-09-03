@@ -46,11 +46,11 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
         os.environ.pop("ASCEND_MF_STORE_URL")
         os.environ.pop("OPENAI_API_KEY", None)
         os.environ.pop("OPENAI_API_BASE", None)
+        super().tearDownClass()
         cls.out_file.close()
         cls.err_file.close()
         os.unlink(cls.out_file.name)
         os.unlink(cls.err_file.name)
-        super().tearDownClass()
 
     @classmethod
     def start_prefill(cls):
