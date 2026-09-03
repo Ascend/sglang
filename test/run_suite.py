@@ -159,6 +159,7 @@ NIGHTLY_SUITES = {
         "nightly-8-npu-a3",
         "nightly-16-npu-a3",
         "nightly-acc-2-npu-a3",
+        "nightly-acc-debug-2-npu-a3",
         "nightly-acc-4-npu-a3",
         "nightly-acc-8-npu-a3",
         "nightly-acc-16-npu-a3",
@@ -336,9 +337,23 @@ def run_a_suite(args):
     # Strict: all discovered files must have proper registration
     sanity_check = True
 
-    all_tests = collect_tests(files, sanity_check=sanity_check)
-    validate_all_suites(all_tests)
-    ci_tests, skipped_tests = filter_tests(all_tests, hw, suite, nightly)
+    # If --files is provided, restrict to the specified files and skip
+    # suite/nightly filtering so tests can run regardless of their
+    # registered suite. Paths may be relative (to repo root) or absolute.
+    if args.files:
+        wanted = {
+            os.path.normpath(os.path.join(repo_root, p))
+            for p in (f.strip() for f in args.files.split(","))
+            if p.strip()
+        }
+        files = [f for f in files if os.path.normpath(f) in wanted]
+        all_tests = collect_tests(files, sanity_check=False)
+        ci_tests = all_tests
+        skipped_tests = []
+    else:
+        all_tests = collect_tests(files, sanity_check=sanity_check)
+        validate_all_suites(all_tests)
+        ci_tests, skipped_tests = filter_tests(all_tests, hw, suite, nightly)
 
     if auto_partition_size:
         live_est = load_live_est(args.partition_model_file, suite, repo_root)
@@ -454,6 +469,12 @@ def main():
         type=str,
         default=None,
         help="Path to sglang-ci-stats model.json for live LPT est; missing/malformed -> in-source est_time fallback.",
+    )
+    parser.add_argument(
+        "--files",
+        type=str,
+        default=None,
+        help="Comma-separated list of test file paths to run. If set, only these files are executed and suite/nightly filtering is skipped.",
     )
     args = parser.parse_args()
 
