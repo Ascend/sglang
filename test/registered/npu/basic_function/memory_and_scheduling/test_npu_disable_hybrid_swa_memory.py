@@ -106,7 +106,7 @@ _MIMO_ENVS = {
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
 }
 
-_SWA_HYBRID_LOG_MARKER = "UNIFIED MEMORY POOL ENABLED -- path=SWA hybrid"
+_SWA_HYBRID_LOG_MARKER = "Use sliding window memory pool"
 
 
 class TestDisableHybridSwaMemory(CustomTestCase):
