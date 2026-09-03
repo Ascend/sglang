@@ -16,7 +16,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-4
+    runs-on: linux-aarch64-a3-16
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260820
     steps:
@@ -44,8 +44,8 @@ jobs:
             #"test/registered/npu/basic_function/runtime_options/test_npu_disaggregation_pp.py"
             #"test/registered/npu/basic_function/parameter/test_npu_enable_session_radix_cache.py"
             #"test/registered/npu/llm_models/test_npu_qwen3_30b_fuseep.py"
-            "test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"
-            "test/registered/npu/llm_models/_test_npu_qwen3_30b_attn_cp.py"
+            #"test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"
+            "test/registered/npu/basic_function/runtime_options/test_npu_pp_single_node.py"
           )
 
           for test_case in "${test_cases[@]}"; do
