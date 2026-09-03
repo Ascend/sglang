@@ -21,8 +21,8 @@ import uuid
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ci.ci_register import  register_npu_ci
 from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -68,11 +68,11 @@ def _make_prompt(seed: int) -> str:
 
 class TestSessionRadixCacheE2E(CustomTestCase):
     """Testcase: Verify set the parameter --enable-session-radix-cache,Prioritize evicting KV cache that are not
-    referenced by other sessions during eviction. Set the parameter --model-checksum, the model weights will be verified.
+     referenced by other sessions during eviction. Set the parameter --model-checksum, the model weights will be verified.
 
-   [Test Category] Parameter
-   [Test Target] --enable-session-radix-cache, --model-checksum
-   """
+    [Test Category] Parameter
+    [Test Target] --enable-session-radix-cache, --model-checksum
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -89,7 +89,7 @@ class TestSessionRadixCacheE2E(CustomTestCase):
             "--mem-fraction-static",
             "0.6",
             "--model-checksum",
-            "Qwen/Qwen3-0.6B"
+            "Qwen/Qwen3-0.6B",
         ]
         cls.out_file = tempfile.NamedTemporaryFile(
             mode="w+", suffix=".txt", delete=False
@@ -129,7 +129,9 @@ class TestSessionRadixCacheE2E(CustomTestCase):
         return meta["prompt_tokens"], meta.get("cached_tokens", 0)
 
     def _cached_ratio(self, text, session_id=None):
-        prompt_tokens, cached_tokens = self._generate(text + " Continue.", session_id=session_id)
+        prompt_tokens, cached_tokens = self._generate(
+            text + " Continue.", session_id=session_id
+        )
         self.assertGreater(prompt_tokens, 0)
         ratio = cached_tokens / prompt_tokens
         print(

@@ -8,8 +8,12 @@ from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
 from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
-from sglang.test.test_utils import CustomTestCase, popen_launch_server, DEFAULT_URL_FOR_TEST, \
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
+from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
+    popen_launch_server,
+)
 
 register_npu_ci(est_time=500, suite="full-4-npu-a3", nightly=True)
 
@@ -60,8 +64,7 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
                 "--enable-prefill-context-parallel",
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
-            env = {**os.environ, "ASCEND_USE_FIA": "1"}
-
+            env={**os.environ, "ASCEND_USE_FIA": "1"},
         )
 
     @classmethod
@@ -86,7 +89,7 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
         print(f"Eval accuracy of GSM8K: {metrics=}")
         self.assertGreater(metrics["score"], 0.92)
 
-    #Setting the --moe-dp-size parameter, MOE_DP log will output
+    # Setting the --moe-dp-size parameter, MOE_DP log will output
     def test_moe_dp(self):
         self.err_file.seek(0)
         content = self.err_file.read()

@@ -21,6 +21,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="base-b-test-2-npu-a3")
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
+
 class TestExpertDistributionRecorderModeStatic(CustomTestCase):
     """Testcase: Verify set the parameter --expert-distribution-recorder-mode，
     will generate .pt file and the inference request successfully.Set the parameter --expert-balancedness-report-mode,
@@ -86,7 +87,6 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
         os.unlink(cls.out_file.name)
         os.unlink(cls.err_file.name)
 
-
     def test_recorder_mode(self):
         # Start recording
         requests.post(f"{DEFAULT_URL_FOR_TEST}/start_expert_distribution_record")
@@ -126,6 +126,7 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
             0,
             msg=f"No distribution recorder",
         )
+
     def test_expert_balancedness_report_mode(self):
         # When --expert-balancedness-report-mode is off, neither logs nor metrics are recorded.
         response = requests.get(f"{DEFAULT_URL_FOR_TEST}/metrics")
@@ -133,7 +134,6 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
         self.err_file.seek(0)
         content = self.err_file.read()
         self.assertNotIn("Expert Balancedness", content)
-
 
 
 class TestExpertDistributionRecorderModeStatApprox(
@@ -149,6 +149,7 @@ class TestExpertDistributionRecorderModeStatApprox(
         self.err_file.seek(0)
         content = self.err_file.read()
         self.assertNotIn("Expert Balancedness", content)
+
 
 class TestExpertDistributionRecorderPerPass(TestExpertDistributionRecorderModeStatic):
     expert_distribution_recorder_mode = "per_pass"
