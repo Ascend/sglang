@@ -363,43 +363,51 @@ class TestLoadWeightsFromRemoteInstance(CustomTestCase):
 
         assert torch.npu.device_count() >= 2, "At least 2 GPUs are required"
         # test_suits : tp, dp, model_name, backend, dst_instance_id
-        if is_in_ci():
-            mode = random.choice(["Engine", "Server"])
-            remote_instance_loader_backend = random.choice(["nccl", "nccl"])
             test_suits = [
+                (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Engine"], "nccl"),
+                (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Server"], "nccl"),
+                (2, 2, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Engine", "Server"], "nccl"),
                 (
                     1,
                     1,
                     DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    [mode],
-                    remote_instance_loader_backend,
-                ),
-            ]
-        else:
-            test_suits = [
-                (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Server"], "nccl"),
-                (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Server"], "nccl"),
-                (2, 2, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Server", "Server"], "nccl"),
-                (
-                    1,
-                    1,
-                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Server"],
-                    "nccl",
+                    ["Engine"],
+                    "transfer_engine",
                 ),
                 (
                     1,
                     1,
                     DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
                     ["Server"],
-                    "nccl",
+                    "transfer_engine",
                 ),
                 (
                     2,
                     2,
                     DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Server", "Server"],
-                    "nccl",
+                    ["Engine", "Server"],
+                    "transfer_engine",
+                ),
+                                (
+                    1,
+                    1,
+                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                    ["Engine"],
+                    "modelexpress",
+                ),
+                (
+                    1,
+                    1,
+                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                    ["Server"],
+                    "modelexpress",
+                ),
+                (
+                    2,
+                    2,
+                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                    ["Engine", "Server"],
+                    "modelexpress",
                 ),
             ]
 
