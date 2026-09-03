@@ -23,10 +23,11 @@ register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
 class TestExpertDistributionRecorderModeStatic(CustomTestCase):
     """Testcase: Verify set the parameter --expert-distribution-recorder-mode，
-    will generate .pt file and the inference request successfully.
+    will generate .pt file and the inference request successfully.Set the parameter --expert-balancedness-report-mode,
+    the expert load‑balancing degree metric reported.
 
     [Test Category] Parameter
-    [Test Target] --expert-distribution-recorder-mode
+    [Test Target] --expert-distribution-recorder-mode, --expert-balancedness-report-mode
     """
 
     expert_distribution_recorder_mode = "stat"
@@ -126,6 +127,7 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
             msg=f"No distribution recorder",
         )
     def test_expert_balancedness_report_mode(self):
+        # When --expert-balancedness-report-mode is off, neither logs nor metrics are recorded.
         response = requests.get(f"{DEFAULT_URL_FOR_TEST}/metrics")
         self.assertNotIn("eplb_balancedness", response.text)
         self.err_file.seek(0)
@@ -141,6 +143,7 @@ class TestExpertDistributionRecorderModeStatApprox(
     expert_balancedness_report_mode = "prometheus"
 
     def test_expert_balancedness_report_mode(self):
+        # When --expert-balancedness-report-mode is prometheus, there are records in metrics, but none in the logs.
         response = requests.get(f"{DEFAULT_URL_FOR_TEST}/metrics")
         self.assertIn("eplb_balancedness", response.text)
         self.err_file.seek(0)
@@ -152,6 +155,7 @@ class TestExpertDistributionRecorderPerPass(TestExpertDistributionRecorderModeSt
     expert_balancedness_report_mode = "both"
 
     def test_expert_balancedness_report_mode(self):
+        # When --expert-balancedness-report-mode is both, both logs and metrics are recorded.
         response = requests.get(f"{DEFAULT_URL_FOR_TEST}/metrics")
         self.assertIn("eplb_balancedness", response.text)
         self.err_file.seek(0)
@@ -160,6 +164,7 @@ class TestExpertDistributionRecorderPerPass(TestExpertDistributionRecorderModeSt
 
 
 class TestExpertDistributionRecorderPerToken(TestExpertDistributionRecorderModeStatic):
+    # When --expert-balancedness-report-mode is server_log, only recorded in the logs
     expert_distribution_recorder_mode = "per_token"
     expert_balancedness_report_mode = "server_log"
 
