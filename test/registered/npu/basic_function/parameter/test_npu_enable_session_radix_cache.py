@@ -195,8 +195,8 @@ class TestSessionRadixCacheE2E(CustomTestCase):
 
     def test_model_checksum(self):
         # Model Weight File Verification
-        self.err_file.seek(0)
-        content = self.err_file.read()
+        self.out_file.seek(0)
+        content = self.out_file.read()
         self.assertIn("ModelFileVerifier", content)
 
 
