@@ -2,9 +2,8 @@ import math
 from typing import Optional
 
 import torch
-from sgl_kernel_npu.fla.kda_chunk_delta_h import (
-    chunk_gated_delta_rule_fwd_h_npu,
-)
+import torch.nn.functional as F
+from sgl_kernel_npu.fla.kda_chunk_delta_h import chunk_gated_delta_rule_fwd_h_npu
 from sgl_kernel_npu.fla.kda_gate import fused_kda_gate_npu
 from sgl_kernel_npu.fla.kda_prefill import (
     chunk_gla_fwd_o_gk_npu,
@@ -21,10 +20,79 @@ from sglang.srt.layers.attention.linear.kda_backend import (
     KDAAttnBackend,
     ragged_verify_dense_scatter_indices,
 )
+from sglang.srt.layers.attention.linear.kda_cp import (
+    build_kda_fla_cp_context,
+    compose_kda_cp_affine_states,
+    kda_use_fla_prefill_cp,
+    prepare_kda_cp_conv_states,
+)
 from sglang.srt.layers.radix_linear_attention import RadixLinearAttention
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 
 _LOG2_E = math.log2(math.e)
+
+
+def _kda_decode_key_value_state_npu(
+    *,
+    A_log: torch.Tensor,
+    dt_bias: torch.Tensor,
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    a: torch.Tensor,
+    b: torch.Tensor,
+    state_source: torch.Tensor,
+    state_indices: torch.Tensor,
+    lower_bound: Optional[float],
+) -> torch.Tensor:
+    """Decode one token per request against speculative ``[H, K, V]`` state.
+
+    NPU speculative allocation exposes the persistent KDA state as contiguous
+    ``[H, K, V]`` so target verification and its snapshots use the same layout.
+    The shared recurrent Triton fallback assumes the ordinary ``[H, V, K]``
+    layout and Kimi's K == V shape cannot expose that mismatch.  Keep this
+    batched and tensor-only so it remains safe during NPU graph capture.
+    """
+    batch_size = q.shape[1]
+    q_heads = q.shape[2]
+    k_heads = k.shape[2]
+    key_dim = q.shape[3]
+    value_heads = v.shape[2]
+
+    output_dtype = v.dtype
+    q = q.squeeze(0)
+    k = k.squeeze(0)
+    v = v.squeeze(0).float()
+    q = q / (q.float().norm(p=2, dim=-1, keepdim=True) + 1e-6)
+    k = k / (k.float().norm(p=2, dim=-1, keepdim=True) + 1e-6)
+    q = q.float() * (key_dim**-0.5)
+    k = k.float()
+
+    gate_input = a.float().view(batch_size, k_heads, key_dim)
+    gate_input = gate_input + dt_bias.float().view(k_heads, key_dim)
+    decay_rate = torch.exp(A_log.float().view(k_heads, 1))
+    if lower_bound is None:
+        log_decay = -decay_rate * F.softplus(gate_input, beta=1.0, threshold=20.0)
+    else:
+        log_decay = lower_bound * torch.sigmoid(decay_rate * gate_input)
+    decay = torch.exp(log_decay).repeat_interleave(value_heads // k_heads, dim=1)
+    beta = torch.sigmoid(b.reshape(batch_size, value_heads).float())
+    q = q.repeat_interleave(value_heads // q_heads, dim=1)
+    k = k.repeat_interleave(value_heads // k_heads, dim=1)
+
+    valid = state_indices >= 0
+    safe_indices = state_indices.clamp_min(0).to(torch.int64)
+    state = state_source.index_select(0, safe_indices).float()
+    valid_mask = valid.view(batch_size, 1, 1, 1)
+    state = state * valid_mask
+    state = state * decay.unsqueeze(-1)
+    value = v - torch.matmul(k.unsqueeze(2), state).squeeze(2)
+    value = value * beta.unsqueeze(-1)
+    state = state + k.unsqueeze(-1) * value.unsqueeze(-2)
+    state = state * valid_mask
+    out = torch.matmul(q.unsqueeze(2), state).squeeze(2)
+    state_source.index_copy_(0, safe_indices, state.to(state_source.dtype))
+    return out.unsqueeze(0).to(output_dtype)
 
 
 class _AscendKDAExtendKernel:
@@ -45,6 +113,15 @@ class _AscendKDAExtendKernel:
         **kwargs,
     ):
         chunk_size = 64
+        cp_context = kwargs.get("cp_context")
+        if cp_context is not None:
+            # Keep PCP-off KDA compatible with kernel packages that predate
+            # the affine-state operator. The new symbol is required only when
+            # FLA prefill context parallelism is actually selected.
+            from sgl_kernel_npu.fla.kda_chunk_delta_h import (
+                chunk_gated_delta_rule_fwd_affine_npu,
+            )
+
         q = l2norm_fwd(q.contiguous())
         k = l2norm_fwd(k.contiguous())
         v = v.contiguous()
@@ -82,13 +159,39 @@ class _AscendKDAExtendKernel:
             chunk_indices=chunk_indices,
         )
         del triangular
+        kernel_state_source = ssm_states
+        kernel_state_indices = cache_indices
+        if cp_context is not None:
+            local_affine = chunk_gated_delta_rule_fwd_affine_npu(
+                k=gated_k,
+                w=w,
+                u=u,
+                gk=g,
+                cu_seqlens=query_start_loc,
+            )
+            local_initial_kv = compose_kda_cp_affine_states(
+                local_affine,
+                ssm_states,
+                cache_indices,
+                cp_context,
+                state_value_major=True,
+            )
+            kernel_state_source = local_initial_kv.transpose(-1, -2).contiguous()
+            kernel_state_indices = cp_context.local_segment_indices
+            if kernel_state_indices is None:
+                kernel_state_indices = torch.arange(
+                    cp_context.num_local_segments,
+                    dtype=cache_indices.dtype,
+                    device=cache_indices.device,
+                )
+
         chunk_states, new_values = chunk_gated_delta_rule_fwd_h_npu(
             k=gated_k,
             w=w,
             u=u,
             gk=g,
-            initial_state=ssm_states,
-            initial_state_indices=cache_indices,
+            initial_state=kernel_state_source,
+            initial_state_indices=kernel_state_indices,
             cu_seqlens=query_start_loc,
             chunk_indices=chunk_indices,
             use_exp2=True,
@@ -145,6 +248,7 @@ class AscendKDAAttnBackend(KDAAttnBackend):
                 conv_pool_shape[-2],
             )
         )
+        self._state_key_value_layout = model_runner.spec_algorithm.is_speculative()
         self.kernel_dispatcher.extend_kernel = _AscendKDAExtendKernel()
 
     def _get_conv_weights_t(
@@ -193,6 +297,36 @@ class AscendKDAAttnBackend(KDAAttnBackend):
             pad_slot_id=-1,
             run_mode=1,
         )
+
+        # Speculative NPU allocation exposes contiguous [H, K, V] state, while
+        # the shared recurrent fallback consumes [H, V, K]. Dispatch the
+        # validated graph-safe recurrence before the generic path;
+        # non-speculative [H, V, K] caches remain unchanged.
+        if self._state_key_value_layout:
+            q, k, v = qkv.split([layer.q_dim, layer.k_dim, layer.v_dim], dim=-1)
+            q = q.unflatten(-1, (-1, layer.head_q_dim)).unsqueeze(0)
+            k = k.unflatten(-1, (-1, layer.head_k_dim)).unsqueeze(0)
+            v = v.unflatten(-1, (-1, layer.head_v_dim)).unsqueeze(0)
+            core_attn_out = _kda_decode_key_value_state_npu(
+                A_log=layer.A_log,
+                dt_bias=layer.dt_bias,
+                q=q,
+                k=k,
+                v=v,
+                a=a,
+                b=b,
+                state_source=ssm_states,
+                state_indices=cache_indices,
+                lower_bound=layer.lower_bound,
+            )
+            self._track_mamba_state_decode(
+                forward_batch,
+                conv_states,
+                ssm_states,
+                cache_indices,
+                layer.layer_id,
+            )
+            return core_attn_out
 
         if self.kernel_dispatcher.supports_packed_decode:
             assert qkv.shape[0] == cache_indices.shape[0], (
@@ -261,6 +395,16 @@ class AscendKDAAttnBackend(KDAAttnBackend):
         """Run Ascend prefill without changing the shared KDA backend."""
         assert isinstance(mixed_qkv, torch.Tensor)
         if forward_batch.forward_mode.is_target_verify():
+            # Idle DP ranks execute padded tokens only for global collective
+            # participation. They own no recurrent-state row and must not
+            # mutate dummy slot 0.
+            if (
+                forward_batch.is_speculative_idle_participation
+                or forward_batch.num_token_non_padded_cpu == 0
+            ):
+                return mixed_qkv.new_zeros(
+                    (mixed_qkv.shape[0], layer.num_v_heads, layer.head_v_dim)
+                )
             return self._forward_target_verify(layer, forward_batch, mixed_qkv, a, b)
 
         query_start_loc = self.forward_metadata.query_start_loc
@@ -275,35 +419,100 @@ class AscendKDAAttnBackend(KDAAttnBackend):
             )
         has_initial_state = forward_batch.extend_prefix_lens > 0
 
-        if self.forward_metadata.has_mamba_track_mask:
-            mixed_qkv_to_track = mixed_qkv[self.forward_metadata.track_conv_indices]
-            conv_states[self.forward_metadata.conv_states_mask_indices] = (
-                mixed_qkv_to_track
+        use_fla_cp = kda_use_fla_prefill_cp(forward_batch)
+        fla_cp_context = None
+        cp_physical_tokens = None
+        if use_fla_cp:
+            fla_cp_context = build_kda_fla_cp_context(
+                forward_batch, device=mixed_qkv.device
             )
+            cp_logical_tokens = sum(fla_cp_context.local_segment_lens)
+            cp_physical_tokens = mixed_qkv.shape[0]
+            if cp_physical_tokens < cp_logical_tokens:
+                raise ValueError(
+                    "KDA FLA CP input is shorter than the logical zigzag shard: "
+                    f"physical={cp_physical_tokens}, logical={cp_logical_tokens}."
+                )
+            mixed_qkv = mixed_qkv[:cp_logical_tokens]
+            a = a[:, :cp_logical_tokens]
+            b = b[:, :cp_logical_tokens]
+            kernel_size = layer.conv_weights.shape[-1]
+            # PoC_20260831 stores NPU convolution state as
+            # [slots, window, channels], while the CP helper operates on the
+            # shared [slots, channels, window] contract. Restrict the view to
+            # the persistent causal window (excluding speculative rollback
+            # slots) and transpose it without changing the owning storage.
+            conv_state_window = conv_states[:, -(kernel_size - 1) :, :].transpose(1, 2)
+            fla_conv_initial_states = prepare_kda_cp_conv_states(
+                mixed_qkv,
+                conv_state_window,
+                cache_indices,
+                fla_cp_context,
+                has_initial_state=has_initial_state,
+            )
+            local_indices = fla_cp_context.local_segment_indices
+            if local_indices is None or local_indices.dtype != cache_indices.dtype:
+                local_indices = torch.arange(
+                    fla_cp_context.num_local_segments,
+                    device=cache_indices.device,
+                    dtype=cache_indices.dtype,
+                )
+            local_has_initial_state = fla_cp_context.local_segment_has_initial_state
+            if local_has_initial_state is None:
+                local_has_initial_state = torch.ones(
+                    fla_cp_context.num_local_segments,
+                    dtype=torch.bool,
+                    device=mixed_qkv.device,
+                )
+            local_conv_states = fla_conv_initial_states.transpose(1, 2).contiguous()
+            mixed_qkv = torch.ops.npu.causal_conv1d(
+                mixed_qkv.contiguous(),
+                self._get_conv_weights_t(layer, mixed_qkv.dtype),
+                conv_states=local_conv_states,
+                bias=layer.bias,
+                query_start_loc=fla_cp_context.local_cu_seqlens,
+                cache_indices=local_indices,
+                has_initial_state=local_has_initial_state,
+                activation_mode=1,
+                pad_slot_id=-1,
+                run_mode=0,
+            )
+            q, k, v = mixed_qkv.split([layer.q_dim, layer.k_dim, layer.v_dim], dim=-1)
+        else:
+            if self.forward_metadata.has_mamba_track_mask:
+                mixed_qkv_to_track = mixed_qkv[self.forward_metadata.track_conv_indices]
+                conv_states[self.forward_metadata.conv_states_mask_indices] = (
+                    mixed_qkv_to_track
+                )
 
-        kernel_size = layer.conv_weights.shape[-1]
-        conv_states_for_prefill = conv_states[:, -(kernel_size - 1) :, :].contiguous()
-        mixed_qkv = torch.ops.npu.causal_conv1d(
-            mixed_qkv.contiguous(),
-            self._get_conv_weights_t(layer, mixed_qkv.dtype),
-            conv_states=conv_states_for_prefill,
-            bias=layer.bias,
-            query_start_loc=query_start_loc,
-            cache_indices=cache_indices,
-            has_initial_state=has_initial_state,
-            activation_mode=1,
-            pad_slot_id=-1,
-            run_mode=0,
-        )
-        conv_states[:, -(kernel_size - 1) :, :] = conv_states_for_prefill
-        q, k, v = mixed_qkv.split([layer.q_dim, layer.k_dim, layer.v_dim], dim=-1)
+            kernel_size = layer.conv_weights.shape[-1]
+            conv_states_for_prefill = conv_states[
+                :, -(kernel_size - 1) :, :
+            ].contiguous()
+            mixed_qkv = torch.ops.npu.causal_conv1d(
+                mixed_qkv.contiguous(),
+                self._get_conv_weights_t(layer, mixed_qkv.dtype),
+                conv_states=conv_states_for_prefill,
+                bias=layer.bias,
+                query_start_loc=query_start_loc,
+                cache_indices=cache_indices,
+                has_initial_state=has_initial_state,
+                activation_mode=1,
+                pad_slot_id=-1,
+                run_mode=0,
+            )
+            conv_states[:, -(kernel_size - 1) :, :] = conv_states_for_prefill
+            q, k, v = mixed_qkv.split([layer.q_dim, layer.k_dim, layer.v_dim], dim=-1)
         q = q.unflatten(-1, (-1, layer.head_q_dim)).unsqueeze(0)
         k = k.unflatten(-1, (-1, layer.head_k_dim)).unsqueeze(0)
         v = v.unflatten(-1, (-1, layer.head_v_dim)).unsqueeze(0)
         g, beta, extend_A_log, extend_dt_bias = self._prepare_extend_gate_inputs(
             layer, a, b
         )
-        track_ssm = self.forward_metadata.has_mamba_track_mask
+        track_ssm = self.forward_metadata.has_mamba_track_mask and not use_fla_cp
+        kernel_query_start_loc = (
+            fla_cp_context.local_cu_seqlens if use_fla_cp else query_start_loc
+        )
         core_attn_out = self.kernel_dispatcher.extend(
             q=q,
             k=k,
@@ -312,7 +521,7 @@ class AscendKDAAttnBackend(KDAAttnBackend):
             beta=beta,
             ssm_states=ssm_states,
             cache_indices=cache_indices,
-            query_start_loc=query_start_loc,
+            query_start_loc=kernel_query_start_loc,
             A_log=extend_A_log,
             dt_bias=extend_dt_bias,
             lower_bound=layer.lower_bound,
@@ -322,11 +531,29 @@ class AscendKDAAttnBackend(KDAAttnBackend):
             track_ssm_h_src=(
                 self.forward_metadata.track_ssm_h_src if track_ssm else None
             ),
+            cp_context=fla_cp_context,
         )
         if track_ssm:
             core_attn_out, h = core_attn_out
             self._track_mamba_state_extend(
                 forward_batch, h, ssm_states, self.forward_metadata
+            )
+        if (
+            use_fla_cp
+            and cp_physical_tokens is not None
+            and core_attn_out.shape[1] < cp_physical_tokens
+        ):
+            pad_tokens = cp_physical_tokens - core_attn_out.shape[1]
+            core_attn_out = torch.cat(
+                (
+                    core_attn_out,
+                    core_attn_out.new_zeros(
+                        core_attn_out.shape[0],
+                        pad_tokens,
+                        *core_attn_out.shape[2:],
+                    ),
+                ),
+                dim=1,
             )
         return core_attn_out
 

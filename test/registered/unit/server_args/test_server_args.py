@@ -60,7 +60,10 @@ from sglang.srt.arg_groups.serving_hook import (
     handle_tokenizer_batching,
     ssl_verify_of,
 )
-from sglang.srt.arg_groups.speculative_hook import handle_speculative_decoding
+from sglang.srt.arg_groups.speculative_hook import (
+    _supports_dspark_prefill_cp,
+    handle_speculative_decoding,
+)
 from sglang.srt.arg_groups.validation_hook import check_two_batch_overlap
 from sglang.srt.entrypoints.sidecar import (
     SGLANG_GRPC_ENDPOINT_ENV,
@@ -1028,6 +1031,20 @@ class TestContextParallelServerArgs(CustomTestCase):
             setattr(server_args, key, value)
         return server_args
 
+    def test_canonical_prefill_cp_cli_sets_unified_fields(self):
+        args = self.parser.parse_args(
+            [
+                "--model",
+                "dummy",
+                "--enable-prefill-cp",
+                "--cp-strategy",
+                "interleave",
+            ]
+        )
+
+        self.assertTrue(args.enable_prefill_cp)
+        self.assertEqual(args.cp_strategy, "interleave")
+
     def test_canonical_prefill_cp_requires_strategy(self):
         args = self.parser.parse_args(["--model", "dummy", "--enable-prefill-cp"])
 
@@ -1655,6 +1672,40 @@ class TestDecoupledSpecArgs(CustomTestCase):
             prepare_server_args(
                 ["--model-path", "dummy", "--decoupled-spec-role", "bogus"]
             )
+
+
+class TestDSparkPrefillCPArgs(unittest.TestCase):
+    @staticmethod
+    def _make_args(**overrides):
+        args = SimpleNamespace(
+            device="npu",
+            enable_prefill_cp=True,
+            get_model_config=lambda: SimpleNamespace(
+                hf_config=SimpleNamespace(
+                    model_type="kimi_k3",
+                    architectures=["KimiK3ForConditionalGeneration"],
+                )
+            ),
+        )
+        for name, value in overrides.items():
+            setattr(args, name, value)
+        return args
+
+    def test_kimi_k3_npu_supports_prefill_only_cp(self):
+        self.assertTrue(_supports_dspark_prefill_cp(self._make_args()))
+
+    def test_cuda_target_remains_rejected(self):
+        self.assertFalse(_supports_dspark_prefill_cp(self._make_args(device="cuda")))
+
+    def test_other_npu_target_remains_rejected(self):
+        args = self._make_args(
+            get_model_config=lambda: SimpleNamespace(
+                hf_config=SimpleNamespace(
+                    model_type="qwen3", architectures=["Qwen3ForCausalLM"]
+                )
+            )
+        )
+        self.assertFalse(_supports_dspark_prefill_cp(args))
 
 
 class TestAdaptiveSpecArgs(CustomTestCase):
