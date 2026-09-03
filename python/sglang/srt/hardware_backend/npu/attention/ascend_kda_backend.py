@@ -3,10 +3,7 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from sgl_kernel_npu.fla.kda_chunk_delta_h import (
-    chunk_gated_delta_rule_fwd_affine_npu,
-    chunk_gated_delta_rule_fwd_h_npu,
-)
+from sgl_kernel_npu.fla.kda_chunk_delta_h import chunk_gated_delta_rule_fwd_h_npu
 from sgl_kernel_npu.fla.kda_gate import fused_kda_gate_npu
 from sgl_kernel_npu.fla.kda_prefill import (
     chunk_gla_fwd_o_gk_npu,
@@ -117,6 +114,14 @@ class _AscendKDAExtendKernel:
     ):
         chunk_size = 64
         cp_context = kwargs.get("cp_context")
+        if cp_context is not None:
+            # Keep PCP-off KDA compatible with kernel packages that predate
+            # the affine-state operator. The new symbol is required only when
+            # FLA prefill context parallelism is actually selected.
+            from sgl_kernel_npu.fla.kda_chunk_delta_h import (
+                chunk_gated_delta_rule_fwd_affine_npu,
+            )
+
         q = l2norm_fwd(q.contiguous())
         k = l2norm_fwd(k.contiguous())
         v = v.contiguous()
