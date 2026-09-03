@@ -8,16 +8,22 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from sglang.kernels.ops.diffusion import (
+from sglang.kernels.ops.diffusion.bitexact_gate import (
     BitExactFusionGate,
-    can_use_linear_gelu,
+    tensors_equal,
+)
+from sglang.kernels.ops.diffusion.fused_linear_gelu import (
+    can_fuse_linear_gelu,
     fused_gelu_active,
     fused_linear_gelu_tanh,
-    hunyuan_qkv_rope_pack,
     mark_fused_gelu_site,
+)
+from sglang.kernels.ops.diffusion.hunyuan_qknorm import (
     mark_hunyuan_qknorm_site,
-    tensors_equal,
     try_hunyuan_qknorm,
+)
+from sglang.kernels.ops.diffusion.triton.hunyuan_qkv_pack import (
+    hunyuan_qkv_rope_pack,
 )
 from sglang.multimodal_gen.configs.models.dits import HunyuanVideoConfig
 from sglang.multimodal_gen.configs.models.fsdp import (
@@ -109,7 +115,7 @@ class HunyuanMLP(MLP):
         mark_fused_gelu_site(self, "fc_in")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if fused_gelu_active(self) and can_use_linear_gelu(self.fc_in, x):
+        if fused_gelu_active(self) and can_fuse_linear_gelu(self.fc_in, x):
             x = fused_linear_gelu_tanh(x, self.fc_in.weight, self.fc_in.bias)
         else:
             x, _ = self.fc_in(x)

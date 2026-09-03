@@ -111,12 +111,14 @@ class TestHiRadixCacheKVEvents(CustomTestCase):
 
         cache.writing_check(write_back=True)
 
-        # Both split fragments must be published as one parent-linked batch.
+        # Both split fragments must be published, with intact parentage.
         stored_cpu = self._stored_cpu_events(cache)
-        self.assertEqual(len(stored_cpu), 1)
-        self.assertEqual(list(stored_cpu[0].token_ids), [1, 2, 3, 4])
+        self.assertEqual(
+            [list(e.token_ids) for e in stored_cpu],
+            [[1, 2], [3, 4]],
+        )
         self.assertIsNone(stored_cpu[0].parent_block_hash)
-        self.assertEqual(len(stored_cpu[0].block_hashes), 2)
+        self.assertEqual(stored_cpu[1].parent_block_hash, stored_cpu[0].block_hashes[0])
 
 
 if __name__ == "__main__":

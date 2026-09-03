@@ -31,6 +31,7 @@ class TestAscendDistTimeout(CustomTestCase):
         os.environ["HCCL_BUFFSIZE"] = "2048"
         os.environ["SGLANG_ENABLE_OVERLAP_PLAN_STREAM"] = "1"
         os.environ["SGLANG_ENABLE_SPEC_V2"] = "1"
+        os.environ["SGLANG_NPU_FUSED_MOE_MODE"] = "1"
         os.environ["TRANSFORMERS_VERBOSITY"] = "error"
         cls.env = os.environ.copy()
         cls.common_args = [
@@ -57,8 +58,6 @@ class TestAscendDistTimeout(CustomTestCase):
             2,
             "--moe-a2a-backend",
             "ascend_fuseep",
-            "--fuseep-mode",
-            1,
             "--deepep-mode",
             "auto",
             "--speculative-draft-model-quantization",

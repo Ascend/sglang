@@ -1,21 +1,14 @@
 # Copied and adapted from: https://github.com/hao-ai-lab/FastVideo
 
 # SPDX-License-Identifier: Apache-2.0
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any
 
 import torch
 
 from sglang.multimodal_gen.configs.models.base import ArchConfig, ModelConfig
 from sglang.multimodal_gen.runtime.layers.quantization import QuantizationConfig
 from sglang.multimodal_gen.runtime.platforms import AttentionBackendEnum
-
-if TYPE_CHECKING:
-    from sglang.srt.layers.quantization.base_config import (
-        QuantizationConfig as SRTQuantizationConfig,
-    )
 
 
 @dataclass
@@ -80,20 +73,19 @@ class EncoderConfig(ModelConfig):
     arch_config: ArchConfig = field(default_factory=EncoderArchConfig)
 
     prefix: str = ""
-    quant_config: QuantizationConfig | SRTQuantizationConfig | None = None
+    quant_config: QuantizationConfig | None = None
     lora_config: Any | None = None
 
     # Parallel folding: during the encoding stage the whole DiT replica is idle,
     # so TP-shard the encoder across those otherwise-unused GPUs instead of
-    # leaving it on the DiT TP group. None keeps that TP group; the other modes
-    # override it with a wider group selected by finalize_encoder_folding.
-    parallel_folding_mode: Literal["sp", "world", "replica"] | None = None
+    # running it on a single rank. None = replicated, else the group to fold
+    # over ("sp"|"ulysses"|"ring"|"world"); resolved by finalize_encoder_folding.
+    parallel_folding_mode: str | None = None
 
 
 @dataclass
 class TextEncoderConfig(EncoderConfig):
     arch_config: ArchConfig = field(default_factory=TextEncoderArchConfig)
-    generation_config: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

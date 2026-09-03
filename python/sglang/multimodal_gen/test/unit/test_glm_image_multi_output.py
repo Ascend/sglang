@@ -50,7 +50,6 @@ class _DummyScheduler:
 
 class _RecordingBeforeDenoisingStage(GlmImageBeforeDenoisingStage):
     def __init__(self):
-        self.text_encoder = None
         self.transformer = SimpleNamespace(
             config=SimpleNamespace(
                 in_channels=4,

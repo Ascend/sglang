@@ -859,7 +859,6 @@ class OpenAIServingResponses(OpenAIServingChat):
         is_required = request.tool_choice == "required"
         tool_call_items: list[ResponseFunctionToolCall] = []
         parsed_via_native = False
-        detector_owns_format = False
         if (
             content
             and chat_tools
@@ -871,11 +870,9 @@ class OpenAIServingResponses(OpenAIServingChat):
                 self.tool_call_parser,
                 tokenizer=self.tokenizer_manager.tokenizer,
             )
-            detector_owns_format = (
-                parser.detector.supports_structural_tag()
-                or parser.detector.parses_required_natively()
+            should_try_native = (
+                not is_required or parser.detector.supports_structural_tag()
             )
-            should_try_native = not is_required or detector_owns_format
             if should_try_native and parser.has_tool_call(content):
                 try:
                     content, call_info_list = parser.parse_non_stream(content)
@@ -894,13 +891,7 @@ class OpenAIServingResponses(OpenAIServingChat):
                 except Exception as e:
                     logger.error("Tool call parsing error: %s", e)
 
-        if (
-            content
-            and chat_tools
-            and is_required
-            and not parsed_via_native
-            and not detector_owns_format
-        ):
+        if content and chat_tools and is_required and not parsed_via_native:
             try:
                 tool_call_data = orjson.loads(content)
                 if isinstance(tool_call_data, dict):

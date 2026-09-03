@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from PIL import Image
 
+from sglang.srt.multimodal._core import inkling as _rs_inkling
 from sglang.srt.multimodal.inkling.image_processing import (
     IMAGE_MEAN,
     IMAGE_STD,
@@ -12,7 +13,6 @@ from sglang.srt.multimodal.inkling.image_processing import (
     _encode_image_bytes,
     _fill_patches_numba,
 )
-from sglang.srt.rust_extensions._multimodal import inkling as _rs_inkling
 
 PS = 40
 

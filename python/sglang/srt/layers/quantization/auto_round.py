@@ -434,13 +434,7 @@ class AutoRoundConfig(QuantizationConfig):
                 return AWQLinearMethod(quant_args)
         return None
 
-    def apply_gptq_quant_layer(
-        self,
-        layer,
-        prefix: str,
-        backend: str = "auto",
-        additional_linear_types: tuple[type[torch.nn.Module], ...] = (),
-    ):
+    def apply_gptq_quant_layer(self, layer, prefix: str, backend: str = "auto"):
         from sglang.srt.layers.linear import LinearBase
         from sglang.srt.layers.moe.fused_moe_triton import FusedMoE
         from sglang.srt.layers.quantization.gptq import (
@@ -455,12 +449,9 @@ class AutoRoundConfig(QuantizationConfig):
         from sglang.srt.layers.quantization.unquant import UnquantizedLinearMethod
         from sglang.srt.layers.vocab_parallel_embedding import ParallelLMHead
 
-        linear_types = (LinearBase, ParallelLMHead, *additional_linear_types)
-        is_linear = isinstance(layer, linear_types)
-
         weight_bits, group_size, sym = self.get_layer_config(layer, prefix)
         if not self.check_quantized(weight_bits):
-            if is_linear:
+            if isinstance(layer, (LinearBase, ParallelLMHead)):
                 return UnquantizedLinearMethod()
             else:
                 return None
@@ -484,7 +475,7 @@ class AutoRoundConfig(QuantizationConfig):
                 layer.scheme = quant_args.get_moe_scheme(layer)
                 return GPTQMoEMethod(quant_args)
 
-            if is_linear:
+            if isinstance(layer, (LinearBase, ParallelLMHead)):
                 layer.scheme = quant_args.get_linear_scheme(layer)
                 return GPTQLinearMethod(quant_args)
 
@@ -503,7 +494,7 @@ class AutoRoundConfig(QuantizationConfig):
                 layer.scheme = quant_args.get_moe_scheme(layer)
                 return GPTQMoEMethod(quant_args)
 
-            if is_linear:
+            if isinstance(layer, (LinearBase, ParallelLMHead)):
                 layer.scheme = quant_args.get_linear_scheme(layer)
                 return GPTQLinearMethod(quant_args)
 
@@ -560,7 +551,7 @@ class AutoRoundConfig(QuantizationConfig):
             }
             return MoeWNA16Config.from_config(config).get_quant_method(layer, prefix)
 
-        if is_linear:
+        if isinstance(layer, (LinearBase, ParallelLMHead)):
             if use_marlin:
                 return GPTQMarlinLinearMethod(quant_args_marlin)
             else:

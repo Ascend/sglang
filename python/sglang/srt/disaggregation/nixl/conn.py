@@ -25,12 +25,7 @@ from sglang.srt.disaggregation.common.conn import (
     CommonKVSender,
     KVTransferError,
 )
-from sglang.srt.disaggregation.common.staging_handler import (
-    STAGING_WATERMARK_WAIT_S,
-    StagingManagerMixin,
-    handle_staging_rsp,
-    handle_watermark_msg,
-)
+from sglang.srt.disaggregation.common.staging_handler import STAGING_WATERMARK_WAIT_S
 from sglang.srt.disaggregation.common.utils import (
     FastQueue,
     TransferKVChunk,
@@ -395,7 +390,7 @@ class TransferStatus:
         return True
 
 
-class NixlKVManager(StagingManagerMixin, CommonKVManager):
+class NixlKVManager(CommonKVManager):
     def __init__(
         self,
         args: KVArgs,
@@ -517,8 +512,7 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
             if self.enable_staging:
                 self._init_staging_decode_ctx()
                 self._staging_handler = None
-            if self.enable_staging or self.enable_deferred_decode_kv_release:
-                self._start_decode_listener_thread()
+                self._start_decode_staging_thread()
             self._start_heartbeat_checker_thread()
         else:
             raise ValueError(
@@ -589,30 +583,64 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
         self._staging_ctx.room_bootstrap[room] = bootstrap_infos
         self._staging_ctx.room_receivers[room] = receiver
 
-    def _start_decode_listener_thread(self):
-        """Decode-side ZMQ listener for STAGING_REQ and ABORT_ACK. A thread, not
-        NIXL notifs: the decode agent has no progress thread, so notifs only drain
-        inside a live receiver's poll() and would be missed while idle."""
+    def _is_watermark_ready(
+        self, agent_name: str, alloc_round: int, alloc_end: int
+    ) -> bool:
+        from sglang.srt.disaggregation.common.staging_handler import (
+            is_watermark_ready,
+        )
 
-        def decode_listener_thread():
+        return is_watermark_ready(self._staging_ctx, agent_name, alloc_round, alloc_end)
+
+    def _start_decode_staging_thread(self):
+        """Start a thread on the decode side to recv STAGING_REQ from prefill via ZMQ."""
+
+        def decode_staging_thread():
             while True:
                 msg = self.server_socket.recv_multipart()
                 if msg[0] == b"STAGING_REQ":
                     self._handle_staging_req(msg)
                     continue
-                if msg[0] == b"ABORT_ACK":
-                    # Drain ack for an aborted room; aggregate per prefill rank.
-                    if len(msg) >= 3:
-                        self.note_abort_ack(
-                            int(msg[1].decode("ascii")), int(msg[2].decode("ascii"))
-                        )
-                    continue
                 logger.warning(
-                    "decode_listener_thread: unexpected message tag %s",
+                    "decode_staging_thread: unexpected message tag %s",
                     msg[0][:20],
                 )
 
-        threading.Thread(target=decode_listener_thread, daemon=True).start()
+        threading.Thread(target=decode_staging_thread, daemon=True).start()
+
+    def _handle_staging_req(self, msg):
+        from sglang.srt.disaggregation.common.staging_handler import (
+            handle_staging_req,
+        )
+
+        room = int(msg[1].decode("ascii"))
+        session_id = msg[4].decode("ascii")
+        handler = self._staging_handler
+        assert (
+            handler is not None
+        ), "STAGING_REQ received before staging handler initialized"
+        decode_req = handler._room_to_decode_req.get(room)
+        if decode_req is None:
+            logger.warning(
+                "STAGING_REQ received for unregistered room=%s, skipping",
+                room,
+            )
+            return
+        prefill_tp = decode_req.kv_receiver.prefill_info.attn_tp_size
+        handle_staging_req(
+            msg,
+            self._staging_ctx.allocator,
+            self.kv_args,
+            self.attn_tp_size,
+            prefill_tp,
+            getattr(self, "kv_buffer_tensors", None),
+            self._staging_ctx.room_receivers,
+            self._staging_ctx.room_bootstrap,
+        )
+
+        receiver = self._staging_ctx.room_receivers.get(room)
+        if receiver is not None:
+            handler.register_wm_subscriber(receiver, session_id)
 
     def _prefetch_staging_reqs(self, room: int):
         """Send STAGING_REQ for all chunks before the prefill forward starts.
@@ -1091,22 +1119,16 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
             room = kv_chunk.room
             handles: List[Any] = []
             try:
-                # Counted at dequeue, before the status check, so
-                # `outstanding == 0` means nothing is dequeued or in flight --
-                # the predicate the abort ack relies on. The flag survives
-                # re-enqueue on defer.
-                if not kv_chunk.staging_counted:
-                    self._staging_outstanding[room] += 1
-                    kv_chunk.staging_counted = True
-
                 if self.check_status(room) == KVPoll.Failed:
                     self._staging_outstanding.pop(room, None)
-                    if self.enable_deferred_decode_kv_release:
-                        # Skipped => nothing written for this aborted room; ack.
-                        self._maybe_ack_drained_abort(room)
                     continue
 
                 assert room in self.transfer_infos
+
+                # Count each chunk once; the flag survives re-enqueue on defer.
+                if not kv_chunk.staging_counted:
+                    self._staging_outstanding[room] += 1
+                    kv_chunk.staging_counted = True
 
                 # Lazily build a per-worker staging strategy bound to this
                 # worker's private staging buffer (matches mooncake).
@@ -1322,10 +1344,6 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
                     time.sleep(0)
 
                 self._staging_outstanding[room] -= 1
-                if self.enable_deferred_decode_kv_release:
-                    # Handles all DONE => this room's writes landed; ack if it
-                    # was aborted and nothing else is outstanding.
-                    self._maybe_ack_drained_abort(room)
                 if kv_chunk.is_last_chunk:
                     self.update_status(room, KVPoll.Success)
                 elif self.check_status(room) != KVPoll.Success:
@@ -1365,8 +1383,6 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
                 self.exceptions[room] = e
                 self.record_failure(room, str(e))
                 self.update_status(room, KVPoll.Failed)
-                # No ack here on purpose: the DONE barrier bails on the first
-                # ERR, so siblings may still be writing; fall back to the timeout.
 
     def register_buffer_to_engine(self):
         self.kv_descs = []
@@ -2612,17 +2628,14 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
 
         try:
             room_to_be_aborted = int(msg[1].decode("ascii"))
-            decode_ip = msg[2].decode("ascii") if len(msg) > 2 else None
-            decode_port = int(msg[3].decode("ascii")) if len(msg) > 3 else None
         except Exception as e:
             logger.debug(f"Ignoring malformed abort notification: {e}")
             return True
 
-        room_active = (
+        if (
             room_to_be_aborted in self.request_status
             and self.check_status(room_to_be_aborted) != KVPoll.Success
-        )
-        if room_active:
+        ):
             self.record_failure(
                 room_to_be_aborted,
                 "Aborted by decode-side abort notification.",
@@ -2638,20 +2651,8 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
                 f"ignoring (already completed or unknown)"
             )
 
-        # Deferred KV release: register only after the status flip above (see
-        # register_deferred_ack_target), then try once -- the room may already be
-        # quiescent and never revisited by the worker. A concluded/unknown room is
-        # acked only when nothing is still counted for it: the ERR path abandons
-        # sibling handles that may still be writing and clear() then drops the
-        # room, so "unknown" alone does not imply quiescent.
-        if self.enable_deferred_decode_kv_release and decode_port is not None:
-            if room_active:
-                self.register_deferred_ack_target(
-                    room_to_be_aborted, decode_ip, decode_port
-                )
-                self._maybe_ack_drained_abort(room_to_be_aborted)
-            elif self._staging_outstanding.get(room_to_be_aborted, 0) == 0:
-                self._send_abort_ack(decode_ip, decode_port, room_to_be_aborted)
+        # TODO: Define real ACK/deferred-release semantics if decode-side buffer
+        # release needs to wait for prefill-side NIXL transfer quiescence.
 
         return True
 
@@ -2667,12 +2668,20 @@ class NixlKVManager(StagingManagerMixin, CommonKVManager):
                 # Staging: decode reports consumption watermark back to prefill
                 if waiting_req_bytes[0] == b"WATERMARK":
                     if self.enable_staging:
+                        from sglang.srt.disaggregation.common.staging_handler import (
+                            handle_watermark_msg,
+                        )
+
                         handle_watermark_msg(self._staging_ctx, waiting_req_bytes)
                     continue
 
                 # Staging: decode replies with allocated staging offset
                 if waiting_req_bytes[0] == b"STAGING_RSP":
                     if self.enable_staging:
+                        from sglang.srt.disaggregation.common.staging_handler import (
+                            handle_staging_rsp,
+                        )
+
                         handle_staging_rsp(waiting_req_bytes, self.transfer_infos)
                     continue
 
@@ -2736,7 +2745,6 @@ class NixlKVSender(CommonKVSender):
             pp_rank,
             req_has_disagg_prefill_dp_rank,
         )
-        self.init_time = time.time()
         self.has_sent = False
         self.chunk_id = 0
         self._send_failed = False
@@ -2782,10 +2790,6 @@ class NixlKVSender(CommonKVSender):
         if self._send_failed:
             return KVPoll.Failed  # type: ignore
         status = self.kv_mgr.check_status(self.bootstrap_room)
-        if status == KVPoll.Bootstrapping:
-            timeout_result = self._check_bootstrap_timeout()
-            if timeout_result is not None:
-                return timeout_result
         # Hold Success until all staging chunks transferred: a deferred chunk
         # can still be pending, and concluding now would drop it.
         if (
@@ -2874,6 +2878,7 @@ class NixlKVReceiver(CommonKVReceiver):
             logger.debug(
                 f"Fetched bootstrap info: {bootstrap_info} for engine rank: {self.kv_mgr.kv_args.engine_rank}"
             )
+            sock, lock = self._connect_to_bootstrap_server(bootstrap_info)
             is_dummy = bootstrap_info["is_dummy"]
             logger.debug(
                 f"Sending to prefill server with bootstrap room {self.bootstrap_room} {is_dummy=}"
@@ -2886,7 +2891,6 @@ class NixlKVReceiver(CommonKVReceiver):
                 else b""
             )
             try:
-                sock, lock = self._connect_to_bootstrap_server(bootstrap_info)
                 with lock:
                     sock.send_multipart(
                         [
@@ -2904,7 +2908,6 @@ class NixlKVReceiver(CommonKVReceiver):
                         ]
                     )
             except zmq.ZMQError:
-                self.invalidate_cached_bootstrap_infos()
                 self.kv_mgr.record_failure(
                     self.bootstrap_room,
                     f"send_metadata to prefill {bootstrap_info.get('rank_ip')}:{bootstrap_info.get('rank_port')} failed",
@@ -3003,8 +3006,8 @@ class NixlKVReceiver(CommonKVReceiver):
                 dst_kv_item_len = 0
                 dst_num_slots = 0
 
+            sock, lock = self._connect_to_bootstrap_server(bootstrap_info)
             try:
-                sock, lock = self._connect_to_bootstrap_server(bootstrap_info)
                 with lock:
                     sock.send_multipart(
                         [

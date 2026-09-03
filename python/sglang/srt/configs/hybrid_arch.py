@@ -15,7 +15,6 @@ from sglang.srt.configs import (
     Lfm2Config,
     Lfm2MoeConfig,
     Lfm2VlConfig,
-    MiniCPMHybridConfig,
     NemotronH_Nano_VL_V2_Config,
     NemotronHConfig,
     Qwen3_5Config,
@@ -42,8 +41,6 @@ def qwen3_next_config(model_config: ModelConfig):
 def hybrid_lightning_config(model_config: ModelConfig):
     config = model_config.hf_config
     if isinstance(config, BailingHybridConfig):
-        return config
-    if isinstance(config, MiniCPMHybridConfig) and config.has_lightning_layers:
         return config
     return None
 

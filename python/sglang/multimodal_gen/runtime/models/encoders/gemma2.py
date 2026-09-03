@@ -38,9 +38,6 @@ from sglang.multimodal_gen.runtime.loader.weight_utils import default_weight_loa
 from sglang.multimodal_gen.runtime.managers.memory_managers.layerwise_offload import (
     LayerwiseOffloadableModuleMixin,
 )
-from sglang.multimodal_gen.runtime.models.encoders.base import (
-    EncoderTensorParallelMixin,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -286,9 +283,7 @@ class Gemma2DecoderLayer(nn.Module):
         return hidden_states
 
 
-class Gemma2Model(
-    EncoderTensorParallelMixin, nn.Module, LayerwiseOffloadableModuleMixin
-):
+class Gemma2Model(nn.Module, LayerwiseOffloadableModuleMixin):
     """Gemma2 text encoder model for SANA pipeline."""
 
     _fsdp_shard_conditions = []

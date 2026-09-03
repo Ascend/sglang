@@ -90,6 +90,7 @@ class TestQwen3MoePPxCP(_Qwen3MoePPCompatMixin, CustomTestCase):
         "--cp-strategy",
         "zigzag",
     ]
+    server_env = {"SGLANG_ENABLE_CP_V2": "1"}
 
 
 class TestQwen3MoePPxDP(_Qwen3MoePPCompatMixin, CustomTestCase):

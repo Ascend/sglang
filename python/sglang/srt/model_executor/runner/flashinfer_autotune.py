@@ -25,12 +25,6 @@ import torch
 
 from sglang.srt.environ import envs
 from sglang.srt.model_executor.forward_batch_info import ForwardMode
-from sglang.srt.runtime_context import (
-    get_disagg,
-    get_exec,
-    get_model,
-    get_spec,
-)
 from sglang.srt.utils import empty_context, log_info_on_rank0
 
 if TYPE_CHECKING:
@@ -43,7 +37,7 @@ FLASHINFER_AUTOTUNE_WORKAROUND_SKIPS = frozenset()
 
 
 def get_flashinfer_autotune_skip_ops(model_runner: ModelRunner) -> set[str]:
-    skip_ops = set(get_exec().kernel.flashinfer_autotune_skip_ops or ())
+    skip_ops = set(model_runner.server_args.flashinfer_autotune_skip_ops or ())
     skip_ops.update(FLASHINFER_AUTOTUNE_WORKAROUND_SKIPS)
     return skip_ops
 
@@ -55,29 +49,28 @@ def should_run_flashinfer_autotune(
     mr = model_runner
     if mr.device != "cuda":
         return False
-    if get_exec().kernel.disable_flashinfer_autotune:
+    if mr.server_args.disable_flashinfer_autotune:
         return False
-    if get_exec().deterministic.enable_deterministic_inference:
+    if mr.server_args.enable_deterministic_inference:
         # Tuned configs are per problem shape, so the reduction order would follow
         # the batch shape.
         return False
 
+    server_args = mr.server_args
     if for_speculative_draft:
         backend_str = (
-            get_spec().speculative_moe_runner_backend
-            or get_exec().moe.moe_runner_backend
+            server_args.speculative_moe_runner_backend or server_args.moe_runner_backend
         )
         a2a_backend_str = (
-            get_spec().speculative_moe_a2a_backend or get_exec().moe.moe_a2a_backend
+            server_args.speculative_moe_a2a_backend or server_args.moe_a2a_backend
         )
     else:
-        backend_str = get_exec().moe.moe_runner_backend
-        a2a_backend_str = get_exec().moe.moe_a2a_backend
+        backend_str = server_args.moe_runner_backend
+        a2a_backend_str = server_args.moe_a2a_backend
 
     # Autotune can run before the MoE backend globals are initialized, so read
-    # the configured backends -- the draft leaves (`get_spec()`) or the target
-    # leaves (`get_exec().moe`) above. CuteDSL v1 bypasses MoeRunner, and its
-    # dummy dispatch can exceed DeepEP low-latency's token limit.
+    # the target or draft backend from server_args. CuteDSL v1 bypasses
+    # MoeRunner, and its dummy dispatch can exceed DeepEP low-latency's token limit.
     if backend_str == "flashinfer_cutedsl" and a2a_backend_str == "deepep":
         return False
 
@@ -137,11 +130,12 @@ def flashinfer_autotune_cache_path(model_runner: ModelRunner) -> Path:
     arch = f"sm{major}{minor}"
     flashinfer_version = getattr(flashinfer, "__version__", "unknown")
 
+    server_args = mr.server_args
     model_key_parts = [
-        str(get_model().model_path),
+        str(server_args.model_path),
         str(mr.dtype),
-        str(get_model().quantization),
-        str(get_exec().moe.moe_runner_backend),
+        str(server_args.quantization),
+        str(server_args.moe_runner_backend),
         str(mr.ps.tp_size),
         str(mr.ps.pp_size),
         str(mr.ps.attn_dp_size),
@@ -262,24 +256,19 @@ def maybe_flashinfer_autotune_extend(
     if not envs.SGLANG_FLASHINFER_AUTOTUNE_EXTEND.get():
         return
     mr = runner.model_runner
-    # Prefer the per-rank scheduler buffer while preserving the legacy ceiling
-    # when chunked prefill is disabled.
-    num_tokens = (
-        mr.server_args.max_prefill_buffer_tokens() or mr.server_args.max_prefill_tokens
-    )
+    # max_prefill_tokens is a per-scheduler (per dp-rank) budget, and warmup
+    # runs on all dp ranks at once, so the gathered dummy already reaches the
+    # worst-case serving gather. Do not divide by dp_size.
+    num_tokens = mr.server_args.max_prefill_tokens
     if num_tokens <= (decode_num_tokens or 0):
         return  # decode-shaped autotune already covered these buckets
-    is_pd_prefill_target = (
-        get_disagg().disaggregation_mode == "prefill" and not mr.is_draft_worker
-    )
-    if not mr.is_generation or (
-        mr.spec_algorithm.is_speculative() and not is_pd_prefill_target
-    ):
-        # Ordinary speculative runners force TARGET_VERIFY; PD prefill targets
-        # have no draft-side state and preserve the requested EXTEND mode.
+    if not mr.is_generation or mr.spec_algorithm.is_speculative():
+        # _dummy_run forces TARGET_VERIFY shapes for speculative runners;
+        # extend-bucket autotune for spec configs is a follow-up.
         return
-    # Multimodal generation wrappers can still run this text-only EXTEND dummy;
-    # an incompatible model should fail the explicit opt-in visibly.
+    if mr.model_config.is_multimodal:
+        # The dummy runs mm_inputs=None, which multimodal prefill paths iterate.
+        return
 
     if mr.attn_backend.extend_dummy_seqs_capped_by_req_pool:
         pool_size = mr.req_to_token_pool.size

@@ -20,9 +20,8 @@ Two filters can narrow the discovered set:
 - SGLANG_BUILD_RUST_EXTS env var, applied at build time on top of the above:
   unset or "all" builds everything, "none" builds nothing, and a
   comma-separated list matches substrings, e.g. "grpc" matches
-  "sglang.srt.rust_extensions._grpc". It is read directly from os.environ
-  instead of sglang.srt.environ, which is not importable until the package is
-  built.
+  "sglang.srt.grpc._core". It is read directly from os.environ instead of
+  sglang.srt.environ, which is not importable until the package is built.
 """
 
 import json

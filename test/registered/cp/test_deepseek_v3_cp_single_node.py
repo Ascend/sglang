@@ -37,9 +37,7 @@ class TestDeepseekV3CPInSeqSplit(CustomTestCase):
             "8",
             "--dp",
             "2",
-            "--enable-prefill-cp",
-            "--cp-strategy",
-            "zigzag",
+            "--enable-prefill-context-parallel",
             "--attention-backend",
             "fa3",
             "--mem-frac",
@@ -81,7 +79,7 @@ class TestDeepseekV3CPInSeqSplit(CustomTestCase):
 
         if is_in_ci():
             write_github_step_summary(
-                f"### test_a_gsm8k (deepseek-v3-mla-cp-zigzag)\n"
+                f"### test_a_gsm8k (deepseek-v3-mla-cp-in-seq-split)\n"
                 f'{metrics["score"]=:.3f}\n'
             )
             self.assertGreater(metrics["score"], GSM8K_ACCURACY_THRESHOLD)

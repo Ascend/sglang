@@ -10,24 +10,7 @@ from dataclasses import dataclass
 
 import torch
 
-from sglang.srt.managers.schedule_batch import (
-    Modality,
-    MultimodalDataItem,
-    MultimodalProcessorOutput,
-)
-from sglang.srt.runtime_context import (
-    configured_tp_size,
-    get_mm,
-    get_parallel,
-)
-from sglang.srt.utils.cuda_ipc_transport_utils import (
-    DEFER_CUDA_IPC_FEATURE_RECONSTRUCTION_KEY,
-    MM_FEATURE_CACHE_SIZE,
-    MM_ITEM_MEMORY_POOL_RECYCLE_INTERVAL,
-    CudaIpcTensorTransportProxy,
-    get_mm_feature_pool_size_per_worker,
-)
-from sglang.srt.utils.cuda_vmm_utils import (
+from sglang.srt.cuda_vmm_utils import (
     _FD_SEND_TIMEOUT_S,
     VmmReservation,
     _get_cuda_driver,
@@ -42,6 +25,19 @@ from sglang.srt.utils.cuda_vmm_utils import (
     make_device_allocation_prop,
     release_mappings,
     tensor_from_pointer,
+)
+from sglang.srt.managers.schedule_batch import (
+    Modality,
+    MultimodalDataItem,
+    MultimodalProcessorOutput,
+)
+from sglang.srt.runtime_context import get_parallel
+from sglang.srt.utils.cuda_ipc_transport_utils import (
+    DEFER_CUDA_IPC_FEATURE_RECONSTRUCTION_KEY,
+    MM_FEATURE_CACHE_SIZE,
+    MM_ITEM_MEMORY_POOL_RECYCLE_INTERVAL,
+    CudaIpcTensorTransportProxy,
+    get_mm_feature_pool_size_per_worker,
 )
 
 logger = logging.getLogger(__name__)
@@ -163,9 +159,9 @@ def _contains_tensor_container(value) -> bool:
 
 
 def get_vmm_feature_consumer_count(server_args) -> int:
-    if get_parallel().enable_dp_attention:
-        return configured_tp_size() // get_parallel().dp_size
-    return configured_tp_size()
+    if server_args.enable_dp_attention:
+        return server_args.tp_size // server_args.dp_size
+    return server_args.tp_size
 
 
 class CudaVmmMemoryPool:
@@ -934,7 +930,7 @@ class CudaVmmFeatureTransport:
 
     def __init__(self, server_args, mm_processor) -> None:
         self.pool: CudaVmmMemoryPool | None = None
-        if get_mm().mm_feature_transport != "cuda_vmm":
+        if server_args.mm_feature_transport != "cuda_vmm":
             return
         if mm_processor is None:
             raise RuntimeError(

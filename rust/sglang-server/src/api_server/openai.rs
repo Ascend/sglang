@@ -6,7 +6,6 @@
 
 use axum::{Router, http::StatusCode, response::Response};
 use futures::StreamExt;
-use std::sync::Arc;
 use tokio::sync::mpsc;
 
 mod chat;
@@ -18,21 +17,19 @@ mod tools;
 
 pub(super) use template::ChatFormatter;
 
-use super::app::AppState;
+use super::AppState;
 use super::frame::OutputAccumulator;
 use super::guard::AbortGuard;
 use super::submit::submit;
-use crate::message::config::ServerArgs;
-use crate::message::ids::Rid;
-use crate::message::request::{GenerateRequest, RequestKind};
-use crate::message::response::{ChunkEvent, ResponseItem};
-use crate::tokenizer_manager::tokenizer;
+use crate::ids::Rid;
+use crate::message::{ChunkEvent, EgressItem, GenerateRequest, RequestKind};
+use crate::runtime::ServerArgs;
 use crate::utils::response::error_response;
 
 const MAX_OPENAI_CHOICES: usize = 4096;
 
 /// The routes this module owns, mounted by `api_server::serve`.
-pub(super) fn routes() -> Router<Arc<AppState>> {
+pub(super) fn routes() -> Router<AppState> {
     Router::new()
         .merge(models::routes())
         .merge(completions::routes())
@@ -50,7 +47,7 @@ pub(super) fn load_chat_support(server_args: &ServerArgs) -> Option<ChatFormatte
     if server_args.skip_tokenizer_init || server_args.tokenizer_path.is_empty() {
         return None;
     }
-    let config_file = tokenizer::resolve_model_file(
+    let config_file = crate::tokenizer::resolve_model_file(
         &server_args.tokenizer_path,
         server_args.revision.as_deref(),
         "tokenizer_config.json",
@@ -117,25 +114,25 @@ pub(super) fn openai_error(code: StatusCode, message: impl Into<String>, stream:
 /// `guard` on a natural terminal, and map errors / validation aborts /
 /// truncation to `(status, message)` for the OpenAI error shape.
 async fn collect_output(
-    mut rx: mpsc::Receiver<ResponseItem>,
+    mut rx: mpsc::Receiver<EgressItem>,
     guard: &mut AbortGuard,
     rid: &Rid,
 ) -> Result<ChunkEvent, (StatusCode, String)> {
     let mut accumulator = OutputAccumulator::default();
     let output = loop {
         match rx.recv().await {
-            Some(ResponseItem::Frame(output)) => accumulator.fold(&output),
-            Some(ResponseItem::Done(output)) => {
+            Some(EgressItem::Frame(output)) => accumulator.fold(&output),
+            Some(EgressItem::Done(output)) => {
                 accumulator.fold(&output);
                 break accumulator.into_output();
             }
-            Some(ResponseItem::Error(error)) => {
+            Some(EgressItem::Error(error)) => {
                 guard.disarm(rid);
                 let status = StatusCode::from_u16(error.http_status())
                     .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
                 return Err((status, error.to_string()));
             }
-            Some(ResponseItem::Control(_)) | Some(ResponseItem::Data(_)) => {}
+            Some(EgressItem::Control(_)) | Some(EgressItem::Data(_)) => {}
             None => {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -163,7 +160,7 @@ async fn submit_generation(
     request: GenerateRequest,
     stream: bool,
     guard: &mut AbortGuard,
-) -> Result<mpsc::Receiver<ResponseItem>, Response> {
+) -> Result<mpsc::Receiver<EgressItem>, Response> {
     match submit(state, RequestKind::Generate(Box::new(request)), stream).await {
         Ok((rid, rx)) => {
             guard.arm(rid);
@@ -180,17 +177,17 @@ async fn submit_generation(
     }
 }
 
-fn indexed_decode_stream(
+fn indexed_egress_stream(
     index: usize,
-    rx: mpsc::Receiver<ResponseItem>,
-) -> futures::stream::BoxStream<'static, (usize, Option<ResponseItem>)> {
+    rx: mpsc::Receiver<EgressItem>,
+) -> futures::stream::BoxStream<'static, (usize, Option<EgressItem>)> {
     futures::stream::unfold((rx, false), move |(mut rx, finished)| async move {
         if finished {
             return None;
         }
         match rx.recv().await {
             Some(item) => {
-                let finished = matches!(item, ResponseItem::Done(_) | ResponseItem::Error(_));
+                let finished = matches!(item, EgressItem::Done(_) | EgressItem::Error(_));
                 Some(((index, Some(item)), (rx, finished)))
             }
             None => Some(((index, None), (rx, true))),

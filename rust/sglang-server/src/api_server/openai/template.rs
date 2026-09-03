@@ -18,7 +18,7 @@ use dynamo_renderer::{ChatTemplate, ContextMixins, PromptContextMixin, PromptFor
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::message::types::OneOrMany;
+use crate::message::OneOrMany;
 
 const SUPPORTED_STYLES: &[&str] = &[
     "ADD_COLON_SINGLE",

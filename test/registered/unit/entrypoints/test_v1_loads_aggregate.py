@@ -66,24 +66,13 @@ class _FakeHttpTokenizerManager:
         pp_size=1,
         enable_dp_attention=False,
     ):
-        from sglang.srt.runtime_context import get_context
-
         self.loads = loads
-        # `tp_size` is raw input and still read off the record; the leaves
-        # resolution writes come from the bags.
-        self.server_args = SimpleNamespace(tp_size=tp_size)
-        # The accelerator arithmetic answers "what will this server do", so it
-        # reads the resolved topology out of the bags; publish the shape under test.
-        self._override = get_context().override_server_args(
+        self.server_args = SimpleNamespace(
             tp_size=tp_size,
             dp_size=dp_size,
             pp_size=pp_size,
             enable_dp_attention=enable_dp_attention,
         )
-        self._override.install()
-
-    def restore(self):
-        self._override.restore()
 
     async def get_loads(self, include=None, dp_rank=None):
         results = []
@@ -106,7 +95,6 @@ class TestLoadsResponse(CustomTestCase):
                 )
             ]
         )
-        self.addCleanup(manager.restore)
 
         response = asyncio.run(get_loads(tokenizer_manager=manager))
 
@@ -123,7 +111,6 @@ class TestLoadsAcceleratorField(CustomTestCase):
         """Guards the response contract: the JSON envelope carries an
         accelerator name and the accelerator count for each DP rank."""
         manager = _FakeHttpTokenizerManager([LoadSnapshot(dp_rank=0)], tp_size=16)
-        self.addCleanup(manager.restore)
 
         with mock.patch.object(
             v1_loads, "_accelerator_name", return_value="NVIDIA GB300"
@@ -139,7 +126,6 @@ class TestLoadsAcceleratorField(CustomTestCase):
             dp_size=8,
             enable_dp_attention=True,
         )
-        self.addCleanup(manager.restore)
 
         response = asyncio.run(get_loads(tokenizer_manager=manager))
 

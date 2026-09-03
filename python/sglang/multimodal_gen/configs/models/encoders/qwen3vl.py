@@ -7,7 +7,6 @@ from sglang.multimodal_gen.configs.models.encoders.base import (
     TextEncoderConfig,
 )
 from sglang.multimodal_gen.configs.models.fsdp import (
-    is_block,
     is_embed_tokens,
     is_final_norm,
     is_layer,
@@ -57,7 +56,7 @@ class Qwen3VLArchConfig(TextEncoderArchConfig):
         ]
     )
     _fsdp_shard_conditions: list = field(
-        default_factory=lambda: [is_layer, is_block, is_embed_tokens, is_final_norm]
+        default_factory=lambda: [is_layer, is_embed_tokens, is_final_norm]
     )
 
     # JoyImage specific settings

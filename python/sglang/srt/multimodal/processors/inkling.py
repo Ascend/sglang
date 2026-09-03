@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import urllib.request
 from collections.abc import Mapping
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -52,7 +53,6 @@ from sglang.srt.parser.inkling_tokenizer import IMAGE_TOKEN_ID as INKLING_IMAGE_
 from sglang.srt.parser.inkling_tokenizer import (
     INKLING_SPECIAL_TOKEN_IDS,
 )
-from sglang.srt.utils.common import download_remote_media
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,8 @@ def _resolve_media_item(item):
         header, _, payload = url.partition(",")
         return base64.b64decode(payload) if ";base64" in header else payload.encode()
     if url.startswith(("http://", "https://")):
-        return download_remote_media(url, timeout=30)
+        with urllib.request.urlopen(url, timeout=30) as resp:
+            return resp.read()
     return url  # plain path / file:// -> handled by the per-modality byte loader
 
 
@@ -133,8 +134,7 @@ class InklingMultimodalProcessor(SGLangBaseProcessor):
                 logger.info("Using Rust-accelerated Inkling image processor")
             except ImportError:
                 logger.warning(
-                    "SGLANG_INKLING_RS_MM_PREPROCESS=1 but "
-                    "sglang.srt.rust_extensions._multimodal is not available; "
+                    "SGLANG_INKLING_RS_MM_PREPROCESS=1 but sglang.srt.multimodal._core is not available; "
                     "falling back to the default image processor."
                 )
                 image_processor = InklingImageProcessor(patch_size=patch_size)

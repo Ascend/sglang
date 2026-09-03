@@ -11,8 +11,6 @@ import torch
 
 from sglang.srt.model_executor.runner_utils.pool import (
     get_or_create_global_graph_memory_pool,
-    graph_pool_capture_scope,
-    graph_pool_replay_scope,
 )
 
 if TYPE_CHECKING:
@@ -159,8 +157,7 @@ class KimiK3ViTCudaGraphRunner:
         entry = self.graphs.get(key)
         if entry is not None:
             entry.input_buffer.copy_(pixel_values)
-            with graph_pool_replay_scope():
-                entry.graph.replay()
+            entry.graph.replay()
             return list(entry.outputs)
 
         max_seqlen = max(t * h * w for t, h, w in grid_thw_list)
@@ -196,22 +193,19 @@ class KimiK3ViTCudaGraphRunner:
             total_tokens=pixel_values.shape[0],
             dtype=pixel_values.dtype,
         )
-        with graph_pool_capture_scope():
-            try:
-                entry = self._capture(
-                    key, pixel_values, grid_thws, grid_thw_list, metadata
-                )
-            except Exception:
-                self.failed_keys.add(key)
-                logger.exception(
-                    "Kimi-K3 ViT CUDA graph capture failed for key=%s; "
-                    "using eager fallback",
-                    key,
-                )
-                outputs, _ = self._run_eager(pixel_values, grid_thws, grid_thw_list)
-                return outputs
+        try:
+            entry = self._capture(key, pixel_values, grid_thws, grid_thw_list, metadata)
+        except Exception:
+            self.failed_keys.add(key)
+            logger.exception(
+                "Kimi-K3 ViT CUDA graph capture failed for key=%s; "
+                "using eager fallback",
+                key,
+            )
+            outputs, _ = self._run_eager(pixel_values, grid_thws, grid_thw_list)
+            return outputs
 
-            self.graphs[key] = entry
-            entry.input_buffer.copy_(pixel_values)
-            entry.graph.replay()
+        self.graphs[key] = entry
+        entry.input_buffer.copy_(pixel_values)
+        entry.graph.replay()
         return list(entry.outputs)

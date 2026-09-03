@@ -58,11 +58,6 @@ on:
         description: 'GitHub token for API calls'
         type: string
         default: ${{ github.token }}
-      test_timeout_minutes:
-        required: false
-        type: string
-        default: '300'
-        description: 'timeout-minutes for the Run test step'
 
 env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
@@ -171,11 +166,6 @@ jobs:
                 core.info(`[health-check] Filtered out h20 job: ${j.name}`);
                 return false;
               }
-              // multimodal-gen NPU tests should not cascade fast-fail to perf/accuracy stages.
-              if (baseName === 'multimodal-gen-test-1-npu-a3' || baseName === 'multimodal-gen-test-2-npu-a3') {
-                core.info(`[health-check] Filtered out multimodal-gen NPU job: ${j.name}`);
-                return false;
-              }
               // If the failing step is the health check, it's a cascade — skip it
               const failedStep = (j.steps || []).find(s => s.conclusion === 'failure');
               if (failedStep && (failedStep.name.includes('check-pr-test-health') || failedStep.name.includes('Check PR test health'))) {
@@ -215,7 +205,7 @@ jobs:
           curl -o /tmp/test.jsonl -L https://gh-proxy.test.osinfra.cn/https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl
 
       - name: Run test
-        timeout-minutes: ${{ fromJson(inputs.test_timeout_minutes) }}
+        timeout-minutes: 300
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com

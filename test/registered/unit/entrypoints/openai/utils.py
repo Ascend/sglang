@@ -54,9 +54,7 @@ class MockTokenizerManager:
             tool_call_parser=None,
             incremental_streaming_output=False,
         )
-        # Stands in for the context's resolved leaves: an override replaces the
-        # field's one live value, the seed stays on server_args.
-        self._config_overrides = {}
+        self._config_updates = []
         self.tokenizer = Mock()
         self.tokenizer.encode.return_value = [1, 2, 3]
         self.tokenizer.chat_template = None
@@ -66,9 +64,10 @@ class MockTokenizerManager:
         self.create_abort_task = Mock()
 
     def config_value(self, name: str):
-        """The value in effect for one config field."""
-        if name in self._config_overrides:
-            return self._config_overrides[name]
+        """The manager's overlay accessor: no control-plane update recorded."""
+        for _source, fields in reversed(self._config_updates):
+            if name in fields:
+                return fields[name]
         return getattr(self.server_args, name)
 
 

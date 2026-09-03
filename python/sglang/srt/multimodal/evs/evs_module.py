@@ -13,6 +13,7 @@
 # ==============================================================================
 
 
+import dataclasses
 import typing
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -26,6 +27,19 @@ from sglang.srt.multimodal.processors.base_processor import BaseMultimodalProces
 from sglang.utils import logger
 
 from .evs_core import compute_retention_mask, replace_offsets_with_tokens_per_frame
+
+
+@dataclasses.dataclass(kw_only=True)
+class EVSDataItem(MultimodalDataItem):
+    thw_grids: list[tuple[int, int, int]]
+
+
+@dataclasses.dataclass(kw_only=True)
+class VideoEVSDataItem(EVSDataItem):
+    pre_chunked_input_ids: torch.Tensor
+
+    def __post_init__(self):
+        assert self.is_video()
 
 
 @dataclass(kw_only=True)
@@ -51,12 +65,14 @@ class EVSEmbeddingResult(EmbeddingResult):
         input_ids: torch.Tensor,
         offsets: list[tuple[int, int]],
         *,
-        item: MultimodalDataItem,
+        item: VideoEVSDataItem,
         extend_prefix_len: int,
         extend_seq_len: int,
     ) -> tuple[torch.Tensor, list[tuple[int, int]]]:
         assert len(input_ids) == extend_seq_len
-        assert item.is_video() and "pre_chunked_input_ids" in item.model_specific_data
+        assert isinstance(
+            item, VideoEVSDataItem
+        ), f"Expected VideoEVSDataItem, got {type(item)}"
         pre_chunked_input_ids = item.pre_chunked_input_ids
         filler_token_id = item.pad_value
         input_ids_list = replace_offsets_with_tokens_per_frame(
@@ -135,7 +151,7 @@ class EVS(torch.nn.Module, ABC):
         Apply EVS pruning to video embeddings.
 
         Args:
-            items: List containing a single EVS video item with video features.
+            items: List containing a single VideoEVSDataItem with video features.
 
         Returns:
             EVSEmbeddingResult with pruned embeddings and actual token counts per frame.
@@ -145,7 +161,9 @@ class EVS(torch.nn.Module, ABC):
         )
         assert len(items) == 1, f"Expected 1 item, got {len(items)}"
         item = items[0]
-        assert item.is_video() and "thw_grids" in item.model_specific_data
+        assert isinstance(
+            item, VideoEVSDataItem
+        ), f"Expected VideoEVSDataItem with modality VIDEO, got {item}"
 
         q = self.evs_config.video_pruning_rate
         merge = self.evs_config.spatial_merge_size

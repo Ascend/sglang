@@ -2,7 +2,6 @@
 
 use std::collections::BTreeMap;
 use std::convert::Infallible;
-use std::sync::Arc;
 
 use axum::{
     Json, Router,
@@ -34,22 +33,18 @@ use super::tools::{
     parse_chat_tool_calls,
 };
 use super::{
-    AppState, ChatFormatter, collect_output, contains_media, error_payload, indexed_decode_stream,
+    AppState, ChatFormatter, collect_output, contains_media, error_payload, indexed_egress_stream,
     openai_error, submit_generation, unix_seconds_u32,
 };
-use crate::message::config::{DefaultSamplingParams, ServerArgs};
-use crate::message::ids::Rid;
-use crate::message::request::GenerateRequest;
-use crate::message::response::{ChunkExtras, ResponseItem};
-use crate::message::sampling::SamplingParams;
-use crate::message::types::OneOrMany;
+use crate::ids::Rid;
+use crate::message::{ChunkExtras, EgressItem, GenerateRequest, OneOrMany, SamplingParams};
 
-pub(super) fn routes() -> Router<Arc<AppState>> {
+pub(super) fn routes() -> Router<AppState> {
     Router::new().route("/v1/chat/completions", post(chat_completions))
 }
 
 async fn chat_completions(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     body: Result<Json<CreateChatCompletionRequest>, JsonRejection>,
 ) -> Response {
     let request = match body {
@@ -288,7 +283,7 @@ pub(super) fn chat_sampling(
     tool_choice: &DynamoToolChoice,
     tools: &[ToolDefinition],
     parallel_tool_calls: Option<bool>,
-    server_args: &ServerArgs,
+    server_args: &crate::runtime::ServerArgs,
 ) -> Result<SamplingParams, String> {
     let mut sampling = chat_sampling_params(
         request,
@@ -304,7 +299,7 @@ pub(super) fn chat_sampling(
     sampling
         .normalize(
             server_args.skip_tokenizer_init,
-            server_args.model_config.vocab_size,
+            server_args.model_config.vocab_size.unwrap_or(u64::MAX),
         )
         .map_err(|error| error.to_string())?;
     Ok(sampling)
@@ -357,7 +352,10 @@ impl SamplingDefaults {
     };
     /// The resolved model defaults (empty in `--sampling-defaults openai`
     /// mode), which slot between the user's values and the OpenAI terminals.
-    pub(super) fn with_model_defaults(mut self, model: &DefaultSamplingParams) -> SamplingDefaults {
+    pub(super) fn with_model_defaults(
+        mut self,
+        model: &crate::runtime::DefaultSamplingParams,
+    ) -> SamplingDefaults {
         self.temperature = model.temperature;
         self.top_p = model.top_p;
         self
@@ -423,7 +421,7 @@ pub(super) fn chat_sampling_params(
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn unary_chat(
-    submitted: Vec<(usize, Rid, mpsc::Receiver<ResponseItem>)>,
+    submitted: Vec<(usize, Rid, mpsc::Receiver<EgressItem>)>,
     mut guard: AbortGuard,
     response_id: String,
     model: String,
@@ -507,7 +505,7 @@ pub(super) async fn unary_chat(
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn chat_event_stream(
-    submitted: Vec<(usize, Rid, mpsc::Receiver<ResponseItem>)>,
+    submitted: Vec<(usize, Rid, mpsc::Receiver<EgressItem>)>,
     mut guard: AbortGuard,
     response_id: String,
     model: String,
@@ -543,7 +541,7 @@ pub(super) fn chat_event_stream(
 
         for (index, rid, rx) in submitted {
             rids.push(rid);
-            streams.push(indexed_decode_stream(index, rx));
+            streams.push(indexed_egress_stream(index, rx));
             yield Annotated {
                 data: Some(CreateChatCompletionStreamResponse {
                     id: response_id.clone(),
@@ -580,12 +578,12 @@ pub(super) fn chat_event_stream(
                 continue;
             };
             let output = match item {
-                ResponseItem::Frame(output) => output,
-                ResponseItem::Done(output) => {
+                EgressItem::Frame(output) => output,
+                EgressItem::Done(output) => {
                     guard.disarm(&rids[index]);
                     output
                 }
-                ResponseItem::Error(error) => {
+                EgressItem::Error(error) => {
                     guard.disarm(&rids[index]);
                     yield Annotated {
                         data: None,
@@ -596,7 +594,7 @@ pub(super) fn chat_event_stream(
                     };
                     continue;
                 }
-                ResponseItem::Control(_) | ResponseItem::Data(_) => continue,
+                EgressItem::Control(_) | EgressItem::Data(_) => continue,
             };
             if let Some((code, message)) = output
                 .finish_reason
@@ -838,7 +836,6 @@ pub(super) fn chat_logprobs(extras: Option<&ChunkExtras>) -> ChatChoiceLogprobs 
             bytes: Some(token.as_bytes().to_vec()),
             token,
             logprob,
-            token_id: u32::try_from(token_id).ok(),
             top_logprobs,
         });
     }
@@ -856,8 +853,8 @@ mod tests {
         merge_template_stops, unary_chat,
     };
     use crate::api_server::guard::AbortGuard;
-    use crate::message::config::DefaultSamplingParams;
-    use crate::message::response::ChunkExtras;
+    use crate::message::ChunkExtras;
+    use crate::runtime::DefaultSamplingParams;
     use axum::http::StatusCode;
     use dynamo_protocols::types::{CreateChatCompletionRequest, Stop};
     use futures::StreamExt;
@@ -925,7 +922,7 @@ mod tests {
         ));
         assert_eq!(
             formatter.stop_strs(),
-            Some(crate::message::types::OneOrMany::Many(vec![
+            Some(crate::message::OneOrMany::Many(vec![
                 "<|endoftext|>".into(),
                 "<|im_end|>".into()
             ]))
@@ -1023,7 +1020,6 @@ mod tests {
         let logprobs = chat_logprobs(Some(&extras));
         let token = &logprobs.content.unwrap()[0];
         assert_eq!(token.token, "x");
-        assert_eq!(token.token_id, Some(7));
         assert_eq!(token.top_logprobs.len(), 2);
         assert_eq!(token.top_logprobs[1].token, "y");
     }

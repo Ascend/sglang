@@ -37,7 +37,6 @@ def get_module_role(module_name: str) -> "RoleType | None":
         "image_processor",
         "processor",
         "connectors",
-        "duration_head",
         "vision_language_encoder",
     )
     if any(
@@ -63,13 +62,7 @@ def get_module_role(module_name: str) -> "RoleType | None":
     if module_name == "hy3dshape_model":
         return RoleType.DENOISER
 
-    decoder_prefixes = (
-        "vae",
-        "audio_vae",
-        "video_vae",
-        "vocoder",
-        "diffusion_decoder",
-    )
+    decoder_prefixes = ("vae", "audio_vae", "video_vae", "vocoder")
     if any(
         module_name == p or module_name.startswith(p + "_") for p in decoder_prefixes
     ):

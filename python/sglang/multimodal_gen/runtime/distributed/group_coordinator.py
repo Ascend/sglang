@@ -24,7 +24,6 @@ from sglang.multimodal_gen.runtime.distributed.device_communicators.base_device_
 from sglang.multimodal_gen.runtime.distributed.device_communicators.cpu_communicator import (
     CpuCommunicator,
 )
-from sglang.multimodal_gen.runtime.distributed.utils import all_gather_single
 from sglang.multimodal_gen.runtime.platforms import current_platform
 from sglang.multimodal_gen.runtime.utils.logging_utils import (
     init_logger,
@@ -124,18 +123,6 @@ class GraphCaptureContext:
     stream: torch.cuda.Stream | None
 
 
-def new_device_group(ranks, backend=None):
-    """Create a process group for device collectives.
-
-    A single-rank group never runs one: every collective short-circuits on
-    world_size == 1. NCCL would still allocate its per-channel device buffers
-    for it, which costs ~390 MiB a group.
-    """
-    return torch.distributed.new_group(
-        ranks, backend="gloo" if len(ranks) == 1 else backend
-    )
-
-
 class GroupCoordinator:
     """
     PyTorch ProcessGroup wrapper for a group of processes.
@@ -182,7 +169,9 @@ class GroupCoordinator:
         self.cpu_group = None
 
         for ranks in group_ranks:
-            device_group = new_device_group(ranks, torch_distributed_backend)
+            device_group = torch.distributed.new_group(
+                ranks, backend=torch_distributed_backend
+            )
             # a group with `gloo` backend, to allow direct coordination between
             # processes through the CPU.
             with suppress_stdout():
@@ -418,7 +407,9 @@ class GroupCoordinator:
         ):
             return torch.ops.sgl_kernel.shm_allgather(input_, dim)
         else:
-            all_gather_single(output_tensor, input_, group=self.device_group)
+            torch.distributed.all_gather_into_tensor(
+                output_tensor, input_, group=self.device_group
+            )
 
         if dim != 0:
             input_size[0] //= world_size
@@ -872,7 +863,9 @@ class PipelineGroupCoordinator(GroupCoordinator):
         self.device_groups = []
         if len(group_ranks[0]) > 2 or len(group_ranks[0]) == 1:
             for ranks in group_ranks:
-                device_group = new_device_group(ranks, torch_distributed_backend)
+                device_group = torch.distributed.new_group(
+                    ranks, backend=torch_distributed_backend
+                )
                 # a group with `gloo` backend, to allow direct coordination between
                 # processes through the CPU.
                 with suppress_stdout():
@@ -934,7 +927,9 @@ class PipelineGroupCoordinator(GroupCoordinator):
         ] = None
         self.skip_device_group = None
         for ranks in group_ranks:
-            skip_device_group = new_device_group(ranks, torch_distributed_backend)
+            skip_device_group = torch.distributed.new_group(
+                ranks, backend=torch_distributed_backend
+            )
             if self.rank in ranks:
                 self.skip_device_group = skip_device_group
         assert self.skip_device_group is not None

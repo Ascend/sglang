@@ -380,7 +380,6 @@ class W8A8Int8MoEMethod(FusedMoEMethodBase):
                 None,  # alpha
                 None,  # limit
                 True,  # is_vnni
-                self.moe_runner_config.activation,  # activation
             )
             return StandardCombineInput(hidden_states=output)
 

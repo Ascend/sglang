@@ -54,6 +54,7 @@ class TestDSACPV2Interleave(CustomTestCase):
             cls.base_url,
             timeout=SERVER_LAUNCH_TIMEOUT,
             other_args=other_args,
+            env={"SGLANG_ENABLE_CP_V2": "1"},
         )
 
     @classmethod

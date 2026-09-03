@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Sequence
 
 from sglang.srt.environ import envs
-from sglang.srt.runtime_context import get_schedule
+from sglang.srt.server_args import ServerArgs
 
 if TYPE_CHECKING:
     from sglang.srt.managers.schedule_batch import Req
@@ -18,10 +18,10 @@ class NewTokenRatioTracker:
     current: float
 
     @classmethod
-    def from_config(cls) -> NewTokenRatioTracker:
+    def from_server_args(cls, server_args: ServerArgs) -> NewTokenRatioTracker:
         init = min(
             envs.SGLANG_INIT_NEW_TOKEN_RATIO.get()
-            * get_schedule().schedule_conservativeness,
+            * server_args.schedule_conservativeness,
             1.0,
         )
         min_ratio = min(

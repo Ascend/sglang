@@ -2,15 +2,19 @@
 only decrease.
 
 After ``ServerArgs.__post_init__`` returns, the instance carries the resolved
-configuration and the resolution pipeline (``server_args.py`` and
-``arg_groups/``) is the only place that computes it: resolved config changes go
-to the context bags via ``get_context().override(source, **fields)``, and a
-value one runner or worker owns travels as a constructor argument. The baseline
-is therefore an exact pin at zero -- new mutations must not appear, and removals
-must lower it.
+configuration; the resolution pipeline (``server_args.py`` and
+``arg_groups/``) is the only place that computes it. Every assignment to a
+``server_args`` field elsewhere weakens that contract, so the count below is
+an exact pin: new mutations must not appear, and removals must lower the
+baseline to lock in the progress.
 
-``ServerArgs.__setattr__`` already raises on a bare assignment after
-resolution; this textual scan is what reaches the sites tests never execute.
+There is no post-resolution mutation entry point on the instance any more:
+resolved config changes go to the context bags via
+``get_context().override(source, **fields)``, and a value that differs for one
+runner or worker travels as a constructor argument to it. The baseline is
+therefore zero. ``ServerArgs.__setattr__`` raises
+on a bare assignment after resolution; this ratchet catches the sites the tests
+never execute.
 """
 
 from sglang.test.ci.ci_register import register_cpu_ci

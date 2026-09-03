@@ -107,9 +107,6 @@ class SchedulerWeightUpdaterManager:
             )
             assert flush_cache_success, "Cache flush failed after updating weights"
 
-    def record_weight_version_after_update(self, weight_version: Optional[str]) -> None:
-        self.scheduler.record_weight_version_change(new_version=weight_version)
-
     def update_weights_from_disk(self, recv_req: UpdateWeightFromDiskReqInput):
         """In-place update of the weights from disk."""
         with self._observe_weight_load("disk"):
@@ -119,9 +116,7 @@ class SchedulerWeightUpdaterManager:
                 success, message = self.draft_worker.update_weights_from_disk(recv_req)
             if tp_success:
                 self.flush_cache_after_weight_update(recv_req)
-            if success:
-                self.record_weight_version_after_update(recv_req.weight_version)
-            else:
+            if not success:
                 logger.error(message)
             return UpdateWeightFromDiskReqOutput(
                 success=success, message=message, num_paused_requests=0
@@ -149,7 +144,6 @@ class SchedulerWeightUpdaterManager:
             success, message = self.tp_worker.update_weights_from_distributed(recv_req)
             if success:
                 self.flush_cache_after_weight_update(recv_req)
-                self.record_weight_version_after_update(recv_req.weight_version)
             else:
                 logger.error(message)
             return UpdateWeightsFromDistributedReqOutput(
@@ -166,7 +160,6 @@ class SchedulerWeightUpdaterManager:
             success, message = worker.update_weights_from_tensor(recv_req)
             if success:
                 self.flush_cache_after_weight_update(recv_req)
-                self.record_weight_version_after_update(recv_req.weight_version)
             else:
                 logger.error(message)
             torch.distributed.barrier(group=self.tp_cpu_group)
@@ -181,9 +174,7 @@ class SchedulerWeightUpdaterManager:
                 success, message = self.draft_worker.update_weights_from_ipc(recv_req)
             if tp_success:
                 self.flush_cache_after_weight_update(recv_req)
-            if success:
-                self.record_weight_version_after_update(recv_req.weight_version)
-            else:
+            if not success:
                 logger.error(message)
             torch.distributed.barrier(group=self.tp_cpu_group)
             return UpdateWeightsFromIPCReqOutput(success=success, message=message)

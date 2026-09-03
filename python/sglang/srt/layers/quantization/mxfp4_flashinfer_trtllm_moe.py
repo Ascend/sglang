@@ -319,10 +319,6 @@ class Mxfp4FlashinferTrtllmMoEMethod:
         else:
             raise NotImplementedError(f"Unsupported mxfp4 moe precision: {precision}")
 
-        from sglang.srt.layers.moe.moe_runner.flashinfer_trtllm import (
-            trtllm_moe_enable_pdl,
-        )
-
         with use_symmetric_memory(
             get_tp_group(), disabled=not is_allocation_symmetric()
         ):
@@ -365,7 +361,6 @@ class Mxfp4FlashinferTrtllmMoEMethod:
             do_finalize=True,
             tune_max_num_tokens=next_power_of_2(x_quant.shape[0]),
             output=symm_output,
-            enable_pdl=trtllm_moe_enable_pdl(num_tokens),
         )[0]
 
         return StandardCombineInput(hidden_states=output)
@@ -382,7 +377,6 @@ def maybe_fuse_routed_scale_and_shared_add(
     # alpha=scale)`. With no shared output, the missing scale is applied
     # in-place. Otherwise `routed` is already scale-final and we just add
     # `shared` (or pass through if there is none).
-    from sglang.srt.layers.quantization.expert_pack import ExpertPackMoEMethod
     from sglang.srt.layers.quantization.mxfp4_flashinfer_cutlass_moe import (
         Mxfp4FlashinferCutlassMoEMethod,
     )
@@ -396,7 +390,6 @@ def maybe_fuse_routed_scale_and_shared_add(
             Mxfp4FlashinferTrtllmMoEMethod,
             Mxfp4FlashinferCutlassMoEMethod,
             Mxfp4MarlinMoEMethod,
-            ExpertPackMoEMethod,
         ),
     )
     if fused:

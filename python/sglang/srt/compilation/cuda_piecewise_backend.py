@@ -18,10 +18,6 @@ from sglang.srt.compilation.compile_phase import (
     is_in_torch_compile_warmup,
 )
 from sglang.srt.compilation.weak_ref_tensor import weak_ref_tensors
-from sglang.srt.model_executor.runner_utils.pool import (
-    graph_pool_capture_scope,
-    graph_pool_replay_scope,
-)
 from sglang.srt.utils.common import print_warning_once
 
 logger = logging.getLogger(__name__)
@@ -190,9 +186,7 @@ class CUDAPiecewiseBackend:
                     stack.enter_context(patch("gc.collect", lambda: None))
                     stack.enter_context(patch("torch.cuda.empty_cache", lambda: None))
                 # mind-exploding: carefully manage the reference and memory.
-                with graph_pool_capture_scope(), torch.cuda.graph(
-                    cudagraph, pool=self.graph_pool, stream=stream
-                ):
+                with torch.cuda.graph(cudagraph, pool=self.graph_pool, stream=stream):
                     # `output` is managed by pytorch's cudagraph pool
                     output = entry.runnable(*args)
                     if self.is_last_graph:
@@ -224,6 +218,5 @@ class CUDAPiecewiseBackend:
                 "Input addresses for cudagraphs are different during replay."
                 f" Expected {entry.input_addresses}, got {new_input_addresses}"
             )
-        with graph_pool_replay_scope():
-            entry.cudagraph.replay()
+        entry.cudagraph.replay()
         return entry.output

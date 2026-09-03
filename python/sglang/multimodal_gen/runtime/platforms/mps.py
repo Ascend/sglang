@@ -46,15 +46,15 @@ class MpsPlatform(Platform):
 
     @classmethod
     def get_device_capability(cls, device_id: int = 0) -> DeviceCapability | None:
-        return None
+        raise NotImplementedError
 
     @classmethod
     def get_device_name(cls, device_id: int = 0) -> str:
-        return "Apple Silicon MPS"
+        raise NotImplementedError
 
     @classmethod
     def get_device_uuid(cls, device_id: int = 0) -> str:
-        return "mps"
+        raise NotImplementedError
 
     @classmethod
     @lru_cache(maxsize=1)

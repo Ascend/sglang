@@ -11,12 +11,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from sglang.kernels.ops.diffusion import (
+from sglang.kernels.ops.diffusion.qknorm_rope import (
     can_use_fused_inplace_qknorm_rope,
-    fuse_scale_shift_kernel,
     fused_inplace_qknorm_rope,
-    triton_one_pass_rms_norm,
 )
+from sglang.kernels.ops.diffusion.triton.rmsnorm_onepass import triton_one_pass_rms_norm
+from sglang.kernels.ops.diffusion.triton.scale_shift import fuse_scale_shift_kernel
 from sglang.kernels.ops.layernorm.norm import (
     can_use_fused_inplace_qknorm,
     fused_inplace_qknorm,
@@ -37,7 +37,6 @@ _is_musa = current_platform.is_musa()
 _is_cpu = current_platform.is_cpu()
 _is_xpu = current_platform.is_xpu()
 _use_rocm_flydsl = get_bool_env_var("SGLANG_USE_ROCM_FLYDSL")
-_has_attentions = False
 
 if _is_cuda or _is_xpu:
     from sgl_kernel import fused_add_rmsnorm, rmsnorm
@@ -47,20 +46,6 @@ if _is_npu:
     from sgl_kernel_npu.norm.rmsnorm_without_weight import (
         fused_rmsnorm_without_weight,
     )
-
-    try:
-        import attentions  # noqa: F401
-
-        _has_attentions = True
-    except ImportError:
-        from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
-
-        logger = init_logger(__name__)  # pylint: disable=invalid-name
-        logger.warning_once(
-            "The 'attentions' library is not installed. Falling back to native layernorm. "
-            "Installing this library may improve performance on NPU. "
-            "See: sgl-project/sgl-kernel-npu"
-        )
 
 if _is_musa:
     from sgl_kernel import fused_add_rmsnorm
@@ -73,7 +58,7 @@ if _is_xpu:
     from sgl_kernel import fused_inplace_qknorm_rope
 
 if not _is_cpu:
-    from sglang.kernels.ops.diffusion import norm_infer, rms_norm_fn
+    from sglang.kernels.ops.diffusion.triton.norm import norm_infer, rms_norm_fn
 
 
 # Copied and adapted from sglang
@@ -467,8 +452,21 @@ class FP32LayerNorm(CustomOp, nn.LayerNorm):
         )
         self._forward_method = self.dispatch_forward()
 
-        if _is_npu and not _has_attentions:
-            self._forward_method = self.forward_native
+        if _is_npu:
+            try:
+                import attentions  # noqa: F401
+            except ImportError:
+                from sglang.multimodal_gen.runtime.utils.logging_utils import (
+                    init_logger,
+                )
+
+                logger = init_logger(__name__)  # pylint: disable=invalid-name
+                logger.warning(
+                    "The 'attentions' library is not installed. Falling back to native layernorm. "
+                    "Installing this library may improve performance on NPU."
+                    "See: sgl-project/sgl-kernel-npu"
+                )
+                self._forward_method = self.forward_native
 
     def _cached_fp32_param(
         self, attr: str, param: torch.Tensor | None, device: torch.device
@@ -616,7 +614,9 @@ class _ScaleResidualNormScaleShift(CustomOp):
             )
             return self.forward_native(residual, x, gate, shift, scale)
 
-        from sglang.kernels.ops.diffusion import fused_scale_residual_norm_scale_shift
+        from sglang.kernels.ops.diffusion.cutedsl.scale_residual_norm_scale_shift import (
+            fused_scale_residual_norm_scale_shift,
+        )
 
         if isinstance(gate, int) and gate != 1:
             raise ValueError(
@@ -647,7 +647,7 @@ class _ScaleResidualNormScaleShift(CustomOp):
             return self.forward_native(residual, x, gate, shift, scale)
 
         try:
-            from sglang.kernels.ops.diffusion import (
+            from sglang.kernels.ops.diffusion.flydsl.fused_residual_norm import (
                 FLYDSL_NORM_MIN_ALIGNED_DIM,
                 flydsl_fused_residual_norm_scale_shift,
             )
@@ -792,7 +792,9 @@ class _NormScaleShift(CustomOp):
             )
             return self.forward_native(x, shift, scale)
 
-        from sglang.kernels.ops.diffusion import fused_norm_scale_shift
+        from sglang.kernels.ops.diffusion.cutedsl.scale_residual_norm_scale_shift import (
+            fused_norm_scale_shift,
+        )
 
         return fused_norm_scale_shift(
             x.contiguous(),
@@ -814,7 +816,7 @@ class _NormScaleShift(CustomOp):
             return self.forward_native(x, shift, scale)
 
         try:
-            from sglang.kernels.ops.diffusion import (
+            from sglang.kernels.ops.diffusion.flydsl.fused_residual_norm import (
                 FLYDSL_NORM_MIN_ALIGNED_DIM,
                 flydsl_norm_scale_shift,
             )
@@ -971,15 +973,11 @@ def apply_qk_norm_rope(
     position_offset: int = 0,
     allow_inplace: bool = True,
     allow_strided_qk: bool = False,
-    round_norm_before_rope: bool = False,
-    cache_has_full_width: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Apply QK RMSNorm followed by RoPE, fusing supported CUDA/XPU shapes.
 
     Strided packed-QKV views require an explicit opt-in because selecting the fused
     kernel changes the numerical path for models that historically used the fallback.
-    ``cache_has_full_width`` describes ``[full cos, full sin]`` cache rows and
-    requires the fused CUDA path; the ordinary cache stores half-width cos/sin.
     """
 
     from sglang.multimodal_gen.runtime.layers.rotary_embedding import (
@@ -1006,12 +1004,7 @@ def apply_qk_norm_rope(
     batch_size, seq_len, _, _ = q.shape
     q_eps = q_norm.variance_epsilon
     k_eps = k_norm.variance_epsilon
-    cache_width = cos_sin_cache.size(-1)
-    if cache_has_full_width and cache_width % 2:
-        raise ValueError(
-            f"full-width cos/sin cache must have even width, got {cache_width}"
-        )
-    rope_dim = cache_width // 2 if cache_has_full_width else cache_width
+    rope_dim = cos_sin_cache.size(-1)
     if rope_dim % 2 != 0 or rope_dim > head_dim:
         raise ValueError(
             f"cos_sin_cache width must be even and <= head_dim, got {rope_dim} vs {head_dim}"
@@ -1061,15 +1054,7 @@ def apply_qk_norm_rope(
         and k_norm.weight.dtype == k.dtype
         and q_has_supported_layout
         and k_has_supported_layout
-        and can_use_fused_inplace_qknorm_rope(
-            head_dim=head_dim,
-            rope_dim=rope_dim,
-            is_neox=is_neox,
-            dtype=q.dtype,
-            cache_dtype=cos_sin_cache.dtype,
-            round_norm_before_rope=round_norm_before_rope,
-            cache_has_full_width=cache_has_full_width,
-        )
+        and can_use_fused_inplace_qknorm_rope(head_dim, rope_dim, is_neox, q.dtype)
     ):
         fused_inplace_qknorm_rope(
             q=q.view(-1, q.shape[-2], head_dim),
@@ -1082,13 +1067,8 @@ def apply_qk_norm_rope(
             eps=q_eps,
             head_dim=head_dim,
             rope_dim=rope_dim,
-            round_norm_before_rope=round_norm_before_rope,
-            cache_has_full_width=cache_has_full_width,
         )
         return q, k
-
-    if cache_has_full_width:
-        raise RuntimeError("full-width cos/sin cache requires fused QKNorm+RoPE")
 
     if (
         _is_xpu

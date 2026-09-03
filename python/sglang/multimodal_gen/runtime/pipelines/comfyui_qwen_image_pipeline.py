@@ -232,10 +232,7 @@ class ComfyUIQwenImagePipelineBase(LoRAPipeline, ComposedPipelineBase):
             with set_default_torch_dtype(default_dtype), torch.device("meta"):
                 model = model_cls(**{"config": dit_config, "hf_config": hf_config})
 
-            use_fsdp = server_args.should_use_fsdp_for_component("transformer")
-            component_starts_on_cpu = server_args.should_start_component_on_cpu(
-                "transformer"
-            )
+            use_fsdp = server_args.use_fsdp_inference
             if current_platform.is_mps():
                 use_fsdp = False
                 logger.info("Disabling FSDP for MPS platform as it's not compatible")
@@ -251,7 +248,7 @@ class ComfyUIQwenImagePipelineBase(LoRAPipeline, ComposedPipelineBase):
                 )
                 shard_model(
                     model,
-                    cpu_offload=False,
+                    cpu_offload=server_args.dit_cpu_offload,
                     reshard_after_forward=True,
                     mp_policy=mp_policy,
                     mesh=device_mesh,
@@ -273,10 +270,6 @@ class ComfyUIQwenImagePipelineBase(LoRAPipeline, ComposedPipelineBase):
         updated_mapping,
         server_args: ServerArgs,
     ):
-        use_fsdp = server_args.should_use_fsdp_for_component("transformer")
-        component_starts_on_cpu = server_args.should_start_component_on_cpu(
-            "transformer"
-        )
         # Create weight iterator for loading
         weight_iterator = safetensors_weights_iterator(safetensors_list)
 
@@ -288,7 +281,7 @@ class ComfyUIQwenImagePipelineBase(LoRAPipeline, ComposedPipelineBase):
             get_local_torch_device(),
             default_dtype,
             strict=True,
-            cpu_offload=component_starts_on_cpu and not use_fsdp,
+            cpu_offload=server_args.dit_cpu_offload,
             param_names_mapping=param_names_mapping_fn,
         )
 

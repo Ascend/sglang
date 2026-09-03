@@ -4,14 +4,13 @@ The Rust server replaces the Python api-server + `TokenizerManager` +
 `DetokenizerManager` stack (hence this module sits beside them in `managers/`),
 running them as Rust threads inside the scheduler process. This wrapper keeps
 all `SGLANG_RUST_SERVER` plumbing — startup, CPU-core partitioning, the
-typed `server_args` handoff, and control-response routing — out of `scheduler.py`. The
+`server_args` blob, and control-response routing — out of `scheduler.py`. The
 scheduler holds an `Optional[RustServer]` and delegates to it.
 """
 
 from __future__ import annotations
 
 import importlib
-import json
 import logging
 import os
 from array import array
@@ -27,10 +26,6 @@ from sglang.srt.managers.utils import (
     compute_num_reserved_tokens,
     msgpack_decode_explained,
 )
-from sglang.srt.runtime_context import (
-    get_mm,
-    get_serving,
-)
 from sglang.srt.utils.flatten import (
     FlatPairColumns,
     NestedRowColumns,
@@ -42,7 +37,7 @@ if TYPE_CHECKING:
     from sglang.srt.configs.model_config import ModelConfig
     from sglang.srt.managers.io_struct import BatchTokenIDOutput
     from sglang.srt.managers.scheduler import Scheduler
-    from sglang.srt.rust_extensions._server import MmSpec, Server, ServerArgs
+    from sglang.srt.server._core import Server
     from sglang.srt.server_args import ServerArgs
 
 logger = logging.getLogger(__name__)
@@ -50,10 +45,8 @@ logger = logging.getLogger(__name__)
 
 class NativeMmSpec(msgspec.Struct, frozen=True, kw_only=True):
     """Resolved parameters of the native Rust MM pipeline for one model,
-    consumed by the Rust worker pool (as the typed extension ``MmSpec``, see
-    :meth:`RustServer._build_mm_spec`), the ``_multimodal`` parity API
-    (:meth:`rust_json`) and the drain adapter
-    (:meth:`NativeMmHost.build_native_mm`)."""
+    consumed by the Rust worker pool (:meth:`rust_json`) and the drain
+    adapter (:meth:`NativeMmHost.build_native_mm`)."""
 
     family: str
     feature_shm: bool
@@ -80,9 +73,7 @@ class NativeMmSpec(msgspec.Struct, frozen=True, kw_only=True):
         return 3 * self.temporal_patch_size * self.patch_size * self.patch_size
 
     def rust_json(self) -> str:
-        """The subset `sglang_mm::registry::pipeline_from_spec` parses — the
-        JSON form the ``_multimodal`` parity API takes; the server itself is
-        handed the typed ``MmSpec`` instead."""
+        """The subset `sglang_mm::registry::pipeline_from_spec` parses."""
         fields = (f for f in self.__struct_fields__ if f not in self.DRAIN_ONLY)
         return msgspec.json.encode({f: getattr(self, f) for f in fields}).decode()
 
@@ -220,7 +211,9 @@ class NativeMmHost:
 
         # `--mm-process-config {"image": {...}}`: only pixel-limit overrides are
         # mirrored natively, anything else disables the pipeline.
-        image_overrides = dict((get_mm().mm_process_config or {}).get("image", {}))
+        image_overrides = dict(
+            (self.server_args.mm_process_config or {}).get("image", {})
+        )
         if not set(image_overrides) <= {"min_pixels", "max_pixels"}:
             return None
 
@@ -267,19 +260,19 @@ class NativeMmHost:
         map in parallel — the transport the Python TokenizerManager already uses.
         Single-rank serving stays inline, where shm would only add a copy.
         """
-        from sglang.srt.multimodal.transport import (
+        from sglang.srt.managers.tokenizer_manager import (
             determine_tensor_transport_mode,
         )
 
         return (
             self.server_args.tp_size > 1
-            and determine_tensor_transport_mode() != "default"
+            and determine_tensor_transport_mode(self.server_args) != "default"
             and not self.server_args.skip_tokenizer_init
         )
 
     @staticmethod
     def build_native_mm(spec: NativeMmSpec, entry):
-        """Drain-time adapter: wrap the Rust-produced buffers of one ``MmEncodeResult``
+        """Drain-time adapter: wrap the Rust-produced buffers of one ``MmHandoff``
         into the scheduler's ``MultimodalProcessorOutput``. Wrapping only — load,
         resize, patchify, token expansion and M-RoPE all ran in Rust.
 
@@ -374,9 +367,7 @@ class RustServer:
         The caller gates this (``SGLANG_RUST_SERVER`` + rank 0); this always
         creates.
         """
-        from sglang.srt.rust_extensions import load_rust_extension
-
-        Server = load_rust_extension("sglang.srt.rust_extensions._server").Server
+        from sglang.srt.server._core import Server
 
         # Force turn off HF tokenizers rayon's unpinned global thread pool.
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -388,7 +379,7 @@ class RustServer:
         # Refuse rather than run: silently dropping it means generating with
         # sampling the operator did not configure, and `/get_model_info` would go on
         # advertising values no request ever receives.
-        if get_serving().preferred_sampling_params:
+        if server_args.preferred_sampling_params:
             raise ValueError(
                 "SGLANG_RUST_SERVER does not yet apply --preferred-sampling-params "
                 "(the Python TokenizerManager merges it into every request; the rust "
@@ -412,10 +403,10 @@ class RustServer:
         )
 
         server = Server(
-            cls._build_server_args(scheduler),
             # None -> run unpinned; the list carries the pinning decision.
             cores=server_cores,
             http_addr=http_addr,
+            server_args_json=cls._build_server_args(scheduler),
         )
 
         # Multimodal models must have a native Rust pipeline — there is no Python
@@ -450,7 +441,7 @@ class RustServer:
                     f"(supported: {', '.join(supported)}; "
                     "images only). Unset SGLANG_RUST_SERVER to serve this model."
                 )
-            server.start_mm_workers(cls._build_mm_spec(mm_spec), mm_host.mm_workers)
+            server.start_mm_workers(mm_spec.rust_json(), mm_host.mm_workers)
 
         # Narrow the scheduler thread only after the server threads are launched.
         if launch_cores is not None:
@@ -473,11 +464,11 @@ class RustServer:
 
         return cls(server, mm_spec=mm_spec)
 
-    def wait_request(self, timeout_ms: int) -> None:
+    def wait_ingress(self, timeout_ms: int) -> None:
         """Block until a request is pushed into the in-process ring or the timeout
         elapses.
         """
-        self.server.wait_request(timeout_ms)
+        self.server.wait_ingress(timeout_ms)
 
     def drain(self, max_recv: int) -> List[Any]:
         """Ingress: non-blocking drain of the in-process ring → list of decoded
@@ -491,10 +482,8 @@ class RustServer:
         the same `TokenizedGenerateReqInput` / control objects the zmq path
         produces, so the IPC schema is tracked automatically) and its `input_ids`
         slice is wrapped as the `array("q")` the scheduler expects. `recv_requests`
-        never waits: the ring drain is `try_recv` (returns the instant the ring
-        is dry, capped at `max_recv`) and the rest is one memcpy per header
-        plus one for the concatenated ids — same contract as `zmq.NOBLOCK`.
-        Parking for work is :meth:`wait_request`, which does release the GIL.
+        releases the GIL for the drain + concat, so this never holds the GIL
+        across a wait — same contract as `zmq.NOBLOCK`.
         """
         limit = max_recv if max_recv > 0 else self._max_per_poll
         batch = self.server.recv_requests(limit)
@@ -562,7 +551,7 @@ class RustServer:
         # rendering happens in Rust.
         encoded = msgspec.msgpack.encode(payload, enc_hook=str)
 
-        self.server.push_control_result(recv_req.rid, encoded)
+        self.server.push_result(recv_req.rid, encoded)
 
     def push_generation(self, payload: BatchTokenIDOutput) -> None:
         """Egress redirect for generation output (replaces the zmq detokenizer).
@@ -707,111 +696,40 @@ class RustServer:
         header = msgspec.msgpack.encode(header_cols)
         # Pass the raw column list; the Rust side concatenates it into the frame
         # with the GIL released.
-        if not self.server.push_decode_result_batch(header, data_cols):
+        if not self.server.push_batch(header, data_cols):
             logger.warning(
                 "Rust egress closed; dropped batch of %d requests during shutdown",
                 len(rids),
             )
 
     @staticmethod
-    def _build_mm_spec(spec: NativeMmSpec) -> MmSpec:
-        """The typed MM handoff for ``Server.start_mm_workers``: the
-        :class:`NativeMmSpec` fields the Rust pipeline consumes, as the Rust
-        extension's own ``MmSpec`` class (same required-keyword contract as
-        :meth:`_build_server_args`; ``family`` / ``resample`` become the
-        extension's ``MmFamily`` / ``MmResample`` enums)."""
-        from sglang.srt.rust_extensions import load_rust_extension
+    def _build_server_args(scheduler: Scheduler) -> str:
+        """JSON blob of the scheduler's ``server_args`` for its embedded Rust
+        server (carries the already-resolved ``model_config``)."""
 
-        ext = load_rust_extension("sglang.srt.rust_extensions._server")
-        family = {"qwen_vl": ext.MmFamily.QwenVl}[spec.family]
-        resample = {"aten_u8": ext.MmResample.AtenU8, "pil": ext.MmResample.Pil}[
-            spec.resample
-        ]
-        return ext.MmSpec(
-            family=family,
-            feature_shm=spec.feature_shm,
-            image_token_id=spec.image_token_id,
-            patch_size=spec.patch_size,
-            merge_size=spec.merge_size,
-            temporal_patch_size=spec.temporal_patch_size,
-            min_pixels=spec.min_pixels,
-            max_pixels=spec.max_pixels,
-            image_mean=spec.image_mean,
-            image_std=spec.image_std,
-            resample=resample,
+        server_args = dict(vars(scheduler.server_args))
+        model_config = dict(vars(scheduler.model_config))
+        model_config["hf_config"] = None  # HF config is not JSON-serializable
+        # Resolved default sampling params (generation_config.json when
+        # `--sampling-defaults model`, {} otherwise). The rust server consumes
+        # these for omitted temperature/top_p in chat conversions instead of
+        # hard-coding the OpenAI terminal defaults.
+        model_config["default_sampling_params"] = (
+            scheduler.model_config.get_default_sampling_params()
         )
-
-    @staticmethod
-    def _build_server_args(scheduler: Scheduler) -> ServerArgs:
-        """The typed launch handoff for the scheduler's embedded Rust server:
-        the ``server_args`` fields it reads, the already-resolved
-        ``model_config``, and launch-time facts — as the Rust extension's own
-        ``ServerArgs`` class. Its constructor takes every field as a required
-        keyword (see ``rust/sglang-server/src/message/config.rs``), so a
-        missing, extra or mistyped field fails here at boot rather than
-        running on a silently-defaulted knob."""
-        from sglang.srt.rust_extensions import load_rust_extension
-
-        ext = load_rust_extension("sglang.srt.rust_extensions._server")
-
-        sa = scheduler.server_args
-        mc = scheduler.model_config
-        disaggregation_mode = {
-            "null": ext.DisaggregationMode.Null,
-            "prefill": ext.DisaggregationMode.Prefill,
-            "decode": ext.DisaggregationMode.Decode,
-        }[sa.disaggregation_mode]
-        return ext.ServerArgs(
-            model_path=sa.model_path,
-            served_model_name=sa.served_model_name,
-            tokenizer_path=sa.tokenizer_path,
-            revision=sa.revision,
-            load_format=sa.load_format,
-            weight_version=sa.weight_version,
-            host=sa.host,
-            port=sa.port,
-            log_level=sa.log_level,
-            log_level_http=sa.log_level_http,
-            chat_template=sa.chat_template,
-            tool_call_parser=sa.tool_call_parser,
-            reasoning_parser=sa.reasoning_parser,
-            stream_response_default_include_usage=sa.stream_response_default_include_usage,
-            tokenizer_worker_num=sa.tokenizer_worker_num,
-            detokenizer_worker_num=sa.detokenizer_worker_num,
-            skip_tokenizer_init=sa.skip_tokenizer_init,
-            incremental_streaming_output=sa.incremental_streaming_output,
-            disaggregation_mode=disaggregation_mode,
-            model_config=ext.ModelConfig(
-                context_len=mc.context_len,
-                vocab_size=mc.vocab_size,
-                is_multimodal=mc.is_multimodal,
-                # Resolved default sampling params (generation_config.json when
-                # `--sampling-defaults model`, {} otherwise). The rust server
-                # consumes these for omitted temperature/top_p in chat
-                # conversions instead of hard-coding the OpenAI terminal
-                # defaults.
-                default_sampling_params=ext.DefaultSamplingParams(
-                    **mc.get_default_sampling_params()
-                ),
-            ),
-            # `preferred_sampling_params` is deliberately absent: `launch`
-            # refuses to start when it is set, so the Rust server never needs it.
-            preferred_sampling_params=(
-                json.dumps(sa.preferred_sampling_params)
-                if sa.preferred_sampling_params is not None
-                else None
-            ),
-            allow_auto_truncate=sa.allow_auto_truncate,
-            enable_return_hidden_states=sa.enable_return_hidden_states,
-            # Not a `server_args` field: `TokenizerManager` derives it, and the
-            # rust ingress needs the same number for its total-token check.
-            num_reserved_tokens=compute_num_reserved_tokens(),
-            # Launch-time facts Python's /server_info reports from
-            # scheduler_info / the package — stamped here so the rust endpoint
-            # can serve them statically (no scheduler round-trip).
-            version=__version__,
-            max_total_num_tokens=scheduler.max_total_num_tokens,
+        server_args["model_config"] = model_config
+        # Launch-time facts Python's /server_info reports from scheduler_info /
+        # the package — stamped here so the rust endpoint can serve them
+        # statically (no scheduler round-trip).
+        server_args["version"] = __version__
+        # Not a `server_args` field: `TokenizerManager` derives it, and the rust
+        # ingress needs the same number for its total-token check.
+        server_args["num_reserved_tokens"] = compute_num_reserved_tokens(
+            scheduler.server_args
         )
+        server_args["max_total_num_tokens"] = scheduler.max_total_num_tokens
+
+        return msgspec.json.encode(server_args, enc_hook=str).decode("utf-8")
 
     @staticmethod
     def _partition_cores(

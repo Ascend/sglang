@@ -3,8 +3,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from sglang.srt.arg_groups.overrides import declare_resolution
-
 if TYPE_CHECKING:
     from sglang.srt.server_args import ServerArgs
 
@@ -22,11 +20,7 @@ def apply_kimi_k3_spec_backend_defaults(server_args: ServerArgs) -> None:
     # Decode is left free (its bf16-ssm SM100+ flashinfer default is fine -- the
     # target only verifies under spec); the verify backend is pinned directly.
     if server_args.linear_attn_verify_backend is None:
-        declare_resolution(
-            server_args,
-            "apply_kimi_k3_spec_backend_defaults",
-            linear_attn_verify_backend="nv_cutedsl",
-        )
+        server_args.linear_attn_verify_backend = "nv_cutedsl"
         logger.info(
             "Kimi hybrid model with speculative decoding: pinning "
             "--linear-attn-verify-backend to nv_cutedsl (uses the fused "
@@ -40,11 +34,7 @@ def apply_kimi_k3_spec_backend_defaults(server_args: ServerArgs) -> None:
         and server_args.speculative_draft_attention_backend is None
         and is_sm100_supported()
     ):
-        declare_resolution(
-            server_args,
-            "apply_kimi_k3_spec_backend_defaults",
-            speculative_draft_attention_backend="trtllm_mha",
-        )
+        server_args.speculative_draft_attention_backend = "trtllm_mha"
         logger.info(
             "Kimi hybrid DSPARK: defaulting "
             "--speculative-draft-attention-backend to trtllm_mha."
@@ -82,11 +72,7 @@ def disable_kimi_k3_symm_mem(server_args: ServerArgs) -> None:
         and graph.prefill.backend == Backend.DISABLED
     ):
         return
-    declare_resolution(
-        server_args,
-        "disable_kimi_k3_symm_mem",
-        enable_symm_mem=False,
-    )
+    server_args.enable_symm_mem = False
     logger.warning(
         "Kimi hybrid model: ignoring --enable-symm-mem because CUDA graphs are on. "
         "The symmetric-memory pool's per-forward allocations are not valid for the "
@@ -110,11 +96,7 @@ def apply_kimi_k3_linear_attn_defaults(server_args: ServerArgs) -> None:
         and server_args.mamba_ssm_dtype == "bfloat16"
         and is_sm100_supported()
     ):
-        declare_resolution(
-            server_args,
-            "apply_kimi_k3_linear_attn_defaults",
-            linear_attn_decode_backend="triton",
-        )
+        server_args.linear_attn_decode_backend = "triton"
         logger.info(
             "Kimi hybrid model with bf16 SSM state: defaulting "
             "--linear-attn-decode-backend to triton."

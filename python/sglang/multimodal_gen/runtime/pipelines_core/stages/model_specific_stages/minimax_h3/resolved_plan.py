@@ -27,7 +27,6 @@ import msgspec
 
 from sglang.multimodal_gen.runtime.pipelines_core.stages.model_specific_stages.minimax_h3.constants import (
     MINIMAX_H3_SUPPORTED_FPS,
-    warn_unverified_short_edge,
 )
 from sglang.multimodal_gen.runtime.pipelines_core.stages.model_specific_stages.minimax_h3.task_profiles import (
     MINIMAX_H3_FL2VA_KEYFRAME_SIGNATURES,
@@ -101,13 +100,11 @@ def _validate_base_short_edge(value: Any) -> int:
     try:
         short_edge = int(value)
     except (TypeError, ValueError) as exc:
+        raise ValueError("target.short_edge must be 768") from exc
+    if short_edge != MINIMAX_H3_BASE_SHORT_EDGE or value != short_edge:
         raise ValueError(
-            f"target.short_edge must be an integer, got {value!r}"
-        ) from exc
-    if short_edge != value or short_edge <= 0:
-        raise ValueError(f"target.short_edge must be a positive integer, got {value!r}")
-    if short_edge != MINIMAX_H3_BASE_SHORT_EDGE:
-        warn_unverified_short_edge(short_edge)
+            f"target.short_edge must be 768 for MiniMax H3 shape policy v2, got {value!r}"
+        )
     return short_edge
 
 
@@ -276,17 +273,8 @@ def minimax_h3_resolve_plan(canonical: Mapping[str, Any]) -> MiniMaxH3ResolvedPl
         if key not in canonical:
             raise ValueError(f"canonical request missing {key!r}")
     profile = minimax_h3_task_profile(str(canonical["task"]))
-    conditions = canonical["conditions"]
-    keyframe_conditions = (
-        [
-            condition
-            for condition in conditions
-            if isinstance(condition, Mapping) and condition.get("role") == "keyframe"
-        ]
-        if isinstance(conditions, (list, tuple))
-        else []
-    )
-    if profile.task == "fl2va" or keyframe_conditions:
+    if profile.task == "fl2va":
+        conditions = canonical["conditions"]
         signatures = (
             [
                 (
@@ -294,9 +282,10 @@ def minimax_h3_resolve_plan(canonical: Mapping[str, Any]) -> MiniMaxH3ResolvedPl
                     condition.get("role"),
                     condition.get("frame_index"),
                 )
-                for condition in keyframe_conditions
+                for condition in conditions
             ]
-            if all(isinstance(condition, Mapping) for condition in keyframe_conditions)
+            if isinstance(conditions, (list, tuple))
+            and all(isinstance(condition, Mapping) for condition in conditions)
             else []
         )
         frame_signature = tuple(signature[2] for signature in signatures)
@@ -306,8 +295,7 @@ def minimax_h3_resolve_plan(canonical: Mapping[str, Any]) -> MiniMaxH3ResolvedPl
             or frame_signature not in MINIMAX_H3_FL2VA_KEYFRAME_SIGNATURES
         ):
             raise ValueError(
-                f"{profile.task} ResolvedPlan requires one or two ordered "
-                "image/keyframe "
+                "fl2va ResolvedPlan requires one or two ordered image/keyframe "
                 "conditions with frame_index [0], [-1], or [0, -1], got "
                 f"{signatures!r}"
             )
@@ -372,15 +360,10 @@ def minimax_h3_resolve_plan(canonical: Mapping[str, Any]) -> MiniMaxH3ResolvedPl
         if rule.audio_tokenizer_encode:
             audio_encode.append(index)
 
-    qwen_condition_indices = [
-        index
-        for index, condition in enumerate(canonical["conditions"])
-        if profile.task != "ref2va" or condition["role"] == "reference"
-    ]
     encoders = {
         "qwen": {
             "prompt": canonical["prompt"],
-            "ordered_condition_indices": qwen_condition_indices,
+            "ordered_condition_indices": list(range(len(canonical["conditions"]))),
         },
         "visual": visual_encode,
         "audio": audio_encode,

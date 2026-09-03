@@ -75,7 +75,6 @@ class BaseIndexerMetadata(ABC):
         self,
         logits: torch.Tensor,
         topk: int,
-        **kwargs,
     ) -> torch.Tensor:
         """
         Perform topk selection on the logits and possibly transform the result.

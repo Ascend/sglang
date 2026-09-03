@@ -241,18 +241,12 @@ class DecodingStage(PipelineStage):
 
         # Decode latents
         with autocast_context(vae_dtype, server_args.disable_autocast):
-            # not every VAE supports toggling tiling at runtime; say so instead
-            # of dropping the request, since the OOM advice below points here
-            if server_args.pipeline_config.vae_tiling:
-                try:
+            try:
+                # TODO: make it more specific
+                if server_args.pipeline_config.vae_tiling:
                     self.vae.enable_tiling()
-                except AttributeError:
-                    logger.warning(
-                        "--vae-tiling has no effect: %s does not support "
-                        "enabling tiling at runtime. Whether it tiles is fixed "
-                        "by its VAE config.",
-                        type(self.vae).__name__,
-                    )
+            except Exception:
+                pass
             should_cast_vae = not vae_autocast_enabled
             if not vae_autocast_enabled:
                 latents = latents.to(vae_dtype)
@@ -263,24 +257,16 @@ class DecodingStage(PipelineStage):
                     decode_output = self._get_vae_decode_fn(vae, server_args)(latents)
                 except Exception as error:
                     if "out of memory" in str(error).lower():
-                        # decode runs after denoising, so the DiT and encoders
-                        # are idle but may still hold VRAM; freeing them is the
-                        # lever here. --vae-cpu-offload is not: it moves VAE
-                        # weights, not the activations that overflow.
                         if not server_args.pipeline_config.vae_tiling:
                             logger.warning(
-                                "OOM detected during VAE decoding. Enable "
-                                "--vae-tiling to bound the decode working set, "
-                                "and free the components that finished earlier "
-                                "with --cpu-offload-components dit,text_encoder."
+                                "OOM detected during VAE decoding. Please enable "
+                                "--vae-tiling to reduce peak memory usage."
                             )
                         else:
                             logger.warning(
                                 "OOM detected during VAE decoding with tiling enabled. "
-                                "Free the components that finished earlier with "
-                                "--cpu-offload-components dit,text_encoder, then "
-                                "lower the tile size in the model's VAE config, "
-                                "then reduce resolution or frame count."
+                                "Please reduce the resolution or enable "
+                                "--vae-cpu-offload."
                             )
                     raise
                 image = _ensure_tensor_decode_output(decode_output)
@@ -321,11 +307,7 @@ class DecodingStage(PipelineStage):
         # load vae if not already loaded (used for memory constrained devices)
         self.load_model()
 
-        vae_dtype = resolve_decode_precision(
-            server_args,
-            self.component_name,
-            quality=batch.sampling_params.quality,
-        )
+        vae_dtype = resolve_decode_precision(server_args, self.component_name)
         with self.use_declared_component(
             component_name=self.component_name,
             module=self.vae,

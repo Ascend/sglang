@@ -2,7 +2,6 @@
 
 use std::collections::BTreeMap;
 use std::convert::Infallible;
-use std::sync::Arc;
 
 use axum::{
     Json, Router,
@@ -24,18 +23,16 @@ use tokio::sync::mpsc;
 use super::super::guard::AbortGuard;
 use super::super::submit::submit;
 use super::{
-    AppState, MAX_OPENAI_CHOICES, collect_output, error_payload, indexed_decode_stream,
+    AppState, MAX_OPENAI_CHOICES, collect_output, error_payload, indexed_egress_stream,
     openai_error, submit_generation, unix_seconds_u32,
 };
-use crate::message::finish_reason::Matched;
-use crate::message::ids::Rid;
-use crate::message::request::{GenerateRequest, RequestKind};
-use crate::message::response::{ChunkEvent, ChunkExtras, ResponseItem};
-use crate::message::sampling::SamplingParams;
-use crate::message::types::{OneOrMany, TokenIds};
-use crate::utils::error::Error;
+use crate::ids::Rid;
+use crate::message::{
+    ChunkEvent, ChunkExtras, EgressItem, GenerateRequest, Matched, OneOrMany, RequestKind,
+    SamplingParams, TokenIds,
+};
 
-pub(super) fn routes() -> Router<Arc<AppState>> {
+pub(super) fn routes() -> Router<AppState> {
     Router::new().route("/v1/completions", post(completions))
 }
 
@@ -50,7 +47,7 @@ pub(super) struct SubmittedChoice {
     pub(super) prompt_index: usize,
     pub(super) rid: Rid,
     pub(super) echo: String,
-    pub(super) rx: mpsc::Receiver<ResponseItem>,
+    pub(super) rx: mpsc::Receiver<EgressItem>,
 }
 #[derive(Debug, Default)]
 pub(super) struct ChoiceExtensions {
@@ -61,7 +58,7 @@ pub(super) struct ChoiceExtensions {
 }
 
 async fn completions(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     body: Result<Json<CreateCompletionRequest>, JsonRejection>,
 ) -> Response {
     let request = match body {
@@ -126,7 +123,11 @@ async fn completions(
     };
     if let Err(error) = sampling.normalize(
         state.server_args.skip_tokenizer_init,
-        state.server_args.model_config.vocab_size,
+        state
+            .server_args
+            .model_config
+            .vocab_size
+            .unwrap_or(u64::MAX),
     ) {
         return openai_error(StatusCode::BAD_REQUEST, error.to_string(), false);
     }
@@ -251,17 +252,17 @@ async fn decode_prompt_echo(state: &AppState, token_ids: TokenIds) -> Result<Str
         ));
     };
     match rx.recv().await {
-        Some(ResponseItem::Data(payload)) => String::from_utf8(payload.to_vec()).map_err(|_| {
+        Some(EgressItem::Data(payload)) => String::from_utf8(payload.to_vec()).map_err(|_| {
             openai_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "detokenized prompt is not valid UTF-8",
                 false,
             )
         }),
-        Some(ResponseItem::Error(Error::Validation(message))) => {
+        Some(EgressItem::Error(crate::error::Error::Validation(message))) => {
             Err(openai_error(StatusCode::BAD_REQUEST, &message, false))
         }
-        Some(ResponseItem::Error(error)) => {
+        Some(EgressItem::Error(error)) => {
             let status = StatusCode::from_u16(error.http_status())
                 .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             Err(openai_error(
@@ -537,7 +538,7 @@ pub(super) fn completion_event_stream(
             rids.push(choice.rid);
             prompt_indexes.push(choice.prompt_index);
             echoes.push(choice.echo);
-            streams.push(indexed_decode_stream(index, choice.rx));
+            streams.push(indexed_egress_stream(index, choice.rx));
         }
         let mut events = futures::stream::select_all(streams);
 
@@ -547,17 +548,17 @@ pub(super) fn completion_event_stream(
                 continue;
             };
             let output = match item {
-                ResponseItem::Frame(output) => output,
-                ResponseItem::Done(output) => {
+                EgressItem::Frame(output) => output,
+                EgressItem::Done(output) => {
                     guard.disarm(&rids[index]);
                     output
                 }
-                ResponseItem::Error(error) => {
+                EgressItem::Error(error) => {
                     guard.disarm(&rids[index]);
                     yield error_payload(StatusCode::from_u16(error.http_status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR), error.to_string()).to_string();
                     continue;
                 }
-                ResponseItem::Control(_) | ResponseItem::Data(_) => continue,
+                EgressItem::Control(_) | EgressItem::Data(_) => continue,
             };
 
             if let Some((code, message)) = output
@@ -738,7 +739,7 @@ mod tests {
         completion_prompt_specs, completion_response_value, unary_completion,
     };
     use crate::api_server::guard::AbortGuard;
-    use crate::message::response::ChunkExtras;
+    use crate::message::ChunkExtras;
     use axum::http::StatusCode;
     use dynamo_protocols::types::{
         Choice, CreateCompletionRequest, CreateCompletionResponse, Prompt,

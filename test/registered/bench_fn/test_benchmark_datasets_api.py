@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import base64
-import functools
 import io
 import json
 import pickle
@@ -60,56 +59,8 @@ from sglang.benchmark.serving import (
 from sglang.test.ci.ci_register import register_cpu_ci
 from sglang.test.test_utils import CustomTestCase
 
-register_cpu_ci(est_time=30, suite="base-a-test-cpu")
-register_cpu_ci(est_time=46, suite="base-c-test-cpu")
-
-
-_BENCH_SERVING_CLI_CASES = {
-    "help": ["--help"],
-    "invalid_distribution": [
-        "--dataset-name",
-        "generated-shared-prefix",
-        "--gsp-group-distribution",
-        "invalid_name",
-    ],
-    "flush_cache_timeout": ["--flush-cache-timeout", "inf"],
-    "zipf_without_alpha": [
-        "--dataset-name",
-        "generated-shared-prefix",
-        "--gsp-group-distribution",
-        "zipf",
-        "--ready-check-timeout-sec",
-        "0",
-    ],
-    "uniform_with_alpha": [
-        "--dataset-name",
-        "generated-shared-prefix",
-        "--gsp-group-distribution",
-        "uniform",
-        "--gsp-zipf-alpha",
-        "1.0",
-        "--ready-check-timeout-sec",
-        "0",
-    ],
-}
-
-
-@functools.lru_cache(maxsize=1)
-def _bench_serving_cli_results():
-    def run(args):
-        return subprocess.run(
-            [sys.executable, "-m", "sglang.benchmark.serving", *args],
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-
-    with ThreadPoolExecutor(max_workers=len(_BENCH_SERVING_CLI_CASES)) as pool:
-        futures = {
-            name: pool.submit(run, args)
-            for name, args in _BENCH_SERVING_CLI_CASES.items()
-        }
-    return {name: future.result() for name, future in futures.items()}
+register_cpu_ci(est_time=40, suite="base-a-test-cpu")
+register_cpu_ci(est_time=7, suite="base-c-test-cpu")
 
 
 class _DummyTokenTensor:
@@ -1412,7 +1363,12 @@ class TestBenchmarkDatasetsAPI(CustomTestCase):
         # Subprocess-driven coverage of the live CLI: --help advertises both
         # flags with the rank-based Zipf formula and the alpha constraint,
         # and argparse rejects an unknown distribution choice.
-        help_res = _bench_serving_cli_results()["help"]
+        help_res = subprocess.run(
+            [sys.executable, "-m", "sglang.benchmark.serving", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
         self.assertEqual(help_res.returncode, 0, help_res.stderr)
         out = help_res.stdout
         # Both new flags appear.
@@ -1424,13 +1380,37 @@ class TestBenchmarkDatasetsAPI(CustomTestCase):
         self.assertIn("finite float", out)
 
         # Argparse rejects unknown distribution choice.
-        bad_choice_res = _bench_serving_cli_results()["invalid_distribution"]
+        bad_choice_res = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "sglang.benchmark.serving",
+                "--dataset-name",
+                "generated-shared-prefix",
+                "--gsp-group-distribution",
+                "invalid_name",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
         self.assertNotEqual(bad_choice_res.returncode, 0)
         self.assertIn("invalid choice", (bad_choice_res.stderr + bad_choice_res.stdout))
 
     def test_serving_benchmark_cli_rejects_invalid_flush_cache_timeout(self):
         """Invalid timeouts fail before the benchmark contacts a server or hangs."""
-        res = _bench_serving_cli_results()["flush_cache_timeout"]
+        res = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "sglang.benchmark.serving",
+                "--flush-cache-timeout",
+                "inf",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
         self.assertEqual(res.returncode, 2, res.stderr)
         self.assertIn("expected a finite float > 0", res.stderr)
 
@@ -1443,7 +1423,22 @@ class TestBenchmarkDatasetsAPI(CustomTestCase):
         # Malformed CLI combinations (zipf with no alpha) must fail at
         # argparse time so users see the GSP-flag error directly, not a
         # downstream connection or model-fetch failure.
-        res = _bench_serving_cli_results()["zipf_without_alpha"]
+        res = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "sglang.benchmark.serving",
+                "--dataset-name",
+                "generated-shared-prefix",
+                "--gsp-group-distribution",
+                "zipf",
+                "--ready-check-timeout-sec",
+                "0",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
         # parser.error() exits with code 2 (argparse convention).
         self.assertEqual(res.returncode, 2, res.stderr)
         stderr = res.stderr + res.stdout
@@ -1463,7 +1458,24 @@ class TestBenchmarkDatasetsAPI(CustomTestCase):
     def test_bench_serving_cli_rejects_uniform_with_alpha_before_server(self):
         # The complementary malformation: uniform distribution with an
         # explicit alpha value. Must also fail at argparse time.
-        res = _bench_serving_cli_results()["uniform_with_alpha"]
+        res = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "sglang.benchmark.serving",
+                "--dataset-name",
+                "generated-shared-prefix",
+                "--gsp-group-distribution",
+                "uniform",
+                "--gsp-zipf-alpha",
+                "1.0",
+                "--ready-check-timeout-sec",
+                "0",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
         self.assertEqual(res.returncode, 2, res.stderr)
         stderr = res.stderr + res.stdout
         self.assertIn("--gsp-group-distribution", stderr)

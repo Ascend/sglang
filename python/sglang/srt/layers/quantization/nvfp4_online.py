@@ -69,9 +69,7 @@ class NvFp4OnlineConfig(ModelOptQuantConfig):
         use_mxfp8: bool = False,
     ) -> None:
         source_ignored_layers = self._normalize_ignored_layers(exclude_modules)
-        fp4_ignored_layers = (
-            [] if self._use_per_token_activation else list(source_ignored_layers)
-        )
+        fp4_ignored_layers = list(source_ignored_layers)
         if ignored_layers_str := envs.SGLANG_FP4_IGNORED_LAYERS.get():
             fp4_ignored_layers.extend(
                 layer.strip()
@@ -116,10 +114,8 @@ class NvFp4OnlineConfig(ModelOptQuantConfig):
         quant_method = str(config.get("quant_method", "")).lower()
         use_mxfp8 = "mxfp8" in quant_method
         is_checkpoint_fp8_serialized = "fp8" in quant_method or use_mxfp8
-        ignored_layers = (
-            config.get("ignore")
-            or config.get("ignored_layers")
-            or config.get("modules_to_not_convert")
+        ignored_layers = config.get("ignored_layers") or config.get(
+            "modules_to_not_convert"
         )
         if isinstance(ignored_layers, str):
             ignored_layers = [ignored_layers]
@@ -146,15 +142,14 @@ class NvFp4OnlineConfig(ModelOptQuantConfig):
                 return Fp8LinearMethod(self)
             return UnquantizedLinearMethod()
         if isinstance(layer, FusedMoE):
-            source_layer_ignored = is_layer_skipped(
+            if is_layer_skipped(
                 prefix, self.exclude_modules, self.packed_modules_mapping
-            ) or self.is_layer_excluded(prefix)
-            if source_layer_ignored and not self.use_per_token_activation:
+            ) or self.is_layer_excluded(prefix):
                 return None
             if is_layer_skipped(
                 prefix, self.fp4_ignored_layers, self.packed_modules_mapping
             ):
-                if self.is_checkpoint_fp8_serialized and not source_layer_ignored:
+                if self.is_checkpoint_fp8_serialized:
                     return Fp8MoEMethod(self)
                 return None
             return ModelOptNvFp4OnlineFusedMoEMethod(self, prefix)
@@ -206,15 +201,15 @@ class ModelOptNvFp4OnlineFusedMoEMethod(ModelOptNvFp4FusedMoEMethod):
             if layer_match is not None
             else layer_prefix
         )
-        if quant_config.use_per_token_activation and not (
-            self.enable_flashinfer_trtllm_moe or self._is_cutedsl_v2_standard
+        if (
+            quant_config.use_per_token_activation
+            and not self.enable_flashinfer_trtllm_moe
         ):
             raise ValueError(
                 "--quantization nvfp4_online requires online per-token FP32 "
-                "activation scales and supports flashinfer_trtllm, "
-                "flashinfer_trtllm_routed, or flashinfer_cutedsl with no A2A "
-                "or FlashInfer A2A. Use --quantization modelopt_fp4 for "
-                "per-tensor FP32 activation scales."
+                "activation scales and supports only flashinfer_trtllm or "
+                "flashinfer_trtllm_routed. Use --quantization modelopt_fp4 "
+                "for per-tensor FP32 activation scales."
             )
 
     def prepare_weight_loader(self, layer, weight_loader):

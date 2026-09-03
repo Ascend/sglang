@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Mapping
-from contextlib import nullcontext
 
 import torch
 
@@ -12,7 +11,6 @@ from sglang.multimodal_gen.runtime.distributed import (
     get_world_group,
     model_parallel_is_initialized,
 )
-from sglang.multimodal_gen.runtime.managers.forward_context import set_forward_context
 from sglang.multimodal_gen.runtime.managers.memory_managers.component_manager import (
     ComponentUse,
 )
@@ -29,8 +27,7 @@ from sglang.multimodal_gen.runtime.pipelines_core.stages.validators import (
 )
 from sglang.multimodal_gen.runtime.server_args import ServerArgs
 from sglang.multimodal_gen.runtime.utils.precision import (
-    autocast_context,
-    autocast_enabled_for_device,
+    autocast_enabled,
     resolve_decode_precision,
     resolve_precision,
 )
@@ -64,7 +61,7 @@ def _cached_decode_mean_std(
     return mean, std
 
 
-def _reverse_normalize_latents(
+def _reverse_normalize_latents_(
     latents: torch.Tensor,
     *,
     mean_values,
@@ -92,13 +89,7 @@ def _reverse_normalize_latents(
         )
     view_shape = [1] * latents.ndim
     view_shape[1] = int(mean.shape[0])
-    # Out of place on purpose. batch.latents / batch.audio_latents are
-    # inference tensors allocated inside the denoising stage's InferenceMode,
-    # while --vae-cpu-offload runs this stage under torch.inference_mode(False)
-    # (PipelineExecutor._stage_needs_version_counters), where writing to one in
-    # place raises. Keep the mul-then-add rounding order rather than addcmul so
-    # the result does not shift with FMA contraction.
-    return latents * std.view(*view_shape) + mean.view(*view_shape)
+    return latents.mul_(std.view(*view_shape)).add_(mean.view(*view_shape))
 
 
 def _crop_to_target_canvas(batch: Req, frames: torch.Tensor) -> torch.Tensor:
@@ -285,7 +276,7 @@ class MiniMaxH3DecodingStage(DecodingStage):
             if audio_vae.training:
                 audio_vae.eval()
             audio_arch_config = server_args.pipeline_config.audio_vae_config.arch_config
-            audio_decode_latent = _reverse_normalize_latents(
+            audio_decode_latent = _reverse_normalize_latents_(
                 audio_latent,
                 mean_values=audio_arch_config.latents_mean,
                 std_values=audio_arch_config.latents_std,
@@ -294,19 +285,15 @@ class MiniMaxH3DecodingStage(DecodingStage):
             audio_vae_dtype = resolve_precision(
                 server_args, "audio_vae", precision_attr="audio_vae_precision"
             )
-            audio_autocast_enabled = autocast_enabled_for_device(
-                audio_latent, audio_vae_dtype, server_args.disable_autocast
+            audio_autocast_enabled = (
+                audio_latent.device.type == "cuda"
+                and autocast_enabled(audio_vae_dtype, server_args.disable_autocast)
             )
-            autocast_context = (
-                torch.autocast(
-                    device_type="cuda",
-                    dtype=audio_vae_dtype,
-                    enabled=audio_autocast_enabled,
-                )
-                if audio_latent.is_cuda
-                else nullcontext()
-            )
-            with autocast_context:
+            with torch.autocast(
+                device_type=audio_latent.device.type,
+                dtype=audio_vae_dtype,
+                enabled=audio_autocast_enabled,
+            ):
                 audio_decode = self._get_vae_decode_fn(
                     audio_vae,
                     server_args,
@@ -345,21 +332,22 @@ class MiniMaxH3DecodingStage(DecodingStage):
             if selected_video_vae.training:
                 selected_video_vae.eval()
             visual_arch_config = server_args.pipeline_config.vae_config.arch_config
-            visual_decode_latent = _reverse_normalize_latents(
+            visual_decode_latent = _reverse_normalize_latents_(
                 visual_latent,
                 mean_values=visual_arch_config.latents_mean,
                 std_values=visual_arch_config.latents_std,
                 name="video_vae",
             )
             video_vae_dtype = resolve_decode_precision(server_args, "video_vae")
-            visual_autocast_enabled = autocast_enabled_for_device(
-                visual_latent, video_vae_dtype, server_args.disable_autocast
+            visual_autocast_enabled = (
+                visual_latent.device.type == "cuda"
+                and autocast_enabled(video_vae_dtype, server_args.disable_autocast)
             )
             if visual_autocast_enabled:
                 selected_video_vae.prepare_decoder_autocast_weights(video_vae_dtype)
-            with autocast_context(
-                video_vae_dtype,
-                server_args.disable_autocast,
+            with torch.autocast(
+                device_type=visual_latent.device.type,
+                dtype=video_vae_dtype,
                 enabled=visual_autocast_enabled,
             ):
                 video_decode = self._get_vae_decode_fn(
@@ -367,8 +355,7 @@ class MiniMaxH3DecodingStage(DecodingStage):
                     server_args,
                     decode_fn=selected_video_vae.decode_base,
                 )
-                with set_forward_context(current_timestep=0, attn_metadata=None):
-                    visual_frames = video_decode(visual_decode_latent)
+                visual_frames = video_decode(visual_decode_latent)
                 visual_frames = selected_video_vae.processor.revert_tensor(
                     visual_frames
                 )

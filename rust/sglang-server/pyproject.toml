@@ -13,4 +13,4 @@ classifiers = [
 dynamic = ["version"]
 
 [tool.maturin]
-module-name = "_server"
+module-name = "_core"

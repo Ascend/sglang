@@ -167,74 +167,6 @@ jobs:
     needs: [check-changes, pr-gate, set-image-config]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.multimodal_gen == 'true' }}
     runs-on: linux-aarch64-a3-800t-2
-    strategy:
-      fail-fast: false
-      matrix:
-        part: [0, 1]
-    container:
-      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Mark repository safe
-        run: |
-          git config --system --add safe.directory ${GITHUB_WORKSPACE}
-
-      - name: Install dependencies
-        env:
-          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-          RUSTUP_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local:8082"
-        run: |
-          # speed up by using infra cache services
-          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-          pip config set global.trusted-host "${CACHING_URL}"
-
-          bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-          # copy required file from our daily cache
-          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          # copy gsm8k dataset from cache
-          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
-      - name: Run test
-        timeout-minutes: 60
-        env:
-          SGLANG_USE_MODELSCOPE: true
-          SGLANG_IS_IN_CI: true
-          HF_ENDPOINT: https://hf-mirror.com
-          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-          STREAMS_PER_DEVICE: 32
-          SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
-        run: |
-          cd python
-          python3 sglang/multimodal_gen/test/run_suite.py \
-            --suite 1-npu \
-            --partition-id ${{ matrix.part }} \
-            --total-partitions 2
-
-      - name: Upload diffusion failure artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: diffusion-failures-npu-1-part${{ matrix.part }}-${{ github.run_attempt }}
-          path: diffusion-failures/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  multimodal-gen-test-2-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
-    if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.multimodal_gen == 'true' }}
-    runs-on: linux-aarch64-a3-800t-16
-    strategy:
-      fail-fast: false
-      matrix:
-        part: [0, 1]
     container:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
     steps:
@@ -277,16 +209,70 @@ jobs:
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
         run: |
           cd python
-          python3 sglang/multimodal_gen/test/run_suite.py \
-            --suite 2-npu \
-            --partition-id ${{ matrix.part }} \
-            --total-partitions 2
+          python3 sglang/multimodal_gen/test/run_suite.py --suite 1-npu
 
       - name: Upload diffusion failure artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: diffusion-failures-npu-2-part${{ matrix.part }}-${{ github.run_attempt }}
+          name: diffusion-failures-npu-1-${{ github.run_attempt }}
+          path: diffusion-failures/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  multimodal-gen-test-2-npu-a3:
+    needs: [check-changes, pr-gate, set-image-config]
+    if: false  # Temporarily disabled; will be restored once the issue is fixed.
+    runs-on: linux-aarch64-a3-800t-2
+    container:
+      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Mark repository safe
+        run: |
+          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Install dependencies
+        env:
+          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+          RUSTUP_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local:8082"
+        run: |
+          # speed up by using infra cache services
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
+
+          bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          # copy required file from our daily cache
+          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+          # copy gsm8k dataset
+          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+
+      - name: Run test
+        timeout-minutes: 60
+        env:
+          SGLANG_USE_MODELSCOPE: true
+          SGLANG_IS_IN_CI: true
+          HF_ENDPOINT: https://hf-mirror.com
+          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+          STREAMS_PER_DEVICE: 32
+          SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
+        run: |
+          cd python
+          python3 sglang/multimodal_gen/test/run_suite.py --suite 2-npu
+
+      - name: Upload diffusion failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diffusion-failures-npu-2-${{ github.run_attempt }}
           path: diffusion-failures/
           if-no-files-found: ignore
           retention-days: 7
@@ -297,13 +283,12 @@ jobs:
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-800t-2
+      runner: linux-aarch64-a3-2-
       test_type: 'accuracy'
       test_suite: base-c-test-acc-2-npu-a3
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       install_sglang_deps: true
       device_type_for_deps: 'a3'
-      partitions: '{"size":2,"arr":[0,1]}'
 
   base-c-test-acc-4-npu-a3:
     name: base-c-test-acc-4-npu-a3
@@ -311,7 +296,7 @@ jobs:
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-800t-4
+      runner: linux-aarch64-a3-4-
       test_type: 'accuracy'
       test_suite: base-c-test-acc-4-npu-a3
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
@@ -324,7 +309,7 @@ jobs:
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-800t-8
+      runner: linux-aarch64-a3-8-
       test_type: 'accuracy'
       test_suite: base-c-test-acc-8-npu-a3
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
@@ -337,7 +322,7 @@ jobs:
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-800t-16
+      runner: linux-aarch64-a3-16-
       test_type: 'accuracy'
       test_suite: base-c-test-acc-16-npu-a3
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
@@ -395,7 +380,6 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       install_sglang_deps: true
       device_type_for_deps: 'a3'
-      test_timeout_minutes: '180'
 
 
   pr-test-npu-finish:

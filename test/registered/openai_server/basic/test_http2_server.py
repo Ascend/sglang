@@ -41,11 +41,7 @@ class TestHTTP2Server(CustomTestCase):
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=[
-                "--enable-http2",
-                "--http2-max-concurrent-streams",
-                "64",
-            ],
+            other_args=["--enable-http2"],
         )
 
     @classmethod
@@ -130,13 +126,7 @@ class TestHTTP2ServerMultiTokenizer(TestHTTP2Server):
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=[
-                "--enable-http2",
-                "--http2-max-concurrent-streams",
-                "64",
-                "--tokenizer-worker-num",
-                "2",
-            ],
+            other_args=["--enable-http2", "--tokenizer-worker-num", "2"],
         )
 
 

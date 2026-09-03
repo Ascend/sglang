@@ -167,13 +167,13 @@ at::Tensor gelu_and_mul_cpu(const at::Tensor& input) {
         num_tokens,
         d,
         [inv_sqrt2](float x) { return 0.5f * x * (1.f + std::erf(x * inv_sqrt2)); },
-        [](Vec x) { return fast_gelu(x); });
+        [inv_sqrt2](Vec x) { return Vec(0.5f) * x * (Vec(1.f) + (x * Vec(inv_sqrt2)).erf()); });
   });
 
   return out;
 }
 
-void fused_sigmoid_mul_cpu(at::Tensor& input, const at::Tensor& gate) {
+at::Tensor fused_sigmoid_mul_cpu(at::Tensor& input, const at::Tensor& gate, bool inplace) {
   CHECK_DIM(2, input);
   const int64_t gate_dim = gate.dim();
   TORCH_CHECK(gate_dim == 2 || gate_dim == 3, "gate must be a 2D or 3D tensor");
@@ -195,9 +195,10 @@ void fused_sigmoid_mul_cpu(at::Tensor& input, const at::Tensor& gate) {
   int64_t g_strideT = gate.stride(0);
   int64_t g_strideH = is_gate_3d ? gate.stride(1) : 0;
 
+  at::Tensor out = inplace ? input : at::empty_like(input);
   AT_DISPATCH_REDUCED_FLOATING_TYPES(st, "fused_sigmoid_mul", [&] {
     fused_sigmoid_mul_kernel_impl<scalar_t>(
-        input.data_ptr<scalar_t>(),
+        out.data_ptr<scalar_t>(),
         input.data_ptr<scalar_t>(),
         gate.data_ptr<scalar_t>(),
         num_tokens,
@@ -207,4 +208,5 @@ void fused_sigmoid_mul_cpu(at::Tensor& input, const at::Tensor& gate) {
         g_strideT,
         g_strideH);
   });
+  return out;
 }

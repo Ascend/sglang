@@ -80,8 +80,7 @@ class TestQwen3235BFP8(unittest.TestCase):
             "--moe-dp-size=2",
             "--attn-cp-size=2",
             "--ep-size=4",
-            "--enable-prefill-cp",
-            "--cp-strategy=zigzag",
+            "--enable-prefill-context-parallel",
         ]
 
         MTP_ARGS = [

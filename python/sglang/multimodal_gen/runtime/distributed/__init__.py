@@ -12,8 +12,6 @@ from sglang.multimodal_gen.runtime.distributed.parallel_state import (
     get_dp_group,
     get_dp_rank,
     get_dp_world_size,
-    get_encoder_data_parallel_group,
-    get_replica_group,
     get_sp_group,
     get_sp_parallel_rank,
     get_sp_world_size,
@@ -46,8 +44,6 @@ __all__ = [
     "get_world_size",
     # Data parallel group
     "get_dp_group",
-    "get_replica_group",
-    "get_encoder_data_parallel_group",
     "get_dp_rank",
     "get_dp_world_size",
     # Sequence parallel group

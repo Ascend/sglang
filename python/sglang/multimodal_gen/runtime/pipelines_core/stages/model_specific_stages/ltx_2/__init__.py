@@ -12,9 +12,6 @@ from sglang.multimodal_gen.runtime.pipelines_core.stages.model_specific_stages.l
     LTX2AVDenoisingStage,
     LTX2RefinementStage,
 )
-from sglang.multimodal_gen.runtime.pipelines_core.stages.model_specific_stages.ltx_2.duration import (
-    LTX2DurationStage,
-)
 from sglang.multimodal_gen.runtime.pipelines_core.stages.model_specific_stages.ltx_2.latent_preparation_av import (
     LTX2AVLatentPreparationStage,
 )
@@ -29,7 +26,6 @@ from sglang.multimodal_gen.runtime.pipelines_core.stages.model_specific_stages.l
 
 __all__ = [
     "LTX2AVDecodingStage",
-    "LTX2DurationStage",
     "LTX2AVDenoisingStage",
     "LTX2AVLatentPreparationStage",
     "LTX2DenoisingStage",

@@ -3,7 +3,6 @@ import math
 import pytest
 
 # TODO: use interface in cpu.py
-import sgl_kernel  # noqa: F401
 import torch
 
 from sglang.srt.layers.amx_utils import CPUQuantMethod
@@ -17,8 +16,7 @@ prepack = True
 alpha = 1.702
 limit = 7.0
 
-from sglang.test.ci.ci_register import register_cpu_ci
-from sglang.test.cpu_test_utils import (
+from utils import (
     BLOCK_K,
     BLOCK_N,
     MXFP4QuantizeUtil,
@@ -34,7 +32,9 @@ from sglang.test.cpu_test_utils import (
     unpack_and_dequant_awq,
 )
 
-register_cpu_ci(est_time=7, suite="base-b-test-cpu")
+from sglang.test.ci.ci_register import register_cpu_ci
+
+register_cpu_ci(est_time=10, suite="base-b-test-cpu")
 
 
 def run_fused_experts(
@@ -55,7 +55,6 @@ def run_fused_experts(
     alpha=None,
     limit=None,
     is_vnni=True,
-    activation=None,
     inplace=False,
 ):
     return kernel.fused_experts_cpu(
@@ -76,7 +75,6 @@ def run_fused_experts(
         alpha,
         limit,
         is_vnni,
-        activation,
     )
 
 
@@ -141,35 +139,13 @@ def make_mxfp4_weights(e, out_dim, in_dim, dtype, with_bias=False):
 
 class TestFusedExperts:
 
-    def test_unsupported_activation_is_rejected(self):
-        m, n, k, e, topk = 2, 32, 32, 4, 2
-        a = torch.randn((m, k), dtype=dtype) / 10
-        w1 = make_bf16_weights(e, 2 * n, k)
-        w2 = make_bf16_weights(e, k, n)
-        topk_weights, topk_ids = make_routing(m, e, topk, dtype=dtype)
-        packed_w1 = kernel.convert_weight_packed(w1) if prepack else w1
-        packed_w2 = kernel.convert_weight_packed(w2) if prepack else w2
-
-        with pytest.raises(RuntimeError, match="Unsupported activation"):
-            run_fused_experts(
-                a,
-                packed_w1,
-                packed_w2,
-                topk_weights,
-                topk_ids,
-                quant=CPUQuantMethod.UNQUANT,
-                is_vnni=prepack,
-                activation="relu",
-            )
-
     @pytest.mark.parametrize("m", [2, 114])
     @pytest.mark.parametrize("n", [32])
     @pytest.mark.parametrize("k", [32])
     @pytest.mark.parametrize("e", [4])
     @pytest.mark.parametrize("topk", [2])
     @pytest.mark.parametrize("renormalize", [False, True])
-    @pytest.mark.parametrize("activation", ["silu", "gelu"])
-    def test_bf16_moe(self, m, n, k, e, topk, renormalize, activation):
+    def test_bf16_moe(self, m, n, k, e, topk, renormalize):
         a = torch.randn((m, k), dtype=dtype) / 10
         w1 = make_bf16_weights(e, 2 * n, k)
         w2 = make_bf16_weights(e, k, n)
@@ -181,9 +157,7 @@ class TestFusedExperts:
             renormalize=renormalize,
             return_score=True,
         )
-        torch_output = torch_naive_fused_moe(
-            a, w1, w2, score, topk, renormalize, activation=activation
-        )
+        torch_output = torch_naive_fused_moe(a, w1, w2, score, topk, renormalize)
 
         packed_w1 = kernel.convert_weight_packed(w1) if prepack else w1
         packed_w2 = kernel.convert_weight_packed(w2) if prepack else w2
@@ -195,7 +169,6 @@ class TestFusedExperts:
             topk_ids,
             quant=CPUQuantMethod.UNQUANT,
             is_vnni=prepack,
-            activation=activation,
             inplace=True,
         )
 
@@ -304,8 +277,7 @@ class TestFusedExperts:
     @pytest.mark.parametrize("K", [256, 320])
     @pytest.mark.parametrize("E", [8])
     @pytest.mark.parametrize("topk", [4])
-    @pytest.mark.parametrize("activation", ["silu", "gelu"])
-    def test_fp8_moe(self, M, N, K, E, topk, activation):
+    def test_fp8_moe(self, M, N, K, E, topk):
         a = torch.randn(M, K, dtype=dtype) / math.sqrt(K)
 
         w1, w1s, w1_scaled = make_fp8_weights(E, 2 * N, K)
@@ -317,7 +289,7 @@ class TestFusedExperts:
         w2 = kernel.convert_weight_packed(w2)
 
         ref_out = native_fp8_fused_moe(
-            a, w1_scaled, w2_scaled, topk_weight, topk_ids, topk, activation=activation
+            a, w1_scaled, w2_scaled, topk_weight, topk_ids, topk
         )
         out = run_fused_experts(
             a,
@@ -330,7 +302,6 @@ class TestFusedExperts:
             w2_scale=w2s,
             block_size=[BLOCK_N, BLOCK_K],
             is_vnni=True,
-            activation=activation,
             inplace=False,
         )
 
@@ -402,8 +373,7 @@ class TestFusedExperts:
     @pytest.mark.parametrize("K", [256, 320])
     @pytest.mark.parametrize("E", [8])
     @pytest.mark.parametrize("topk", [4])
-    @pytest.mark.parametrize("activation", ["silu", "gelu"])
-    def test_mxfp4_moe(self, M, N, K, E, topk, activation):
+    def test_mxfp4_moe(self, M, N, K, E, topk):
         a = torch.randn(M, K, dtype=dtype) / 10
 
         w1dq, w1_packed, w1s_packed = make_mxfp4_weights(E, 2 * N, K, dtype=dtype)
@@ -412,13 +382,7 @@ class TestFusedExperts:
         topk_weight, topk_ids = make_routing(M, E, topk, dtype=dtype)
 
         ref_out = native_fp8_fused_moe(
-            a,
-            w1dq.float(),
-            w2dq.float(),
-            topk_weight,
-            topk_ids,
-            topk,
-            activation=activation,
+            a, w1dq.float(), w2dq.float(), topk_weight, topk_ids, topk
         )
         out = run_fused_experts(
             a,
@@ -430,7 +394,6 @@ class TestFusedExperts:
             w1_scale=w1s_packed,
             w2_scale=w2s_packed,
             is_vnni=True,
-            activation=activation,
             inplace=False,
         )
 

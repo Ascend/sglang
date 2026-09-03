@@ -6,7 +6,7 @@
 
 use axum::{Router, response::Response};
 
-use crate::message::config::ServerArgs;
+use crate::runtime::ServerArgs;
 
 /// Install the access-log middleware when `server_args` enables it; identity
 /// otherwise (the layer is never installed, so disabled stays zero-cost).

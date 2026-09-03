@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 from typing import Tuple
 
 from transformers import AutoProcessor
@@ -44,7 +45,7 @@ def token_in_out_example(
             model_override_args=server_args.json_model_override_args,
         ),
     )
-    backend = Engine(server_args=server_args)
+    backend = Engine(**dataclasses.asdict(server_args))
 
     output = backend.generate(
         input_ids=input_ids,
@@ -70,5 +71,4 @@ if __name__ == "__main__":
     ]
     args = parser.parse_args(args=args)
     server_args = ServerArgs.from_cli_args(args)
-    server_args.resolve_once()
     token_in_out_example(server_args)

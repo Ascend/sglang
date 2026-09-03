@@ -716,9 +716,7 @@ class InternVLChatModel(nn.Module):
                 ckpt_gate_proj_name="gate_proj",
                 ckpt_down_proj_name="down_proj",
                 ckpt_up_proj_name="up_proj",
-                # InternVLChatConfig has no top-level num_experts; the MoE config lives on
-                # the nested llm_config (the Qwen3MoE text backbone).
-                num_experts=self.config.llm_config.num_experts,
+                num_experts=self.config.num_experts,
             )
         elif "Qwen3ForCausalLM" in self.config.llm_config.architectures:
             stacked_params_mapping = [
