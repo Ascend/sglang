@@ -46,6 +46,7 @@ jobs:
             #"test/registered/npu/llm_models/test_npu_qwen3_30b_fuseep.py"
             #"test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"
             "test/registered/npu/basic_function/runtime_options/test_npu_pp_single_node.py"
+            "test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py"
           )
 
           for test_case in "${test_cases[@]}"; do
