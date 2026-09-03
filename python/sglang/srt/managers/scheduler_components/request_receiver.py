@@ -170,9 +170,7 @@ class SchedulerRequestReceiver:
                 or is_ep_scale_joiner()
             )
             if _local_ctrl:
-                control_reqs = self._broadcast_within_attention_dp_group(
-                    control_reqs
-                )
+                control_reqs = self._broadcast_within_attention_dp_group(control_reqs)
             elif self.ps.tp_size != 1:
                 control_reqs = broadcast_pyobj(
                     control_reqs,
@@ -190,9 +188,7 @@ class SchedulerRequestReceiver:
             )
         return recv_reqs
 
-    def _broadcast_within_attention_dp_group(
-        self, reqs: Optional[List]
-    ) -> List:
+    def _broadcast_within_attention_dp_group(self, reqs: Optional[List]) -> List:
         """Broadcast from the (attention-CP0, attention-TP0) DP leader.
 
         Only that leader receives requests. First seed its CP0 attention-TP

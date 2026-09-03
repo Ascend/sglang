@@ -80,9 +80,7 @@ class TestPPCPRankOffsets(unittest.TestCase):
             attn_cp_rank=0,
             attn_cp_size=4,
         )
-        attn_tp_group = SimpleNamespace(
-            rank=1, ranks=[0, 1, 2, 3], cpu_group="attn_tp"
-        )
+        attn_tp_group = SimpleNamespace(rank=1, ranks=[0, 1, 2, 3], cpu_group="attn_tp")
         attn_cp_group = SimpleNamespace(
             rank=1, ranks=[1, 5, 9, 13], cpu_group="attn_cp"
         )
@@ -124,9 +122,7 @@ class TestPPCPRankOffsets(unittest.TestCase):
             attn_cp_rank=1,
             attn_cp_size=4,
         )
-        attn_tp_group = SimpleNamespace(
-            rank=4, ranks=[4, 5, 6, 7], cpu_group="attn_tp"
-        )
+        attn_tp_group = SimpleNamespace(rank=4, ranks=[4, 5, 6, 7], cpu_group="attn_tp")
         attn_cp_group = SimpleNamespace(
             rank=4, ranks=[0, 4, 8, 12], cpu_group="attn_cp"
         )

@@ -7,6 +7,9 @@ from sglang.srt.hardware_backend.npu.attention.ascend_kda_backend import (
     _kda_decode_key_value_state_npu,
 )
 from sglang.srt.model_executor.forward_batch_info import ForwardMode
+from sglang.test.ci.ci_register import register_cpu_ci
+
+register_cpu_ci(est_time=2, suite="base-a-test-cpu")
 
 
 def test_kda_decode_updates_key_value_state_layout():
