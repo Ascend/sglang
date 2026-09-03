@@ -16,9 +16,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-4
+    runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260828
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,10 +41,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            #"test/registered/npu/basic_function/runtime_options/test_npu_disaggregation_pp.py"
-            "test/registered/npu/basic_function/parameter/test_npu_enable_session_radix_cache.py"
-            "test/registered/npu/llm_models/test_npu_qwen3_30b_fuseep.py"
-            "test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"    
+            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
           )
 
           for test_case in "${test_cases[@]}"; do
@@ -85,14 +82,10 @@ jobs:
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"
 
-          failed_test_cases=""
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
             echo "Running test case ${test_case}"
-            if ! python -u ${sglang_source_path}/${test_case}; then
-              failed_test_cases="${failed_test_cases} ${test_case}"
-              echo "Test case ${test_case} FAILED"
-            fi
+            python -u ${sglang_source_path}/${test_case}
             echo "Finished test case ${test_case}"
           done
 
@@ -104,9 +97,4 @@ jobs:
             rm -rf ${target_plog_path}
             mkdir -p ${target_plog_path}
             cp ${plog_path}/* ${target_plog_path}
-          fi
-
-          if [ -n "${failed_test_cases}" ]; then
-            echo "Failed test cases:${failed_test_cases}"
-            exit 1
           fi
