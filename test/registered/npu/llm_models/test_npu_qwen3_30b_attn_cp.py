@@ -85,6 +85,9 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
         metrics = run_eval(args)
         print(f"Eval accuracy of GSM8K: {metrics=}")
         self.assertGreater(metrics["score"], 0.92)
+
+    #Setting the --moe-dp-size parameter enables MOE_DP log output
+    def test_moe_dp(self):
         self.err_file.seek(0)
         content = self.err_file.read()
         self.assertIn("MOE_DP", content)
