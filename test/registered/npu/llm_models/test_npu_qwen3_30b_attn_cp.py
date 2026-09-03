@@ -60,7 +60,7 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
                 "--enable-prefill-context-parallel",
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
-            env = {"ASCEND_USE_FIA": "1"}
+            env = {**os.environ, "ASCEND_USE_FIA": "1"}
 
         )
 
@@ -86,7 +86,7 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
         print(f"Eval accuracy of GSM8K: {metrics=}")
         self.assertGreater(metrics["score"], 0.92)
 
-    #Setting the --moe-dp-size parameter enables MOE_DP log output
+    #Setting the --moe-dp-size parameter, MOE_DP log will output
     def test_moe_dp(self):
         self.err_file.seek(0)
         content = self.err_file.read()
