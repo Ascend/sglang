@@ -44,8 +44,7 @@ jobs:
             #"test/registered/npu/basic_function/runtime_options/test_npu_disaggregation_pp.py"
             "test/registered/npu/basic_function/parameter/test_npu_enable_session_radix_cache.py"
             "test/registered/npu/llm_models/test_npu_qwen3_30b_fuseep.py"
-            "test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"
-            
+            "test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"    
           )
 
           for test_case in "${test_cases[@]}"; do
