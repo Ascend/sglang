@@ -10,7 +10,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="debug-nightly-perf-16-npu-a3",
     nightly=True,
     disabled="performance testcase",
 )
@@ -18,11 +18,11 @@ register_npu_ci(
 MODEL_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "72",
+    "DEEPEP_HCCL_BUFFSIZE": "1800",
+    "HCCL_BUFFSIZE": "300",
     "DEEPEP_HCCL_BUFFSIZE": "2000",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "10",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
@@ -50,15 +50,16 @@ MODEL_OTHER_ARGS = [
     8,
     12,
     14,
+    16,
     "--mem-fraction-static",
-    0.9,
+    0.85,
     "--max-running-requests",
-    224,
+    256,
     "--context-length",
     8188,
     "--disable-radix-cache",
     "--chunked-prefill-size",
-    65536,
+    81920,
     "--max-prefill-tokens",
     3000,
     "--moe-a2a-backend",
@@ -72,17 +73,20 @@ MODEL_OTHER_ARGS = [
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
-    3,
+    2,
     "--speculative-eagle-topk",
     1,
     "--speculative-num-draft-tokens",
-    4,
+    3,
     "--dtype",
     "bfloat16",
     "--reasoning-parser",
     "deepseek-r1",
     "--tool-call-parser",
     "deepseekv3",
+    "--enable-prefill-delayer",
+    "--prefill-delayer-max-delay-passes",
+    "50",
     "--max-total-tokens",
     100000,
 ]
@@ -95,8 +99,8 @@ class TestNPUDeepSeekR1W4A8(TestNpuPerformanceTestCaseBase):
     other_args = MODEL_OTHER_ARGS
     envs = MODEL_ENVS
     dataset_name = "random"
-    max_concurrency = 224
-    num_prompts = 896
+    max_concurrency = 256
+    num_prompts = 448
     input_len = 3500
     output_len = 1500
     random_range_ratio = 1
