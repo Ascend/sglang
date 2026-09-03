@@ -9,8 +9,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3600, suite="base-c-test-perf-16-npu-a3")
-register_npu_ci(est_time=3600, suite="nightly-perf-16-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="full-test-npu-perf-16", nightly=True)
 
 QWEN3_235B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -22,7 +21,7 @@ QWEN3_235B_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "50",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
     "SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE": "16",
     "SGLANG_NPU_PROFILING": "0",
     "SGLANG_NPU_PROFILING_BS": "27",
@@ -66,11 +65,11 @@ QWEN3_235B_OTHER_ARGS = [
     "--speculative-draft-model-path",
     QWEN3_235B_A22B_EAGLE_MODEL_PATH,
     "--speculative-num-steps",
-    "3",
+    "2",
     "--speculative-eagle-topk",
     "1",
     "--speculative-num-draft-tokens",
-    "4",
+    "3",
     "--speculative-draft-model-quantization",
     "unquant",
     "--tp",
