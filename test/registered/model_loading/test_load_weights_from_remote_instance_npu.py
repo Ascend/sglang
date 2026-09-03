@@ -363,53 +363,53 @@ class TestLoadWeightsFromRemoteInstance(CustomTestCase):
 
         assert torch.npu.device_count() >= 2, "At least 2 GPUs are required"
         # test_suits : tp, dp, model_name, backend, dst_instance_id
-            test_suits = [
-                (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Engine"], "nccl"),
-                (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Server"], "nccl"),
-                (2, 2, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Engine", "Server"], "nccl"),
-                (
-                    1,
-                    1,
-                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Engine"],
-                    "transfer_engine",
-                ),
-                (
-                    1,
-                    1,
-                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Server"],
-                    "transfer_engine",
-                ),
-                (
-                    2,
-                    2,
-                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Engine", "Server"],
-                    "transfer_engine",
-                ),
-                                (
-                    1,
-                    1,
-                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Engine"],
-                    "modelexpress",
-                ),
-                (
-                    1,
-                    1,
-                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Server"],
-                    "modelexpress",
-                ),
-                (
-                    2,
-                    2,
-                    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-                    ["Engine", "Server"],
-                    "modelexpress",
-                ),
-            ]
+        test_suits = [   
+            (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Engine"], "nccl"),
+            (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Server"], "nccl"),
+            (2, 2, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, ["Engine", "Server"], "nccl"),  
+            (  
+                1,
+                1,
+                DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                ["Engine"],
+                "transfer_engine",
+            ),
+            (
+                1,
+                1,
+                DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                ["Server"],
+                "transfer_engine",
+            ),
+            (
+                2,
+                2,
+                DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                ["Engine", "Server"],
+                "transfer_engine",
+            ),            
+            ( 
+                1,
+                1,
+                DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                ["Engine"],
+                "modelexpress",
+            ),
+            (
+                1,
+                1,
+                DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                ["Server"],
+                "modelexpress",
+            ),
+            (
+                2,
+                2,
+                DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+                ["Engine", "Server"],
+                "modelexpress",
+            ), 
+        ]
 
         truncate_size = 10
         checking_parameters = [
