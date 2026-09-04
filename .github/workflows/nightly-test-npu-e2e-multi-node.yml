@@ -64,6 +64,11 @@ on:
         type: string
         default: '{}'
         description: 'JSON run metadata {branch_label, workflow_name, create_time}, recorded once at workflow start'
+      coverage_run_id:
+        required: false
+        type: string
+        default: ""
+        description: "Unique identifier for coverage data grouping. Pass caller's run_id-run_attempt."
 
 concurrency:
   group: ascend-nightly-multi-node-${{ github.workflow_ref }}-${{ github.ref }}-${{ inputs.test_config_name }}
@@ -107,6 +112,8 @@ jobs:
           rm -rf ${target_path}
           mkdir -p ${target_path}
           cp -r ${current_path}/* ${target_path}/
+          # `*` glob does not match dotfiles, so copy hidden files (.coveragerc etc.) explicitly.
+          cp -f ${current_path}/.coveragerc ${target_path}/.coveragerc 2>/dev/null || true
 
       - name: Clear resources
         run: |
@@ -236,6 +243,11 @@ jobs:
             echo "Use default transformers version in image."
           fi
 
+          coverage_run_id="${{ inputs.coverage_run_id }}"
+          if [ "$coverage_run_id" != "" ];then
+            CMD="${CMD} --coverage-run-id ${coverage_run_id}"
+          fi
+
           echo "Run command: ${CMD}"
           eval "${CMD}"
 
@@ -245,6 +257,15 @@ jobs:
         with:
           name: metrics-${{ inputs.test_config_name }}
           path: /tmp/metrics.json
+          retention-days: 7
+
+      - name: Upload coverage data
+        if: always() && inputs.coverage_run_id != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.coverage_run_id }}-${{ inputs.test_config_name }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
           retention-days: 7
 
       - name: Post process
