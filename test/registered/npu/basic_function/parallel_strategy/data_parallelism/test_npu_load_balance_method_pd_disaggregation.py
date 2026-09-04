@@ -24,7 +24,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=3600, suite="base-b-test-16-npu-a3")
-register_npu_ci(est_time=3600, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="full-4-npu-a3-test", nightly=True)
 
 load_balance_method_options = [
     "auto",
@@ -85,8 +85,6 @@ class BaseTestNPULoadBalanceMethodDPDisaggregation(TestDisaggregationBase):
             0.8,
             "--dist-init-addr",
             "127.0.0.1:10100",
-            "--base-gpu-id",
-            4,
         ]
 
         cls.process_prefill = popen_launch_pd_server(
