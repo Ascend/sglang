@@ -27,7 +27,7 @@ PREFILL_ENVS = {
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24699",
-    "ZBAL_ENABLE_GRAPH": "1",
+    "ZBAL_ENABLE_GRAPH": "0",
 }
 
 DECODE_ENVS = {
