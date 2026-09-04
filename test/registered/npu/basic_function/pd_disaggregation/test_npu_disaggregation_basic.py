@@ -81,16 +81,9 @@ class DisaggregationTestBase(PDDisaggregationServerBase):
             1,
         ] + cls.prefill_extra_args
         prefill_args += cls.transfer_backend + cls.rdma_devices
-        # NPU KV pools never build the CUDA-style k_data_ptrs/v_data_ptrs
-        # arrays; with the default "kernel" HiCache IO backend, decode-side
-        # retraction backup crashes the scheduler with AttributeError on
-        # NPUMHATokenToKVPool.k_data_ptrs. Pin the Ascend IO backend and its
-        # page-first-direct host layout.
         prefill_args += [
             "--hicache-io-backend",
             "kernel_ascend",
-            "--hicache-mem-layout",
-            "page_first_direct",
         ]
         cls.process_prefill = popen_launch_pd_server(
             cls.model,
@@ -113,6 +106,10 @@ class DisaggregationTestBase(PDDisaggregationServerBase):
             1,
         ] + cls.decode_extra_args
         decode_args += cls.transfer_backend + cls.rdma_devices
+        decode_args += [
+            "--hicache-io-backend",
+            "kernel_ascend",
+        ]
         cls.process_decode = popen_launch_pd_server(
             cls.model,
             cls.decode_url,
@@ -349,6 +346,18 @@ class TestDisaggregationSimulatedRetract(DisaggregationTestBase):
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
     gsm8k_score_threshold = 0.62
     extra_env_vars = {"SGLANG_TEST_RETRACT": "true"}
+    # Retraction backs up device KV to the host pool via kernel_ascend, which
+    # only supports the page_first_direct host layout (mha.py
+    # backup_from_device_all_layer). Without this the forced retract crashes
+    # with ValueError: Unsupported layout: page_first.
+    prefill_extra_args = [
+        "--hicache-mem-layout",
+        "page_first_direct",
+    ]
+    decode_extra_args = [
+        "--hicache-mem-layout",
+        "page_first_direct",
+    ]
 
     def test_gsm8k(self):
         self.run_gsm8k()
