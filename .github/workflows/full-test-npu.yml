@@ -80,6 +80,7 @@ jobs:
       job_filter: ${{ needs.set-image-config.outputs.job_filter }}
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
       skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-1-npu-a3:
@@ -115,6 +116,11 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
 
       - name: Print Log Information
         run: |
@@ -129,6 +135,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -144,6 +153,14 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-1-npu-a3
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
 
   full-2-npu-a3:
     needs: [set-image-config]
@@ -178,6 +195,11 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
 
       - name: Print Log Information
         run: |
@@ -192,6 +214,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -207,6 +232,14 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-2-npu-a3
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
 
   full-4-npu-a3:
     needs: [set-image-config]
@@ -241,6 +274,11 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
 
       - name: Print Log Information
         run: |
@@ -255,6 +293,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -270,6 +311,14 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-4-npu-a3
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
 
   full-16-npu-a3:
     needs: [set-image-config]
@@ -304,6 +353,11 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           # copy gsm8k dataset
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
 
       - name: Print Log Information
         run: |
@@ -318,6 +372,9 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
+          COVERAGE_FILE: /tmp/coverage_data/.coverage
+          COVERAGE_RCFILE: /tmp/coverage_data/.coveragerc
+          COVERAGE_PROCESS_START: /tmp/coverage_data/.coveragerc
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
@@ -333,6 +390,14 @@ jobs:
           cd ../
           cd test
           python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-full-16-npu-a3
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7
 
   check-all-jobs:
     if: github.repository == 'sgl-project/sglang' && always()
@@ -357,3 +422,70 @@ jobs:
             exit 1
           fi
           echo "All nightly test jobs passed"
+
+  coverage-report:
+    needs:
+      [
+        set-image-config,
+        nighly-test-npu,
+        full-1-npu-a3,
+        full-2-npu-a3,
+        full-4-npu-a3,
+        full-16-npu-a3,
+      ]
+    if: always()
+    runs-on: linux-aarch64-a3-2
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+
+      - name: Mark repository safe
+        run: |
+          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: /tmp/coverage_data
+          merge-multiple: true
+
+      - name: Upload all raw coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-all-data-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Combine and generate report
+        run: |
+          DATA_DIR=/tmp/coverage_data
+          echo "=== Coverage data files ==="
+          ls -la "$DATA_DIR"/.coverage* 2>/dev/null || echo "No .coverage files found"
+          if ls "$DATA_DIR"/.coverage* 1>/dev/null 2>&1; then
+            python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+            coverage combine "$DATA_DIR"
+            # 诊断：combine 后生成的合并数据文件（存在但为 0 字节 = 无有效测量数据）。
+            ls -la ./.coverage 2>/dev/null || echo "combine produced no .coverage file"
+            coverage report -m
+            coverage html
+          else
+            echo "No coverage data found, skipping report generation."
+            mkdir -p htmlcov
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: htmlcov/
+          retention-days: 30
