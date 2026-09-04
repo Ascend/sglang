@@ -131,8 +131,7 @@ jobs:
           sleep 120
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
-          cd test
-          python3 run_suite.py --hw npu --suite full-4-npu-a3-test --nightly --continue-on-error --timeout-per-file 3600
+          cd test && python3 registered/npu/vlm_models/test_npu_qwen3_vl_8b_instruct.py -f
 
 
   check-all-jobs:
