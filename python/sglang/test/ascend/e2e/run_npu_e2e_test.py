@@ -332,9 +332,20 @@ def prepare_cm_data(namespace, pod_string, run_id=None):
 
 
 def monitor_pod_logs(
-    kube_job_type, kube_job_prefix_name, namespace, timeout=LOCAL_TIMEOUT
+    kube_job_type,
+    kube_job_prefix_name,
+    namespace,
+    timeout=LOCAL_TIMEOUT,
+    expected_matches: int = 1,
 ):
-    """Monitor the logs of the specified pod until the special pattern is matched or reaches its timeout."""
+    """Monitor the logs of the specified pod until the special pattern is matched
+    ``expected_matches`` times (one per test case in a batch) or until timeout.
+
+    For a single-case run, expected_matches defaults to 1 and behavior is
+    unchanged: stop after the first OK/FAILED pattern.
+    For a multi-case batch, the function keeps tailing the logs and counts each
+    completion pattern; it only returns success when all cases report OK.
+    """
     monitor_pod_name = {
         KUBE_JOB_SINGLE: f"{kube_job_prefix_name}-pod-0",
         KUBE_JOB_MULTI_PD_MIX: f"{kube_job_prefix_name}-sglang-node-0",
@@ -369,6 +380,9 @@ def monitor_pod_logs(
         logger.info(f"Starting to monitor logs for Pod: {pod_name}")
         match_state = 0
         is_success = False
+        completed_cases = 0
+        success_cases = 0
+        failed_cases = 0
 
         # Use two threads: one for reading logs, one for checking pod status
         import threading
@@ -379,7 +393,7 @@ def monitor_pod_logs(
 
         def read_logs():
             """Thread function to read logs continuously"""
-            nonlocal is_success, match_state
+            nonlocal is_success, match_state, completed_cases, success_cases, failed_cases
 
             while process.poll() is None and not match_event.is_set():
                 line = process.stdout.readline()
@@ -392,10 +406,25 @@ def monitor_pod_logs(
                     ):
                         match_state += 1
                         if match_state == len(patterns):
+                            completed_cases += 1
                             if pattern_ok.match(line):
-                                is_success = True
-                            logger.info("Detected complete test completion pattern!")
-                            match_event.set()
+                                success_cases += 1
+                                logger.info(
+                                    f"Case {completed_cases}/{expected_matches} OK"
+                                )
+                            else:
+                                failed_cases += 1
+                                logger.info(
+                                    f"Case {completed_cases}/{expected_matches} FAILED"
+                                )
+                            # Reset state machine for next case.
+                            match_state = 0
+                            if completed_cases >= expected_matches:
+                                is_success = failed_cases == 0
+                                logger.info(
+                                    f"Batch finished: {success_cases} OK, {failed_cases} FAILED"
+                                )
+                                match_event.set()
                     else:
                         match_state = 0
                         if patterns[0].match(line):
@@ -501,7 +530,28 @@ def monitor_pod_logs(
 
 
 def generate_metrics_json(metrics_data_file, test_case, status):
-    log_file = os.path.join(metrics_data_file, "test_output.log")
+    """Generate per-case metrics JSON.
+
+    With Plan A, the test runner writes each case's log into its own
+    subdirectory ``{metrics_data_file}/{tc_name}/test_output.log``. This
+    function reads that per-case log and writes ``metrics.json`` next to it.
+    For backward compatibility with single-case runs that still write to
+    ``{metrics_data_file}/test_output.log``, fall back to the flat layout.
+    """
+    tc_name = test_case.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    per_case_log = os.path.join(metrics_data_file, tc_name, "test_output.log")
+    flat_log = os.path.join(metrics_data_file, "test_output.log")
+    if os.path.exists(per_case_log):
+        log_file = per_case_log
+        output_dir = os.path.join(metrics_data_file, tc_name)
+    elif os.path.exists(flat_log):
+        log_file = flat_log
+        output_dir = metrics_data_file
+    else:
+        logger.warning(
+            f"Metrics log file not found (tried {per_case_log} and {flat_log})"
+        )
+        return
 
     metrics = {}
     baselines = {}
@@ -523,8 +573,6 @@ def generate_metrics_json(metrics_data_file, test_case, status):
                         metrics[key] = value
     else:
         logger.warning(f"Metrics log file not found: {log_file}")
-
-    tc_name = test_case.rsplit("/", 1)[-1].rsplit(".", 1)[0]
 
     test_type = "unknown"
     # nightly: .../output/{branch}-{date}-{run_id}-{run_attempt}/{workflow}/{test_type}/...
@@ -548,11 +596,14 @@ def generate_metrics_json(metrics_data_file, test_case, status):
         "baselines": baselines,
     }
 
-    output_path = os.path.join(metrics_data_file, "metrics.json")
+    output_path = os.path.join(output_dir, "metrics.json")
     with open(output_path, "w") as f:
         json.dump(output, f, indent=2)
     logger.info(f"Metrics JSON written to {output_path}")
 
+    # /tmp/metrics.json is consumed by the workflow's upload-artifact step; in a
+    # batch run each case overwrites it, so the final content reflects the last
+    # case. The per-case metrics.json files above are the source of truth.
     with open("/tmp/metrics.json", "w") as f:
         json.dump(output, f, indent=2)
     logger.info("Metrics JSON written to /tmp/metrics.json")
@@ -737,9 +788,18 @@ def run_npu_e2e_test_case(
             logger.info("Pod not ready, maybe not enough resource")
 
         monitor_success = False
+        # Plan A: test_case may contain multiple cases separated by spaces.
+        # The Pod runs them sequentially and prints one pytest summary per case,
+        # so we tell monitor_pod_logs how many completion patterns to expect.
+        test_cases = test_case.split()
+        expected_matches = len(test_cases)
         try:
             monitor_pod_logs(
-                kube_job_type, final_kube_job_name, kube_name_space, LOCAL_TIMEOUT
+                kube_job_type,
+                final_kube_job_name,
+                kube_name_space,
+                LOCAL_TIMEOUT,
+                expected_matches=expected_matches,
             )
             monitor_success = True
         except Exception:
@@ -748,10 +808,16 @@ def run_npu_e2e_test_case(
         finally:
             if metrics_data_file:
                 status = "pass" if monitor_success else "fail"
-                try:
-                    generate_metrics_json(metrics_data_file, test_case, status)
-                except Exception as e:
-                    logger.error(f"Failed to generate metrics JSON: {e}", exc_info=True)
+                # Generate a metrics.json per case so each upload-artifact has
+                # its own result.
+                for tc in test_cases:
+                    try:
+                        generate_metrics_json(metrics_data_file, tc, status)
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to generate metrics JSON for {tc}: {e}",
+                            exc_info=True,
+                        )
     finally:
         if os.path.exists(kube_yaml_file):
             # Don't delete pod when trouble_shotting is enabled
