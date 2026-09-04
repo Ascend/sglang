@@ -83,8 +83,6 @@ jobs:
 #      skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
 #    secrets: inherit
 
-
-
 #  nightly-poc-single-node-tests:
 #    name: single-node-poc
 #    if: ${{ !cancelled() }}
