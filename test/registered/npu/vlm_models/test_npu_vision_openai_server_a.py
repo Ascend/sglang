@@ -179,6 +179,18 @@ class TestKimiVLServer(ImageOpenAITestMixin):
         pass
 
 
+class TestGemma4itServer(ImageOpenAITestMixin):
+    os.environ["ASCEND_USE_FIA"] = "1"
+    model = GEMMA_4_31B_WEIGHTS_PATH
+    extra_args = [
+        "--disable-cuda-graph",
+        "--attention-backend",
+        "ascend",
+        "--tp-size",
+        "4",
+    ]
+
+
 # Delete the mixin classes so that they are not collected by pytest
 del (
     TestOpenAIMLLMServerBase,
