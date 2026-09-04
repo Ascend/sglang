@@ -45,6 +45,11 @@ on:
         type: string
         default: ""
         description: "The transformers version number for running sglang. Use default version in image if keep empty."
+      coverage_run_id:
+        required: false
+        type: string
+        default: ""
+        description: "Unique identifier for coverage data grouping. Pass caller's run_id-run_attempt."
 
 concurrency:
   group: ascend-nightly-e2e-singlenode-${{ github.workflow_ref }}-${{ github.ref }}-${{ inputs.test_config_name }}
@@ -81,6 +86,14 @@ jobs:
           bash scripts/ci/npu/npu_ci_install_dependency.sh ${{ inputs.device_type_for_deps }}
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
 
+      - name: Install coverage
+        run: |
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
+
       - name: Run test
         timeout-minutes: 300
         env:
@@ -90,6 +103,10 @@ jobs:
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
           SGLANG_TEST_METRICS_OUTPUT: /root/.cache/tests/output/metrics/metrics
+          PYTHONUNBUFFERED: "1"
+          COVERAGE_FILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coverage' || '' }}
+          COVERAGE_RCFILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
+          COVERAGE_PROCESS_START: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
         shell: bash
         run: |
           sglang_source_path=$(pwd)
@@ -178,6 +195,18 @@ jobs:
           ${PYTHON_FOR_SGLANG} -u ${test_case} 2>&1 | tee /tmp/test_output.log || test_exit_code=$?
           echo "Finished test case ${test_case}"
 
+          echo "=== [Coverage Diag] Check coverage data files ==="
+          COVERAGE_DIR="/tmp/coverage_data"
+          echo "COVERAGE_DIR=${COVERAGE_DIR}"
+          echo "COVERAGE_FILE=${COVERAGE_FILE}"
+          if [ -d "$COVERAGE_DIR" ]; then
+            ls -la "$COVERAGE_DIR/"
+            echo "File count: $(ls -A1 "$COVERAGE_DIR/" | wc -l)"
+          else
+            echo "ERROR: Coverage directory does not exist after test!"
+          fi
+          echo "=== [Coverage Diag] End ==="
+
           if [ "${test_exit_code}" = "0" ]; then
             test_status="pass"
             status_icon="✅"
@@ -237,6 +266,15 @@ jobs:
         with:
           name: metrics-${{ inputs.test_config_name }}
           path: /tmp/metrics.json
+          retention-days: 7
+
+      - name: Upload coverage data
+        if: always() && inputs.coverage_run_id != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.coverage_run_id }}-${{ inputs.test_config_name }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
           retention-days: 7
 
       - name: Backup plog
