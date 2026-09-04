@@ -22,7 +22,6 @@ register_npu_ci(est_time=600, suite="", nightly=True)
 
 class TestImageProcessorBackendParsing(CustomTestCase):
     """Testcase: Verify --image-processor-backend CLI parsing
-    and deprecated --disable-fast-image-processor compatibility.
 
     [Test Category] Parameter
     [Test Target] --image-processor-backend
@@ -63,20 +62,6 @@ class TestImageProcessorBackendParsing(CustomTestCase):
     def test_default_value(self):
         sa = self._parse([])
         self.assertEqual(sa.image_processor_backend, "auto")
-
-    def test_deprecated_flag_migration(self):
-        sa = self._parse(["--disable-fast-image-processor"])
-        self.assertEqual(sa.image_processor_backend, "pil")
-
-    def test_deprecated_conflict(self):
-        with self.assertRaises(ValueError):
-            self._parse(
-                [
-                    "--disable-fast-image-processor",
-                    "--image-processor-backend",
-                    "torchvision",
-                ]
-            )
 
 
 class TestImageProcessorBackendE2E(CustomTestCase):

@@ -4,22 +4,17 @@ The parameter controls: SWA pool tokens = Full pool tokens * ratio.
 Only effective on Hybrid SWA models (DeepSeek V4, MiMo, Inkling, etc.).
 
 Two test strategies:
-- Unit test: mock Hybrid SWA model, verify pool size calculation (CPU only)
+- Unit test: test/registered/unit/model_executor/test_pool_configurator.py (CPU only)
 - Server test: launch a real Hybrid SWA model, verify inference and print pool sizes
 """
 
-import contextlib
 import os
 import re
 import tempfile
 import unittest
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
 
 import requests
 
-from sglang.srt.distributed.parallel_state_wrapper import ParallelState
-from sglang.srt.runtime_context import get_parallel
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
@@ -42,288 +37,29 @@ register_npu_ci(
     disabled="accuracy testcase",
 )
 
-KV_SIZE = 2  # bf16
-
-
-@contextlib.contextmanager
-def _mock_cpu_env(kv_size=2, tp_size=1, swa_eviction_interval=4):
-    """Mock GPU-dependent functions for CPU-only testing."""
-    from sglang.srt.environ import envs
-
-    with (
-        patch("torch._utils._element_size", return_value=kv_size),
-        get_parallel().override(attn_tp_size=tp_size),
-        envs.SGLANG_SWA_EVICTION_INTERVAL.override(swa_eviction_interval),
-    ):
-        yield
-
-
-def _make_model_runner(
-    *,
-    num_kv_heads=4,
-    head_dim=64,
-    v_head_dim=64,
-    num_layers=32,
-    use_mla_backend=False,
-    is_hybrid_swa=False,
-    full_attention_layer_ids=None,
-    swa_attention_layer_ids=None,
-    swa_num_kv_heads=None,
-    swa_head_dim=None,
-    swa_v_head_dim=None,
-    swa_full_tokens_ratio=0.5,
-    page_size=1,
-    mambaish_config=None,
-    disable_radix_cache=False,
-    chunked_prefill_size=None,
-    disable_overlap_schedule=False,
-    sliding_window_size=None,
-    speculative_num_draft_tokens=None,
-    max_speculative_num_draft_tokens=None,
-    speculative_algorithm=None,
-    speculative_num_steps=None,
-    speculative_eagle_topk=None,
-    disaggregation_mode="null",
-    max_running_requests=None,
-    disaggregation_decode_extra_slots=0,
-    kv_lora_rank=512,
-    qk_rope_head_dim=64,
-):
-    """Create a mock ModelRunner with the fields configurators need."""
-    mr = MagicMock()
-
-    mr.use_mla_backend = use_mla_backend
-    mr.is_draft_worker = False
-    mr.num_effective_layers = num_layers
-    mr.start_layer = 0
-    mr.end_layer = num_layers
-    mr.dp_size = 1
-    mr.page_size = page_size
-    mr.mambaish_config = mambaish_config
-    mr.is_hybrid_swa = is_hybrid_swa
-    mr.sliding_window_size = sliding_window_size
-
-    mc = SimpleNamespace()
-    mc.head_dim = head_dim
-    mc.v_head_dim = v_head_dim
-    mc.kv_lora_rank = kv_lora_rank
-    mc.qk_rope_head_dim = qk_rope_head_dim
-    mc.is_hybrid_swa = is_hybrid_swa
-    mc.full_attention_layer_ids = (
-        full_attention_layer_ids
-        if full_attention_layer_ids is not None
-        else list(range(num_layers))
-    )
-    mc.swa_attention_layer_ids = (
-        swa_attention_layer_ids if swa_attention_layer_ids is not None else []
-    )
-    mc.swa_head_dim = swa_head_dim or head_dim
-    mc.swa_v_head_dim = swa_v_head_dim or v_head_dim
-    mc.get_num_kv_heads = lambda tp_size, dcp_size=1: num_kv_heads
-    mc.get_swa_num_kv_heads = lambda tp_size: swa_num_kv_heads or num_kv_heads
-    mc.hf_config = SimpleNamespace(architectures=["LlamaForCausalLM"])
-    mc.hf_config.get_text_config = lambda: mc.hf_config
-    mc.linear_attn_registry_result = None
-    mc.context_len = 8192
-    mr.model_config = mc
-    mr.kv_cache_dtype = "fake_bf16"
-
-    sa = SimpleNamespace()
-    sa.max_total_tokens = None
-    sa.swa_full_tokens_ratio = swa_full_tokens_ratio
-    sa.page_size = page_size
-    sa.disable_radix_cache = disable_radix_cache
-    sa.chunked_prefill_size = chunked_prefill_size
-    sa.disable_overlap_schedule = disable_overlap_schedule
-    sa.speculative_num_draft_tokens = speculative_num_draft_tokens
-    sa.max_speculative_num_draft_tokens = (
-        max_speculative_num_draft_tokens or speculative_num_draft_tokens
-    )
-    sa.speculative_algorithm = speculative_algorithm
-    sa.speculative_num_steps = speculative_num_steps
-    sa.speculative_eagle_topk = speculative_eagle_topk
-    sa.disaggregation_mode = disaggregation_mode
-    sa.max_running_requests = max_running_requests
-    sa.disaggregation_decode_extra_slots = disaggregation_decode_extra_slots
-    sa.enable_hisparse = False
-    sa.enable_dsa_cache_layer_split = False
-    sa.kv_cache_dtype = "auto"
-    mr.server_args = sa
-
-    spec = MagicMock()
-    spec.is_eagle.return_value = False
-    spec.is_standalone.return_value = False
-    spec.is_dflash.return_value = False
-    spec.is_dflash_family.return_value = False
-    spec.is_none.return_value = True
-    mr.spec_algorithm = spec
-
-    mr.layer_info = SimpleNamespace(
-        start_layer=0, end_layer=num_layers, num_effective_layers=num_layers
-    )
-    mr.ps = ParallelState.trivial()
-    mr.pp_group = SimpleNamespace(rank_in_group=0)
-    mr.spec_aux_config = SimpleNamespace(
-        eagle_draft_num_layers=None, dflash_draft_num_layers=None
-    )
-
-    return mr
-
-
-def _full_per_token(mr):
-    mc = mr.model_config
-    return mc.get_num_kv_heads(1) * (mc.head_dim + mc.v_head_dim) * KV_SIZE
-
-
-def _swa_per_token(mr):
-    mc = mr.model_config
-    return mc.get_swa_num_kv_heads(1) * (mc.swa_head_dim + mc.swa_v_head_dim) * KV_SIZE
-
-
-def _actual_memory_used(mr, config):
-    """Compute actual memory consumed by the pool sizes in config."""
-    mc = mr.model_config
-    full_pt = _full_per_token(mr)
-    swa_pt = _swa_per_token(mr)
-    nf = len(mc.full_attention_layer_ids)
-    ns = len(mc.swa_attention_layer_ids)
-
-    if mr.is_hybrid_swa:
-        full = config.full_max_total_num_tokens or 0
-        swa = config.swa_max_total_num_tokens or 0
-        return full * full_pt * nf + swa * swa_pt * ns
-    else:
-        return config.max_total_num_tokens * full_pt * (nf + ns)
-
-
-class TestSwaFullTokensRatio(CustomTestCase):
-    """Unit tests for --swa-full-tokens-ratio via pool_configurator.
-
-    Fully references test_pool_configurator.py's TestHybridSWAConfigurator
-    pattern: mock Hybrid SWA model -> run pool configurator -> assert
-    pool sizes and memory invariants.
-
-    [Test Category] Parameter
-    [Test Target] --swa-full-tokens-ratio
-    [Scenario] S1: ratio controls SWA pool proportionally
-    """
-
-    def _make_swa_runner(self, full_layers=16, swa_layers=16, ratio=0.5, page_size=1):
-        return _make_model_runner(
-            is_hybrid_swa=True,
-            full_attention_layer_ids=list(range(full_layers)),
-            swa_attention_layer_ids=list(range(full_layers, full_layers + swa_layers)),
-            swa_num_kv_heads=4,
-            page_size=page_size,
-            swa_full_tokens_ratio=ratio,
-        )
-
-    def _run(self, available_bytes, **kwargs):
-        mr = self._make_swa_runner(**kwargs)
-        with _mock_cpu_env():
-            from sglang.srt.model_executor.pool_configurator import (
-                create_memory_pool_configurator,
-            )
-
-            cfg = create_memory_pool_configurator(mr)
-            config = cfg.calculate_pool_sizes(available_bytes, mr.server_args.page_size)
-        return mr, cfg, config
-
-    def test_memory_utilization(self):
-        """Memory used <= available and within 1% of available."""
-        available = 10_000_000
-        mr, _, config = self._run(available)
-        used = _actual_memory_used(mr, config)
-        self.assertLessEqual(used, available)
-        self.assertGreater(used, available * 0.99)
-
-    def test_ratio_respected(self):
-        """swa_tokens = full_tokens * ratio for various ratios."""
-        available = 10_000_000
-        for ratio in [0.25, 0.5, 0.75, 1.0]:
-            _, _, config = self._run(available, ratio=ratio, page_size=1)
-            full = config.full_max_total_num_tokens
-            swa = config.swa_max_total_num_tokens
-            self.assertEqual(
-                swa,
-                int(full * ratio),
-                f"ratio={ratio}: swa={swa} != full({full}) * {ratio}",
-            )
-
-    def test_ratio_with_page_alignment(self):
-        """With page_size=128, swa_tokens = floor(full_tokens * ratio / 128) * 128."""
-        available = 10_000_000
-        _, _, config = self._run(available, ratio=0.5, page_size=128)
-        full = config.full_max_total_num_tokens
-        swa = config.swa_max_total_num_tokens
-        self.assertEqual(full % 128, 0)
-        self.assertEqual(swa % 128, 0)
-        self.assertEqual(swa, (int(full * 0.5) // 128) * 128)
-
-    def test_max_total_equals_full(self):
-        """For Hybrid SWA, max_total_num_tokens = full_max_total_num_tokens."""
-        _, _, config = self._run(10_000_000)
-        self.assertEqual(config.max_total_num_tokens, config.full_max_total_num_tokens)
-
-    def test_constraint_respected(self):
-        """full_tokens = constrained value after re-run."""
-        mr, cfg, _ = self._run(10_000_000, page_size=1)
-        with _mock_cpu_env():
-            config = cfg.calculate_pool_sizes_from_max_tokens(200, page_size=1)
-        self.assertEqual(config.full_max_total_num_tokens, 200)
-        self.assertEqual(config.swa_max_total_num_tokens, 100)
-
-    def test_constraint_memory_within_budget(self):
-        """After constraint, memory <= original budget."""
-        available = 10_000_000
-        mr, cfg, original = self._run(available, page_size=1)
-        user_limit = original.full_max_total_num_tokens // 2
-        with _mock_cpu_env():
-            config = cfg.calculate_pool_sizes_from_max_tokens(
-                user_limit, mr.server_args.page_size
-            )
-        used = _actual_memory_used(mr, config)
-        self.assertLessEqual(used, available)
-        original_used = _actual_memory_used(mr, original)
-        self.assertAlmostEqual(used / original_used, 0.5, delta=0.01)
-
-    def test_different_layer_counts(self):
-        """Asymmetric full/swa layer counts."""
-        available = 10_000_000
-        mr, _, config = self._run(available, full_layers=24, swa_layers=8, ratio=0.5)
-        used = _actual_memory_used(mr, config)
-        self.assertLessEqual(used, available)
-        self.assertEqual(
-            config.swa_max_total_num_tokens,
-            int(config.full_max_total_num_tokens * 0.5),
-        )
-
-
 _MIMO_BASE_ARGS = [
     "--tp-size",
-    "16",
+    16,
     "--trust-remote-code",
     "--device",
     "npu",
     "--mem-fraction-static",
-    "0.85",
-    "--swa-full-tokens-ratio",
-    "0.95",
+    0.85,
     "--reasoning-parser",
     "mimo",
     "--attention-backend",
     "ascend",
     "--disable-piecewise-cuda-graph",
     "--base-gpu-id",
-    "0",
+    0,
     "--cuda-graph-bs",
-    "1",
-    "2",
-    "4",
-    "8",
-    "16",
+    1,
+    2,
+    4,
+    8,
+    16,
     "--dp-size",
-    "4",
+    4,
     "--enable-dp-attention",
     "--enable-dp-lm-head",
     "--quantization",
@@ -332,11 +68,13 @@ _MIMO_BASE_ARGS = [
     "--speculative-algorithm",
     "EAGLE",
     "--speculative-num-steps",
-    "3",
+    3,
     "--speculative-eagle-topk",
-    "1",
+    1,
     "--speculative-num-draft-tokens",
-    "4",
+    4,
+    "--swa-full-tokens-ratio",
+    0.3,
     "--enable-multi-layer-eagle",
     "--speculative-draft-model-quantization",
     "unquant",

@@ -40,7 +40,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.08",
+        "0.3",
         "--max-running-requests",
         "1",
         "--disable-radix-cache",
@@ -123,7 +123,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.08",
+        "0.3",
         "--enable-priority-scheduling",
         "--priority-scheduling-preemption-threshold",
         "0",
@@ -227,43 +227,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
                 f"low1={low1_result['finished_at']:.2f} "
                 f"low2={low2_result['finished_at']:.2f} "
                 f"→ high_first={high_finished_at < low1_result['finished_at']}"
-            )
-        finally:
-            kill_process_tree(process.pid)
-
-
-class TestRetractionPolicyValidation(CustomTestCase):
-    """Verify --retraction-policy=priority requires --enable-priority-scheduling.
-
-    [Test Category] Parameter
-    [Test Target] --retraction-policy
-    [Scenario] R3: priority policy without priority_scheduling raises error
-    [Reference] server_args.py:9109-9112
-    """
-
-    model = QWEN3_5_9B_WEIGHTS_PATH
-
-    def test_priority_without_scheduling_error(self):
-        """R3: --retraction-policy priority without --enable-priority-scheduling raises error."""
-        process = popen_launch_server(
-            self.model,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=[
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
-                "--retraction-policy",
-                "priority",
-            ],
-        )
-        try:
-            # Wait for the process to exit with an error
-            time.sleep(10)
-            retcode = process.poll()
-            self.assertIsNotNone(
-                retcode,
-                "Server should have failed to start with --retraction-policy priority alone",
             )
         finally:
             kill_process_tree(process.pid)

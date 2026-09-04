@@ -92,7 +92,9 @@ jobs:
       max-parallel: 6
       matrix:
         test_config:
-          # qwen3_vl_8b_thinking accuracy tests
+          - name: pool_configurator
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/unit/model_executor/test_pool_configurator.py
           - name: dynamic_chunking
             runner: linux-aarch64-a3-2
             test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_dynamic_chunking.py
