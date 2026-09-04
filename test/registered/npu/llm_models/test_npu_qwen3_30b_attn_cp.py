@@ -1,13 +1,11 @@
 import os
 import tempfile
 import unittest
-from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
 from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -79,19 +77,11 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
         os.unlink(cls.out_file.name)
         os.unlink(cls.err_file.name)
 
-    def test_gsm8k(self):
-        args = SimpleNamespace(
-            base_url=self.base_url,
-            model=self.model,
-            eval_name="gsm8k",
-            api="completion",
-            max_tokens=512,
-            num_examples=100,
-            num_threads=32,
-        )
-        metrics = run_eval(args)
-        print(f"Eval accuracy of GSM8K: {metrics=}")
-        self.assertGreater(metrics["score"], 0.92)
+    # GSM8K Configs
+    accuracy = 0.92  # GSM8K accuracy ≥0.92
+    gsm8k_parallel = 32
+    num_questions = 100
+    gsm8k_num_shots = 5
 
     # Setting the --moe-dp-size parameter, MOE_DP log will output
     def test_moe_dp(self):
