@@ -163,8 +163,10 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             self.assertIn("Paris", resp.text)
 
             # 2. Verify pool type from server logs
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            # NOTE: Use a separate file handle to read logs, because out_log_file
+            # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
+            with open(out_log_path, "r", encoding="utf-8") as f:
+                stdout = f.read()
             has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 
             pool_type = "independent SWA pool" if has_swa_pool else "unified pool"

@@ -161,8 +161,10 @@ class TestSwaFullTokensRatioServer(CustomTestCase):
             self.assertIn("Paris", resp.text)
 
             # 2. Extract and print Full/SWA pool sizes from server logs
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            # NOTE: Use a separate file handle to read logs, because out_log_file
+            # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
+            with open(out_log_path, "r", encoding="utf-8") as f:
+                stdout = f.read()
             full, swa = self._capture_pool_sizes(stdout)
 
             if full is not None and swa is not None:

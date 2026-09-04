@@ -22,7 +22,7 @@ class TestRetractionPolicyLength(CustomTestCase):
     """Verify --retraction-policy=length (default) retracts short-output,
     long-input requests first when KV cache is full.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.08)
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.3)
     and max-running-requests=1. Send a long-output request to fill the KV cache,
     then send a short request. The short request triggers retraction of the
     long-output request, and both complete successfully.
@@ -102,7 +102,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority retracts lower-priority requests
     first, allowing high-priority requests to complete earlier.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.08),
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.3),
     max-running-requests=1, and priority-scheduling-preemption-threshold=0 to
     enable immediate preemption. Send 2 low-priority long-output requests to
     fill KV cache, then send a high-priority request. All 3 requests have large
