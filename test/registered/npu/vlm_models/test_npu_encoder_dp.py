@@ -23,7 +23,8 @@ class TestVLMEncoderDP(TestVLMModels):
     ]
 
     def test_vlm_mmmu_benchmark(self):
-        self._run_vlm_mmmu_test()
+        self.max_tokens = 2048
+        self._run_vlm_mmmu_test(self)
 
 
 if __name__ == "__main__":

@@ -4,11 +4,13 @@ python3 -m unittest test_vision_openai_server.TestOpenAIVisionServer.test_mixed_
 python3 -m unittest test_vision_openai_server.TestOpenAIVisionServer.test_multi_images_chat_completion
 """
 
+import os
 import unittest
 
 import openai
 
 from sglang.test.ascend.test_ascend_utils import (
+    GEMMA_4_31B_WEIGHTS_PATH,
     KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
     LLAVA_ONEVISION_QWEN2_7B_OV_WEIGHTS_PATH,
     MINICPM_O_2_6_WEIGHTS_PATH,
@@ -27,7 +29,7 @@ from sglang.test.ascend.vlm_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3200, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True)
 
 
 class TestLlavaServer(ImageOpenAITestMixin):
@@ -144,6 +146,18 @@ class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
         "4",
         "--attention-backend",
         "ascend",
+    ]
+
+
+class TestGemma4itServer(ImageOpenAITestMixin):
+    os.environ["ASCEND_USE_FIA"] = "1"
+    model = GEMMA_4_31B_WEIGHTS_PATH
+    extra_args = [
+        "--disable-cuda-graph",
+        "--attention-backend",
+        "ascend",
+        "--tp-size",
+        "4",
     ]
 
 
