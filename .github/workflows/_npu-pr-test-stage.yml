@@ -48,6 +48,10 @@ on:
         description: 'GitHub token for API calls'
         type: string
         default: ${{ github.token }}
+      coverage_run_id:
+        description: 'Unique identifier for coverage data grouping. Pass caller run_id-run_attempt to enable coverage.'
+        type: string
+        default: ''
 
 env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
@@ -206,10 +210,22 @@ jobs:
           apt-get install -y libssl-dev
           pip install sglang_router
 
+      - name: Install coverage
+        if: ${{ inputs.coverage_run_id != '' }}
+        run: |
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import coverage; coverage.process_startup()" > $(python -c "import site; print(site.getsitepackages()[0])")/coverage.pth
+          rm -f $(python -c "import site; print(site.getsitepackages()[0])")/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
+
       - name: Run test
         timeout-minutes: ${{ fromJson(inputs.run_timeout_minutes) }}
         env:
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
+          COVERAGE_FILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coverage' || '' }}
+          COVERAGE_RCFILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
+          COVERAGE_PROCESS_START: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
         shell: bash
         run: |
           # Fail fast on any command error, undefined variable, or pipe failure.
@@ -250,3 +266,12 @@ jobs:
             --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
             ${{ inputs.timeout_per_file && format('--timeout-per-file {0}', inputs.timeout_per_file) || '' }} \
             $NIGHTLY_FLAG $CONTINUE_ON_ERROR_FLAG
+
+      - name: Upload coverage data
+        if: ${{ always() && inputs.coverage_run_id != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.coverage_run_id }}-${{ inputs.self_name }}-p${{ matrix.partition }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7

@@ -61,6 +61,11 @@ on:
         required: false
         type: string
         default: ''
+      coverage_run_id:
+        description: 'Unique identifier for coverage data grouping. Pass caller run_id-run_attempt to enable coverage.'
+        required: false
+        type: string
+        default: ''
 concurrency:
   group: nightly-test-npu-${{ inputs.ref || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
@@ -137,6 +142,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: '910b'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-1-npu-a3:
     name: nightly-1-npu-a3
@@ -151,6 +157,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-2-npu-a3:
@@ -166,6 +173,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   # The nightly-4-npu-a3 suite is split across 2 parallel partition jobs, mirroring base-b-test-4-npu-a3 in the PR pipeline.
@@ -183,6 +191,7 @@ jobs:
       partitions: '{"size":2,"arr":[0,1]}'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-8-npu-a3:
@@ -198,6 +207,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-16-npu-a3:
@@ -213,6 +223,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-perf-2-npu-a3:
@@ -230,6 +241,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-perf-4-npu-a3:
     name: nightly-perf-4-npu-a3
@@ -246,6 +258,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-perf-8-npu-a3:
     name: nightly-perf-8-npu-a3
@@ -262,6 +275,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-perf-16-npu-a3:
     name: nightly-perf-16-npu-a3
@@ -278,6 +292,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   # The acc-2 suite is split across 4 parallel partition jobs via the single `partitions` input.
   nightly-acc-2-npu-a3:
@@ -296,6 +311,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-acc-4-npu-a3:
     name: nightly-acc-4-npu-a3
@@ -312,6 +328,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-acc-16-npu-a3:
     name: nightly-acc-16-npu-a3
@@ -328,6 +345,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-poc-multi-node-tests:
     name: multi-node-poc
@@ -382,6 +400,7 @@ jobs:
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
@@ -413,6 +432,7 @@ jobs:
       prefill_decode_deployment: 'mix'
       transformers_version: ''
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   check-all-jobs:
     if: ${{ !cancelled() }}
