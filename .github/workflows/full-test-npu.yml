@@ -1,11 +1,13 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - main
+      - testcases
+      - testcases-260813
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -18,16 +20,32 @@ on:
         required: false
         type: string
         default: 'all'
+      image_a2:
+        description: 'The a2 running docker image of the test task.'
+        required: false
+        type: string
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-910b'
       image_a3:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.0.0-a3-ubuntu22.04-py3.11'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260828'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
         type: string
-        default: 'false'
+        default: 'true'
+      test_scope:
+        description: 'Test scope: all / func / poc / no_nightly / poc_no_nightly'
+        required: true
+        type: choice
+        options:
+          - all
+          - func
+          - poc
+          - no_nightly
+          - poc_no_nightly
+        default: 'func'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -39,13 +57,23 @@ jobs:
     outputs:
       ref: ${{ steps.set-vars.outputs.ref }}
       job_filter: ${{ steps.set-vars.outputs.job_filter }}
+      image_a2: ${{ steps.set-vars.outputs.image_a2 }}
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       skip_install_flag: ${{ steps.set-vars.outputs.skip_install_flag }}
+      test_scope: ${{ steps.set-vars.outputs.test_scope }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
         id: set-vars
         run: |
+          echo "========== INPUT PARAMETERS =========="
+          echo "inputs.ref            = ${{ inputs.ref }}"
+          echo "inputs.job_filter     = ${{ inputs.job_filter }}"
+          echo "inputs.image_a2        = ${{ inputs.image_a2 }}"
+          echo "inputs.image_a3        = ${{ inputs.image_a3 }}"
+          echo "inputs.skip_install_flag = ${{ inputs.skip_install_flag }}"
+          echo "inputs.test_scope      = ${{ inputs.test_scope }}"
+          echo "======================================="
           if [ -z "${{ inputs.ref }}" ]; then
             echo "ref=" >> $GITHUB_OUTPUT
           else
@@ -58,97 +86,136 @@ jobs:
             echo "job_filter=${{ inputs.job_filter }}" >> $GITHUB_OUTPUT
           fi
 
+          if [ -z "${{ inputs.image_a2 }}" ]; then
+            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-910b" >> $GITHUB_OUTPUT
+          else
+            echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
+          fi
+
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260828" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.skip_install_flag }}" ]; then
-            echo "skip_install_flag=false" >> $GITHUB_OUTPUT
+            echo "skip_install_flag=true" >> $GITHUB_OUTPUT
           else
             echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
           fi
 
-  nighly-test-npu:
-    needs: [set-image-config]
-    name: nightly-test-npu
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    uses: ./.github/workflows/nightly-test-npu.yml
-    with:
-      ref:  ${{ needs.set-image-config.outputs.ref }}
-      job_filter: ${{ needs.set-image-config.outputs.job_filter }}
-      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
-      skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
-    secrets: inherit
-
-  full-1-npu-a3:
-    needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    runs-on: linux-aarch64-a3-2
-    container:
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-
-      - name: Install dependencies
-        env:
-          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-        run: |
-          # speed up by using infra cache services
-          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-          pip config set global.trusted-host "${CACHING_URL}"
-
-          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
-            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          if [ -z "${{ inputs.test_scope }}" ]; then
+            echo "test_scope=func" >> $GITHUB_OUTPUT
+          else
+            echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
-          # copy required file from our daily cache
-          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          # copy gsm8k dataset
-          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
-      - name: Print Log Information
-        run: |
-          bash scripts/ci/npu/npu_log_print.sh
-
-      - name: Run test
-        timeout-minutes: 240
-        env:
-          SGLANG_USE_MODELSCOPE: true
-          SGLANG_IS_IN_CI: true
-          HF_ENDPOINT: https://hf-mirror.com
-          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-          STREAMS_PER_DEVICE: 32
-        run: |
-          pip install sglang_router
-          hf download lmms-lab/MMMU --repo-type dataset
-          pip install sentence_transformers torchaudio==2.8.0
-          pip install protobuf==6.31.1 zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
-          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
-          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-          cd ./lmms-eval
-          nohup pip install . > lmmslog.txt 2>&1 &
-          sleep 120
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          cd ../
-          cd test
-          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+#  full-1-npu-a3:
+#    needs: [ set-image-config ]
+#    runs-on: linux-aarch64-a3-2-
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        part: [0, 1]
+#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+#    container:
+#      image: ${{ needs.set-image-config.outputs.image_a3 }}
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+#      - name: Install dependencies
+#        env:
+#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+#        run: |
+#          # speed up by using infra cache services
+#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+#          pip config set global.trusted-host "${CACHING_URL}"
+#          sglang_source_path=$(pwd)
+#          echo "Source code path: ${sglang_source_path}"
+#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+#          else
+#            sglang_pkg_path=/sgl-workspace/sglang/python
+#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+#            mkdir -p ${ascend_test_util_path}
+#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+#          fi
+#
+#          # copy required file from our daily cache
+#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+#          cp ~/.cache/modelscope/hub/datasets/hellaswag_val.jsonl /tmp
+#      - name: Print Log Information
+#        run: bash scripts/ci/npu/npu_log_print.sh
+#      - name: Run test
+#        timeout-minutes: 960
+#        env:
+#          SGLANG_USE_MODELSCOPE: true
+#          SGLANG_IS_IN_CI: true
+#          HF_ENDPOINT: https://hf-mirror.com
+#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+#          STREAMS_PER_DEVICE: 32
+#          TRANSFORMERS_VERBOSITY: "error"
+#          GDN_ATTN_BACKEND_TRITON: 1
+#        run: |
+#          # speed up by using infra cache services
+#          pip install sglang_router
+#          hf download lmms-lab/MMMU --repo-type dataset
+#          pip install fastokens
+#          pip install mindstudio-probe --pre
+#          pip install sentence_transformers torchaudio==2.10.0
+#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv granian
+#          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+#          pip install msgpack
+#          pip install watchfiles
+#          pip install torchao==0.16.0
+#          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
+#          # Install sgl-eval
+#          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+#          # sglang_source_path=$(pwd)
+#          # echo "Source code path: ${sglang_source_path}"
+#          # . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+#          # pip install "$SGL_EVAL_SPEC"
+#          # git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+#          # cd ./lmms-eval
+#          # nohup pip install . > lmmslog.txt 2>&1 &
+#          # sleep 120
+#          # export PYTHONPATH=$PYTHONPATH:$(pwd)
+#          # cd ../
+#          cd test
+#          # Only run the selected test files for this suite via --files.
+#          # suite/nightly filtering is bypassed when --files is provided.
+#          FILES=$(printf '%s,' \
+#            test/registered/npu/llm_models/test_npu_granite_4_0_micro.py
+#            test/registered/npu/llm_models/test_npu_granite_4_0_micro_5shot.py
+#            test/registered/npu/llm_models/test_npu_granite_4_0_micro_no_env.py
+#            test/registered/npu/llm_models/test_npu_granite_4_0_micro_no_env_5shot.py
+#          )
+#          #  test/registered/npu/llm_models/test_npu_granite_4_0_h_micro.py
+#          #  test/registered/npu/llm_models/test_npu_lfm2_5_1_2b_instruct.py
+#          #  test/registered/npu/llm_models/test_npu_lfm2_8b_a1b.py
+#          FILES="${FILES%,}"
+#          python3 run_suite.py --hw npu --suite full-1-npu-a3 --nightly --continue-on-error --timeout-per-file 4800 --auto-partition-size 2 --auto-partition-id ${{ matrix.part }} --files "$FILES"
 
   full-2-npu-a3:
-    needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    runs-on: linux-aarch64-a3-2
+    needs: [ set-image-config ]
+    runs-on: linux-aarch64-a3-2-
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0]
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -156,7 +223,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-
       - name: Install dependencies
         env:
           TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
@@ -164,27 +230,26 @@ jobs:
           UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
         run: |
-          # speed up by using infra cache services
           CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
           sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
           pip config set global.index-url http://${CACHING_URL}/pypi/simple
           pip config set global.trusted-host "${CACHING_URL}"
-
+          sglang_source_path=$(pwd)
           if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
             bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          else
+            sglang_pkg_path=/sgl-workspace/sglang/python
+            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+            mkdir -p ${ascend_test_util_path}
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
           fi
-
-          # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          # copy gsm8k dataset
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
       - name: Print Log Information
-        run: |
-          bash scripts/ci/npu/npu_log_print.sh
-
+        run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
-        timeout-minutes: 240
+        timeout-minutes: 960
         env:
           SGLANG_USE_MODELSCOPE: true
           SGLANG_IS_IN_CI: true
@@ -192,89 +257,189 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
-          pip install sentence_transformers torchaudio==2.8.0
-          pip install protobuf==6.31.1 zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
           pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
           pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+          pip install websocket-client websockets uvicorn==0.49.0
           git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          pip install opentelemetry-sdk opentelemetry-api opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc
+          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
           cd ./lmms-eval
           nohup pip install . > lmmslog.txt 2>&1 &
           sleep 120
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/memory_and_scheduling/test_npu_schedule_conservativeness.py"
 
-  full-4-npu-a3:
-    needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    runs-on: linux-aarch64-a3-4
-    container:
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-
-      - name: Install dependencies
-        env:
-          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-        run: |
-          # speed up by using infra cache services
-          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-          pip config set global.trusted-host "${CACHING_URL}"
-
-          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
-            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
-          fi
-
-          # copy required file from our daily cache
-          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          # copy gsm8k dataset
-          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
-      - name: Print Log Information
-        run: |
-          bash scripts/ci/npu/npu_log_print.sh
-
-      - name: Run test
-        timeout-minutes: 240
-        env:
-          SGLANG_USE_MODELSCOPE: true
-          SGLANG_IS_IN_CI: true
-          HF_ENDPOINT: https://hf-mirror.com
-          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
-          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
-          STREAMS_PER_DEVICE: 32
-        run: |
-          pip install sglang_router
-          hf download lmms-lab/MMMU --repo-type dataset
-          pip install sentence_transformers torchaudio==2.8.0
-          pip install protobuf==6.31.1 zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
-          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
-          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
-          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-          cd ./lmms-eval
-          nohup pip install . > lmmslog.txt 2>&1 &
-          sleep 120
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          cd ../
-          cd test
-          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+#  full-4-npu-a3:
+#    needs: [ set-image-config ]
+#    runs-on: linux-aarch64-a3-4-
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        part: [0]
+#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+#    container:
+#      image: ${{ needs.set-image-config.outputs.image_a3 }}
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+#      - name: Install dependencies
+#        env:
+#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+#        run: |
+#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+#          pip config set global.trusted-host "${CACHING_URL}"
+#          sglang_source_path=$(pwd)
+#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+#          else
+#            sglang_pkg_path=/sgl-workspace/sglang/python
+#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+#            mkdir -p ${ascend_test_util_path}
+#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+#          fi
+#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+#      - name: Print Log Information
+#        run: bash scripts/ci/npu/npu_log_print.sh
+#      - name: Run test
+#        timeout-minutes: 960
+#        env:
+#          SGLANG_USE_MODELSCOPE: true
+#          SGLANG_IS_IN_CI: true
+#          HF_ENDPOINT: https://hf-mirror.com
+#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+#          STREAMS_PER_DEVICE: 32
+#          TRANSFORMERS_VERBOSITY: "error"
+#          GDN_ATTN_BACKEND_TRITON: 1
+#        run: |
+#          pip install sglang_router
+#          hf download lmms-lab/MMMU --repo-type dataset
+#          pip install sentence_transformers torchaudio==2.10.0
+#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+#          pip install /root/.cache/.cache/npu-pkgs/torch_memory_saver-0.0.8-cp312-cp312-linux_aarch64.whl
+#          # Install sgl-eval
+#          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+#          sglang_source_path=$(pwd)
+#          echo "Source code path: ${sglang_source_path}"
+#          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+#          pip install "$SGL_EVAL_SPEC"
+#          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+#          cd ./lmms-eval
+#          nohup pip install . > lmmslog.txt 2>&1 &
+#          sleep 120
+#          export PYTHONPATH=$PYTHONPATH:$(pwd)
+#          cd ../
+#          cd test
+#          python3 run_suite.py --hw npu --suite full-4-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/optimization_debug_options/test_npu_attn_tp_gather_fuseep.py"
+#
+#  full-8-npu-a3:
+#    needs: [ set-image-config ]
+#    runs-on: linux-aarch64-a3-8-
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        part: [0]
+#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+#    container:
+#      image: ${{ needs.set-image-config.outputs.image_a3 }}
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+#      - name: Install dependencies
+#        env:
+#          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
+#          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+#          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+#          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+#        run: |
+#          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+#          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+#          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+#          pip config set global.trusted-host "${CACHING_URL}"
+#          sglang_source_path=$(pwd)
+#          if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
+#            bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+#          else
+#            sglang_pkg_path=/sgl-workspace/sglang/python
+#            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+#            mkdir -p ${ascend_test_util_path}
+#            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+#            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+#          fi
+#          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
+#          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
+#      - name: Print Log Information
+#        run: bash scripts/ci/npu/npu_log_print.sh
+#      - name: Run test
+#        timeout-minutes: 960
+#        env:
+#          SGLANG_USE_MODELSCOPE: true
+#          SGLANG_IS_IN_CI: true
+#          HF_ENDPOINT: https://hf-mirror.com
+#          TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
+#          PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+#          STREAMS_PER_DEVICE: 32
+#          TRANSFORMERS_VERBOSITY: "error"
+#          GDN_ATTN_BACKEND_TRITON: 1
+#        run: |
+#          pip install sglang_router
+#          hf download lmms-lab/MMMU --repo-type dataset
+#          pip install sentence_transformers torchaudio==2.10.0
+#          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+#          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
+#          pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+#          # Install sgl-eval
+#          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+#          sglang_source_path=$(pwd)
+#          echo "Source code path: ${sglang_source_path}"
+#          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+#          pip install "$SGL_EVAL_SPEC"
+#          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+#          cd ./lmms-eval
+#          nohup pip install . > lmmslog.txt 2>&1 &
+#          sleep 120
+#          export PYTHONPATH=$PYTHONPATH:$(pwd)
+#          cd ../
+#          cd test
+#          python3 run_suite.py --hw npu --suite full-8-npu-a3 --nightly --continue-on-error --timeout-per-file 7200 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py,test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_235b_a22b_w8a8.py"
 
   full-16-npu-a3:
-    needs: [set-image-config]
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    runs-on: linux-aarch64-a3-16
+    needs: [ set-image-config ]
+    runs-on: linux-aarch64-a3-16-
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0]
+    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
@@ -282,7 +447,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
-
       - name: Install dependencies
         env:
           TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
@@ -290,27 +454,26 @@ jobs:
           UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
         run: |
-          # speed up by using infra cache services
           CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
           sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
           pip config set global.index-url http://${CACHING_URL}/pypi/simple
           pip config set global.trusted-host "${CACHING_URL}"
-
+          sglang_source_path=$(pwd)
           if [ ${{ needs.set-image-config.outputs.skip_install_flag }} != "true" ];then
             bash scripts/ci/npu/npu_ci_install_dependency.sh a3
+          else
+            sglang_pkg_path=/sgl-workspace/sglang/python
+            ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+            mkdir -p ${ascend_test_util_path}
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+            cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
           fi
-
-          # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          # copy gsm8k dataset
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
       - name: Print Log Information
-        run: |
-          bash scripts/ci/npu/npu_log_print.sh
-
+        run: bash scripts/ci/npu/npu_log_print.sh
       - name: Run test
-        timeout-minutes: 240
+        timeout-minutes: 960
         env:
           SGLANG_USE_MODELSCOPE: true
           SGLANG_IS_IN_CI: true
@@ -318,13 +481,21 @@ jobs:
           TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
           PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
           STREAMS_PER_DEVICE: 32
+          TRANSFORMERS_VERBOSITY: "error"
+          GDN_ATTN_BACKEND_TRITON: 1
         run: |
           pip install sglang_router
           hf download lmms-lab/MMMU --repo-type dataset
-          pip install sentence_transformers torchaudio==2.8.0
-          pip install protobuf==6.31.1 zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install sentence_transformers torchaudio==2.10.0
+          pip install zss pre-commit wandb>=0.16.0 tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
           pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 sacrebleu>=1.5.0 pytablewriter black==24.1.0 isort==5.13.2 peft>=0.2.0 accelerate>=0.29.1
           pip install jsonlines httpx==0.25.0 evaluate>=0.4.0 datasets==2.16.1 numexpr xgrammar==0.2.1 numpy==1.26.4 dotenv
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
           git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
           cd ./lmms-eval
           nohup pip install . > lmmslog.txt 2>&1 &
@@ -332,28 +503,62 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600
+          python3 run_suite.py --hw npu --suite full-16-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/speculative_inference/test_npu_speculative_moe_a2a_backend.py"
+
 
   check-all-jobs:
-    if: github.repository == 'sgl-project/sglang' && always()
     needs:
-      - nighly-test-npu
-      - full-1-npu-a3
+      - set-image-config
+#      - full-1-npu-a3
       - full-2-npu-a3
-      - full-4-npu-a3
+#      - full-4-npu-a3
+#      - full-8-npu-a3
       - full-16-npu-a3
     runs-on: ubuntu-latest
-    container:
-      image: docker.m.daocloud.io/ubuntu:22.04
+    if: ${{ !cancelled() }}
     steps:
-      - name: Check if any job failed
+      - name: Download all metrics
+        uses: actions/download-artifact@v4
+        with:
+          pattern: metrics-*
+          path: /tmp/metrics
+          merge-multiple: false
+
+      - name: Generate results table
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
-            echo "One or more nightly test jobs failed"
-            exit 1
+          echo "## Per-Test Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          has_metrics=false
+          for dir in /tmp/metrics/metrics-*/; do
+            file="${dir}metrics.json"
+            if [ -f "$file" ]; then
+              has_metrics=true
+              echo "import json" > /tmp/parse_metrics.py
+              echo "with open('$file') as f:" >> /tmp/parse_metrics.py
+              echo "    d = json.load(f)" >> /tmp/parse_metrics.py
+              echo "tc = d.get('test_case', '-')" >> /tmp/parse_metrics.py
+              echo "tp = d.get('test_type', '-')" >> /tmp/parse_metrics.py
+              echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
+              echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
+              echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
+              echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
+              echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
+              echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
+              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
+              python3 /tmp/parse_metrics.py
+            fi
+          done > /tmp/metrics_table.txt
+
+          if [ "${has_metrics}" = "true" ]; then
+            echo "| Test Case | Type | Status | Metrics | Baseline |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|------|--------|---------|----------|" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/metrics_table.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No per-test metrics available (artifacts not found)." >> $GITHUB_STEP_SUMMARY
           fi
-          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "One or more nightly test jobs were cancelled"
-            exit 1
-          fi
-          echo "All nightly test jobs passed"
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          FAIL=0
+          ${{ needs.nighly-test-npu.result != 'success' && needs.nighly-test-npu.result != 'skipped' }} && FAIL=1
+          exit $FAIL
