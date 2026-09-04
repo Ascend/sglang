@@ -39,7 +39,7 @@ on:
         required: true
         type: choice
         options:
-          - al
+          - all
           - func
           - poc
           - no_nightly
