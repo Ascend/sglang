@@ -12,23 +12,14 @@ import os
 import re
 import tempfile
 import unittest
-
-import requests
-
-from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
+    TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-    DEFAULT_URL_FOR_TEST,
-    CustomTestCase,
-    popen_launch_server,
-)
 
 register_npu_ci(
     est_time=3600,
@@ -106,11 +97,11 @@ _MIMO_ENVS = {
 }
 
 _POOL_LOG_PATTERN = re.compile(
-    r"full_max_total_num_tokens=(\d+).*swa_max_total_num_tokens=(\d+)"
+    r"Use sliding window memory pool. full_layer_tokens=(\d+).*swa_layer_tokens=(\d+)"
 )
 
 
-class TestSwaFullTokensRatioServer(CustomTestCase):
+class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     """Verify --swa-full-tokens-ratio on a real Hybrid SWA model (MiMo V2 Flash).
 
     Launches the server, sends an inference request, and prints the
@@ -123,6 +114,17 @@ class TestSwaFullTokensRatioServer(CustomTestCase):
 
     model = MIMO_V2_FLASH_MODEL_PATH
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    other_args = _MIMO_BASE_ARGS
+    envs = _MIMO_ENVS
+    accuracy = 0.70
+    datasets = ["gsm8k"]
+    few_shot_num = 5
+    generation_config = {
+        "max_tokens": 2048,
+        "temperature": 1.0,
+    }
+    max_concurrency = 64
+    output_len = 2048
 
     def _capture_pool_sizes(self, stdout):
         """Extract full/swa pool sizes from server stdout."""
@@ -134,33 +136,14 @@ class TestSwaFullTokensRatioServer(CustomTestCase):
 
     def test_launch_and_print_pool_sizes(self):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
+        self.run_accuracy()
+
         out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
         err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
         out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
         err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
-
-        process = popen_launch_server(
-            self.model,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=_MIMO_BASE_ARGS,
-            env=_MIMO_ENVS,
-            return_stdout_stderr=(out_log_file, err_log_file),
-        )
         try:
-            # 1. Verify inference works
-            resp = requests.post(
-                f"{DEFAULT_URL_FOR_TEST}/generate",
-                json={
-                    "text": "The capital of France is",
-                    "sampling_params": {"temperature": 0, "max_new_tokens": 32},
-                },
-                timeout=120,
-            )
-            self.assertEqual(resp.status_code, 200)
-            self.assertIn("Paris", resp.text)
-
-            # 2. Extract and print Full/SWA pool sizes from server logs
+            # Extract and print Full/SWA pool sizes from server logs
             # NOTE: Use a separate file handle to read logs, because out_log_file
             # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
             with open(out_log_path, "r", encoding="utf-8") as f:
@@ -185,7 +168,6 @@ class TestSwaFullTokensRatioServer(CustomTestCase):
                     "Look for '[unified-memory-pool]' or similar log lines."
                 )
         finally:
-            kill_process_tree(process.pid)
             out_log_file.close()
             err_log_file.close()
             os.unlink(out_log_path)
