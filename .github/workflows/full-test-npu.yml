@@ -1,11 +1,11 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - testcases-260813
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -22,7 +22,7 @@ on:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.0.0-a3-ubuntu22.04-py3.11'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:cann9.1.0-a3-20260901'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
