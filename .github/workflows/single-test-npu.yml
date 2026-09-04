@@ -16,9 +16,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-2-
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260813
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,18 +35,21 @@ jobs:
           SGLANG_IS_IN_CI: true
         shell: bash
         run: |
+          pip install peft==0.20.0
+          pip install torchao==0.16.0
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "python/sglang/test/ascend/e2e/generate_lora_reference_data.py --model_path /root/.cache/modelscope/hub/models/Qwen/Qwen3.6-27B --lora_path /root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora --output /root/.cache/modelscope/hub/models/hotdogs/qwen3.6-27b-cybersecurity-lora/compare_sample_train_data.pt"
           )
 
           for test_case in "${test_cases[@]}"; do
-            if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-              echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
+            script_path="${test_case%% *}"
+            if [ ! -f "${sglang_source_path}/${script_path}" ]; then
+              echo "The testcase does not exit: ${sglang_source_path}/${script_path}"
               exit 1
             fi
           done
@@ -83,7 +86,8 @@ jobs:
           echo "Log path: ${log_path}"
 
           for test_case in "${test_cases[@]}"; do
-            tc_name=$(basename ${test_case} .py)
+            script_path="${test_case%% *}"
+            tc_name=$(basename ${script_path} .py)
             echo "Running test case ${test_case}"
             python -u ${sglang_source_path}/${test_case}
             echo "Finished test case ${test_case}"
