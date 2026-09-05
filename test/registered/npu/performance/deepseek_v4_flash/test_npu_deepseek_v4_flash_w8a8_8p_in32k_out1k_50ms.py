@@ -10,9 +10,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="nightly-perf-16-npu-a3",
     nightly=True,
-    disabled="performance testcase",
 )
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
