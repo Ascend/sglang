@@ -27,7 +27,7 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.0.0-a3-ubuntu22.04-py3.11'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -65,7 +65,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.5.0-a3-ubuntu22.04-py3.11" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -230,7 +230,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-perf-2-npu-a3
-      runner_config: linux-aarch64-a3-2-
+      runner_config: linux-aarch64-a3-800t-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
@@ -246,7 +246,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-perf-4-npu-a3
-      runner_config: linux-aarch64-a3-4-
+      runner_config: linux-aarch64-a3-800t-4
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
@@ -262,7 +262,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-perf-8-npu-a3
-      runner_config: linux-aarch64-a3-8-
+      runner_config: linux-aarch64-a3-800t-8
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
@@ -278,7 +278,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-perf-16-npu-a3
-      runner_config: linux-aarch64-a3-16-
+      runner_config: linux-aarch64-a3-800t-16
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
