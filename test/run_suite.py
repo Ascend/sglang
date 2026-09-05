@@ -171,6 +171,8 @@ NIGHTLY_SUITES = {
         "full-4-npu-a3",
         "full-8-npu-a3",
         "full-16-npu-a3",
+        "full-perf-2-npu-a3",
+        "full-perf-16-npu-a3",
         "full-4-npu-a2",
         "full-acc-2-npu-a3",
         "full-acc-4-npu-a3",
