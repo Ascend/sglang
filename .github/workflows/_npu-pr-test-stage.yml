@@ -44,6 +44,10 @@ on:
         description: 'Run the test suite with --nightly (collects nightly-registered tests) and --continue-on-error'
         type: boolean
         default: false
+      use_run_selected_tests:
+        description: 'If true, delegate test execution to scripts/run_selected_tests.sh instead of running via run_suite.py directly'
+        type: boolean
+        default: false
       github-token:
         description: 'GitHub token for API calls'
         type: string
@@ -238,6 +242,21 @@ jobs:
           done
 
           cd test
+          # Optional: delegate execution to scripts/run_selected_tests.sh when the
+          # caller sets use_run_selected_tests=true. The original run_suite.py
+          # execution below is preserved unchanged for the default (false) path.
+          if [[ "${{ inputs.use_run_selected_tests }}" == "true" ]]; then
+            python3 run_suite.py --hw npu --suite ${{ inputs.self_name }} \
+              --auto-partition-id ${{ matrix.partition }} \
+              --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
+              ${{ inputs.timeout_per_file && format('--timeout-per-file {0}', inputs.timeout_per_file) || '' }} \
+              --list-tests > /tmp/selected_tests.txt
+            if [ -s /tmp/selected_tests.txt ]; then
+              bash ../scripts/run_selected_tests.sh $(cat /tmp/selected_tests.txt)
+            fi
+            exit 0
+          fi
+
           # Append `--nightly` and `--continue-on-error` when the job belongs to the nightly pipeline.
           # --nightly: Collect test cases registered for nightly runs.
           # --continue-on-error: Keep running remaining cases even if one fails.
