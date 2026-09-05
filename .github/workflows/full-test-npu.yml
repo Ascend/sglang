@@ -295,7 +295,7 @@ jobs:
       image: ${{ needs.set-image-config.outputs.image_a2 }}
       device_type_for_deps: '910b'
 
-  nightly-poc-multi-node-tests:
+  full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
     if: ${{ !cancelled() }}
@@ -391,7 +391,7 @@ jobs:
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
 
-  nightly-poc-multi-node-mix-tests:
+  full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
@@ -439,8 +439,8 @@ jobs:
       - full-acc-4-npu-a3
       - full-acc-16-npu-a3
       - full-4-npu-a2
-      - nightly-poc-multi-node-tests
-      - nightly-poc-multi-node-mix-tests
+      - full-poc-multi-node-tests
+      - full-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
     container:
       image: docker.m.daocloud.io/ubuntu:22.04
