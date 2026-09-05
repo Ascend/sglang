@@ -74,7 +74,7 @@ jobs:
   full-4-npu-a3:
     needs: [set-image-config]
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    runs-on: linux-aarch64-a3-800t-4
+    runs-on: linux-aarch64-a3-4
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
     steps:
