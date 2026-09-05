@@ -193,7 +193,7 @@ jobs:
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
           RUSTUP_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local:8082"
         run: |
-          set -euo pipefail
+          set -eu
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
 
