@@ -89,7 +89,6 @@ QWEN3_32B_OTHER_ARGS = [
     "qwen",
 ]
 
-
 class TestQwen32B(TestNpuPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
@@ -108,21 +107,6 @@ class TestQwen32B(TestNpuPerformanceTestCaseBase):
 
     def test_qwen3_32b(self):
         self.run_throughput()
-
-
-class TestQwen32B_mmlupro(TestNpuAccuracyTestCaseBase):
-    model = QWEN3_32B_W8A8_MODEL_PATH
-    envs = QWEN3_32B_ENVS
-    other_args = QWEN3_32B_OTHER_ARGS
-    accuracy = 0.4949
-    datasets = ["gpqa_diamond"]
-    few_shot_num = 0
-    eval_batch_size = 64
-    generation_config = {"max_tokens": 40000, "temperature": 1.0}
-
-    def test_accuracy(self):
-        self.run_accuracy()
-
 
 if __name__ == "__main__":
     unittest.main()

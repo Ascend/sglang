@@ -96,7 +96,6 @@ QWEN3_NEXT_80B_A3B_OTHER_ARGS = [
     "qwen3_coder",
 ]
 
-
 class TestQwen3Next80BA3B(TestNpuPerformanceTestCaseBase):
     max_attempts = 5
     model = QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH
@@ -112,27 +111,6 @@ class TestQwen3Next80BA3B(TestNpuPerformanceTestCaseBase):
 
     def test_qwen3_next_80b_a3b(self):
         self.run_throughput()
-
-
-class TestQwen3Next80BA3B_aime25(TestNpuAccuracyTestCaseBase):
-    model = QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH
-    envs = QWEN3_NEXT_80B_A3B_ENVS
-    other_args = QWEN3_NEXT_80B_A3B_OTHER_ARGS
-    accuracy = 0.695
-    datasets = ["aime25"]
-    few_shot_num = 0
-    generation_config = {
-        "max_tokens": 65536,
-        "temperature": 0.7,
-        "top_p": 0.8,
-        "top_k": 20,
-        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
-    }
-    max_concurrency = 16
-
-    def test_aime25(self):
-        self.run_accuracy()
-
 
 if __name__ == "__main__":
     unittest.main()

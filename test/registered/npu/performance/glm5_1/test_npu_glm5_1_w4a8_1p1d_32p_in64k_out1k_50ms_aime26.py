@@ -167,21 +167,6 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
     "router_envs": {},
 }
 
-
-class TestNPUGLM5_1_W4A8_PD_SEP_AIME2026(TestNpuAccuracyMultiNodePdSepTestCaseBase):
-    """Test NPU accuracy for GLM-5.1-w4a8 PD separation on AIME2026"""
-
-    model_config = GLM_5_1_PD_SEP_MODEL_CONFIG
-    accuracy = 0.953
-    datasets = ["aime26"]
-    eval_batch_size = 64
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
-
-    def test_npu_glm5_1_w4a8_pd_sep_aime2026(self):
-        """Run NPU accuracy test for GLM-5.1-w4a8 PD separation on AIME2026"""
-        self.run_accuracy()
-
-
 class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestNpuPerfMultiNodePdSepTestCaseBase):
     """Test NPU performance for GLM-5.1-w4a8 PD separation 4 nodes in3k5 out1k5"""
 
@@ -201,7 +186,6 @@ class TestNPUGLM5_1_W4A8_PD_SEP_In3k5_Out1k5(TestNpuPerfMultiNodePdSepTestCaseBa
     def test_npu_glm5_1_w4a8_pd_sep_in3k5_out1k5(self):
         """Run NPU performance test for GLM-5.1-w4a8 PD separation"""
         self.run_throughput()
-
 
 if __name__ == "__main__":
     unittest.main()

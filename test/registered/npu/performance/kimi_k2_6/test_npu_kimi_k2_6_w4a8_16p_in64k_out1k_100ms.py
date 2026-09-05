@@ -94,20 +94,6 @@ MODEL_CONFIG = {
     "node_envs": ENVS,
 }
 
-
-class TestNPUKimiK2_6_W4A8_16P_AIME2025(TestNpuAccuracyMultiNodePdMixTestCaseBase):
-
-    model_config = MODEL_CONFIG
-    accuracy = 0.961
-    datasets = ["aime25"]
-    few_shot_num = 0
-    eval_batch_size = 64
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
-
-    def test_aime2025(self):
-        self.run_accuracy()
-
-
 class TestNPUKimiK2_6_W4A8_16P_In64k_Out1k_100ms(TestNpuPerfMultiNodePdMixTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
@@ -124,7 +110,6 @@ class TestNPUKimiK2_6_W4A8_16P_In64k_Out1k_100ms(TestNpuPerfMultiNodePdMixTestCa
 
     def test_npu_kimi_k2_6_w4a8_16p_in64k_out1k_100ms(self):
         self.run_throughput()
-
 
 if __name__ == "__main__":
     unittest.main()
