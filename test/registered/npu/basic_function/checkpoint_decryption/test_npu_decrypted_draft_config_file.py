@@ -119,6 +119,7 @@ class TestDraftConfigFile(CustomTestCase):
             num_shots=5,
         )
         metrics = run_eval(args)
+        # The GSM8K baseline accuracy reported in the Qwen3-8B model paper is 0.8984.
         self.assertGreater(metrics["score"], 0.8984)
 
 
