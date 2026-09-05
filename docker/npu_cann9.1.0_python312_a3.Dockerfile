@@ -105,7 +105,7 @@ RUN . /etc/environment_new && \
 RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.2.0"/d' pyproject.toml && \
-    ${PIP_INSTALL} -v -e .[all_npu] "anyio==4.12.2"
+    ${PIP_INSTALL} -v -e .[all_npu] "anyio==4.14.2"
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 
