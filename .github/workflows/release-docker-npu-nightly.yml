@@ -1,15 +1,11 @@
 name: Release Docker Images Nightly
 
 on:
-  # 定时构建：每天北京时间 22:00 自动触发（GitHub cron 按 UTC 执行，
-  # 所以这里写 0 14 * * *，即 UTC 14:00 = 北京时间 22:00）
-  schedule:
-    - cron: '0 14 * * *'
   workflow_dispatch:
     inputs:
       tag_suffix:
         description: 'tag后缀，如 B021, release20260810'
-        required: true
+        required: false
         type: string
 
 jobs:
@@ -58,7 +54,7 @@ jobs:
       # 因此每天的定时构建会覆盖上一次的 nightly 镜像。
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}-${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "FULL_TAG=cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}-${{ matrix.platform }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -116,7 +112,7 @@ jobs:
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
@@ -134,7 +130,7 @@ jobs:
     concurrency:
       # Unique per workflow + matrix leg + tag (shared reusable manifest
       # workflow; see release-docker-dev.yml).
-      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
+      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       cancel-in-progress: false
     strategy:
       matrix:
@@ -144,11 +140,11 @@ jobs:
           - device_type: 950
             dockerfile: docker/npu_cann9.1.0_python312_950.Dockerfile
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       dockerfile: ${{ matrix.dockerfile }}
       build_args: |
         SGLANG_KERNEL_NPU_TAG=2026.9.1
         CANN_VERSION=9.1.0
         DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
+      artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       deploy_pages: 'true'
