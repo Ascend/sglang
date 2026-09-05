@@ -14,7 +14,7 @@ register_npu_ci(
     # reserves ~3 rounds of budget for accuracy retries.
     # Normalized to the shared 6500 ladder value for ~42-54min cases.
     est_time=6500,
-    suite="full-acc-2-npu-a3",
+    suite="nightly-acc-2-npu-a3",
     nightly=True,
 )
 
