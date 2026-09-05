@@ -179,7 +179,6 @@ NIGHTLY_SUITES = {
     ],
 }
 
-
 OTHER_SUITES = {
     HWBackend.CPU: [
         "default",
@@ -191,7 +190,6 @@ OTHER_SUITES = {
         "weekly-test-8-gpu-h200",
     ],
 }
-
 
 _SUITE_CHECKED_BACKENDS = {
     HWBackend.CUDA,
@@ -356,6 +354,8 @@ def run_a_suite(args):
             ci_tests, auto_partition_id, auto_partition_size, live_est=live_est
         )
 
+    pretty_print_tests(args, ci_tests, skipped_tests)
+
     # --list-tests: list selected files (after suite filter + partition) and exit
     # without running anything. Placed here so the output exactly matches what
     # CI would actually execute.
@@ -363,8 +363,6 @@ def run_a_suite(args):
         for t in ci_tests:
             print(t.filename)
         return 0
-
-    pretty_print_tests(args, ci_tests, skipped_tests)
 
     # None hands the per-file budget over to est_time (see run_unittest_files).
     timeout = None if args.timeout_from_est_time else args.timeout_per_file

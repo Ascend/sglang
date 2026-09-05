@@ -251,6 +251,8 @@ jobs:
               --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
               ${{ inputs.timeout_per_file && format('--timeout-per-file {0}', inputs.timeout_per_file) || '' }} \
               --list-tests > /tmp/selected_tests.txt
+            echo "Selected test files:"
+            cat /tmp/selected_tests.txt
             if [ -s /tmp/selected_tests.txt ]; then
               bash ../scripts/run_selected_tests.sh $(cat /tmp/selected_tests.txt)
             fi
