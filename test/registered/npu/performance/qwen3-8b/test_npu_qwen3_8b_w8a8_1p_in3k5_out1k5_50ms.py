@@ -1,8 +1,5 @@
 import unittest
 
-from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    TestNpuAccuracyTestCaseBase,
-)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,

@@ -1,9 +1,6 @@
 import os
 import unittest
 
-from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    TestNpuAccuracyTestCaseBase,
-)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     BENCHMARK_TOOL_DEFAULT,
     MINIMAX_M2_5_EAGLE3_MODEL_PATH,
