@@ -7,6 +7,7 @@ on:
         description: 'tag后缀，如 B021, release20260810'
         required: false
         type: string
+        default: 'nightly'
 
 jobs:
   # 按架构拆分到原生 runner，去掉 QEMU 模拟：
