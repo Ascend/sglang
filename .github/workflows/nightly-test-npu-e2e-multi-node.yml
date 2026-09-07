@@ -106,9 +106,11 @@ jobs:
       - name: Prepare code for testing
         run: |
           # copy source code to shared-disk
-          # Append run_id to isolate concurrent runs sharing the same PVC.
+          # Append run_id to isolate concurrent runs sharing the same PVC, and
+          # test_config_name to isolate concurrent multi-node jobs within the
+          # same run (otherwise rm/cp race on the same directory).
           current_path=$(pwd)
-          target_path=/root/.cache/tests/sglang-${{ github.run_id }}
+          target_path=/root/.cache/tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }}
           rm -rf ${target_path}
           mkdir -p ${target_path}
           cp -r ${current_path}/* ${target_path}/
@@ -309,5 +311,5 @@ jobs:
             echo "WARNING: post-test cleanup timeout after $((max_retries*30))s, some pods may remain"
           fi
 
-          # Cleanup the run-scoped source code directory on the shared PVC.
-          rm -rf /root/.cache/tests/sglang-${{ github.run_id }} || true
+          # Cleanup the run-scoped source code directories on the shared PVC.
+          rm -rf /root/.cache/tests/sglang-${{ github.run_id }}-* || true
