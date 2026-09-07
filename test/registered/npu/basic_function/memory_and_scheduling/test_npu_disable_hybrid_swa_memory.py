@@ -116,6 +116,17 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
 
     model = MIMO_V2_FLASH_MODEL_PATH
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    other_args = _MIMO_BASE_ARGS
+    envs = _MIMO_ENVS
+    accuracy = 0.70
+    datasets = ["gsm8k"]
+    few_shot_num = 5
+    generation_config = {
+        "max_tokens": 2048,
+        "temperature": 1.0,
+    }
+    max_concurrency = 64
+    output_len = 2048
 
     def _launch_and_check_pool(self, extra_args, expect_swa_pool):
         """Launch server with given extra_args, verify inference and pool type.
