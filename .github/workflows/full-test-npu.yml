@@ -772,7 +772,7 @@ jobs:
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
 
-#  nightly-poc-multi-node-mix-tests:
+#  nightly-poc-multi-node-mix-tests
 #    name: multi-node-mix-poc
 #    needs: [ set-image-config, nightly-poc-single-node-tests, nightly-poc-multi-node-tests ]
 #    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
