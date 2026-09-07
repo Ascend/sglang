@@ -481,7 +481,7 @@ jobs:
     if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'aaa' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 1
       matrix:
         test_config:
           - name: test_npu_kvtc_qwen3_235b_a22b_1p_gsm8k_evalscope
