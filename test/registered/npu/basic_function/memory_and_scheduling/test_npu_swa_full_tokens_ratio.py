@@ -130,21 +130,18 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
 
     @classmethod
     def setUpClass(cls):
-        """Let base class do full setup, capturing server logs via monkey-patch.
-
-        Patch popen_launch_server in the base class module to inject
-        return_stdout_stderr, so the original server (launched by the base
-        class setUpClass) has its logs captured without duplicating any logic.
-        """
+        """Let base class do full setup, capturing server logs via monkey-patch."""
         import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
 
-        # Create log files before super().setUpClass()
-        out_log_fd, cls._out_log_path = tempfile.mkstemp(suffix=".log")
-        os.close(out_log_fd)
-        cls._out_log_file = open(cls._out_log_path, "w", encoding="utf-8")
-        err_log_fd, cls._err_log_path = tempfile.mkstemp(suffix=".log")
-        os.close(err_log_fd)
-        cls._err_log_file = open(cls._err_log_path, "w", encoding="utf-8")
+        # Create log files with NamedTemporaryFile (same pattern as test_npu_logging.py)
+        cls._out_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        cls._err_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        cls._out_log_path = cls._out_log_file.name
+        cls._err_log_path = cls._err_log_file.name
 
         # Patch popen_launch_server to inject return_stdout_stderr
         original_popen = base_module.popen_launch_server
@@ -173,6 +170,18 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
             cls._err_log_file.close()
             os.unlink(cls._err_log_path)
 
+    def _wait_for_log_content(self, log_file, timeout=30):
+        """Poll until log file has non-empty content, then return it."""
+        start_time = time.time()
+        content = ""
+        while time.time() - start_time < timeout:
+            with open(log_file.name, "r", encoding="utf-8") as f:
+                content = f.read()
+            if content:
+                break
+            time.sleep(0.5)
+        return content
+
     def _capture_pool_sizes(self, stdout):
         """Extract full/swa pool sizes from server stdout."""
         for line in stdout.splitlines():
@@ -185,11 +194,7 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
         self.run_accuracy()
 
-        # Use a separate file handle to avoid thread-safety issues
-        # with the _dump daemon thread writing to _out_log_file.
-        time.sleep(0.5)  # Let _dump thread flush pending writes
-        with open(self._out_log_path, "r", encoding="utf-8") as f:
-            stdout = f.read()
+        stdout = self._wait_for_log_content(self._out_log_file, timeout=30)
         full, swa = self._capture_pool_sizes(stdout)
 
         if full is not None and swa is not None:
