@@ -114,8 +114,12 @@ class TestDynamicChunking(CustomTestCase):
             self.assertGreater(len(long_resp.json().get("text", "")), 0)
 
             # 3. Log assertions: verify dynamic chunking actually activated
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            # NOTE: Use a separate file handle to read logs, because out_log_file
+            # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
+            # Reading via the same TextIOWrapper from two threads can cause empty/
+            # partial reads due to internal buffer corruption.
+            with open(out_log_path, "r", encoding="utf-8") as f:
+                stdout = f.read()
 
             # 3a. Predictor must be ready (profiling succeeded)
             self.assertIn(
