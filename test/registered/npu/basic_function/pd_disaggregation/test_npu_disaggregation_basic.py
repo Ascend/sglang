@@ -81,6 +81,9 @@ class DisaggregationTestBase(PDDisaggregationServerBase):
             1,
         ] + cls.prefill_extra_args
         prefill_args += cls.transfer_backend + cls.rdma_devices
+        # Use kernel_ascend as the HiCache I/O backend to avoid AttributeError
+        # on NPUMHATokenToKVPool which lacks k_data_ptrs/v_data_ptrs required
+        # by the default backend during retraction device-to-host KV backup.
         prefill_args += [
             "--hicache-io-backend",
             "kernel_ascend",
@@ -106,6 +109,8 @@ class DisaggregationTestBase(PDDisaggregationServerBase):
             1,
         ] + cls.decode_extra_args
         decode_args += cls.transfer_backend + cls.rdma_devices
+        # Use kernel_ascend as the HiCache I/O backend for the same reason
+        # as the prefill node above.
         decode_args += [
             "--hicache-io-backend",
             "kernel_ascend",
@@ -346,10 +351,9 @@ class TestDisaggregationSimulatedRetract(DisaggregationTestBase):
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
     gsm8k_score_threshold = 0.62
     extra_env_vars = {"SGLANG_TEST_RETRACT": "true"}
-    # Retraction backs up device KV to the host pool via kernel_ascend, which
-    # only supports the page_first_direct host layout (mha.py
-    # backup_from_device_all_layer). Without this the forced retract crashes
-    # with ValueError: Unsupported layout: page_first.
+    # kernel_ascend backend only supports page_first_direct host layout during
+    # retraction KV backup (backup_from_device_all_layer). Without this the
+    # forced retract crashes with ValueError: Unsupported layout: page_first.
     prefill_extra_args = [
         "--hicache-mem-layout",
         "page_first_direct",
