@@ -13,8 +13,6 @@ import re
 import tempfile
 import unittest
 
-import requests
-
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
