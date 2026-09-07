@@ -410,7 +410,7 @@ jobs:
   full-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled()  }}
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       max-parallel: 3
