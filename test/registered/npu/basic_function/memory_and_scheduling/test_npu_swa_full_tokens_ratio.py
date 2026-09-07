@@ -102,6 +102,7 @@ _POOL_LOG_PATTERN = re.compile(
     r"Use sliding window memory pool. full_layer_tokens=(\d+).*swa_layer_tokens=(\d+)"
 )
 
+
 class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     """Verify --swa-full-tokens-ratio on a real Hybrid SWA model (MiMo V2 Flash).
 
