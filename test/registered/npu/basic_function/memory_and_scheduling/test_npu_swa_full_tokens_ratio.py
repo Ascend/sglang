@@ -11,6 +11,7 @@ Two test strategies:
 import os
 import re
 import tempfile
+import time
 import unittest
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
@@ -20,6 +21,10 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.test_utils import (
+    DEFAULT_URL_FOR_TEST,
+    popen_launch_server,
+)
 
 register_npu_ci(
     est_time=3600,
@@ -126,6 +131,85 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     max_concurrency = 64
     output_len = 2048
 
+    @classmethod
+    def setUpClass(cls):
+        """Override to capture server logs via NamedTemporaryFile.
+
+        The base class launches the server without return_stdout_stderr,
+        so we need to override setUpClass to pass our log files.
+        """
+        # Import here to avoid circular imports
+        import logging
+        from sglang.srt.utils import kill_process_tree
+
+        logger = logging.getLogger(__name__)
+
+        cls._setup_per_case_output()
+        cls.base_url = DEFAULT_URL_FOR_TEST
+
+        env = os.environ.copy()
+        for key, value in env.items():
+            logger.info(f"ENV_VAR_SYS {key}:{value}")
+        if cls.envs:
+            for key, value in cls.envs.items():
+                logger.info(f"ENV_VAR_CASE {key}:{value}")
+                env[key] = value
+
+        # Create log files for capturing server stdout/stderr
+        cls._out_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        cls._err_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        cls._out_log_path = cls._out_log_file.name
+        cls._err_log_path = cls._err_log_file.name
+
+        other_args = list(cls.other_args)
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=cls.server_timeout,
+            other_args=other_args,
+            env=env,
+            return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up server process and log files."""
+        from sglang.srt.utils import kill_process_tree
+
+        if hasattr(cls, "process") and cls.process:
+            try:
+                kill_process_tree(cls.process.pid)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error during tearDown: {e}")
+
+        cls._save_metrics_json()
+        cls._backup_plog()
+
+        # Clean up log files
+        if hasattr(cls, "_out_log_file"):
+            cls._out_log_file.close()
+            os.unlink(cls._out_log_path)
+        if hasattr(cls, "_err_log_file"):
+            cls._err_log_file.close()
+            os.unlink(cls._err_log_path)
+
+    def _wait_for_log_content(self, log_file, timeout=30):
+        """Poll until log file has non-empty content, then return it."""
+        start_time = time.time()
+        content = ""
+        while time.time() - start_time < timeout:
+            with open(log_file.name, "r", encoding="utf-8") as f:
+                content = f.read()
+            if content:
+                break
+            time.sleep(0.5)
+        return content
+
     def _capture_pool_sizes(self, stdout):
         """Extract full/swa pool sizes from server stdout."""
         for line in stdout.splitlines():
@@ -138,40 +222,22 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
         self.run_accuracy()
 
-        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
-        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
-        try:
-            # Extract and print Full/SWA pool sizes from server logs
-            # NOTE: Use a separate file handle to read logs, because out_log_file
-            # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
-            with open(out_log_path, "r", encoding="utf-8") as f:
-                stdout = f.read()
-            full, swa = self._capture_pool_sizes(stdout)
+        # Poll-wait for log content since the _dump thread writes asynchronously.
+        stdout = self._wait_for_log_content(self._out_log_file, timeout=30)
+        full, swa = self._capture_pool_sizes(stdout)
 
-            if full is not None and swa is not None:
-                ratio = swa / full
-                print(
-                    f"\n  [SWA Pool Info] full={full}, swa={swa}, "
-                    f"ratio={ratio:.4f} (config=0.95)"
-                )
-                # self.assertAlmostEqual(
-                #     ratio,
-                #     0.95,
-                #     delta=0.01,
-                #     msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.95",
-                # )
-            else:
-                print(
-                    "\n  [SWA Pool Info] Pool size log not found in server stdout. "
-                    "Look for '[unified-memory-pool]' or similar log lines."
-                )
-        finally:
-            out_log_file.close()
-            err_log_file.close()
-            os.unlink(out_log_path)
-            os.unlink(err_log_path)
+        if full is not None and swa is not None:
+            ratio = swa / full
+            print(
+                f"\n  [SWA Pool Info] full={full}, swa={swa}, "
+                f"ratio={ratio:.4f} (config=0.3)"
+            )
+        else:
+            print(
+                "\n  [SWA Pool Info] Pool size log not found in server stdout. "
+                "Look for 'Use sliding window memory pool' in server logs.\n"
+                f"Server stdout ({len(stdout)} chars):\n{stdout[-2000:]}"
+            )
 
 
 if __name__ == "__main__":

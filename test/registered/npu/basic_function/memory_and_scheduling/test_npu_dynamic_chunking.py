@@ -9,6 +9,7 @@ Two test scenarios:
 
 import os
 import tempfile
+import time
 import unittest
 
 import requests
@@ -45,6 +46,29 @@ class TestDynamicChunking(CustomTestCase):
         "1024",
     ]
 
+    def _wait_for_log_content(self, log_file, timeout=30):
+        """Poll until log file has non-empty content, then return it.
+
+        The _dump thread writes server logs asynchronously. This method
+        polls the file until content appears or timeout expires.
+
+        Args:
+            log_file: A NamedTemporaryFile object opened in "w+" mode.
+            timeout: Maximum wait time in seconds.
+
+        Returns:
+            str: Log file content (may be empty if timeout expired).
+        """
+        start_time = time.time()
+        content = ""
+        while time.time() - start_time < timeout:
+            with open(log_file.name, "r", encoding="utf-8") as f:
+                content = f.read()
+            if content:
+                break
+            time.sleep(0.5)
+        return content
+
     def test_dynamic_chunking_pp_size_two(self):
         """C1: pp_size=2 + --enable-dynamic-chunking.
         Dynamic chunking should be enabled and adjust chunk sizes
@@ -59,13 +83,20 @@ class TestDynamicChunking(CustomTestCase):
 
         Assertions:
         - Short and long inference both return correct responses
-        - Log contains "[PP Dynamic Chunk] Predictor ready" (profiling succeeded)
+        - Log contains "[PP Dynamic Chunk]" and "Predictor ready" (profiling succeeded)
         - Log does NOT contain "Failed to profile" or "Dynamic chunking will be disabled"
         """
-        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
-        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
+        # Use NamedTemporaryFile (same as test_npu_logging.py) instead of
+        # mkstemp+fdopen. The latter creates unreliable file objects that
+        # may not flush data to disk correctly when written by the _dump thread.
+        out_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        err_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        out_log_path = out_log_file.name
+        err_log_path = err_log_file.name
 
         process = popen_launch_server(
             self.model,
@@ -114,25 +145,21 @@ class TestDynamicChunking(CustomTestCase):
             self.assertGreater(len(long_resp.json().get("text", "")), 0)
 
             # 3. Log assertions: verify dynamic chunking actually activated
-            # NOTE: Use a separate file handle to read logs, because out_log_file
-            # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
-            # Reading via the same TextIOWrapper from two threads can cause empty/
-            # partial reads due to internal buffer corruption.
-            with open(out_log_path, "r", encoding="utf-8") as f:
-                stdout = f.read()
+            #    Poll-wait for log content since the _dump thread writes asynchronously.
+            stdout = self._wait_for_log_content(out_log_file, timeout=30)
 
             # 3a. Predictor must be ready (profiling succeeded)
             self.assertIn(
                 "[PP Dynamic Chunk]",
                 stdout,
                 "Dynamic chunking log not found in server output. "
-                "Possible causes: profiling failed or dynamic chunking was disabled.",
+                "Server stdout:\n" + stdout,
             )
             self.assertIn(
                 "Predictor ready",
                 stdout,
                 "Dynamic chunking predictor not ready. "
-                "Profiling may have failed (check for 'Failed to profile' in logs).",
+                "Server stdout:\n" + stdout,
             )
 
             # 3b. No fallback — profiling must NOT have failed
@@ -140,13 +167,13 @@ class TestDynamicChunking(CustomTestCase):
                 "Failed to profile",
                 stdout,
                 "Dynamic chunking profiling failed. "
-                "Check server logs for the exception that caused the fallback.",
+                "Server stdout:\n" + stdout,
             )
             self.assertNotIn(
                 "Dynamic chunking will be disabled",
                 stdout,
                 "Dynamic chunking was disabled due to profiling failure. "
-                "Inference used static chunked_prefill_size instead.",
+                "Server stdout:\n" + stdout,
             )
         finally:
             kill_process_tree(process.pid)
