@@ -260,6 +260,14 @@ jobs:
           done
 
           cd test
+          # Append `--nightly` and `--continue-on-error` when the job belongs to the nightly pipeline.
+          # --nightly: Collect test cases registered for nightly runs.
+          # --continue-on-error: Keep running remaining cases even if one fails.
+          NIGHTLY_FLAG=""
+          if [ "${{ inputs.is_nightly_pipeline_job }}" = "true" ]; then
+            NIGHTLY_FLAG="--nightly --continue-on-error"
+          fi
+
           # Optional: delegate execution to scripts/run_selected_tests.sh when the
           # caller sets use_run_selected_tests=true. The original run_suite.py
           # execution below is preserved unchanged for the default (false) path.
@@ -269,7 +277,7 @@ jobs:
               --auto-partition-id ${{ matrix.partition }} \
               --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
               ${{ inputs.timeout_per_file && format('--timeout-per-file {0}', inputs.timeout_per_file) || '' }} \
-              --list-tests-output /tmp/selected_tests.txt
+              $NIGHTLY_FLAG $CONTINUE_ON_ERROR_FLAG --list-tests-output /tmp/selected_tests.txt
             echo "Selected test files:"
             cat /tmp/selected_tests.txt
             if [ -s /tmp/selected_tests.txt ]; then
@@ -278,13 +286,6 @@ jobs:
             exit 0
           fi
 
-          # Append `--nightly` and `--continue-on-error` when the job belongs to the nightly pipeline.
-          # --nightly: Collect test cases registered for nightly runs.
-          # --continue-on-error: Keep running remaining cases even if one fails.
-          NIGHTLY_FLAG=""
-          if [ "${{ inputs.is_nightly_pipeline_job }}" = "true" ]; then
-            NIGHTLY_FLAG="--nightly --continue-on-error"
-          fi
           python3 run_suite.py --hw npu --suite ${{ inputs.self_name }} \
             --auto-partition-id ${{ matrix.partition }} \
             --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
