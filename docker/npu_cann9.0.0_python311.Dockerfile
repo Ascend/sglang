@@ -72,10 +72,10 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN ${PIP_INSTALL} memfabric-hybrid==1.0.8
+RUN ${PIP_INSTALL} memfabric-hybrid==1.1.4
 
 ### Install zbal
-RUN ${PIP_INSTALL} memfabric-zbal==1.2.0
+RUN ${PIP_INSTALL} memfabric-zbal==1.1.2
 
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
