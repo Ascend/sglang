@@ -4,8 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CACHE_ROOT="/root/.cache/tests/precise-test"
-LOG_DIR="${CACHE_ROOT}/logs"
-COV_ROOT="${CACHE_ROOT}/coverage"
+
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+LOG_DIR="${CACHE_ROOT}/logs/${TIMESTAMP}"
+COV_ROOT="${CACHE_ROOT}/coverage/${TIMESTAMP}"
 
 mkdir -p "${LOG_DIR}" "${COV_ROOT}"
 
@@ -16,6 +18,8 @@ if [ "${#targets[@]}" -eq 0 ]; then
 fi
 
 overall_status=0
+
+results=()
 
 setup_coverage() {
   local target="$1"
@@ -48,8 +52,10 @@ run_one() {
     echo "1" > "$(dirname "${COVERAGE_FILE}")/FAILED"
     echo "=== FAILED: ${target} (log: ${log_file}) ==="
     overall_status=1
+    results+=("${target}|FAILED")
   else
     echo "=== PASSED: ${target} ==="
+    results+=("${target}|PASSED")
   fi
 }
 
@@ -57,5 +63,52 @@ for target in "${targets[@]}"; do
   run_one "${target}"
 done
 
-echo "=== Done. Logs: ${LOG_DIR}/, Coverage: ${COV_ROOT}/ ==="
+# ====================
+# Test result summary
+# ====================
+passed_list=()
+failed_list=()
+
+for entry in "${results[@]}"; do
+  test_name="${entry%%|*}"
+  test_status="${entry##*|}"
+  if [ "${test_status}" = "PASSED" ]; then
+    passed_list+=("${test_name}")
+  else
+    failed_list+=("${test_name}")
+  fi
+done
+
+passed_count="${#passed_list[@]}"
+failed_count="${#failed_list[@]}"
+total_count=$((passed_count + failed_count))
+
+echo
+echo "============================================================"
+echo "Test Summary: total ${total_count}, passed ${passed_count}, failed ${failed_count}"
+echo "============================================================"
+
+if [ "${passed_count}" -gt 0 ]; then
+  echo "✓ PASSED:"
+  for t in "${passed_list[@]}"; do
+    echo "  ${t}"
+  done
+fi
+
+if [ "${failed_count}" -gt 0 ]; then
+  echo
+  echo "✗ FAILED:"
+  for t in "${failed_list[@]}"; do
+    echo "  ${t}"
+  done
+fi
+
+echo "============================================================"
+
+if [ "${failed_count}" -gt 0 ]; then
+  echo "ERROR: Some tests failed."
+fi
+echo "Logs: ${LOG_DIR}/"
+echo "Coverage: ${COV_ROOT}/"
+
 exit "${overall_status}"
