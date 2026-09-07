@@ -5,9 +5,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CACHE_ROOT="/root/.cache/tests/precise-test"
 
-TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-LOG_DIR="${CACHE_ROOT}/logs/${TIMESTAMP}"
-COV_ROOT="${CACHE_ROOT}/coverage/${TIMESTAMP}"
+# Per-CI-run, per-attempt unique directory (no cross-run residue, no overwrite on re-run)
+RUN_ID="${GITHUB_RUN_ID:-local}"
+RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:-1}"
+RUN_DIR="${RUN_ID}-attempt-${RUN_ATTEMPT}"
+
+LOG_DIR="${CACHE_ROOT}/logs/${RUN_DIR}"
+COV_ROOT="${CACHE_ROOT}/coverage/${RUN_DIR}"
 
 mkdir -p "${LOG_DIR}" "${COV_ROOT}"
 
