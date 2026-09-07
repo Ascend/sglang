@@ -1,11 +1,11 @@
-name: Nightly Test (NPU)
+name: Coverage Rate Test (NPU)
 on:
   pull_request:
     branches:
       - main
       - testcases-260813
     paths:
-      - ".github/workflows/pr-test-test-npu.yml"
+      - ".github/workflows/coverage-rate-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
