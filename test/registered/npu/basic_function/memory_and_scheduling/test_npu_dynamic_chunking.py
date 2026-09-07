@@ -9,6 +9,7 @@ Two test scenarios:
 
 import os
 import tempfile
+import time
 import unittest
 
 import requests
@@ -63,9 +64,11 @@ class TestDynamicChunking(CustomTestCase):
         - Log does NOT contain "Failed to profile" or "Dynamic chunking will be disabled"
         """
         out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
+        os.close(out_log_fd)
+        out_log_file = open(out_log_path, "w", encoding="utf-8")
         err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
+        os.close(err_log_fd)
+        err_log_file = open(err_log_path, "w", encoding="utf-8")
 
         process = popen_launch_server(
             self.model,
@@ -114,8 +117,11 @@ class TestDynamicChunking(CustomTestCase):
             self.assertGreater(len(long_resp.json().get("text", "")), 0)
 
             # 3. Log assertions: verify dynamic chunking actually activated
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            #    Use a separate file handle to avoid thread-safety issues
+            #    with the _dump daemon thread writing to out_log_file.
+            time.sleep(0.5)  # Let _dump thread flush pending writes
+            with open(out_log_path, "r", encoding="utf-8") as f:
+                stdout = f.read()
 
             # 3a. Predictor must be ready (profiling succeeded)
             self.assertIn(

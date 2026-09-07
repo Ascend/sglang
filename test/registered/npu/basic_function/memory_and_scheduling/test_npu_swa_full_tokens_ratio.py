@@ -8,11 +8,14 @@ Two test strategies:
 - Server test: launch a real Hybrid SWA model, verify inference and print pool sizes
 """
 
+import logging
 import os
 import re
 import tempfile
+import time
 import unittest
 
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
@@ -21,6 +24,11 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    DEFAULT_URL_FOR_TEST,
+    popen_launch_server,
+)
 
 register_npu_ci(
     est_time=3600,
@@ -101,6 +109,8 @@ _POOL_LOG_PATTERN = re.compile(
     r"Use sliding window memory pool. full_layer_tokens=(\d+).*swa_layer_tokens=(\d+)"
 )
 
+logger = logging.getLogger(__name__)
+
 
 class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     """Verify --swa-full-tokens-ratio on a real Hybrid SWA model (MiMo V2 Flash).
@@ -127,6 +137,57 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     max_concurrency = 64
     output_len = 2048
 
+    @classmethod
+    def setUpClass(cls):
+        """Override to capture server logs via return_stdout_stderr."""
+        cls._setup_per_case_output()
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        env = os.environ.copy()
+        for key, value in env.items():
+            logger.info(f"ENV_VAR_SYS {key}:{value}")
+        if cls.envs:
+            for key, value in cls.envs.items():
+                logger.info(f"ENV_VAR_CASE {key}:{value}")
+                env[key] = value
+
+        other_args = list(cls.other_args)
+
+        # Create log files for capturing server stdout/stderr
+        out_log_fd, cls._out_log_path = tempfile.mkstemp(suffix=".log")
+        os.close(out_log_fd)
+        cls._out_log_file = open(cls._out_log_path, "w", encoding="utf-8")
+        err_log_fd, cls._err_log_path = tempfile.mkstemp(suffix=".log")
+        os.close(err_log_fd)
+        cls._err_log_file = open(cls._err_log_path, "w", encoding="utf-8")
+
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=cls.server_timeout,
+            other_args=other_args,
+            env=env,
+            return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up server process and log files."""
+        if hasattr(cls, "process") and cls.process:
+            try:
+                kill_process_tree(cls.process.pid)
+            except Exception as e:
+                logger.error(f"Error during tearDown: {e}")
+        cls._save_metrics_json()
+        cls._backup_plog()
+
+        # Clean up log files
+        if hasattr(cls, "_out_log_file"):
+            cls._out_log_file.close()
+            os.unlink(cls._out_log_path)
+        if hasattr(cls, "_err_log_file"):
+            cls._err_log_file.close()
+            os.unlink(cls._err_log_path)
+
     def _capture_pool_sizes(self, stdout):
         """Extract full/swa pool sizes from server stdout."""
         for line in stdout.splitlines():
@@ -139,38 +200,25 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
         self.run_accuracy()
 
-        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
-        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
-        try:
-            # Extract and print Full/SWA pool sizes from server logs
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
-            full, swa = self._capture_pool_sizes(stdout)
+        # Use a separate file handle to avoid thread-safety issues
+        # with the _dump daemon thread writing to _out_log_file.
+        time.sleep(0.5)  # Let _dump thread flush pending writes
+        with open(self._out_log_path, "r", encoding="utf-8") as f:
+            stdout = f.read()
+        full, swa = self._capture_pool_sizes(stdout)
 
-            if full is not None and swa is not None:
-                ratio = swa / full
-                print(
-                    f"\n  [SWA Pool Info] full={full}, swa={swa}, "
-                    f"ratio={ratio:.4f} (config=0.95)"
-                )
-                # self.assertAlmostEqual(
-                #     ratio,
-                #     0.95,
-                #     delta=0.01,
-                #     msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.95",
-                # )
-            else:
-                print(
-                    "\n  [SWA Pool Info] Pool size log not found in server stdout. "
-                    "Look for '[unified-memory-pool]' or similar log lines."
-                )
-        finally:
-            out_log_file.close()
-            err_log_file.close()
-            os.unlink(out_log_path)
-            os.unlink(err_log_path)
+        if full is not None and swa is not None:
+            ratio = swa / full
+            print(
+                f"\n  [SWA Pool Info] full={full}, swa={swa}, "
+                f"ratio={ratio:.4f} (config=0.95)"
+            )
+        else:
+            print(
+                "\n  [SWA Pool Info] Pool size log not found in server stdout. "
+                "Look for 'Use sliding window memory pool' in server logs.\n"
+                f"Server stdout ({len(stdout)} chars):\n{stdout[-2000:]}"
+            )
 
 
 if __name__ == "__main__":

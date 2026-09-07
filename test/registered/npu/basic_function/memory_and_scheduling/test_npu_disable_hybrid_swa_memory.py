@@ -12,6 +12,7 @@ Test strategy:
 
 import os
 import tempfile
+import time
 import unittest
 
 import requests
@@ -134,9 +135,11 @@ class TestDisableHybridSwaMemory(CustomTestCase):
                              False if unified pool is expected.
         """
         out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
+        os.close(out_log_fd)
+        out_log_file = open(out_log_path, "w", encoding="utf-8")
         err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
+        os.close(err_log_fd)
+        err_log_file = open(err_log_path, "w", encoding="utf-8")
 
         args = _MIMO_BASE_ARGS + (extra_args or [])
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
@@ -163,8 +166,11 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             self.assertIn("Paris", resp.text)
 
             # 2. Verify pool type from server logs
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            #    Use a separate file handle to avoid thread-safety issues
+            #    with the _dump daemon thread writing to out_log_file.
+            time.sleep(0.5)  # Let _dump thread flush pending writes
+            with open(out_log_path, "r", encoding="utf-8") as f:
+                stdout = f.read()
             has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 
             pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
