@@ -378,7 +378,7 @@ jobs:
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    needs: [set-image-config]
+    needs: [set-image-config, full-poc-multi-node-tests]
     strategy:
       fail-fast: false
       max-parallel: 1
