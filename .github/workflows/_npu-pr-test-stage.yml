@@ -264,15 +264,16 @@ jobs:
           # caller sets use_run_selected_tests=true. The original run_suite.py
           # execution below is preserved unchanged for the default (false) path.
           if [[ "${{ inputs.use_run_selected_tests }}" == "true" ]]; then
+            pip install coverage==7.8.*
             python3 run_suite.py --hw npu --suite ${{ inputs.self_name }} \
               --auto-partition-id ${{ matrix.partition }} \
               --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
               ${{ inputs.timeout_per_file && format('--timeout-per-file {0}', inputs.timeout_per_file) || '' }} \
-              --list-tests > /tmp/selected_tests.txt
+              --list-tests-output /root/.cache/tests/selected_tests.txt
             echo "Selected test files:"
-            cat /tmp/selected_tests.txt
-            if [ -s /tmp/selected_tests.txt ]; then
-              bash ../scripts/run_selected_tests.sh $(cat /tmp/selected_tests.txt)
+            cat /root/.cache/tests/selected_tests.txt
+            if [ -s /root/.cache/tests/selected_tests.txt ]; then
+              bash ../scripts/run_selected_tests.sh $(cat /root/.cache/tests/selected_tests.txt)
             fi
             exit 0
           fi

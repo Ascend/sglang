@@ -363,12 +363,12 @@ def run_a_suite(args):
 
     pretty_print_tests(args, ci_tests, skipped_tests)
 
-    # --list-tests: list selected files (after suite filter + partition) and exit
-    # without running anything. Placed here so the output exactly matches what
-    # CI would actually execute.
-    if args.list_tests:
-        for t in ci_tests:
-            print(t.filename)
+    # --list-tests-output: write selected test file paths (one per line) to a file and exit without running.
+    # Python writes the file directly; no shell redirect / grep needed.
+    if args.list_tests_output:
+        with open(args.list_tests_output, "w") as f:
+            for t in ci_tests:
+                f.write(t.filename + "\n")
         return 0
 
     # None hands the per-file budget over to est_time (see run_unittest_files).
@@ -468,12 +468,13 @@ def main():
         default=None,
         help="Path to sglang-ci-stats model.json for live LPT est; missing/malformed -> in-source est_time fallback.",
     )
-    # ---- Minimal --list-tests support (the only addition) ----
+    # --list-tests-output: write selected test file paths (one per line) to a file and exit without running.
+    # Python writes the file directly; no shell redirect / grep needed.
     parser.add_argument(
-        "--list-tests",
-        action="store_true",
-        default=False,
-        help="Only list the selected test files (after suite filter and partition) without running them.",
+        "--list-tests-output",
+        type=str,
+        default=None,
+        help="Write selected test file paths (one per line) to this file and exit without running.",
     )
     args = parser.parse_args()
 
