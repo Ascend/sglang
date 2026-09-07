@@ -8,14 +8,12 @@ Two test strategies:
 - Server test: launch a real Hybrid SWA model, verify inference and print pool sizes
 """
 
-import logging
 import os
 import re
 import tempfile
 import time
 import unittest
 
-from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
@@ -24,11 +22,6 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-    DEFAULT_URL_FOR_TEST,
-    popen_launch_server,
-)
 
 register_npu_ci(
     est_time=3600,
@@ -109,9 +102,6 @@ _POOL_LOG_PATTERN = re.compile(
     r"Use sliding window memory pool. full_layer_tokens=(\d+).*swa_layer_tokens=(\d+)"
 )
 
-logger = logging.getLogger(__name__)
-
-
 class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     """Verify --swa-full-tokens-ratio on a real Hybrid SWA model (MiMo V2 Flash).
 
@@ -139,20 +129,15 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
 
     @classmethod
     def setUpClass(cls):
-        """Override to capture server logs via return_stdout_stderr."""
-        cls._setup_per_case_output()
-        cls.base_url = DEFAULT_URL_FOR_TEST
-        env = os.environ.copy()
-        for key, value in env.items():
-            logger.info(f"ENV_VAR_SYS {key}:{value}")
-        if cls.envs:
-            for key, value in cls.envs.items():
-                logger.info(f"ENV_VAR_CASE {key}:{value}")
-                env[key] = value
+        """Let base class do full setup, capturing server logs via monkey-patch.
 
-        other_args = list(cls.other_args)
+        Patch popen_launch_server in the base class module to inject
+        return_stdout_stderr, so the original server (launched by the base
+        class setUpClass) has its logs captured without duplicating any logic.
+        """
+        import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
 
-        # Create log files for capturing server stdout/stderr
+        # Create log files before super().setUpClass()
         out_log_fd, cls._out_log_path = tempfile.mkstemp(suffix=".log")
         os.close(out_log_fd)
         cls._out_log_file = open(cls._out_log_path, "w", encoding="utf-8")
@@ -160,27 +145,26 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         os.close(err_log_fd)
         cls._err_log_file = open(cls._err_log_path, "w", encoding="utf-8")
 
-        cls.process = popen_launch_server(
-            cls.model,
-            cls.base_url,
-            timeout=cls.server_timeout,
-            other_args=other_args,
-            env=env,
-            return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
-        )
+        # Patch popen_launch_server to inject return_stdout_stderr
+        original_popen = base_module.popen_launch_server
+
+        def _patched_popen(*args, **kwargs):
+            kwargs["return_stdout_stderr"] = (
+                cls._out_log_file,
+                cls._err_log_file,
+            )
+            return original_popen(*args, **kwargs)
+
+        base_module.popen_launch_server = _patched_popen
+        try:
+            super().setUpClass()
+        finally:
+            base_module.popen_launch_server = original_popen
 
     @classmethod
     def tearDownClass(cls):
-        """Clean up server process and log files."""
-        if hasattr(cls, "process") and cls.process:
-            try:
-                kill_process_tree(cls.process.pid)
-            except Exception as e:
-                logger.error(f"Error during tearDown: {e}")
-        cls._save_metrics_json()
-        cls._backup_plog()
-
-        # Clean up log files
+        """Delegate to base class, then clean up log files."""
+        super().tearDownClass()
         if hasattr(cls, "_out_log_file"):
             cls._out_log_file.close()
             os.unlink(cls._out_log_path)
