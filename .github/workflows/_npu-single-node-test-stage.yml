@@ -6,7 +6,7 @@ on:
       runner:
         required: true
         type: string
-        default: linux-aarch64-a3-16
+        default: linux-aarch64-a3-16-
       test_type:
         required: true
         type: string
