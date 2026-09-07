@@ -8,7 +8,6 @@ sigterm = False
 disable_warnings = no-data-collected,module-not-python
 
 include =
-    */sglang/*
     */python/sglang/*
 
 omit =
