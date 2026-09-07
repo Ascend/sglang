@@ -420,10 +420,10 @@ jobs:
             runner: linux-aarch64-a3-2
             test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_dynamic_chunking.py
           - name: swa_full_tokens_ratio
-            runner: linux-aarch64-a3-8
+            runner: linux-aarch64-a3-16
             test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_swa_full_tokens_ratio.py
           - name: disable_hybrid_swa_memory
-            runner: linux-aarch64-a3-8
+            runner: linux-aarch64-a3-16
             test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_disable_hybrid_swa_memory.py
           - name: retraction_policy
             runner: linux-aarch64-a3-2
