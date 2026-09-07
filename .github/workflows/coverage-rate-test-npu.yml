@@ -142,7 +142,7 @@ jobs:
     with:
       self_name: base-b-test-2-npu-a3
       runner_config: linux-aarch64-a3-2
-      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '120'
       timeout_per_file: '3600'
       partitions: '{"size":2,"arr":[0, 1]}'
