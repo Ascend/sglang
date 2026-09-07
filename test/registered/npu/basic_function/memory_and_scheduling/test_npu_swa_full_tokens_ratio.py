@@ -12,7 +12,6 @@ import os
 import re
 import tempfile
 import unittest
-
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
@@ -137,19 +136,18 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
 
     def test_launch_and_print_pool_sizes(self):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
-        # Server is already running from setUpClass
         self.run_accuracy()
 
-        # Read server logs from the log file captured in setUpClass
         out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
         err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
+        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
         err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
-
         try:
-            # The server is already running, but we can try to read its logs
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            # Extract and print Full/SWA pool sizes from server logs
+            # NOTE: Use a separate file handle to read logs, because out_log_file
+            # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
+            with open(out_log_path, "r", encoding="utf-8") as f:
+                stdout = f.read()
             full, swa = self._capture_pool_sizes(stdout)
 
             if full is not None and swa is not None:
@@ -158,10 +156,16 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
                     f"\n  [SWA Pool Info] full={full}, swa={swa}, "
                     f"ratio={ratio:.4f} (config=0.95)"
                 )
+                # self.assertAlmostEqual(
+                #     ratio,
+                #     0.95,
+                #     delta=0.01,
+                #     msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.95",
+                # )
             else:
                 print(
                     "\n  [SWA Pool Info] Pool size log not found in server stdout. "
-                    "Look for 'Use sliding window memory pool' in server logs."
+                    "Look for '[unified-memory-pool]' or similar log lines."
                 )
         finally:
             out_log_file.close()
