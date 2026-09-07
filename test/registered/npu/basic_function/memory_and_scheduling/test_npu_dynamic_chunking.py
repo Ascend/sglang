@@ -9,6 +9,7 @@ Two test scenarios:
 
 import os
 import tempfile
+import time
 import unittest
 
 import requests
@@ -62,10 +63,12 @@ class TestDynamicChunking(CustomTestCase):
         - Log contains "[PP Dynamic Chunk] Predictor ready" (profiling succeeded)
         - Log does NOT contain "Failed to profile" or "Dynamic chunking will be disabled"
         """
-        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
-        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
+        out_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        err_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
 
         process = popen_launch_server(
             self.model,
@@ -118,8 +121,14 @@ class TestDynamicChunking(CustomTestCase):
             # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
             # Reading via the same TextIOWrapper from two threads can cause empty/
             # partial reads due to internal buffer corruption.
-            with open(out_log_path, "r", encoding="utf-8") as f:
-                stdout = f.read()
+            start_time = time.time()
+            stdout = ""
+            while time.time() - start_time < 30:
+                with open(out_log_path, "r", encoding="utf-8") as f:
+                    stdout = f.read()
+                if stdout:
+                    break
+                time.sleep(0.5)
 
             # 3a. Predictor must be ready (profiling succeeded)
             self.assertIn(
@@ -152,8 +161,8 @@ class TestDynamicChunking(CustomTestCase):
             kill_process_tree(process.pid)
             out_log_file.close()
             err_log_file.close()
-            os.unlink(out_log_path)
-            os.unlink(err_log_path)
+            os.unlink(out_log_file.name)
+            os.unlink(err_log_file.name)
 
 
 if __name__ == "__main__":

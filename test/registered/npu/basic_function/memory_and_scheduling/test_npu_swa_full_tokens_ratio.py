@@ -11,6 +11,7 @@ Two test strategies:
 import os
 import re
 import tempfile
+import time
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
@@ -139,16 +140,22 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
         self.run_accuracy()
 
-        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
-        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
+        out_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        err_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
         try:
             # Extract and print Full/SWA pool sizes from server logs
-            # NOTE: Use a separate file handle to read logs, because out_log_file
-            # (TextIOWrapper) is shared with the _dump thread and is NOT thread-safe.
-            with open(out_log_path, "r", encoding="utf-8") as f:
-                stdout = f.read()
+            start_time = time.time()
+            stdout = ""
+            while time.time() - start_time < 30:
+                with open(out_log_file.name, "r", encoding="utf-8") as f:
+                    stdout = f.read()
+                if stdout:
+                    break
+                time.sleep(0.5)
             full, swa = self._capture_pool_sizes(stdout)
 
             if full is not None and swa is not None:
@@ -171,8 +178,8 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         finally:
             out_log_file.close()
             err_log_file.close()
-            os.unlink(out_log_path)
-            os.unlink(err_log_path)
+            os.unlink(out_log_file.name)
+            os.unlink(err_log_file.name)
 
 
 if __name__ == "__main__":

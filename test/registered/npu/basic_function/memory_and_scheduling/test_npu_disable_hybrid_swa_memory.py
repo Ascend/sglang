@@ -12,6 +12,7 @@ Test strategy:
 
 import os
 import tempfile
+import time
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
@@ -138,17 +139,25 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
         """
         self.run_accuracy()
 
-        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
-        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
-        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
-        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
+        out_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
+        err_log_file = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="utf-8", delete=False, suffix=".log"
+        )
 
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
 
         try:
-            #  Verify pool type from server logs
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            # Verify pool type from server logs
+            start_time = time.time()
+            stdout = ""
+            while time.time() - start_time < 30:
+                with open(out_log_file.name, "r", encoding="utf-8") as f:
+                    stdout = f.read()
+                if stdout:
+                    break
+                time.sleep(0.5)
             has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 
             pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
@@ -169,8 +178,8 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
         finally:
             out_log_file.close()
             err_log_file.close()
-            os.unlink(out_log_path)
-            os.unlink(err_log_path)
+            os.unlink(out_log_file.name)
+            os.unlink(err_log_file.name)
 
     def test_disable_hybrid_swa_memory(self):
         """D1+D2: Verify --disable-hybrid-swa-memory switches pool type.
