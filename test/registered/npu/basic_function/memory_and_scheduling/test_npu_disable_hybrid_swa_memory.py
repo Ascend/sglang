@@ -12,7 +12,6 @@ Test strategy:
 
 import os
 import tempfile
-import time
 import unittest
 
 import requests
@@ -126,28 +125,18 @@ class TestDisableHybridSwaMemory(CustomTestCase):
     model = MIMO_V2_FLASH_MODEL_PATH
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
 
-    def _wait_for_log_content(self, log_file, timeout=30):
-        """Poll until log file has non-empty content, then return it."""
-        start_time = time.time()
-        content = ""
-        while time.time() - start_time < timeout:
-            with open(log_file.name, "r", encoding="utf-8") as f:
-                content = f.read()
-            if content:
-                break
-            time.sleep(0.5)
-        return content
-
     def _launch_and_check_pool(self, extra_args, expect_swa_pool):
-        """Launch server with given extra_args, verify inference and pool type."""
-        out_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        err_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        out_log_path = out_log_file.name
-        err_log_path = err_log_file.name
+        """Launch server with given extra_args, verify inference and pool type.
+
+        Args:
+            extra_args: Additional CLI args (list or None).
+            expect_swa_pool: True if independent SWA pool is expected,
+                             False if unified pool is expected.
+        """
+        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
+        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
+        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
+        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
 
         args = _MIMO_BASE_ARGS + (extra_args or [])
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
@@ -174,7 +163,8 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             self.assertIn("Paris", resp.text)
 
             # 2. Verify pool type from server logs
-            stdout = self._wait_for_log_content(out_log_file, timeout=30)
+            out_log_file.seek(0)
+            stdout = out_log_file.read()
             has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 
             pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
@@ -200,8 +190,15 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             os.unlink(err_log_path)
 
     def test_disable_hybrid_swa_memory(self):
-        """D1+D2: Verify --disable-hybrid-swa-memory switches pool type."""
+        """D1+D2: Verify --disable-hybrid-swa-memory switches pool type.
+
+        D1 (default): independent SWA pool → "path=SWA hybrid" in logs
+        D2 (disabled): unified pool → no "path=SWA hybrid" in logs
+        """
+        # D1: Without --disable-hybrid-swa-memory → independent SWA pool
         self._launch_and_check_pool(extra_args=None, expect_swa_pool=True)
+
+        # D2: With --disable-hybrid-swa-memory → unified pool
         self._launch_and_check_pool(
             extra_args=["--disable-hybrid-swa-memory"], expect_swa_pool=False
         )

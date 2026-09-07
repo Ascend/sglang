@@ -9,7 +9,6 @@ Two test scenarios:
 
 import os
 import tempfile
-import time
 import unittest
 
 import requests
@@ -46,31 +45,27 @@ class TestDynamicChunking(CustomTestCase):
         "1024",
     ]
 
-    def _wait_for_log_content(self, log_file, timeout=30):
-        """Poll until log file has non-empty content, then return it.
-
-        Same pattern as TestNPULoggingBase.wait_for_log_content.
-        """
-        start_time = time.time()
-        content = ""
-        while time.time() - start_time < timeout:
-            with open(log_file.name, "r", encoding="utf-8") as f:
-                content = f.read()
-            if content:
-                break
-            time.sleep(0.5)
-        return content
-
     def test_dynamic_chunking_pp_size_two(self):
-        """C1: pp_size=2 + --enable-dynamic-chunking."""
-        out_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        err_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        out_log_path = out_log_file.name
-        err_log_path = err_log_file.name
+        """C1: pp_size=2 + --enable-dynamic-chunking.
+        Dynamic chunking should be enabled and adjust chunk sizes
+        based on PP stage profiling. Server starts and inference succeeds.
+
+        Verification strategy:
+        1. Short input → verify basic inference works
+        2. Long input (2048 tokens, > chunked_prefill_size=1024) → triggers
+           chunked prefill, where dynamic chunking replaces static chunk size
+           with predicted values. Correct completion proves dynamic sizing works.
+        3. Log assertions confirm profiling succeeded and no fallback occurred.
+
+        Assertions:
+        - Short and long inference both return correct responses
+        - Log contains "[PP Dynamic Chunk] Predictor ready" (profiling succeeded)
+        - Log does NOT contain "Failed to profile" or "Dynamic chunking will be disabled"
+        """
+        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
+        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
+        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
+        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
 
         process = popen_launch_server(
             self.model,
@@ -100,6 +95,10 @@ class TestDynamicChunking(CustomTestCase):
             self.assertIn("Paris", resp.text)
 
             # 2. Long input: triggers chunked prefill with dynamic chunk sizing
+            #    Input length 2048 > chunked_prefill_size=1024, so prefill is
+            #    split into multiple chunks. Dynamic chunking determines each
+            #    chunk's size via predict_next_chunk_size() instead of using
+            #    the static chunked_prefill_size.
             long_text = (
                 "The history of artificial intelligence is a fascinating story. " * 100
             )
@@ -114,9 +113,11 @@ class TestDynamicChunking(CustomTestCase):
             self.assertEqual(long_resp.status_code, 200)
             self.assertGreater(len(long_resp.json().get("text", "")), 0)
 
-            # 3. Log assertions
-            stdout = self._wait_for_log_content(out_log_file, timeout=30)
+            # 3. Log assertions: verify dynamic chunking actually activated
+            out_log_file.seek(0)
+            stdout = out_log_file.read()
 
+            # 3a. Predictor must be ready (profiling succeeded)
             self.assertIn(
                 "[PP Dynamic Chunk]",
                 stdout,
@@ -129,6 +130,8 @@ class TestDynamicChunking(CustomTestCase):
                 "Dynamic chunking predictor not ready. "
                 "Profiling may have failed (check for 'Failed to profile' in logs).",
             )
+
+            # 3b. No fallback — profiling must NOT have failed
             self.assertNotIn(
                 "Failed to profile",
                 stdout,

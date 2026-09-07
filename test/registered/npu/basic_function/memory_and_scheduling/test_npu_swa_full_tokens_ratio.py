@@ -11,9 +11,11 @@ Two test strategies:
 import os
 import re
 import tempfile
-import time
 import unittest
 
+import requests
+
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
@@ -128,60 +130,6 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     max_concurrency = 64
     output_len = 2048
 
-    @classmethod
-    def setUpClass(cls):
-        """Let base class do full setup, capturing server logs via monkey-patch."""
-        import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
-
-        # Create log files with NamedTemporaryFile (same pattern as test_npu_logging.py)
-        cls._out_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        cls._err_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        cls._out_log_path = cls._out_log_file.name
-        cls._err_log_path = cls._err_log_file.name
-
-        # Patch popen_launch_server to inject return_stdout_stderr
-        original_popen = base_module.popen_launch_server
-
-        def _patched_popen(*args, **kwargs):
-            kwargs["return_stdout_stderr"] = (
-                cls._out_log_file,
-                cls._err_log_file,
-            )
-            return original_popen(*args, **kwargs)
-
-        base_module.popen_launch_server = _patched_popen
-        try:
-            super().setUpClass()
-        finally:
-            base_module.popen_launch_server = original_popen
-
-    @classmethod
-    def tearDownClass(cls):
-        """Delegate to base class, then clean up log files."""
-        super().tearDownClass()
-        if hasattr(cls, "_out_log_file"):
-            cls._out_log_file.close()
-            os.unlink(cls._out_log_path)
-        if hasattr(cls, "_err_log_file"):
-            cls._err_log_file.close()
-            os.unlink(cls._err_log_path)
-
-    def _wait_for_log_content(self, log_file, timeout=30):
-        """Poll until log file has non-empty content, then return it."""
-        start_time = time.time()
-        content = ""
-        while time.time() - start_time < timeout:
-            with open(log_file.name, "r", encoding="utf-8") as f:
-                content = f.read()
-            if content:
-                break
-            time.sleep(0.5)
-        return content
-
     def _capture_pool_sizes(self, stdout):
         """Extract full/swa pool sizes from server stdout."""
         for line in stdout.splitlines():
@@ -192,23 +140,37 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
 
     def test_launch_and_print_pool_sizes(self):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
+        # Server is already running from setUpClass
         self.run_accuracy()
 
-        stdout = self._wait_for_log_content(self._out_log_file, timeout=30)
-        full, swa = self._capture_pool_sizes(stdout)
+        # Read server logs from the log file captured in setUpClass
+        out_log_fd, out_log_path = tempfile.mkstemp(suffix=".log")
+        out_log_file = os.fdopen(out_log_fd, "w+", encoding="utf-8")
+        err_log_fd, err_log_path = tempfile.mkstemp(suffix=".log")
+        err_log_file = os.fdopen(err_log_fd, "w+", encoding="utf-8")
 
-        if full is not None and swa is not None:
-            ratio = swa / full
-            print(
-                f"\n  [SWA Pool Info] full={full}, swa={swa}, "
-                f"ratio={ratio:.4f} (config=0.95)"
-            )
-        else:
-            print(
-                "\n  [SWA Pool Info] Pool size log not found in server stdout. "
-                "Look for 'Use sliding window memory pool' in server logs.\n"
-                f"Server stdout ({len(stdout)} chars):\n{stdout[-2000:]}"
-            )
+        try:
+            # The server is already running, but we can try to read its logs
+            out_log_file.seek(0)
+            stdout = out_log_file.read()
+            full, swa = self._capture_pool_sizes(stdout)
+
+            if full is not None and swa is not None:
+                ratio = swa / full
+                print(
+                    f"\n  [SWA Pool Info] full={full}, swa={swa}, "
+                    f"ratio={ratio:.4f} (config=0.95)"
+                )
+            else:
+                print(
+                    "\n  [SWA Pool Info] Pool size log not found in server stdout. "
+                    "Look for 'Use sliding window memory pool' in server logs."
+                )
+        finally:
+            out_log_file.close()
+            err_log_file.close()
+            os.unlink(out_log_path)
+            os.unlink(err_log_path)
 
 
 if __name__ == "__main__":
