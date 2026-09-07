@@ -410,7 +410,7 @@ jobs:
   full-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       max-parallel: 3
