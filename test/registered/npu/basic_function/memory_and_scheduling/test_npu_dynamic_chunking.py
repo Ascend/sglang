@@ -124,7 +124,7 @@ class TestDynamicChunking(CustomTestCase):
             start_time = time.time()
             stdout = ""
             while time.time() - start_time < 30:
-                with open(out_log_path, "r", encoding="utf-8") as f:
+                with open(out_log_file, "r", encoding="utf-8") as f:
                     stdout = f.read()
                 if stdout:
                     break
