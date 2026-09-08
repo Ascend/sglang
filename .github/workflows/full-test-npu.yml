@@ -485,9 +485,8 @@ jobs:
   nightly-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
-    # PR #1222: disabled, replaced by dsv4-flash-external-server-test below
-    # (server launched via shell script instead of the test framework).
-    if: ${{ false }}
+    # PR #1222: restored to the framework-launched server (original logic).
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -511,6 +510,8 @@ jobs:
   # 服务由 scripts/ci/npu/launch_dsv4_flash_w8a8_server.sh（.claude/2.sh 的 CI 适配版）
   # 后台拉起，测试用例通过 SGLANG_EXTERNAL_SERVER_URL 直连外部服务，
   # 跳过框架内置的 popen_launch_server，用于隔离"框架拉起方式"导致的启动崩溃问题。
+  # 注意：该 job 会独占 16 卡机器，与 single-node-poc 同时调度会因占卡互相干扰导致失败，
+  # 目前已禁用（改回框架拉服务的原逻辑）。需要重新验证 shell 拉服务时删掉 if 即可。
   dsv4-flash-external-server-test:
     name: dsv4-flash-external-server-test
     needs: [ set-image-config ]
