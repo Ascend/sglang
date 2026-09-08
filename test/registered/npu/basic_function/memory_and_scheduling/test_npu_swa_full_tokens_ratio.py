@@ -134,6 +134,7 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         cls.err_log_file = open(cls.err_log_file_name, "w+", encoding="utf-8")
 
         import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
+
         original_popen = base_module.popen_launch_server
 
         def _patched_popen(*args, **kwargs):
