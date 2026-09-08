@@ -2,6 +2,61 @@
   "manifests": [
     {
       "schema_version": 1,
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-950-nightly",
+      "dockerfile": "docker/npu_cann9.1.0_python312_950.Dockerfile",
+      "generated_at": "2026-09-08T13:34:39.075861+00:00",
+      "build_args": {
+        "CANN_VERSION": "9.1.0",
+        "DEVICE_TYPE": "950",
+        "OS": "ubuntu22.04",
+        "PYTHON_VERSION": "py3.12",
+        "arch": "",
+        "PIP_INDEX_URL": "https://pypi.org/simple/",
+        "PYTORCH_VERSION": "2.10.0",
+        "TORCHVISION_VERSION": "0.25.0",
+        "TORCHAUDIO_VERSION": "2.10.0",
+        "PTA_URL_ARM64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_aarch64.whl",
+        "PTA_URL_AMD64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_x86_64.whl",
+        "SGLANG_TAG": "main",
+        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
+        "SGLANG_KERNEL_NPU_TAG": "2026.9.8",
+        "PIP_INSTALL": "python3 -m pip install --no-cache-dir"
+      },
+      "git_clones": [
+        {
+          "remote": "https://github.com/sgl-project/sglang",
+          "branch": "main",
+          "dir": "/sgl-workspace/sglang"
+        }
+      ],
+      "declared_pip_pins": [
+        "memfabric-hybrid==1.2.0",
+        "memfabric-zbal==1.2.21004.post1",
+        "torch==2.10.0",
+        "torchvision==0.25.0",
+        "torchaudio==2.10.0",
+        "wheel==0.45.1"
+      ],
+      "sglang": {
+        "dir": "/sgl-workspace/sglang",
+        "remote": "https://github.com/sgl-project/sglang",
+        "branch": "main",
+        "commit": "554f817948c26e8e9c8338b4a33e94a609d6f0fb",
+        "describe": "gateway-v0.3.1-9212-g554f817948",
+        "commit_date": "2026-09-08T19:05:02+08:00"
+      },
+      "os": {
+        "distro": "Ubuntu 22.04.5 LTS",
+        "kernel": "6.8.0-1064-azure",
+        "arch": "aarch64"
+      },
+      "cann": {
+        "toolkit": "latest set_env.sh",
+        "version_files": ""
+      }
+    },
+    {
+      "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-nightly",
       "dockerfile": "docker/npu_cann9.1.0_python312_a3.Dockerfile",
       "generated_at": "2026-09-08T13:33:51.883941+00:00",
@@ -44,61 +99,6 @@
         "commit": "554f817948c26e8e9c8338b4a33e94a609d6f0fb",
         "describe": "gateway-v0.3.1-9212-g554f817948",
         "commit_date": "2026-09-08T19:05:02+08:00"
-      },
-      "os": {
-        "distro": "Ubuntu 22.04.5 LTS",
-        "kernel": "6.8.0-1064-azure",
-        "arch": "aarch64"
-      },
-      "cann": {
-        "toolkit": "latest set_env.sh",
-        "version_files": ""
-      }
-    },
-    {
-      "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-950-nightly",
-      "dockerfile": "docker/npu_cann9.1.0_python312_950.Dockerfile",
-      "generated_at": "2026-09-08T10:55:26.211809+00:00",
-      "build_args": {
-        "CANN_VERSION": "9.1.0",
-        "DEVICE_TYPE": "950",
-        "OS": "ubuntu22.04",
-        "PYTHON_VERSION": "py3.12",
-        "arch": "",
-        "PIP_INDEX_URL": "https://pypi.org/simple/",
-        "PYTORCH_VERSION": "2.10.0",
-        "TORCHVISION_VERSION": "0.25.0",
-        "TORCHAUDIO_VERSION": "2.10.0",
-        "PTA_URL_ARM64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_aarch64.whl",
-        "PTA_URL_AMD64": "https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_x86_64.whl",
-        "SGLANG_TAG": "main",
-        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
-        "SGLANG_KERNEL_NPU_TAG": "2026.9.8",
-        "PIP_INSTALL": "python3 -m pip install --no-cache-dir"
-      },
-      "git_clones": [
-        {
-          "remote": "https://github.com/sgl-project/sglang",
-          "branch": "main",
-          "dir": "/sgl-workspace/sglang"
-        }
-      ],
-      "declared_pip_pins": [
-        "memfabric-hybrid==1.2.0",
-        "memfabric-zbal==1.2.21004.post1",
-        "torch==2.10.0",
-        "torchvision==0.25.0",
-        "torchaudio==2.10.0",
-        "wheel==0.45.1"
-      ],
-      "sglang": {
-        "dir": "/sgl-workspace/sglang",
-        "remote": "https://github.com/sgl-project/sglang",
-        "branch": "main",
-        "commit": "e634ba78a43b569226a8831ef1cfb719aab9aef8",
-        "describe": "gateway-v0.3.1-9210-ge634ba78a4",
-        "commit_date": "2026-09-08T03:10:09-07:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",
