@@ -24,6 +24,10 @@ on:
         description: 'timeout-minutes for the Run test step. Required so compute_partitions.py can read it from pr-test.yml without a duplicated default constant.'
         type: string
         required: true
+      job_timeout_minutes:
+        description: 'Job-level timeout-minutes (covers checkout + install + test). Must be >= run_timeout_minutes plus install time.'
+        type: string
+        default: '240'
       timeout_per_file:
         description: 'run_suite.py --timeout-per-file value (empty = unset).'
         type: string
@@ -63,7 +67,7 @@ jobs:
     runs-on: ${{ inputs.runner_config }}
     container:
       image: ${{ inputs.image }}
-    timeout-minutes: 240
+    timeout-minutes: ${{ fromJson(inputs.job_timeout_minutes) }}
     strategy:
       fail-fast: false
       matrix:
