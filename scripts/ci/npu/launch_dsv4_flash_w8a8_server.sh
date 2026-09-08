@@ -118,7 +118,10 @@ echo "${SERVER_PID}" > "${PID_FILE}"
 echo "Server started, pid=${SERVER_PID}, log=${LOG_FILE}"
 
 # ---------- 健康检查轮询 ----------
+# 轮询期间每 60s 把服务日志尾部打印到 CI job 日志（stdout），
+# 便于实时观察加载权重 / graph capture 进度，也避免服务静默卡死无从排查。
 start=$(date +%s)
+last_print=${start}
 while true; do
     # 进程退出视为启动失败，直接打印日志尾部并报错
     if ! kill -0 "${SERVER_PID}" 2>/dev/null; then
@@ -128,6 +131,9 @@ while true; do
     fi
     if curl -sf "${HEALTH_URL}" > /dev/null 2>&1; then
         echo "Server is ready at ${HEALTH_URL}"
+        echo "===== server startup log (last 200 lines of ${LOG_FILE}) ====="
+        tail -n 200 "${LOG_FILE}" || true
+        echo "===== end of server startup log ====="
         break
     fi
     now=$(date +%s)
@@ -135,6 +141,11 @@ while true; do
         echo "ERROR: timeout waiting for server health after ${WAIT_TIMEOUT}s. Last 80 log lines:"
         tail -n 80 "${LOG_FILE}" || true
         exit 1
+    fi
+    if [ $((now - last_print)) -ge 60 ]; then
+        last_print=${now}
+        echo "----- [${now}] still waiting for ${HEALTH_URL}, server log tail: -----"
+        tail -n 5 "${LOG_FILE}" || true
     fi
     sleep 15
 done

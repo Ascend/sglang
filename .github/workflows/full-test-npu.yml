@@ -561,10 +561,19 @@ jobs:
         run: |
           set -o pipefail
           python -u test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py 2>&1 | tee /tmp/test_output.log
+        # 注意：必须用 bash —— 步骤默认 sh(dash) 不支持 pipefail，
+        # 且没有 pipefail 时 `python | tee` 会用 tee 的退出码掩盖 python 的失败。
+        shell: bash
 
       - name: Stop server
         if: always()
         run: |
+          # 把服务日志尾部打印进 job 日志，便于直接在 CI 页面看运行期/压测期错误
+          if [ -f /tmp/dsv4_flash_server.log ]; then
+            echo "===== server log tail before shutdown (last 200 lines) ====="
+            tail -n 200 /tmp/dsv4_flash_server.log || true
+            echo "===== end of server log tail ====="
+          fi
           if [ -f /tmp/dsv4_flash_server.pid ]; then
             kill $(cat /tmp/dsv4_flash_server.pid) 2>/dev/null || true
           fi
