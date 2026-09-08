@@ -94,13 +94,13 @@ jobs:
           if [ -z "${{ inputs.image_a3 }}" ]; then
             echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
           else
-            echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
+            echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.skip_install_flag }}" ]; then
             echo "skip_install_flag=true" >> $GITHUB_OUTPUT
           else
-            echo "skip_install_flag=${{ inputs.skip_install_flag }}" >> $GITHUB_OUTPUT
+            echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.test_scope }}" ]; then
@@ -120,7 +120,6 @@ jobs:
       job_filter: ${{ needs.set-image-config.outputs.job_filter }}
       image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
-      skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
     secrets: inherit
 
   full-1-npu-a3:
@@ -804,6 +803,7 @@ jobs:
     needs:
       - set-image-config
       - nighly-test-npu
+      - full-4-npu-a2
       - full-1-npu-a3
       - full-2-npu-a3
       - full-4-npu-a3
