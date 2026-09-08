@@ -10,8 +10,6 @@ Two test strategies:
 
 import os
 import re
-import tempfile
-import time
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
@@ -128,6 +126,34 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     max_concurrency = 64
     output_len = 2048
 
+    @classmethod
+    def setUpClass(cls):
+        cls.out_log_file_name = "./tmp_out_log.txt"
+        cls.err_log_file_name = "./tmp_err_log.txt"
+        cls.out_log_file = open(cls.out_log_file_name, "w+", encoding="utf-8")
+        cls.err_log_file = open(cls.err_log_file_name, "w+", encoding="utf-8")
+
+        import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
+        original_popen = base_module.popen_launch_server
+
+        def _patched_popen(*args, **kwargs):
+            kwargs["return_stdout_stderr"] = (cls.out_log_file, cls.err_log_file)
+            return original_popen(*args, **kwargs)
+
+        base_module.popen_launch_server = _patched_popen
+        try:
+            super().setUpClass()
+        finally:
+            base_module.popen_launch_server = original_popen
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cls.out_log_file.close()
+        cls.err_log_file.close()
+        os.remove(cls.out_log_file_name)
+        os.remove(cls.err_log_file_name)
+
     def _capture_pool_sizes(self, stdout):
         """Extract full/swa pool sizes from server stdout."""
         for line in stdout.splitlines():
@@ -140,50 +166,32 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
         self.run_accuracy()
 
-        out_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        err_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        try:
-            # Extract and print Full/SWA pool sizes from server logs
-            start_time = time.time()
-            stdout = ""
-            while time.time() - start_time < 30:
-                with open(out_log_file.name, "r", encoding="utf-8") as f:
-                    stdout = f.read()
-                if stdout:
-                    break
-                time.sleep(0.5)
-            full, swa = self._capture_pool_sizes(stdout)
+        self.out_log_file.seek(0)
+        stdout = self.out_log_file.read()
+        self.assertTrue(len(stdout) > 0)
+        full, swa = self._capture_pool_sizes(stdout)
 
-            self.assertIsNotNone(
-                full,
-                "Pool size log not found in server stdout. "
-                "Look for 'Use sliding window memory pool' in server logs.",
-            )
-            self.assertIsNotNone(
-                swa,
-                "Pool size log not found in server stdout. "
-                "Look for 'Use sliding window memory pool' in server logs.",
-            )
-            ratio = swa / full
-            print(
-                f"\n  [SWA Pool Info] full={full}, swa={swa}, "
-                f"ratio={ratio:.4f} (config=0.95)"
-            )
-            self.assertAlmostEqual(
-                ratio,
-                0.95,
-                delta=0.01,
-                msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.95",
-            )
-        finally:
-            out_log_file.close()
-            err_log_file.close()
-            os.unlink(out_log_file.name)
-            os.unlink(err_log_file.name)
+        self.assertIsNotNone(
+            full,
+            "Pool size log not found in server stdout. "
+            "Look for 'Use sliding window memory pool' in server logs.",
+        )
+        self.assertIsNotNone(
+            swa,
+            "Pool size log not found in server stdout. "
+            "Look for 'Use sliding window memory pool' in server logs.",
+        )
+        ratio = swa / full
+        print(
+            f"\n  [SWA Pool Info] full={full}, swa={swa}, "
+            f"ratio={ratio:.4f} (config=0.95)"
+        )
+        self.assertAlmostEqual(
+            ratio,
+            0.95,
+            delta=0.01,
+            msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.95",
+        )
 
 
 if __name__ == "__main__":

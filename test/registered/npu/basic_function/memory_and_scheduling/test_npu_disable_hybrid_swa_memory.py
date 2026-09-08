@@ -11,8 +11,6 @@ Test strategy:
 """
 
 import os
-import tempfile
-import time
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
@@ -129,6 +127,34 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
     max_concurrency = 64
     output_len = 2048
 
+    @classmethod
+    def setUpClass(cls):
+        cls.out_log_file_name = "./tmp_out_log.txt"
+        cls.err_log_file_name = "./tmp_err_log.txt"
+        cls.out_log_file = open(cls.out_log_file_name, "w+", encoding="utf-8")
+        cls.err_log_file = open(cls.err_log_file_name, "w+", encoding="utf-8")
+
+        import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
+        original_popen = base_module.popen_launch_server
+
+        def _patched_popen(*args, **kwargs):
+            kwargs["return_stdout_stderr"] = (cls.out_log_file, cls.err_log_file)
+            return original_popen(*args, **kwargs)
+
+        base_module.popen_launch_server = _patched_popen
+        try:
+            super().setUpClass()
+        finally:
+            base_module.popen_launch_server = original_popen
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cls.out_log_file.close()
+        cls.err_log_file.close()
+        os.remove(cls.out_log_file_name)
+        os.remove(cls.err_log_file_name)
+
     def _launch_and_check_pool(self, extra_args, expect_swa_pool):
         """Launch server with given extra_args, verify inference and pool type.
 
@@ -139,47 +165,28 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
         """
         self.run_accuracy()
 
-        out_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-        err_log_file = tempfile.NamedTemporaryFile(
-            mode="w+", encoding="utf-8", delete=False, suffix=".log"
-        )
-
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
 
-        try:
-            # Verify pool type from server logs
-            start_time = time.time()
-            stdout = ""
-            while time.time() - start_time < 30:
-                with open(out_log_file.name, "r", encoding="utf-8") as f:
-                    stdout = f.read()
-                if stdout:
-                    break
-                time.sleep(0.5)
-            has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
+        self.out_log_file.seek(0)
+        stdout = self.out_log_file.read()
+        self.assertTrue(len(stdout) > 0)
+        has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 
-            pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
-            print(f"\n  [Hybrid SWA Memory] {label}: pool_type={pool_type}")
+        pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
+        print(f"\n  [Hybrid SWA Memory] {label}: pool_type={pool_type}")
 
-            if expect_swa_pool:
-                self.assertTrue(
-                    has_swa_pool,
-                    f"{label}: expected independent SWA pool but got unified pool. "
-                    f"Log marker '{_SWA_HYBRID_LOG_MARKER}' not found in server stdout.",
-                )
-            else:
-                self.assertFalse(
-                    has_swa_pool,
-                    f"{label}: expected unified pool but got independent SWA pool. "
-                    f"Log marker '{_SWA_HYBRID_LOG_MARKER}' found in server stdout.",
-                )
-        finally:
-            out_log_file.close()
-            err_log_file.close()
-            os.unlink(out_log_file.name)
-            os.unlink(err_log_file.name)
+        if expect_swa_pool:
+            self.assertTrue(
+                has_swa_pool,
+                f"{label}: expected independent SWA pool but got unified pool. "
+                f"Log marker '{_SWA_HYBRID_LOG_MARKER}' not found in server stdout.",
+            )
+        else:
+            self.assertFalse(
+                has_swa_pool,
+                f"{label}: expected unified pool but got independent SWA pool. "
+                f"Log marker '{_SWA_HYBRID_LOG_MARKER}' found in server stdout.",
+            )
 
     def test_disable_hybrid_swa_memory(self):
         """D1+D2: Verify --disable-hybrid-swa-memory switches pool type.
