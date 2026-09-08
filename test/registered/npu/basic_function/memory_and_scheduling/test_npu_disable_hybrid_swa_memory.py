@@ -142,7 +142,6 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
             env=_MIMO_ENVS,
-            device="npu",
             return_stdout_stderr=(out_log_file, err_log_file),
         )
         try:
