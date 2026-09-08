@@ -14,7 +14,9 @@
 #   /tmp/dsv4_flash_server.pid  — 服务主进程 PID，供 CI 清理步骤 kill
 #   /tmp/dsv4_flash_server.log  — 服务完整日志
 # ==============================================
-set -uo pipefail
+# 注意：不要加 -u（nounset）——华为 Ascend 的 set_env.sh 引用了未定义变量
+# （如 ZSH_VERSION），开启 -u 会导致 source 直接失败（CI 实测踩坑）。
+set -o pipefail
 
 PORT="${1:-${SGLANG_PORT:-30000}}"
 MODEL_PATH="${MODEL_PATH:-/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-w8a8-mtp}"
