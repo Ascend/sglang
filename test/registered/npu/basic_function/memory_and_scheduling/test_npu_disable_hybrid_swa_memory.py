@@ -13,6 +13,7 @@ Test strategy:
 import os
 import unittest
 
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
@@ -21,6 +22,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.test_utils import popen_launch_server
 
 register_npu_ci(
     est_time=3600,
@@ -164,9 +166,27 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
             expect_swa_pool: True if independent SWA pool is expected,
                              False if unified pool is expected.
         """
-        self.run_accuracy()
-
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
+
+        if extra_args is not None:
+            # Restart server with modified args (e.g. --disable-hybrid-swa-memory)
+            kill_process_tree(self.process.pid)
+
+            self.out_log_file.close()
+            self.err_log_file.close()
+            self.out_log_file = open(self.out_log_file_name, "w+", encoding="utf-8")
+            self.err_log_file = open(self.err_log_file_name, "w+", encoding="utf-8")
+
+            self.process = popen_launch_server(
+                self.model,
+                self.base_url,
+                timeout=self.server_timeout,
+                other_args=_MIMO_BASE_ARGS + extra_args,
+                env=_MIMO_ENVS,
+                return_stdout_stderr=(self.out_log_file, self.err_log_file),
+            )
+
+        self.run_accuracy()
 
         self.out_log_file.seek(0)
         self.err_log_file.seek(0)
