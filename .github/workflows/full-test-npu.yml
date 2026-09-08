@@ -803,7 +803,6 @@ jobs:
     needs:
       - set-image-config
       - nighly-test-npu
-      - full-4-npu-a2
       - full-1-npu-a3
       - full-2-npu-a3
       - full-4-npu-a3
