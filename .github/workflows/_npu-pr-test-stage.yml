@@ -263,7 +263,7 @@ jobs:
           # Append `--nightly` and `--continue-on-error` when the job belongs to the nightly pipeline.
           # --nightly: Collect test cases registered for nightly runs.
           # --continue-on-error: Keep running remaining cases even if one fails.
-          # NIGHTLY_FLAG=""
+          NIGHTLY_FLAG=""
           # if [ "${{ inputs.is_nightly_pipeline_job }}" = "true" ]; then
           #   NIGHTLY_FLAG="--nightly --continue-on-error"
           # fi
