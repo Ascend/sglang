@@ -554,10 +554,10 @@ jobs:
         timeout-minutes: 240
         env:
           SGLANG_USE_MODELSCOPE: true
-          SGLANG_IS_IN_CI: true
+          SGLANG_IS_IN_CI: true 
           HF_ENDPOINT: https://hf-mirror.com
           TRANSFORMERS_VERBOSITY: "error"
-          SGLANG_EXTERNAL_SERVER_URL: http://127.0.0.1:30000
+        #  SGLANG_EXTERNAL_SERVER_URL: http://127.0.0.1:30000
         run: |
           set -o pipefail
           python -u test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms.py 2>&1 | tee /tmp/test_output.log
