@@ -341,8 +341,10 @@ def run_a_suite(args):
             os.path.join(script_dir, "registered", "**", "*.py"), recursive=True
         )
         # conftest.py / __init__.py are pytest+package structure, never
-        # registered tests, and must not be executed as one.
-        if os.path.basename(f) not in ("conftest.py", "__init__.py")
+        # registered tests, and must not be executed as one. utils.py files
+        # are helper modules imported by registered tests (e.g. cpu tests),
+        # they contain no CI registries and must be skipped too.
+        if os.path.basename(f) not in ("conftest.py", "__init__.py", "utils.py")
     ]
 
     # Strict: all discovered files must have proper registration
