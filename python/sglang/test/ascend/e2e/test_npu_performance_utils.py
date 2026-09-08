@@ -180,6 +180,16 @@ QWEN3_5_397B_W8A8_MODEL_PATH = (
 DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-w8a8-mtp"
 )
+# DeepSeek-V4-Pro-0813 W4A8 weights (already available in the A3 environment).
+DEEPSEEK_V4_PRO_0813_W4A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Pro-0813-w4a8"
+)
+# DeepSeek-V4-Flash-0731 W8A8 weights. Not preinstalled in the environment:
+# download them to this path (or adjust the constant) before running the
+# 0731 testcases.
+DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
+)
 QWEN3_5_397B_W4A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
 )
