@@ -459,14 +459,28 @@ jobs:
           echo "All nightly test jobs passed"
 
   coverage-report:
+    # Must wait for ALL coverage-producing jobs (same list as check-all-jobs,
+    # plus set-image-config for image/ref), otherwise artifacts from jobs that
+    # are still running are missed by download-artifact.
     needs:
       [
         set-image-config,
         nighly-test-npu,
+        full-4-npu-a2,
         full-1-npu-a3,
         full-2-npu-a3,
         full-4-npu-a3,
+        full-8-npu-a3,
         full-16-npu-a3,
+        full-acc-2-npu-a3,
+        full-acc-4-npu-a3,
+        full-acc-16-npu-a3,
+        full-perf-2-npu-a3,
+        full-perf-4-npu-a3,
+        full-perf-8-npu-a3,
+        full-perf-16-npu-a3,
+        full-poc-multi-node-tests,
+        full-poc-multi-node-mix-tests,
       ]
     if: always()
     runs-on: linux-aarch64-a3-2
