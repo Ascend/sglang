@@ -192,7 +192,7 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
             ratio,
             0.3,
             delta=0.01,
-            msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.95",
+            msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.3",
         )
 
 
