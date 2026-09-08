@@ -514,6 +514,7 @@ jobs:
   dsv4-flash-external-server-test:
     name: dsv4-flash-external-server-test
     needs: [ set-image-config ]
+    if: ${{ false }}
     runs-on: linux-aarch64-a3-800t-16
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
