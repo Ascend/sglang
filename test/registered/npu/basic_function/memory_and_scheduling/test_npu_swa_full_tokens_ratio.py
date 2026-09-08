@@ -130,8 +130,8 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
     def setUpClass(cls):
         cls.out_log_file_name = "./tmp_out_log.txt"
         cls.err_log_file_name = "./tmp_err_log.txt"
-        cls.out_log_file = open(cls.out_log_file_name, "w+", encoding="utf-8")
-        cls.err_log_file = open(cls.err_log_file_name, "w+", encoding="utf-8")
+        cls.out_log_file = open(cls.out_log_file_name, "w", encoding="utf-8")
+        cls.err_log_file = open(cls.err_log_file_name, "w", encoding="utf-8")
 
         import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
 
@@ -167,8 +167,9 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         """S2: Launch MiMo V2 Flash, infer, and print Full/SWA pool sizes."""
         self.run_accuracy()
 
-        self.out_log_file.seek(0)
-        stdout = self.out_log_file.read()
+        self.out_log_file.flush()
+        with open(self.out_log_file_name, "r", encoding="utf-8") as f:
+            stdout = f.read()
         self.assertTrue(len(stdout) > 0)
         full, swa = self._capture_pool_sizes(stdout)
 

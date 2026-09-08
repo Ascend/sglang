@@ -131,8 +131,8 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
     def setUpClass(cls):
         cls.out_log_file_name = "./tmp_out_log.txt"
         cls.err_log_file_name = "./tmp_err_log.txt"
-        cls.out_log_file = open(cls.out_log_file_name, "w+", encoding="utf-8")
-        cls.err_log_file = open(cls.err_log_file_name, "w+", encoding="utf-8")
+        cls.out_log_file = open(cls.out_log_file_name, "w", encoding="utf-8")
+        cls.err_log_file = open(cls.err_log_file_name, "w", encoding="utf-8")
 
         import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
 
@@ -168,8 +168,9 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
 
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
 
-        self.out_log_file.seek(0)
-        stdout = self.out_log_file.read()
+        self.out_log_file.flush()
+        with open(self.out_log_file_name, "r", encoding="utf-8") as f:
+            stdout = f.read()
         self.assertTrue(len(stdout) > 0)
         has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 

@@ -63,8 +63,8 @@ class TestDynamicChunking(CustomTestCase):
         """
         out_log_file_name = "./tmp_out_log.txt"
         err_log_file_name = "./tmp_err_log.txt"
-        out_log_file = open(out_log_file_name, "w+", encoding="utf-8")
-        err_log_file = open(err_log_file_name, "w+", encoding="utf-8")
+        out_log_file = open(out_log_file_name, "w", encoding="utf-8")
+        err_log_file = open(err_log_file_name, "w", encoding="utf-8")
 
         process = popen_launch_server(
             self.model,
@@ -113,8 +113,9 @@ class TestDynamicChunking(CustomTestCase):
             self.assertGreater(len(long_resp.json().get("text", "")), 0)
 
             # 3. Log assertions: verify dynamic chunking actually activated
-            out_log_file.seek(0)
-            stdout = out_log_file.read()
+            out_log_file.flush()
+            with open(out_log_file_name, "r", encoding="utf-8") as f:
+                stdout = f.read()
             self.assertTrue(len(stdout) > 0)
 
             # 3a. Predictor must be ready (profiling succeeded)
