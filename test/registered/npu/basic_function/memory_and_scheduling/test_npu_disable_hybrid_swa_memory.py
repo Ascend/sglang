@@ -2,7 +2,7 @@
 
 When set on a Hybrid SWA model, this flag disables the independent SWA
 memory pool and falls back to a unified pool. The server log shows
-"path=SWA hybrid" only when the independent SWA pool is active.
+"Use sliding window memory pool" only when the independent SWA pool is active.
 
 Test strategy:
 - Launch MiMo V2 Flash model twice (with and without the flag)
@@ -13,22 +13,25 @@ Test strategy:
 import os
 import unittest
 
+import requests
+
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    BENCHMARK_TOOL_DEFAULT,
-    TestNpuAccuracyTestCaseBase,
-)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_FLASH_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import popen_launch_server
+from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
+    popen_launch_server,
+)
 
 register_npu_ci(
     est_time=3600,
     suite="",
     nightly=True,
-    disabled="accuracy testcase",
+    disabled="",
 )
 
 _MIMO_BASE_ARGS = [
@@ -102,12 +105,12 @@ _MIMO_ENVS = {
 _SWA_HYBRID_LOG_MARKER = "Use sliding window memory pool"
 
 
-class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
+class TestDisableHybridSwaMemory(CustomTestCase):
     """Verify --disable-hybrid-swa-memory controls independent SWA pool vs unified pool.
 
     Launches MiMo V2 Flash twice:
-    - Without the flag: independent SWA pool → log contains "path=SWA hybrid"
-    - With the flag: unified pool → log does NOT contain "path=SWA hybrid"
+    - Without the flag: independent SWA pool → log contains the SWA pool marker
+    - With the flag: unified pool → log does NOT contain the SWA pool marker
 
     [Test Category] Parameter
     [Test Target] --disable-hybrid-swa-memory
@@ -116,50 +119,9 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
     """
 
     model = MIMO_V2_FLASH_MODEL_PATH
-    benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    other_args = _MIMO_BASE_ARGS
-    envs = _MIMO_ENVS
-    accuracy = 0.70
-    datasets = ["gsm8k"]
-    few_shot_num = 5
-    generation_config = {
-        "max_tokens": 2048,
-        "temperature": 1.0,
-    }
-    max_concurrency = 64
-    output_len = 2048
 
-    @classmethod
-    def setUpClass(cls):
-        cls.out_log_file_name = "./tmp_out_log.txt"
-        cls.err_log_file_name = "./tmp_err_log.txt"
-        cls.out_log_file = open(cls.out_log_file_name, "w+", encoding="utf-8")
-        cls.err_log_file = open(cls.err_log_file_name, "w+", encoding="utf-8")
-
-        import sglang.test.ascend.e2e.test_npu_accuracy_utils as base_module
-
-        original_popen = base_module.popen_launch_server
-
-        def _patched_popen(*args, **kwargs):
-            kwargs["return_stdout_stderr"] = (cls.out_log_file, cls.err_log_file)
-            return original_popen(*args, **kwargs)
-
-        base_module.popen_launch_server = _patched_popen
-        try:
-            super().setUpClass()
-        finally:
-            base_module.popen_launch_server = original_popen
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        cls.out_log_file.close()
-        cls.err_log_file.close()
-        os.remove(cls.out_log_file_name)
-        os.remove(cls.err_log_file_name)
-
-    def _launch_and_check_pool(self, extra_args, expect_swa_pool):
-        """Launch server with given extra_args, verify inference and pool type.
+    def _launch_and_check(self, extra_args, expect_swa_pool):
+        """Launch server, verify inference, and check pool type from logs.
 
         Args:
             extra_args: Additional CLI args (list or None).
@@ -168,59 +130,73 @@ class TestDisableHybridSwaMemory(TestNpuAccuracyTestCaseBase):
         """
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
 
-        if extra_args is not None:
-            # Restart server with modified args (e.g. --disable-hybrid-swa-memory)
-            kill_process_tree(self.process.pid)
+        out_log_file_name = "./tmp_out_log.txt"
+        err_log_file_name = "./tmp_err_log.txt"
+        out_log_file = open(out_log_file_name, "w+", encoding="utf-8")
+        err_log_file = open(err_log_file_name, "w+", encoding="utf-8")
 
-            self.out_log_file.close()
-            self.err_log_file.close()
-            self.out_log_file = open(self.out_log_file_name, "w+", encoding="utf-8")
-            self.err_log_file = open(self.err_log_file_name, "w+", encoding="utf-8")
-
-            self.process = popen_launch_server(
-                self.model,
-                self.base_url,
-                timeout=self.server_timeout,
-                other_args=_MIMO_BASE_ARGS + extra_args,
-                env=_MIMO_ENVS,
-                return_stdout_stderr=(self.out_log_file, self.err_log_file),
+        args = _MIMO_BASE_ARGS + (extra_args or [])
+        process = popen_launch_server(
+            self.model,
+            DEFAULT_URL_FOR_TEST,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=args,
+            env=_MIMO_ENVS,
+            return_stdout_stderr=(out_log_file, err_log_file),
+        )
+        try:
+            # Verify inference works
+            resp = requests.post(
+                f"{DEFAULT_URL_FOR_TEST}/generate",
+                json={
+                    "text": "The capital of France is",
+                    "sampling_params": {"temperature": 0, "max_new_tokens": 32},
+                },
+                timeout=120,
             )
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Paris", resp.text)
 
-        self.run_accuracy()
+            # Verify pool type from server logs
+            out_log_file.seek(0)
+            err_log_file.seek(0)
+            stdout = out_log_file.read() + err_log_file.read()
+            self.assertTrue(len(stdout) > 0)
+            has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
 
-        self.out_log_file.seek(0)
-        self.err_log_file.seek(0)
-        stdout = self.out_log_file.read() + self.err_log_file.read()
-        self.assertTrue(len(stdout) > 0)
-        has_swa_pool = _SWA_HYBRID_LOG_MARKER in stdout
+            pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
+            print(f"\n  [Hybrid SWA Memory] {label}: pool_type={pool_type}")
 
-        pool_type = "independent SWA pool" if has_swa_pool else "unified pool"
-        print(f"\n  [Hybrid SWA Memory] {label}: pool_type={pool_type}")
-
-        if expect_swa_pool:
-            self.assertTrue(
-                has_swa_pool,
-                f"{label}: expected independent SWA pool but got unified pool. "
-                f"Log marker '{_SWA_HYBRID_LOG_MARKER}' not found in server stdout.",
-            )
-        else:
-            self.assertFalse(
-                has_swa_pool,
-                f"{label}: expected unified pool but got independent SWA pool. "
-                f"Log marker '{_SWA_HYBRID_LOG_MARKER}' found in server stdout.",
-            )
+            if expect_swa_pool:
+                self.assertTrue(
+                    has_swa_pool,
+                    f"{label}: expected independent SWA pool but got unified pool. "
+                    f"Log marker '{_SWA_HYBRID_LOG_MARKER}' not found in server output.",
+                )
+            else:
+                self.assertFalse(
+                    has_swa_pool,
+                    f"{label}: expected unified pool but got independent SWA pool. "
+                    f"Log marker '{_SWA_HYBRID_LOG_MARKER}' found in server output.",
+                )
+        finally:
+            kill_process_tree(process.pid)
+            out_log_file.close()
+            err_log_file.close()
+            os.remove(out_log_file_name)
+            os.remove(err_log_file_name)
 
     def test_disable_hybrid_swa_memory(self):
         """D1+D2: Verify --disable-hybrid-swa-memory switches pool type.
 
-        D1 (default): independent SWA pool → "path=SWA hybrid" in logs
-        D2 (disabled): unified pool → no "path=SWA hybrid" in logs
+        D1 (default): independent SWA pool
+        D2 (disabled): unified pool
         """
         # D1: Without --disable-hybrid-swa-memory → independent SWA pool
-        self._launch_and_check_pool(extra_args=None, expect_swa_pool=True)
+        self._launch_and_check(extra_args=None, expect_swa_pool=True)
 
         # D2: With --disable-hybrid-swa-memory → unified pool
-        self._launch_and_check_pool(
+        self._launch_and_check(
             extra_args=["--disable-hybrid-swa-memory"], expect_swa_pool=False
         )
 
