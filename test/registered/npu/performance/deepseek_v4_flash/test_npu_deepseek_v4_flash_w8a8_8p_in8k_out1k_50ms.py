@@ -1,5 +1,7 @@
+import os
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import wait_server_ready
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -9,6 +11,13 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
+
+# 外部服务模式开关：设置 SGLANG_EXTERNAL_SERVER_URL（如 http://127.0.0.1:30000）后，
+# 用例不再通过框架 popen_launch_server 拉服务，而是直连该已启动的服务。
+# 用于 CI 中先用 shell 脚本（scripts/ci/npu/launch_dsv4_flash_w8a8_server.sh，
+# 即 .claude/2.sh 的 CI 适配版）拉起服务，隔离"框架拉起方式"引入的问题。
+# 不设置该环境变量时保持原有行为，完全向后兼容。
+EXTERNAL_SERVER_URL_ENV = "SGLANG_EXTERNAL_SERVER_URL"
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
@@ -117,6 +126,21 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
     tpot = 50
     max_attempts = 3
     output_token_throughput = 2825
+
+    @classmethod
+    def setUpClass(cls):
+        external_url = os.environ.get(EXTERNAL_SERVER_URL_ENV, "")
+        if not external_url:
+            super().setUpClass()
+            return
+
+        # 外部服务模式：服务已由 CI 中的 shell 脚本拉起，这里只等待就绪并直连，
+        # 跳过框架内置的 popen_launch_server（含其 envs/other_args 注入逻辑）。
+        cls._setup_per_case_output()
+        cls.base_url = external_url
+        wait_server_ready(f"{cls.base_url}/health")
+        # 故意不设置 cls.process：tearDownClass 检测到无 process 便不会 kill
+        # 外部服务，服务的生命周期由 CI 的启动/清理步骤统一管理。
 
     def test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms(self):
         """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in8k out1k."""
