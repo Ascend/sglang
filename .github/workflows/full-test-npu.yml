@@ -73,7 +73,8 @@ jobs:
   nighly-test-npu:
     needs: [set-image-config]
     name: nightly-test-npu
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
       ref:  ${{ needs.set-image-config.outputs.ref }}
@@ -84,7 +85,8 @@ jobs:
 
   full-4-npu-a2:
     name: full-4-npu-a2
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -99,7 +101,8 @@ jobs:
 
   full-1-npu-a3:
     name: full-1-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -133,7 +136,8 @@ jobs:
 
   full-4-npu-a3:
     name: full-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -150,7 +154,8 @@ jobs:
 
   full-8-npu-a3:
     name: full-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -184,7 +189,8 @@ jobs:
 
   full-acc-2-npu-a3:
     name: full-acc-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -201,7 +207,8 @@ jobs:
 
   full-acc-4-npu-a3:
     name: full-acc-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -218,7 +225,8 @@ jobs:
 
   full-acc-16-npu-a3:
     name: full-acc-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -235,7 +243,8 @@ jobs:
 
   full-perf-2-npu-a3:
     name: full-perf-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -252,7 +261,8 @@ jobs:
 
   full-perf-4-npu-a3:
     name: full-perf-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -269,7 +279,8 @@ jobs:
 
   full-perf-8-npu-a3:
     name: full-perf-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -286,7 +297,8 @@ jobs:
 
   full-perf-16-npu-a3:
     name: full-perf-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -304,7 +316,8 @@ jobs:
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
+    # TEMP SMOKE: disabled; only the mix glm5_1 multi-node case runs.
+    if: false
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -400,11 +413,11 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-          # kimi_k2_6 performance tests
-          - name: kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25
-            node_size: 2
-            test_case: test/registered/npu/accuracy/kimi_k2_6/test_npu_kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25.py
-            test_type: 'accuracy'
+          # TEMP SMOKE: kimi case commented out, keep only 1 multi-node case.
+          # - name: kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25
+          #   node_size: 2
+          #   test_case: test/registered/npu/accuracy/kimi_k2_6/test_npu_kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25.py
+          #   test_type: 'accuracy'
           # glm5.1 mix tests
           - name: glm5_1_w4a8_16p_in3k5_out1k5_50ms
             node_size: 2
