@@ -4,7 +4,7 @@
       "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-nightly",
       "dockerfile": "docker/npu_cann9.1.0_python312_a3.Dockerfile",
-      "generated_at": "2026-09-08T10:55:38.590182+00:00",
+      "generated_at": "2026-09-08T13:33:51.883941+00:00",
       "build_args": {
         "CANN_VERSION": "9.1.0",
         "DEVICE_TYPE": "a3",
@@ -41,9 +41,9 @@
         "dir": "/sgl-workspace/sglang",
         "remote": "https://github.com/sgl-project/sglang",
         "branch": "main",
-        "commit": "e634ba78a43b569226a8831ef1cfb719aab9aef8",
-        "describe": "gateway-v0.3.1-9210-ge634ba78a4",
-        "commit_date": "2026-09-08T03:10:09-07:00"
+        "commit": "554f817948c26e8e9c8338b4a33e94a609d6f0fb",
+        "describe": "gateway-v0.3.1-9212-g554f817948",
+        "commit_date": "2026-09-08T19:05:02+08:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",
