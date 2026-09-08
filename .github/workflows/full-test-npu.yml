@@ -544,5 +544,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report-${{ github.run_id }}-${{ github.run_attempt }}
-          path: htmlcov/
+          # Include the combined .coverage data file (hidden, so
+          # include-hidden-files is required) alongside the HTML report.
+          path: |
+            htmlcov/
+            .coverage
+          include-hidden-files: true
           retention-days: 30
