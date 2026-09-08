@@ -152,9 +152,11 @@ jobs:
       - name: Run test
         timeout-minutes: 300
         run: |
-          # sglang_source_relative_path is shared-disk path
-          # Append run_id so concurrent runs do not overwrite each other on the shared PVC.
-          sglang_source_relative_path=tests/sglang-${{ github.run_id }}
+          # sglang_source_relative_path is shared-disk path.
+          # Must match the target_path in "Prepare code for testing":
+          # run_id isolates concurrent runs, test_config_name isolates
+          # concurrent multi-node jobs within the same run.
+          sglang_source_relative_path=tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }}
           sglang_source_path=/root/.cache/${sglang_source_relative_path}
           echo "Source code path: ${sglang_source_path}"
 
