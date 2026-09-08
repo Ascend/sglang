@@ -418,7 +418,10 @@ jobs:
           export test_status tc_name
           echo "## ${tc_name}  ${status_icon} ${test_status}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null || echo 0)
+          # grep -c prints "0" and exits 1 on no match; "|| echo 0" would then
+          # produce a multi-line "0\n0" and break the integer test below.
+          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null || true)
+          metric_count=${metric_count:-0}
           if [ "${metric_count}" -gt 0 ]; then
             echo "| Metric | Value | Pass |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|------|" >> $GITHUB_STEP_SUMMARY
