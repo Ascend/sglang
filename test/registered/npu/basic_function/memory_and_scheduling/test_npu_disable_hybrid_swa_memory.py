@@ -142,6 +142,7 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
             env=_MIMO_ENVS,
+            device="npu",
             return_stdout_stderr=(out_log_file, err_log_file),
         )
         try:
@@ -189,16 +190,16 @@ class TestDisableHybridSwaMemory(CustomTestCase):
     def test_disable_hybrid_swa_memory(self):
         """D1+D2: Verify --disable-hybrid-swa-memory switches pool type.
 
-        D1 (default): independent SWA pool
-        D2 (disabled): unified pool
+        D1 (disabled): unified pool
+        D2 (default): independent SWA pool
         """
-        # D1: Without --disable-hybrid-swa-memory → independent SWA pool
-        self._launch_and_check(extra_args=None, expect_swa_pool=True)
-
-        # D2: With --disable-hybrid-swa-memory → unified pool
+        # D1: With --disable-hybrid-swa-memory → unified pool
         self._launch_and_check(
             extra_args=["--disable-hybrid-swa-memory"], expect_swa_pool=False
         )
+
+        # D2: Without --disable-hybrid-swa-memory → independent SWA pool
+        self._launch_and_check(extra_args=None, expect_swa_pool=True)
 
 
 if __name__ == "__main__":
