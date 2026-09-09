@@ -65,7 +65,7 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
             env={
                 **os.environ,
                 "ASCEND_USE_FIA": "1",
-                "SGLANG_ENABLE_CP_V2": "0",
+                # "SGLANG_ENABLE_CP_V2": "0",
             },
         )
 
@@ -87,7 +87,7 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
     def test_moe_dp(self):
         self.err_file.seek(0)
         content = self.err_file.read()
-        self.assertIn("MOE_DP0", content)
+        self.assertIn("MOE_DP2", content)
 
 
 if __name__ == "__main__":
