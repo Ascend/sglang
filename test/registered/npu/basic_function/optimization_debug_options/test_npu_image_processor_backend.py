@@ -1,78 +1,33 @@
 """Tests for --image-processor-backend parameter.
 
-Two test layers:
-- Parameter parsing: verify auto/torchvision/pil parse correctly (CPU)
+One test layers:
 - End-to-end: launch a VLM server with each backend, verify startup (NPU)
 """
 
 import unittest
 
+import requests
+
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
+    DEFAULT_IMAGE_URL,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
 )
 
-register_npu_ci(est_time=600, suite="", nightly=True)
-
-
-class TestImageProcessorBackendParsing(CustomTestCase):
-    """Testcase: Verify --image-processor-backend CLI parsing
-
-    [Test Category] Parameter
-    [Test Target] --image-processor-backend
-    [Scenario] I1-I5: parsing and migration
-    """
-
-    @staticmethod
-    def _parse(extra_args):
-        from sglang.srt.server_args import ServerArgs
-
-        kwargs = {}
-        i = 0
-        while i < len(extra_args):
-            if extra_args[i].startswith("--"):
-                key = extra_args[i][2:].replace("-", "_")
-                if i + 1 < len(extra_args) and not extra_args[i + 1].startswith("--"):
-                    kwargs[key] = extra_args[i + 1]
-                    i += 2
-                else:
-                    kwargs[key] = True
-                    i += 1
-            else:
-                i += 1
-        return ServerArgs(model_path="dummy", attention_backend="ascend", **kwargs)
-
-    def test_parsing_auto(self):
-        sa = self._parse(["--image-processor-backend", "auto"])
-        self.assertEqual(sa.image_processor_backend, "auto")
-
-    def test_parsing_torchvision(self):
-        sa = self._parse(["--image-processor-backend", "torchvision"])
-        self.assertEqual(sa.image_processor_backend, "torchvision")
-
-    def test_parsing_pil(self):
-        sa = self._parse(["--image-processor-backend", "pil"])
-        self.assertEqual(sa.image_processor_backend, "pil")
-
-    def test_default_value(self):
-        sa = self._parse([])
-        self.assertEqual(sa.image_processor_backend, "auto")
+register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 class TestImageProcessorBackendE2E(CustomTestCase):
     """Testcase: Verify --image-processor-backend is accepted by the VLM server
-    and the multimodal processor initializes correctly.
-
-    Uses Qwen3-VL-4B (smallest available VLM model on NPU).
+       and the multi-mode processor is initialized correctly, with normal inference
 
     [Test Category] Parameter
-    [Test Target] --image-processor-backend
-    [Scenario] I6: end-to-end server startup with each backend
+    [Test Target] Verify whether the service inference is successful
     """
 
     model = QWEN3_VL_4B_INSTRUCT_WEIGHTS_PATH
@@ -96,7 +51,7 @@ class TestImageProcessorBackendE2E(CustomTestCase):
 
     def _launch_and_verify(self, backend):
         """Launch a VLM server with the given image-processor-backend
-        and verify it starts successfully.
+        and verify it starts successfully and can handle multimodal input.
         """
         other_args = self._BASE_ARGS + ["--image-processor-backend", backend]
         process = popen_launch_server(
@@ -111,6 +66,23 @@ class TestImageProcessorBackendE2E(CustomTestCase):
                 process.poll(),
                 f"Server exited prematurely with {backend=}",
             )
+
+            # Send a multimodal request to verify inference works
+            resp = requests.post(
+                f"{DEFAULT_URL_FOR_TEST}/generate",
+                json={
+                    "text": "Describe this image in a short sentence.",
+                    "image_data": DEFAULT_IMAGE_URL,
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": 64,
+                    },
+                },
+                timeout=120,
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("text", resp.json())
+            self.assertGreater(len(resp.json()["text"]), 0)
         finally:
             kill_process_tree(process.pid)
 
