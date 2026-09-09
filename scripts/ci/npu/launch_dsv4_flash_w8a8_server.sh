@@ -85,7 +85,7 @@ echo "PYTHONPATH=${PYTHONPATH:-<not set, using pre-installed sglang>}"
 # ---------- 后台启动服务 ----------
 # 注意：这里用 python3 -m sglang.launch_server（与 2.sh 一致），
 # 而非 CI 框架的入口 —— 这是本次验证的核心差异点之一。
-nohup python3 -m sglang serve \
+nohup sglang serve \
     --model-path "${MODEL_PATH}" \
     --page-size 128 \
     --tp-size 16 \
