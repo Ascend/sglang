@@ -52,6 +52,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "35"
+    "LD_DEBUG": "libs"
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
