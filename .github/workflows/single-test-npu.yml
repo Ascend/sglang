@@ -15,7 +15,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-800t-16
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
@@ -26,8 +26,44 @@ jobs:
         run: |
           npu-smi info
 
+      - name: Install dependencies
+        timeout-minutes: 60
+        shell: bash
+        run: |
+          set -euo pipefail
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+
+          # Use ascend test utils from PR code
+          sglang_pkg_path=/sgl-workspace/sglang/python
+          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
+          mkdir -p ${ascend_test_util_path}
+          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+          cp -r $(pwd)/python/sglang/test/ascend ${ascend_test_util_path}
+
+          pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
+          pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
+          pip install jsonlines "evaluate>=0.4.0" numexpr dotenv
+          pip install websocket
+
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
+
+          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          cd ./lmms-eval
+          nohup pip install . > lmmslog.txt 2>&1 &
+          cd ..
+
+          hf download MMMU/MMMU --repo-type dataset
+
+          # install sglang_router
+          apt-get install -y libssl-dev
+          pip install sglang_router
+
       - name: Run test
-        timeout-minutes: 120
+        timeout-minutes: 2880
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
@@ -40,7 +76,18 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/ascend/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/basic_function/kernel_backends/test_npu_sampling_backend.py"
+            "test/registered/npu/basic_function/HiCache/test_npu_hicache_page.py"
+            "test/registered/npu/basic_function/memory_and_scheduling/test_npu_no_chunked_prefill.py"
+            "test/registered/npu/basic_function/api_related/test_npu_api_related_asr_max.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_235b_a22b_w8a8.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_30b_a3b_w8a8.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_qwen3_235b_a22b_w8a8.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_qwen3_30b_a3b_w8a8.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_R1_0528_w4a8_per_channel.py"
+            "test/registered/npu/basic_function/EPD/test_npu_epd_disaggregation.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_R1_0528_w4a8_per_channel.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v3_2_w8a8.py"
           )
 
           for test_case in "${test_cases[@]}"; do
@@ -63,13 +110,6 @@ jobs:
           export SGLANG_TEST_MAX_RETRY=0
           export SGLANG_SET_CPU_AFFINITY=1
           echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
-
-          echo "Use sglang from image"
-          sglang_pkg_path=/sgl-workspace/sglang/python
-          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-          mkdir -p ${ascend_test_util_path}
-          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-          cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
