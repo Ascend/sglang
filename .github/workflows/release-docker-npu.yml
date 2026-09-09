@@ -1,13 +1,12 @@
-name: Release Docker Images Nightly
+name: Release Docker Images (NPU)
 
 on:
   workflow_dispatch:
     inputs:
       tag_suffix:
         description: 'tag后缀，如 B021, release20260810'
-        required: false
+        required: true
         type: string
-        default: 'nightly'
 
 jobs:
   # 按架构拆分到原生 runner，去掉 QEMU 模拟：
@@ -20,20 +19,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - device_type: a3
-            dockerfile: docker/npu_cann9.1.0_python312_a3_test.Dockerfile
+          - cann_version: "9.0.0"
+            device_type: "910b"
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: amd64
             runner: ubuntu-latest
-          - device_type: a3
-            dockerfile: docker/npu_cann9.1.0_python312_a3_test.Dockerfile
+          - cann_version: "9.0.0"
+            device_type: "910b"
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: arm64
             runner: ubuntu-22.04-arm
-          - device_type: 950
-            dockerfile: docker/npu_cann9.1.0_python312_950_test.Dockerfile
+          - cann_version: "9.0.0"
+            device_type: "a3"
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: amd64
             runner: ubuntu-latest
-          - device_type: 950
-            dockerfile: docker/npu_cann9.1.0_python312_950_test.Dockerfile
+          - cann_version: "9.0.0"
+            device_type: "a3"
+            dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
             platform: arm64
             runner: ubuntu-22.04-arm
     steps:
@@ -49,13 +52,13 @@ jobs:
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
 
-      # tag 末尾追加平台后缀，避免两个架构的镜像互相覆盖；
-      # 最终不带平台后缀的 tag 由 merge job 合并生成。
-      # 定时触发没有 tag_suffix 输入，回退为固定后缀 nightly，
-      # 因此每天的定时构建会覆盖上一次的 nightly 镜像。
+      # tag_suffix 放在基础 tag 之后、平台后缀之前：
+      #   cann9.0.0-910b-20260901-amd64 / cann9.0.0-910b-20260901-arm64
+      # 平台后缀保持在最末尾，避免两个架构的镜像互相覆盖；
+      # 最终不带平台后缀的 tag（cann9.0.0-910b-20260901）由 merge job 合并生成
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}-${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "FULL_TAG=cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}-${{ matrix.platform }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -88,7 +91,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             SGLANG_KERNEL_NPU_TAG=2026.9.1
-            CANN_VERSION=9.1.0
+            CANN_VERSION=${{ matrix.cann_version }}
             DEVICE_TYPE=${{ matrix.device_type }}
 
   # 把两个单架构 tag 合并成最终的多架构 tag（manifest list / index）
@@ -99,7 +102,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        device_type: ["a3", "950"]
+        cann_version: ["9.0.0"]
+        device_type: ["910b", "a3"]
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -113,7 +117,7 @@ jobs:
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
@@ -135,18 +139,14 @@ jobs:
       cancel-in-progress: false
     strategy:
       matrix:
-        include:
-          - device_type: a3
-            dockerfile: docker/npu_cann9.1.0_python312_a3.Dockerfile
-          - device_type: 950
-            dockerfile: docker/npu_cann9.1.0_python312_950.Dockerfile
+        cann_version: ["9.0.0"]
+        device_type: ["910b", "a3"]
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
-      dockerfile: ${{ matrix.dockerfile }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+      dockerfile: docker/npu_cann9.0.0_python311.Dockerfile
       build_args: |
         SGLANG_KERNEL_NPU_TAG=2026.9.1
-        CANN_VERSION=9.1.0
+        CANN_VERSION=${{ matrix.cann_version }}
         DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+      artifact_name: image-manifest-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       deploy_pages: 'true'
-
