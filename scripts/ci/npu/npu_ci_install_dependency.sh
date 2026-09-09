@@ -54,9 +54,9 @@ ${UV_PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} 
 #${PIP_INSTALL} ${PTA_URL}
 
 ### Install zbal
-${UV_PIP_INSTALL} memfabric-zbal==1.2.0
+#${UV_PIP_INSTALL} memfabric-zbal==1.2.0
 ### Install Triton-Ascend
-${PIP_INSTALL} triton-ascend==3.2.1.dev20260530 --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly --trusted-host triton-ascend.osinfra.cn
+#${PIP_INSTALL} triton-ascend==3.2.1.dev20260530 --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly --trusted-host triton-ascend.osinfra.cn
 
 
 ### Install sgl-kernel-npu
