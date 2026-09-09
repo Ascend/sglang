@@ -175,7 +175,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
 
     def test_priority_policy_retraction(self):
         """R2: 2 low-priority requests fill KV cache, high-priority finishes first.
-        
+
         All three requests use the same prompt and max_new_tokens, differing only
         in priority. This ensures the finish order is determined purely by
         priority-based retraction, not by workload differences.
