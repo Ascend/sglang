@@ -186,7 +186,7 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
             f"\n  [SWA Pool Info] full={full}, swa={swa}, "
             f"ratio={ratio:.4f} (config=0.3)"
         )
-        #The parameter - swa full tokens ratio is configured to 0.3, insert assertions
+        # The parameter - swa full tokens ratio is configured to 0.3, insert assertions
         self.assertAlmostEqual(
             ratio,
             0.3,
