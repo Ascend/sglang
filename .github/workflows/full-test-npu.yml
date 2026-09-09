@@ -486,8 +486,7 @@ jobs:
     name: single-node-poc
     needs: [ set-image-config ]
     # PR #1222: restored to the framework-launched server (original logic).
-    # if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
-    if: ${{ false }}
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -516,7 +515,7 @@ jobs:
   dsv4-flash-external-server-test:
     name: dsv4-flash-external-server-test
     needs: [ set-image-config ]
-    if: ${{ true }}
+    if: ${{ !true }}
     runs-on: linux-aarch64-a3-800t-16
     container:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
