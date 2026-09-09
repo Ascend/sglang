@@ -416,21 +416,24 @@ jobs:
       max-parallel: 3
       matrix:
         test_config:
-#          - name: dynamic_chunking
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_dynamic_chunking.py
-#          - name: swa_full_tokens_ratio
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_swa_full_tokens_ratio.py
-          - name: disable_hybrid_swa_memory
+          - name: dynamic_chunking
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_dynamic_chunking.py
+          - name: swa_full_tokens_ratio
             runner: linux-aarch64-a3-16
-            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_disable_hybrid_swa_memory.py
-#          - name: retraction_policy
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_retraction_policy.py
-#          - name: image_processor_backend
-#            runner: linux-aarch64-a3-2
-#            test_case: test/registered/npu/basic_function/optimization_debug_options/test_npu_image_processor_backend.py
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_swa_full_tokens_ratio.py
+#          - name: disable_hybrid_swa_memory
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_disable_hybrid_swa_memory.py
+          - name: retraction_policy
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_retraction_policy.py
+          - name: image_processor_backend
+            runner: linux-aarch64-a3-2
+            test_case: test/registered/npu/basic_function/optimization_debug_options/test_npu_image_processor_backend.py
+          - name: disaggregation_pp
+            runner: linux-aarch64-a3-16
+            test_case: test/registered/npu/basic_function/runtime_options/test_npu_disaggregation_pp.py
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}

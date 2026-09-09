@@ -3,7 +3,7 @@
 The parameter enables dynamic adjustment of chunked prefill size based on
 PP stage profiling, reducing pipeline bubbles. Only effective when pp_size > 1.
 
-Two test scenarios:
+One test scenarios:
 - C1: pp_size > 1, dynamic chunking adjusts chunk size (core scenario)
 """
 
@@ -22,8 +22,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
-register_npu_ci(est_time=400, suite="", nightly=True)
+register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
 
 class TestDynamicChunking(CustomTestCase):
@@ -31,7 +30,6 @@ class TestDynamicChunking(CustomTestCase):
 
     [Test Category] Parameter
     [Test Target] --enable-dynamic-chunking
-    [Scenario] C1: pp_size > 1 enables dynamic chunking
     """
 
     model = QWEN3_4B_WEIGHTS_PATH
@@ -93,13 +91,13 @@ class TestDynamicChunking(CustomTestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Paris", resp.text)
 
-            # 2. Long input: triggers chunked prefill with dynamic chunk sizing
-            #    Input length 2048 > chunked_prefill_size=1024, so prefill is
-            #    split into multiple chunks. Dynamic chunking determines each
-            #    chunk's size via predict_next_chunk_size() instead of using
-            #    the static chunked_prefill_size.
+            # 2. Long input: question padded with filler text to exceed chunked_prefill_size=1024.
+            #    Chunked prefill splits the input across multiple chunks. Dynamic chunking
+            #    determines each chunk's size via predict_next_chunk_size() instead of
+            #    using the static chunked_prefill_size.
             long_text = (
                 "The history of artificial intelligence is a fascinating story. " * 100
+                + "\n\nQuestion: What is the capital of France? Answer:"
             )
             long_resp = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
@@ -110,7 +108,12 @@ class TestDynamicChunking(CustomTestCase):
                 timeout=120,
             )
             self.assertEqual(long_resp.status_code, 200)
-            self.assertGreater(len(long_resp.json().get("text", "")), 0)
+            long_text_output = long_resp.json().get("text", "")
+            self.assertIn(
+                "Paris",
+                long_text_output,
+                f"Long input inference failed: expected 'Paris' in response, got: {long_text_output}",
+            )
 
             # 3. Log assertions: verify dynamic chunking actually activated
             # NOTE: SGLang uses logging.basicConfig() which sends logger.info/warning
