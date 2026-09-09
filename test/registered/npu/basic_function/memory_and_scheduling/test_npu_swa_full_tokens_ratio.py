@@ -3,8 +3,7 @@
 The parameter controls: SWA pool tokens = Full pool tokens * ratio.
 Only effective on Hybrid SWA models (DeepSeek V4, MiMo, Inkling, etc.).
 
-Two test strategies:
-- Unit test: test/registered/unit/model_executor/test_pool_configurator.py (CPU only)
+One test strategies:
 - Server test: launch a real Hybrid SWA model, verify inference and print pool sizes
 """
 
@@ -23,7 +22,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="full-16-npu-a3",
     nightly=True,
     disabled="accuracy testcase",
 )
@@ -109,7 +108,6 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
 
     [Test Category] Parameter
     [Test Target] --swa-full-tokens-ratio
-    [Scenario] S2: parameter accepted on Hybrid SWA model, pool sizes printed
     """
 
     model = MIMO_V2_FLASH_MODEL_PATH
@@ -188,6 +186,7 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
             f"\n  [SWA Pool Info] full={full}, swa={swa}, "
             f"ratio={ratio:.4f} (config=0.3)"
         )
+        #The parameter - swa full tokens ratio is configured to 0.3, insert assertions
         self.assertAlmostEqual(
             ratio,
             0.3,
