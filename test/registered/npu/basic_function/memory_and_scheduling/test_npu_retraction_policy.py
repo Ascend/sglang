@@ -14,23 +14,26 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
-register_npu_ci(est_time=400, suite="", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestRetractionPolicyLength(CustomTestCase):
-    """Verify --retraction-policy=length (default) retracts short-output,
-    long-input requests first when KV cache is full.
+    """Verify --retraction-policy=length (default) retracts short-output requests
+    first when KV cache is full, allowing short requests to complete before long ones.
 
     Test strategy: Launch server with small KV cache (mem-fraction-static=0.3)
-    and max-running-requests=1. Send a long-output request to fill the KV cache,
-    then send a short request. The short request triggers retraction of the
-    long-output request, and both complete successfully.
+    and max-running-requests=1. Start a long-output request (4096 tokens) in a
+    background thread to fill the KV cache, then send a short request (16 tokens).
+    The short request triggers retraction of the long-output request under length
+    policy. The short request should finish before the long request.
+
+    Assertions:
+    - Short and long requests both complete successfully (status=200)
+    - Short request finishes before long request (retraction worked)
+    - Server does not crash after retraction
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
-    [Scenario] R1: length policy default behavior
-    [Reference] test_npu_retract_decode.py, test_retraction_order.py
     """
 
     model = QWEN3_5_9B_WEIGHTS_PATH
@@ -50,7 +53,7 @@ class TestRetractionPolicyLength(CustomTestCase):
     ]
 
     def test_length_policy_retraction(self):
-        """R1: KV Cache triggers retraction under length policy, service survives."""
+        """R1: KV Cache triggers retraction, short request finishes before long request."""
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
@@ -62,22 +65,30 @@ class TestRetractionPolicyLength(CustomTestCase):
             health_resp = requests.get(f"{DEFAULT_URL_FOR_TEST}/health_generate")
             self.assertEqual(health_resp.status_code, 200)
 
-            # Send a long-output request to fill KV cache
-            long_resp = requests.post(
-                f"{DEFAULT_URL_FOR_TEST}/generate",
-                json={
-                    "text": "The capital of France is",
-                    "sampling_params": {
-                        "temperature": 0,
-                        "max_new_tokens": 512,
-                        "ignore_eos": True,
-                    },
-                },
-                timeout=120,
-            )
-            self.assertEqual(long_resp.status_code, 200)
+            long_result = {}
 
-            # Send a short request after KV cache is full—triggers retraction
+            def _send_long_request():
+                resp = requests.post(
+                    f"{DEFAULT_URL_FOR_TEST}/generate",
+                    json={
+                        "text": "The capital of France is",
+                        "sampling_params": {
+                            "temperature": 0,
+                            "max_new_tokens": 4096,
+                            "ignore_eos": True,
+                        },
+                    },
+                    timeout=120,
+                )
+                long_result["status"] = resp.status_code
+                long_result["finished_at"] = time.time()
+
+            # Start long request in background thread to fill KV cache
+            t = threading.Thread(target=_send_long_request, daemon=True)
+            t.start()
+            time.sleep(2)  # Let long request start generating and fill KV cache
+
+            # Send short request while long request is still running → triggers retraction
             short_resp = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
                 json={
@@ -89,8 +100,28 @@ class TestRetractionPolicyLength(CustomTestCase):
                 },
                 timeout=120,
             )
+            short_finished_at = time.time()
             self.assertEqual(short_resp.status_code, 200)
             self.assertIn("2", short_resp.text)
+
+            # Wait for long request to finish
+            t.join(timeout=120)
+            self.assertFalse(t.is_alive(), "Long request timed out")
+            self.assertEqual(long_result.get("status"), 200)
+
+            # Short request should finish before long request (retraction succeeded)
+            self.assertLess(
+                short_finished_at,
+                long_result["finished_at"],
+                f"Short request should finish before long request under length policy: "
+                f"short={short_finished_at:.1f} long={long_result['finished_at']:.1f}",
+            )
+
+            print(
+                f"  [length retraction] short={short_finished_at:.2f} "
+                f"long={long_result['finished_at']:.2f} "
+                f"→ short_first={short_finished_at < long_result['finished_at']}"
+            )
 
             # Verify server is still alive after retraction
             self.assertIsNone(process.poll(), "Server crashed during retraction test")
@@ -112,8 +143,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
-    [Scenario] R2: priority policy — high priority finishes first
-    [Reference] retraction-policy.sh, test_npu_priority_scheduling.py
     """
 
     model = QWEN3_5_9B_WEIGHTS_PATH
@@ -139,8 +168,18 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "debug",
     ]
 
+    _LONG_PROMPT = (
+        "Write a long essay about the history of artificial intelligence. "
+        "Artificial intelligence is a fascinating field that has evolved significantly"
+    )
+
     def test_priority_policy_retraction(self):
-        """R2: 2 low-priority requests fill KV cache, high-priority finishes first."""
+        """R2: 2 low-priority requests fill KV cache, high-priority finishes first.
+        
+        All three requests use the same prompt and max_new_tokens, differing only
+        in priority. This ensures the finish order is determined purely by
+        priority-based retraction, not by workload differences.
+        """
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
@@ -155,11 +194,10 @@ class TestRetractionPolicyPriority(CustomTestCase):
                 resp = requests.post(
                     f"{DEFAULT_URL_FOR_TEST}/generate",
                     json={
-                        "text": f"low{request_id}: Write a long essay about the history of France. "
-                        "The history of France is a fascinating subject that spans",
+                        "text": f"low{request_id}: {self._LONG_PROMPT}",
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": 512,
+                            "max_new_tokens": 4096,
                             "ignore_eos": True,
                         },
                         "priority": 0,
@@ -182,14 +220,14 @@ class TestRetractionPolicyPriority(CustomTestCase):
             t2.start()
             time.sleep(2)
 
-            # Send high-priority request (should preempt and finish first)
+            # Send high-priority request with same workload (should preempt and finish first)
             resp = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
                 json={
-                    "text": "high: What is 1+1? Answer:",
+                    "text": f"high: {self._LONG_PROMPT}",
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 512,
+                        "max_new_tokens": 4096,
                         "ignore_eos": True,
                     },
                     "priority": 20,
