@@ -65,7 +65,6 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
             env={
                 **os.environ,
                 "ASCEND_USE_FIA": "1",
-                # "SGLANG_ENABLE_CP_V2": "0",
             },
         )
 
