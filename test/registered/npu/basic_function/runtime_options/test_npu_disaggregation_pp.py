@@ -129,7 +129,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
     def test_pp(self):
         self.err_file.seek(0)
         content = self.err_file.read()
-        self.assertIn("PP0", content)
+        self.assertIn("PP3", content)
 
 
 class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
