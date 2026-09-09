@@ -29,11 +29,22 @@ jobs:
 
       - name: Install dependencies
         timeout-minutes: 60
+        env:
+          GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
+          HF_ENDPOINT: https://hf-mirror.com
+          SGLANG_USE_MODELSCOPE: true
         shell: bash
         run: |
           set -euo pipefail
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
+
+          # Use internal caching mirrors (same as official NPU CI):
+          # direct access to pypi.org/github.com is unreliable from the cluster.
+          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
+          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
+          pip config set global.index-url http://${CACHING_URL}/pypi/simple
+          pip config set global.trusted-host "${CACHING_URL}"
 
           # Use ascend test utils from PR code
           sglang_pkg_path=/sgl-workspace/sglang/python
@@ -50,9 +61,10 @@ jobs:
           # Install sgl-eval
           # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
           . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          SGL_EVAL_SPEC="sgl-eval @ git+${GITHUB_PROXY_URL}https://github.com/sgl-project/sgl-eval.git@${SGL_EVAL_REF}"
           pip install "$SGL_EVAL_SPEC"
 
-          git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+          git clone --branch v0.3.3 --depth 1 ${GITHUB_PROXY_URL}https://github.com/EvolvingLMMs-Lab/lmms-eval.git
           cd ./lmms-eval
           nohup pip install . > lmmslog.txt 2>&1 &
           cd ..
