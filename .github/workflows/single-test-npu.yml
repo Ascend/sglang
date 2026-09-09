@@ -134,12 +134,27 @@ jobs:
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"
 
+          # Run all cases; a single failure does not stop the rest.
+          # Collect failures and fail the job at the end.
+          failed_cases=()
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
             echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
-            echo "Finished test case ${test_case}"
+            if python -u ${sglang_source_path}/${test_case}; then
+              echo "Finished test case ${test_case}"
+            else
+              echo "FAILED test case ${test_case}, continue with the next one"
+              failed_cases+=("${test_case}")
+            fi
           done
+
+          echo "===== Test summary ====="
+          echo "Total: ${#test_cases[@]}, Failed: ${#failed_cases[@]}"
+          if [ ${#failed_cases[@]} -gt 0 ]; then
+            echo "Failed test cases:"
+            printf '  %s\n' "${failed_cases[@]}"
+            exit 1
+          fi
 
           plog_path="/root/ascend/log/debug/plog"
           if [ -d "$plog_path" ];then
