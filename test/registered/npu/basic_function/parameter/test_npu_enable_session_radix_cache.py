@@ -71,7 +71,7 @@ class TestSessionRadixCacheE2E(CustomTestCase):
      referenced by other sessions during eviction. Set the parameter --model-checksum, the model weights will be verified.
 
     [Test Category] Parameter
-    [Test Target] --enable-session-radix-cache, --model-checksum
+    [Test Target] --enable-session-radix-cache; --model-checksum
     """
 
     @classmethod
