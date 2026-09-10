@@ -199,8 +199,8 @@ class TestRetractionPolicyPriority(CustomTestCase):
         """R2: 2 low-priority requests fill KV cache, high-priority finishes first.
 
         All three requests use the same prompt and max_new_tokens, differing only
-        in priority. This ensures the finish order is determined purely by
-        priority-based retraction, not by workload differences.
+        in priority. They are started concurrently so the finish order is
+        determined purely by priority-based retraction, not by arrival time.
         """
         process = popen_launch_server(
             self.model,
@@ -211,6 +211,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         try:
             low1_result = {}
             low2_result = {}
+            high_result = {}
 
             def _send_low_priority(request_id, result_dict):
                 resp = requests.post(
@@ -229,64 +230,68 @@ class TestRetractionPolicyPriority(CustomTestCase):
                 result_dict["status"] = resp.status_code
                 result_dict["finished_at"] = time.time()
 
-            # Start 2 low-priority requests to fill KV cache
+            def _send_high_priority():
+                resp = requests.post(
+                    f"{DEFAULT_URL_FOR_TEST}/generate",
+                    json={
+                        "text": f"high: {self._LONG_PROMPT}",
+                        "sampling_params": {
+                            "temperature": 0,
+                            "max_new_tokens": 4096,
+                            "ignore_eos": True,
+                        },
+                        "priority": 20,
+                    },
+                    timeout=300,
+                )
+                high_result["status"] = resp.status_code
+                high_result["finished_at"] = time.time()
+
+            # Start all 3 requests concurrently
             t1 = threading.Thread(
                 target=_send_low_priority, args=(1, low1_result), daemon=True
             )
-            t1.start()
-            time.sleep(2)
-
             t2 = threading.Thread(
                 target=_send_low_priority, args=(2, low2_result), daemon=True
             )
+            t_high = threading.Thread(target=_send_high_priority, daemon=True)
+            t1.start()
             t2.start()
-            time.sleep(2)
+            t_high.start()
 
-            # Send high-priority request with same workload (should preempt and finish first)
-            resp = requests.post(
-                f"{DEFAULT_URL_FOR_TEST}/generate",
-                json={
-                    "text": f"high: {self._LONG_PROMPT}",
-                    "sampling_params": {
-                        "temperature": 0,
-                        "max_new_tokens": 4096,
-                        "ignore_eos": True,
-                    },
-                    "priority": 20,
-                },
-                timeout=300,
-            )
-            high_finished_at = time.time()
-            self.assertEqual(resp.status_code, 200)
-
-            # Wait for both low-priority requests to finish
+            # Wait for all to finish
             t1.join(timeout=300)
             t2.join(timeout=300)
+            t_high.join(timeout=300)
             self.assertFalse(t1.is_alive(), "Low-priority-1 request timed out")
             self.assertFalse(t2.is_alive(), "Low-priority-2 request timed out")
+            self.assertFalse(t_high.is_alive(), "High-priority request timed out")
 
             self.assertEqual(low1_result.get("status"), 200)
             self.assertEqual(low2_result.get("status"), 200)
+            self.assertEqual(high_result.get("status"), 200)
 
             # High-priority should finish before both low-priority requests
             self.assertLess(
-                high_finished_at,
+                high_result["finished_at"],
                 low1_result["finished_at"],
                 f"High-priority should finish before low-priority-1: "
-                f"high={high_finished_at:.1f} low1={low1_result['finished_at']:.1f}",
+                f"high={high_result['finished_at']:.1f} "
+                f"low1={low1_result['finished_at']:.1f}",
             )
             self.assertLess(
-                high_finished_at,
+                high_result["finished_at"],
                 low2_result["finished_at"],
                 f"High-priority should finish before low-priority-2: "
-                f"high={high_finished_at:.1f} low2={low2_result['finished_at']:.1f}",
+                f"high={high_result['finished_at']:.1f} "
+                f"low2={low2_result['finished_at']:.1f}",
             )
 
             print(
-                f"  [priority retraction] high={high_finished_at:.2f} "
+                f"  [priority retraction] high={high_result['finished_at']:.2f} "
                 f"low1={low1_result['finished_at']:.2f} "
                 f"low2={low2_result['finished_at']:.2f} "
-                f"→ high_first={high_finished_at < low1_result['finished_at']}"
+                f"→ high_first={high_result['finished_at'] < low1_result['finished_at']}"
             )
         finally:
             kill_process_tree(process.pid)
