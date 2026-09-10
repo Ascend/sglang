@@ -5,7 +5,7 @@ WeightChecker chain on a real Ascend NPU engine. Unit tests in
 test/registered/unit/utils/test_weight_checker.py cover the in-module
 logic; this file is the thin integration cover plus interaction with
 update_weights_from_tensor."""
-
+import tempfile
 import unittest
 from typing import List, Tuple
 
@@ -38,7 +38,16 @@ class TestWeightCheckerE2E(CustomTestCase):
 
     The reset case mutates weights to random; it is named to sort last so any
     case that needs intact weights runs first. The server is torn down right
-    after, so leaving the engine in a corrupted state is harmless."""
+    after, so leaving the engine in a corrupted state is harmless.
+    """
+
+    """
+    Testcase: Set the parameter --model-checksum, the model weights will be verified.
+
+    [Test Category] Parameter
+    [Test Target] --model-checksum
+    """
+
 
     @classmethod
     def setUpClass(cls):
@@ -48,6 +57,12 @@ class TestWeightCheckerE2E(CustomTestCase):
         # _compare moves each snapshot tensor back to NPU for byte equality.
         # With the default 0.88, the vocab-embedding round-trip OOMs the
         # snapshot/reset/compare cycle in test_z_*.
+        cls.out_file = tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".txt", delete=False
+        )
+        cls.err_file = tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".txt", delete=False
+        )
         cls.process = popen_launch_server(
             _MODEL_NAME,
             cls.url,
@@ -58,7 +73,10 @@ class TestWeightCheckerE2E(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
+                "--model-checksum",
+                "Qwen/Qwen3-0.6B",
             ],
+            return_stdout_stderr=(cls.out_file, cls.err_file),
         )
 
     @classmethod
@@ -220,6 +238,11 @@ class TestWeightCheckerE2E(CustomTestCase):
         self.assertFalse(body["success"])
         self.assertIn("max_abs_err", body["message"])
 
+    def test_model_checksum(self):
+        # Model Weight File Verification
+        self.out_file.seek(0)
+        content = self.out_file.read()
+        self.assertIn("[ModelFileVerifier] All 7 files verified successfully.", content)
 
 if __name__ == "__main__":
     unittest.main()

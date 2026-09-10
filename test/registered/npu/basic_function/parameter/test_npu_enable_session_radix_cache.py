@@ -88,21 +88,13 @@ class TestSessionRadixCacheE2E(CustomTestCase):
             "ascend",
             "--mem-fraction-static",
             "0.6",
-            "--model-checksum",
-            "Qwen/Qwen3-0.6B",
         ]
-        cls.out_file = tempfile.NamedTemporaryFile(
-            mode="w+", suffix=".txt", delete=False
-        )
-        cls.err_file = tempfile.NamedTemporaryFile(
-            mode="w+", suffix=".txt", delete=False
-        )
+
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
-            return_stdout_stderr=(cls.out_file, cls.err_file),
         )
 
     @classmethod
@@ -192,12 +184,6 @@ class TestSessionRadixCacheE2E(CustomTestCase):
             "prompt A should be evicted after close_session, "
             f"cached_ratio={a_ratio_after:.3f}",
         )
-
-    def test_model_checksum(self):
-        # Model Weight File Verification
-        self.out_file.seek(0)
-        content = self.out_file.read()
-        self.assertIn("[ModelFileVerifier] All 7 files verified successfully.", content)
 
 
 if __name__ == "__main__":
