@@ -293,7 +293,7 @@ jobs:
   nightly-poc-single-node-tests:
     name: single-node-poc
     needs: [ set-image-config ]
-    if: ${{ false }}
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -316,7 +316,7 @@ jobs:
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
+    if: ${{ false }}
     strategy:
       fail-fast: false
       max-parallel: 1
