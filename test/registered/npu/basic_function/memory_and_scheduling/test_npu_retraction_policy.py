@@ -25,7 +25,7 @@ class TestRetractionPolicyLength(CustomTestCase):
     retracts the one with the smallest key. With equal output, the tiebreaker
     (-input_tokens) retracts the request with the longer input first.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.15)
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.3)
     and max-running-requests=2. Start two requests concurrently, both with the
     same output length (4096 tokens) but different input lengths:
       - Request A: short input (5 tokens)  → larger key → not retracted
@@ -54,7 +54,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.15",
+        "0.3",
         "--max-running-requests",
         "2",
         "--disable-radix-cache",
@@ -155,7 +155,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority retracts lower-priority requests
     first, allowing high-priority requests to complete earlier.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.15)
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.3)
     and max-running-requests=2 to allow retraction. Start 2 low-priority
     long-output requests (4096 tokens, priority=0) to fill the KV cache, then
     send a high-priority request (priority=20). All 3 requests have the same
