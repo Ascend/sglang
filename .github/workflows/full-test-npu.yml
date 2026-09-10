@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - testcases-260813
     paths:
       - "test/registered/npu/performance/deepseek_v4_flash/**"
       - ".github/workflows/nightly-test-npu-e2e-single-node.yml"
