@@ -14,7 +14,6 @@ then evict A like any unprotected entry.
 """
 
 import random
-import tempfile
 import unittest
 import uuid
 
