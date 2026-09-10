@@ -19,7 +19,7 @@ ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
 ARG PTA_URL_ARM64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_aarch64.whl"
 ARG PTA_URL_AMD64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_x86_64.whl"
-ARG SGLANG_TAG=[aarch64.whl](https://console.huaweicloud.com/obs/?locale=zh-cn&agencyId=4b646abf970d4a4e8fe084d63b98281c&region=cn-north-4#/obs/manage/ascend-cann-open/object/list/torch_npu-2.10.0.post5.dev20260910-cp310-cp310-manylinux_2_28_aarch64.whl/?prefix=Triton_Innersource%2Finductor%2F20260910180111%2F&clearSearch=true&isOpenMult=false&isLatest=false&isDeleteMarker=false&isSoftLink=false&region=cn-north-4) 
+ARG SGLANG_TAG=glmx-main-a3-a5-merge
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post1
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
