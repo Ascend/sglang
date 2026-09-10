@@ -45,6 +45,10 @@ class TestQwen330Bw8a8FuseModeWithTwo(GSM8KAscendMixin, CustomTestCase):
 
 class TestQwen330Bw8a8FuseModeWithOne(TestQwen330Bw8a8FuseModeWithTwo):
     fuseep_mode = 1
+    other_args = [
+        *TestQwen330Bw8a8FuseModeWithTwo.other_args[:-1],
+        fuseep_mode,
+    ]
 
 
 if __name__ == "__main__":
