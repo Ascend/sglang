@@ -174,7 +174,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.1",
+        "0.3",
         "--enable-priority-scheduling",
         "--priority-scheduling-preemption-threshold",
         "0",
