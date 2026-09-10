@@ -34,7 +34,6 @@ _MIMO_BASE_ARGS = [
     "mimo",
     "--attention-backend",
     "ascend",
-    "--disable-piecewise-cuda-graph",
     "--base-gpu-id",
     0,
     "--cuda-graph-bs-decode",

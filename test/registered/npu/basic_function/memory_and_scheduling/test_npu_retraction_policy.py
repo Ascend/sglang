@@ -156,12 +156,13 @@ class TestRetractionPolicyPriority(CustomTestCase):
     first, allowing high-priority requests to complete earlier.
 
     Test strategy: Launch server with small KV cache (mem-fraction-static=0.30)
-    and max-running-requests=2 to allow retraction. Start 2 low-priority
+    and max-running-requests=1 to force preemption. Start 2 low-priority
     long-output requests (8192 tokens, priority=0) to fill the KV cache, then
-    send a high-priority request (priority=20). All 3 requests have the same
-    workload, so the finish order is determined purely by priority-based
-    retraction. The high-priority request should finish before both low-priority
-    requests.
+    send a high-priority request (priority=20). With max-running-requests=1,
+    the high-priority request must preempt the running low-priority request
+    to be scheduled. The retracted low-priority request is restarted from
+    scratch, so the high-priority request finishes first.
+    This proves --retraction-policy=priority is working correctly.
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -179,7 +180,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "--priority-scheduling-preemption-threshold",
         "0",
         "--max-running-requests",
-        "2",
+        "1",
         "--disable-radix-cache",
         "--retraction-policy",
         "priority",
