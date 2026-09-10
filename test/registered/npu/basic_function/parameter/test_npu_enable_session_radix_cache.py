@@ -197,7 +197,7 @@ class TestSessionRadixCacheE2E(CustomTestCase):
         # Model Weight File Verification
         self.out_file.seek(0)
         content = self.out_file.read()
-        self.assertIn("ModelFileVerifier", content)
+        self.assertIn("[ModelFileVerifier] All 7 files verified successfully.", content)
 
 
 if __name__ == "__main__":
