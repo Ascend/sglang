@@ -196,11 +196,14 @@ class TestRetractionPolicyPriority(CustomTestCase):
     )
 
     def test_priority_policy_retraction(self):
-        """R2: 2 low-priority requests fill KV cache, high-priority finishes first.
+        """R2: Low-priority requests start first to fill KV cache, high-priority
+        preempts and finishes first despite arriving later.
 
-        All three requests use the same prompt and max_new_tokens, differing only
-        in priority. They are started concurrently so the finish order is
-        determined purely by priority-based retraction, not by arrival time.
+        Low-priority requests run first to fill the KV cache. The high-priority
+        request (priority=20) arrives later and preempts a running low-priority
+        request via priority scheduling. The retracted low-priority request is
+        restarted from scratch, so the high-priority request finishes first.
+        This proves --retraction-policy=priority is working correctly.
         """
         process = popen_launch_server(
             self.model,
@@ -247,16 +250,21 @@ class TestRetractionPolicyPriority(CustomTestCase):
                 high_result["status"] = resp.status_code
                 high_result["finished_at"] = time.time()
 
-            # Start all 3 requests concurrently
+            # Start low-priority requests first to fill KV cache
             t1 = threading.Thread(
                 target=_send_low_priority, args=(1, low1_result), daemon=True
             )
             t2 = threading.Thread(
                 target=_send_low_priority, args=(2, low2_result), daemon=True
             )
-            t_high = threading.Thread(target=_send_high_priority, daemon=True)
             t1.start()
             t2.start()
+
+            # Wait for KV cache to fill up and retraction to trigger
+            time.sleep(3)
+
+            # Send high-priority request - should preempt low-priority requests
+            t_high = threading.Thread(target=_send_high_priority, daemon=True)
             t_high.start()
 
             # Wait for all to finish
@@ -272,6 +280,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             self.assertEqual(high_result.get("status"), 200)
 
             # High-priority should finish before both low-priority requests
+            # despite starting later, proving priority retraction works
             self.assertLess(
                 high_result["finished_at"],
                 low1_result["finished_at"],
