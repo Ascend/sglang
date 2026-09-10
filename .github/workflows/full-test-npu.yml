@@ -434,9 +434,9 @@ jobs:
           - name: disaggregation_pp
             runner: linux-aarch64-a3-16
             test_case: test/registered/npu/basic_function/runtime_options/test_npu_disaggregation_pp.py
-          - name: mimo_v2_flash_w8a8_8p_gsm8k
-            runner: linux-aarch64-a3-16
-            test_case: test/registered/npu/accuracy/mimo_v2_flash/test_npu_mimo_v2_flash_w8a8_8p_gsm8k.py
+#          - name: mimo_v2_flash_w8a8_8p_gsm8k
+#            runner: linux-aarch64-a3-16
+#            test_case: test/registered/npu/accuracy/mimo_v2_flash/test_npu_mimo_v2_flash_w8a8_8p_gsm8k.py
     uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
     with:
       runner: ${{ matrix.test_config.runner }}

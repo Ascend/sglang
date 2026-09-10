@@ -37,7 +37,7 @@ _MIMO_BASE_ARGS = [
     "--disable-piecewise-cuda-graph",
     "--base-gpu-id",
     0,
-    "--cuda-graph-bs-decode",
+    "--cuda-graph-bs",
     1,
     2,
     4,
