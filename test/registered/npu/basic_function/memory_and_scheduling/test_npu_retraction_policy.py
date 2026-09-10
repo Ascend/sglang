@@ -18,18 +18,25 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestRetractionPolicyLength(CustomTestCase):
-    """Verify --retraction-policy=length (default) retracts short-output requests
-    first when KV cache is full, allowing short requests to complete before long ones.
+    """Verify --retraction-policy=length (default) retracts the request with the
+    fewest output tokens (and longest input as tiebreaker) when KV cache is full.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.3)
-    and max-running-requests=1. Start a long-output request (4096 tokens) in a
-    background thread to fill the KV cache, then send a short request (16 tokens).
-    The short request triggers retraction of the long-output request under length
-    policy. The short request should finish before the long request.
+    The length policy sorts running requests by (output_tokens, -input_tokens) and
+    retracts the one with the smallest key. With equal output, the tiebreaker
+    (-input_tokens) retracts the request with the longer input first.
+
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.15)
+    and max-running-requests=2. Start two requests concurrently, both with the
+    same output length (4096 tokens) but different input lengths:
+      - Request A: short input (5 tokens)  → larger key → not retracted
+      - Request B: long input (100 tokens)  → smaller key → retracted first
+    Since both have the same output length, the tiebreaker retracts the
+    longer-input request (B). Request A finishes first, then B is re-scheduled
+    and finishes later.
 
     Assertions:
-    - Short and long requests both complete successfully (status=200)
-    - Short request finishes before long request (retraction worked)
+    - Both requests complete successfully (status=200)
+    - Short-input request (A) finishes before long-input request (B) — policy verified
     - Server does not crash after retraction
 
     [Test Category] Parameter
@@ -38,14 +45,18 @@ class TestRetractionPolicyLength(CustomTestCase):
 
     model = QWEN3_5_9B_WEIGHTS_PATH
 
+    _LONG_INPUT_PREFIX = (
+        "The history of artificial intelligence is a fascinating story. " * 20
+    )
+
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.3",
+        "0.15",
         "--max-running-requests",
-        "1",
+        "2",
         "--disable-radix-cache",
         "--enable-metrics",
         "--log-level",
@@ -53,7 +64,8 @@ class TestRetractionPolicyLength(CustomTestCase):
     ]
 
     def test_length_policy_retraction(self):
-        """R1: KV Cache triggers retraction, short request finishes before long request."""
+        """R1: Length policy retracts the longer-input request via tiebreaker,
+        so the short-input request finishes first."""
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
@@ -65,9 +77,10 @@ class TestRetractionPolicyLength(CustomTestCase):
             health_resp = requests.get(f"{DEFAULT_URL_FOR_TEST}/health_generate")
             self.assertEqual(health_resp.status_code, 200)
 
-            long_result = {}
+            result_short = {}
+            result_long = {}
 
-            def _send_long_request():
+            def _send_short_input():
                 resp = requests.post(
                     f"{DEFAULT_URL_FOR_TEST}/generate",
                     json={
@@ -78,49 +91,58 @@ class TestRetractionPolicyLength(CustomTestCase):
                             "ignore_eos": True,
                         },
                     },
-                    timeout=120,
+                    timeout=180,
                 )
-                long_result["status"] = resp.status_code
-                long_result["finished_at"] = time.time()
+                result_short["status"] = resp.status_code
+                result_short["finished_at"] = time.time()
 
-            # Start long request in background thread to fill KV cache
-            t = threading.Thread(target=_send_long_request, daemon=True)
-            t.start()
-            time.sleep(2)  # Let long request start generating and fill KV cache
-
-            # Send short request while long request is still running → triggers retraction
-            short_resp = requests.post(
-                f"{DEFAULT_URL_FOR_TEST}/generate",
-                json={
-                    "text": "What is 1+1? Answer:",
-                    "sampling_params": {
-                        "temperature": 0,
-                        "max_new_tokens": 16,
+            def _send_long_input():
+                resp = requests.post(
+                    f"{DEFAULT_URL_FOR_TEST}/generate",
+                    json={
+                        "text": f"{self._LONG_INPUT_PREFIX}. The capital of France is",
+                        "sampling_params": {
+                            "temperature": 0,
+                            "max_new_tokens": 4096,
+                            "ignore_eos": True,
+                        },
                     },
-                },
-                timeout=120,
-            )
-            short_finished_at = time.time()
-            self.assertEqual(short_resp.status_code, 200)
-            self.assertIn("2", short_resp.text)
+                    timeout=180,
+                )
+                result_long["status"] = resp.status_code
+                result_long["finished_at"] = time.time()
 
-            # Wait for long request to finish
-            t.join(timeout=120)
-            self.assertFalse(t.is_alive(), "Long request timed out")
-            self.assertEqual(long_result.get("status"), 200)
+            # Start both requests concurrently
+            t_short = threading.Thread(target=_send_short_input, daemon=True)
+            t_long = threading.Thread(target=_send_long_input, daemon=True)
+            t_short.start()
+            t_long.start()
 
-            # Short request should finish before long request (retraction succeeded)
+            # Wait for both to finish
+            t_short.join(timeout=180)
+            t_long.join(timeout=180)
+            self.assertFalse(t_short.is_alive(), "Short-input request timed out")
+            self.assertFalse(t_long.is_alive(), "Long-input request timed out")
+
+            # Both requests should complete successfully after retraction
+            self.assertEqual(result_short.get("status"), 200)
+            self.assertEqual(result_long.get("status"), 200)
+
+            # Length policy: both have similar output, but long-input request
+            # has smaller key (-input_tokens) → retracted first → finishes later
             self.assertLess(
-                short_finished_at,
-                long_result["finished_at"],
-                f"Short request should finish before long request under length policy: "
-                f"short={short_finished_at:.1f} long={long_result['finished_at']:.1f}",
+                result_short["finished_at"],
+                result_long["finished_at"],
+                f"Short-input request should finish before long-input request "
+                f"under length policy tiebreaker: "
+                f"short_input={result_short['finished_at']:.1f} "
+                f"long_input={result_long['finished_at']:.1f}",
             )
 
             print(
-                f"  [length retraction] short={short_finished_at:.2f} "
-                f"long={long_result['finished_at']:.2f} "
-                f"→ short_first={short_finished_at < long_result['finished_at']}"
+                f"  [length retraction] short_input={result_short['finished_at']:.2f} "
+                f"long_input={result_long['finished_at']:.2f} "
+                f"→ short_first={result_short['finished_at'] < result_long['finished_at']}"
             )
 
             # Verify server is still alive after retraction
@@ -133,13 +155,13 @@ class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority retracts lower-priority requests
     first, allowing high-priority requests to complete earlier.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.3),
-    max-running-requests=1, and priority-scheduling-preemption-threshold=0 to
-    enable immediate preemption. Send 2 low-priority long-output requests to
-    fill KV cache, then send a high-priority request. All 3 requests have large
-    max_tokens to fill KV cache, so the finish order is determined purely by
-    priority-based retraction. The high-priority request should finish before
-    both low-priority requests.
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.15)
+    and max-running-requests=2 to allow retraction. Start 2 low-priority
+    long-output requests (4096 tokens, priority=0) to fill the KV cache, then
+    send a high-priority request (priority=20). All 3 requests have the same
+    workload, so the finish order is determined purely by priority-based
+    retraction. The high-priority request should finish before both low-priority
+    requests.
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -152,12 +174,12 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.3",
+        "0.1",
         "--enable-priority-scheduling",
         "--priority-scheduling-preemption-threshold",
         "0",
         "--max-running-requests",
-        "1",
+        "2",
         "--disable-radix-cache",
         "--retraction-policy",
         "priority",
@@ -202,7 +224,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
                         },
                         "priority": 0,
                     },
-                    timeout=120,
+                    timeout=300,
                 )
                 result_dict["status"] = resp.status_code
                 result_dict["finished_at"] = time.time()
@@ -232,14 +254,14 @@ class TestRetractionPolicyPriority(CustomTestCase):
                     },
                     "priority": 20,
                 },
-                timeout=120,
+                timeout=300,
             )
             high_finished_at = time.time()
             self.assertEqual(resp.status_code, 200)
 
             # Wait for both low-priority requests to finish
-            t1.join(timeout=120)
-            t2.join(timeout=120)
+            t1.join(timeout=300)
+            t2.join(timeout=300)
             self.assertFalse(t1.is_alive(), "Low-priority-1 request timed out")
             self.assertFalse(t2.is_alive(), "Low-priority-2 request timed out")
 

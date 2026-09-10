@@ -13,9 +13,6 @@ from sglang.test.test_utils import (
     popen_launch_pd_server,
     try_cached_model,
 )
-from sglang.test.server_fixtures.disaggregation_fixture import (
-    PDDisaggregationServerBase,
-)
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
@@ -241,30 +238,21 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
         time.sleep(5)
 
 
-class TestDisaggregationPrefillPPDynamicChunkAccuracy(PDDisaggregationServerBase):
+class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # set up ROCm env
-        os.environ["SGLANG_USE_AITER"] = "1"
-        rdma_env = os.environ.get("SGLANG_TEST_RDMA_DEVICE")
-
-        if rdma_env:
-            cls.rdma_devices = ["--disaggregation-ib-device", rdma_env]
-            print(f"Found RDMA devices in env: {rdma_env}")
-        else:
-            print("SGLANG_TEST_RDMA_DEVICE is not set! Running without RDMA.")
-            cls.rdma_devices = []
-
+        cls.bootstrap_port = f"{int(cls.lb_port) + 500}"
         cls.model = try_cached_model("Qwen/Qwen3-8B")
+        os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
 
         # Non blocking start servers
         cls.start_prefill()
         cls.start_decode()
 
         # Block until both
-        cls.wait_server_ready(cls.prefill_url + "/health", process=cls.process_prefill)
-        cls.wait_server_ready(cls.decode_url + "/health", process=cls.process_decode)
+        cls.wait_server_ready(cls.prefill_url + "/health")
+        cls.wait_server_ready(cls.decode_url + "/health")
 
         cls.launch_lb()
 
@@ -283,9 +271,11 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(PDDisaggregationServerBase
             "--disable-overlap-schedule",
             "--enable-dynamic-chunking",
             "--attention-backend",
-            "aiter",
+            "ascend",
+            "--disaggregation-transfer-backend",
+            "ascend",
         ]
-        prefill_args += cls.transfer_backend + cls.rdma_devices
+        prefill_args += cls.rdma_devices
         cls.process_prefill = popen_launch_pd_server(
             cls.model,
             cls.prefill_url,
@@ -306,9 +296,11 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(PDDisaggregationServerBase
             "--base-gpu-id",
             "4",
             "--attention-backend",
-            "aiter",
+            "ascend",
+            "--disaggregation-transfer-backend",
+            "ascend",
         ]
-        decode_args += cls.transfer_backend + cls.rdma_devices
+        decode_args += cls.rdma_devices
         cls.process_decode = popen_launch_pd_server(
             cls.model,
             cls.decode_url,
