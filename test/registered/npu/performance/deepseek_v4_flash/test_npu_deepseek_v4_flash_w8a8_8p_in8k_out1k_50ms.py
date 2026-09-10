@@ -5,7 +5,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import wait_server_ready
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
-    DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -18,7 +18,7 @@ register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
 # 即 .claude/2.sh 的 CI 适配版）拉起服务，隔离"框架拉起方式"引入的问题。
 # 不设置该环境变量时保持原有行为，完全向后兼容。
 EXTERNAL_SERVER_URL_ENV = "SGLANG_EXTERNAL_SERVER_URL"
-DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
+DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
@@ -31,10 +31,8 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "HCCL_OP_EXPANSION_MODE": "AIV",
     # deepep
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "DEEPEP_HCCL_BUFFSIZE": "1000",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
+    "DEEPEP_HCCL_BUFFSIZE": "2048",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     # war barrier
     "SGLANG_ENABLE_WAR_BARRIER": "1",
     "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
@@ -52,8 +50,11 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     # mtp
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "35",
-    "LD_DEBUG": "libs"
+    # DSPARK
+    "SGLANG_RAGGED_VERIFY_MODE": "static",
+    "SGLANG_DSPARK_FAST_KERNEL": "0", 
+    # EXPARA
+    "LD_DEBUG": "libs",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -95,16 +96,19 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     4,
     8,
     10,
-    # MTP (EAGLE) configuration.
+    # MTP (DSPARK) configuration.
     "--speculative-algorithm",
-    "EAGLE",
-    "--speculative-num-steps",
-    2,
-    "--speculative-eagle-topk",
-    1,
+    "DSPARK",
+    "--speculative-draft-model-path",
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
+    "--speculative-draft-model-quantization",
+    "modelslim",
+    "--speculative-draft-attention-backend",
+    "ascend",
     "--speculative-num-draft-tokens",
-    3,
-    "--disable-radix-cache",
+    6,
+    "--speculative-dspark-block-size",
+    5,
 ]
 
 
@@ -113,7 +117,7 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    model = DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH
+    model = DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     dataset_name = "random"
