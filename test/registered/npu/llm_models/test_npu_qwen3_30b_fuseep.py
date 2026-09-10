@@ -19,6 +19,7 @@ class TestQwen330Bw8a8FuseModeWithTwo(GSM8KAscendMixin, CustomTestCase):
 
     model = QWEN3_30B_A3B_W8A8_WEIGHTS_PATH
     accuracy = 0.90
+    # Use dispatch_ffn_combine operator, when fuseep_mode = 2.
     fuseep_mode = 2
     other_args = [
         "--trust-remote-code",
@@ -44,6 +45,7 @@ class TestQwen330Bw8a8FuseModeWithTwo(GSM8KAscendMixin, CustomTestCase):
 
 
 class TestQwen330Bw8a8FuseModeWithOne(TestQwen330Bw8a8FuseModeWithTwo):
+    # Use dispatch_gmm_combine_decode operator, when fuseep_mode = 1.
     fuseep_mode = 1
     other_args = [
         *TestQwen330Bw8a8FuseModeWithTwo.other_args[:-1],
