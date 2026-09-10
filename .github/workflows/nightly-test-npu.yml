@@ -227,7 +227,9 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      coverage_run_id: ${{ inputs.coverage_run_id }}
+      # Perf suites run WITHOUT coverage: instrumentation distorts perf metrics
+      # and slows server startup (A/B comparison: runs 34210201362 vs 34234219033).
+      coverage_run_id: ''
 
   nightly-perf-4-npu-a3:
     name: nightly-perf-4-npu-a3
@@ -245,7 +247,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      coverage_run_id: ${{ inputs.coverage_run_id }}
+      coverage_run_id: ''
 
   nightly-perf-8-npu-a3:
     name: nightly-perf-8-npu-a3
@@ -263,7 +265,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      coverage_run_id: ${{ inputs.coverage_run_id }}
+      coverage_run_id: ''
 
   nightly-perf-16-npu-a3:
     name: nightly-perf-16-npu-a3
@@ -280,7 +282,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      coverage_run_id: ${{ inputs.coverage_run_id }}
+      coverage_run_id: ''
 
   # The acc-2 suite is split across 4 parallel partition jobs via the single `partitions` input.
   nightly-acc-2-npu-a3:
@@ -384,7 +386,7 @@ jobs:
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      coverage_run_id: ${{ inputs.coverage_run_id }}
+      coverage_run_id: ''
 
   check-all-jobs:
     if: ${{ !cancelled() }}
