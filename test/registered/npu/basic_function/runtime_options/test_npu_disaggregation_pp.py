@@ -310,14 +310,13 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
-            base_url=None,
+            base_url=self.lb_url,
+            model=self.model,
             eval_name="gsm8k",
             num_examples=200,
             num_threads=128,
             num_shots=5,
             max_tokens=512,
-            host=f"http://{self.base_host}",
-            port=int(self.lb_port),
         )
         metrics = run_eval(args)
         print(f"{metrics=}")

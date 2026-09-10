@@ -25,9 +25,9 @@ class TestRetractionPolicyLength(CustomTestCase):
     retracts the one with the smallest key. With equal output, the tiebreaker
     (-input_tokens) retracts the request with the longer input first.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.1)
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.30)
     and max-running-requests=2. Start two requests concurrently, both with the
-    same output length (4096 tokens) but different input lengths:
+    same output length (8192 tokens) but different input lengths:
       - Request A: short input (5 tokens)  → larger key → not retracted
       - Request B: long input (100 tokens)  → smaller key → retracted first
     Since both have the same output length, the tiebreaker retracts the
@@ -54,7 +54,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.1",
+        "0.30",
         "--max-running-requests",
         "2",
         "--disable-radix-cache",
@@ -87,11 +87,11 @@ class TestRetractionPolicyLength(CustomTestCase):
                         "text": "The capital of France is",
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": 4096,
+                            "max_new_tokens": 8192,
                             "ignore_eos": True,
                         },
                     },
-                    timeout=180,
+                    timeout=400,
                 )
                 result_short["status"] = resp.status_code
                 result_short["finished_at"] = time.time()
@@ -103,11 +103,11 @@ class TestRetractionPolicyLength(CustomTestCase):
                         "text": f"{self._LONG_INPUT_PREFIX}. The capital of France is",
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": 4096,
+                            "max_new_tokens": 8192,
                             "ignore_eos": True,
                         },
                     },
-                    timeout=180,
+                    timeout=400,
                 )
                 result_long["status"] = resp.status_code
                 result_long["finished_at"] = time.time()
@@ -119,8 +119,8 @@ class TestRetractionPolicyLength(CustomTestCase):
             t_long.start()
 
             # Wait for both to finish
-            t_short.join(timeout=180)
-            t_long.join(timeout=180)
+            t_short.join(timeout=400)
+            t_long.join(timeout=400)
             self.assertFalse(t_short.is_alive(), "Short-input request timed out")
             self.assertFalse(t_long.is_alive(), "Long-input request timed out")
 
@@ -155,9 +155,9 @@ class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority retracts lower-priority requests
     first, allowing high-priority requests to complete earlier.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.1)
+    Test strategy: Launch server with small KV cache (mem-fraction-static=0.30)
     and max-running-requests=2 to allow retraction. Start 2 low-priority
-    long-output requests (4096 tokens, priority=0) to fill the KV cache, then
+    long-output requests (8192 tokens, priority=0) to fill the KV cache, then
     send a high-priority request (priority=20). All 3 requests have the same
     workload, so the finish order is determined purely by priority-based
     retraction. The high-priority request should finish before both low-priority
@@ -174,7 +174,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.1",
+        "0.30",
         "--enable-priority-scheduling",
         "--priority-scheduling-preemption-threshold",
         "0",
@@ -223,12 +223,12 @@ class TestRetractionPolicyPriority(CustomTestCase):
                         "text": f"low{request_id}: {self._LONG_PROMPT}",
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": 4096,
+                            "max_new_tokens": 8192,
                             "ignore_eos": True,
                         },
                         "priority": 0,
                     },
-                    timeout=300,
+                    timeout=400,
                 )
                 result_dict["status"] = resp.status_code
                 result_dict["finished_at"] = time.time()
@@ -240,12 +240,12 @@ class TestRetractionPolicyPriority(CustomTestCase):
                         "text": f"high: {self._LONG_PROMPT}",
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": 4096,
+                            "max_new_tokens": 8192,
                             "ignore_eos": True,
                         },
                         "priority": 20,
                     },
-                    timeout=300,
+                    timeout=400,
                 )
                 high_result["status"] = resp.status_code
                 high_result["finished_at"] = time.time()
@@ -268,9 +268,9 @@ class TestRetractionPolicyPriority(CustomTestCase):
             t_high.start()
 
             # Wait for all to finish
-            t1.join(timeout=300)
-            t2.join(timeout=300)
-            t_high.join(timeout=300)
+            t1.join(timeout=400)
+            t2.join(timeout=400)
+            t_high.join(timeout=400)
             self.assertFalse(t1.is_alive(), "Low-priority-1 request timed out")
             self.assertFalse(t2.is_alive(), "Low-priority-2 request timed out")
             self.assertFalse(t_high.is_alive(), "High-priority request timed out")
