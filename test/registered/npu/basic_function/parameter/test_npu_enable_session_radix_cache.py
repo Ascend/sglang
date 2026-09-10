@@ -68,10 +68,10 @@ def _make_prompt(seed: int) -> str:
 
 class TestSessionRadixCacheE2E(CustomTestCase):
     """Testcase: Verify set the parameter --enable-session-radix-cache,Prioritize evicting KV cache that are not
-     referenced by other sessions during eviction. Set the parameter --model-checksum, the model weights will be verified.
+     referenced by other sessions during eviction.
 
     [Test Category] Parameter
-    [Test Target] --enable-session-radix-cache; --model-checksum
+    [Test Target] --enable-session-radix-cache
     """
 
     @classmethod
