@@ -18,6 +18,7 @@ register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
 # 即 .claude/2.sh 的 CI 适配版）拉起服务，隔离"框架拉起方式"引入的问题。
 # 不设置该环境变量时保持原有行为，完全向后兼容。
 EXTERNAL_SERVER_URL_ENV = "SGLANG_EXTERNAL_SERVER_URL"
+DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
