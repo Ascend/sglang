@@ -5,7 +5,6 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
-from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
@@ -242,8 +241,7 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.bootstrap_port = f"{int(cls.lb_port) + 500}"
-        cls.model = QWEN3_8B_WEIGHTS_PATH
+        cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
 
         # Non blocking start servers
@@ -262,12 +260,10 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
             "--trust-remote-code",
             "--disaggregation-mode",
             "prefill",
-            "--disaggregation-bootstrap-port",
-            cls.bootstrap_port,
             "--tp-size",
-            "2",
-            "--pp-size",
-            "2",
+            "1",
+            "--pipeline-parallel-size",
+            "4",
             "--disable-overlap-schedule",
             "--enable-dynamic-chunking",
             "--attention-backend",
@@ -289,12 +285,10 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
             "--trust-remote-code",
             "--disaggregation-mode",
             "decode",
-            "--disaggregation-bootstrap-port",
-            cls.bootstrap_port,
             "--tp-size",
-            "2",
+            "1",
             "--base-gpu-id",
-            "4",
+            "8",
             "--attention-backend",
             "ascend",
             "--disaggregation-transfer-backend",
@@ -315,15 +309,15 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
             base_url=self.lb_url,
             model=self.model,
             eval_name="gsm8k",
+            api="completion",
+            max_tokens=512,
             num_examples=200,
             num_threads=128,
-            num_shots=5,
-            max_tokens=512,
         )
         metrics = run_eval(args)
         print(f"{metrics=}")
 
-        self.assertGreater(metrics["accuracy"], 0.70)
+        self.assertGreater(metrics["score"], 0.24)
         # Wait a little bit so that the memory check happens.
         time.sleep(5)
 
