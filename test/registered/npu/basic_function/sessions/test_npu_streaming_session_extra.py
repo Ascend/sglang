@@ -65,6 +65,70 @@ class NPUStreamingSessionKitMixin(StreamingSessionKitMixin):
     Logic is otherwise identical to the upstream kit.
     """
 
+    def test_kv_cache_inheritance(self, gen_len=12):
+        """Each turn's cached_tokens must equal previous turn's prompt+completion
+        (modulo kv_inherit_offsets)."""
+        chunks = [
+            "Let me tell you something about France." * 20,
+            "The capital of France is",
+            "The population of the city is",
+        ]
+        chunks_ids = [self.tokenizer.encode(x) for x in chunks]
+        for i in range(1, len(chunks_ids)):
+            if chunks_ids[i][0] == self.tokenizer.bos_token_id:
+                chunks_ids[i] = chunks_ids[i][1:]
+
+        # === Part 1: streaming session — check KV inheritance ===
+        requests.post(self.base_url + "/flush_cache")
+        session_id = requests.post(
+            self.base_url + "/open_session",
+            json={"capacity_of_str_len": 1000, "streaming": True},
+        ).json()
+        rid = None
+
+        prev_kv_len = 0
+        for turn_idx, chunk_ids in enumerate(chunks_ids):
+            response = requests.post(
+                self.base_url + "/generate",
+                json={
+                    "input_ids": chunk_ids,
+                    "session_params": {"id": session_id, "rid": rid},
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": gen_len,
+                        "no_stop_trim": True,
+                        "skip_special_tokens": False,
+                    },
+                },
+            ).json()
+            rid = response["meta_info"]["id"]
+            cached = response["meta_info"]["cached_tokens"]
+            prompt_tokens = response["meta_info"]["prompt_tokens"]
+            completion_tokens = response["meta_info"]["completion_tokens"]
+
+            if turn_idx == 0:
+                # Turn 1: cache flushed, no hit.
+                self.assertEqual(cached, 0, "Turn 1: clean start, no cache hit")
+            else:
+                # Turns 2+: cached_tokens reflects KV inherited from previous turn
+                # (via inherit_kv_states, not radix tree matching).
+                allowed = {
+                    (prev_kv_len + off) // 128 * 128 for off in self.kv_inherit_offsets
+                }
+                self.assertIn(
+                    cached,
+                    allowed,
+                    f"Turn {turn_idx + 1}: inherited {cached} not in {sorted(allowed)}",
+                )
+            prev_kv_len = prompt_tokens + completion_tokens
+
+        # Close the session.
+        ret = requests.post(
+            self.base_url + "/close_session",
+            json={"session_id": session_id},
+        )
+        self.assertEqual(ret.status_code, 200)
+
     def test_nth_mid_abort_recovery(self) -> None:
         """Abort an Nth-turn request mid-decode; session rolls back to last
         successful turn."""
