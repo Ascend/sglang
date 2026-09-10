@@ -310,6 +310,7 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
+            base_url=None,
             num_shots=5,
             data_path=None,
             num_questions=200,
