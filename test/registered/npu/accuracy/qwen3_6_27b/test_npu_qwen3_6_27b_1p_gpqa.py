@@ -43,7 +43,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     32768,
     "--max-prefill-tokens",
     32768,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",

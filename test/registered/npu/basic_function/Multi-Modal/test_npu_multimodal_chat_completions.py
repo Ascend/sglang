@@ -81,7 +81,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         1,
         2,
         4,
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--tp-size",
         1,

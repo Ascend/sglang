@@ -148,7 +148,6 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     180000,
     "--tokenizer-worker-num",
     4,
-    "--prefill-round-robin-balance",
     "--disable-shared-experts-fusion",
     "--dtype",
     "bfloat16",

@@ -40,7 +40,7 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     65536,
     "--trust-remote-code",
     "--enable-prefill-delayer",
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--max-running-requests",
     103,

@@ -294,7 +294,7 @@ _NPU_COMMON_ARGS = [
     "--attention-backend",
     "ascend",
     "--disable-cuda-graph",
-    "--disable-piecewise-cuda-graph",
+    "--cuda-graph-backend-prefill=disabled",
     "--enable-streaming-session",
     "--mem-fraction-static",
     "0.7",
