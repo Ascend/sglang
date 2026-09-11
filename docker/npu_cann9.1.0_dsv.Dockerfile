@@ -76,7 +76,8 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN git clone --branch br_v4.1_a5 https://gitcode.com/victor7wang/memfabric_hybrid.git /tmp/memfabric_hybrid && \
+RUN ${PIP_INSTALL} pybind11 && \
+    git clone --branch br_v4.1_a5 https://gitcode.com/victor7wang/memfabric_hybrid.git /tmp/memfabric_hybrid && \
     cd /tmp/memfabric_hybrid && \
     bash script/build.sh && \
     ./memfabric_hybrid-1.2.1_linux_aarch64.run --install && \
