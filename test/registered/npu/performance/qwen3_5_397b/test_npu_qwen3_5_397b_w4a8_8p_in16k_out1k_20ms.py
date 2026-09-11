@@ -58,7 +58,7 @@ QWEN3_5_397B_16K_OTHER_ARGS = [
     0.8,
     "--max-total-tokens",
     210000,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     4,
     6,

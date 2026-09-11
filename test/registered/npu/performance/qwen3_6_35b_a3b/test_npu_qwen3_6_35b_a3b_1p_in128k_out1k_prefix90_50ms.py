@@ -48,7 +48,7 @@ QWEN3_6_35B_A3B_128K_PREFIX_OTHER_ARGS = [
     85,
     "--mem-fraction-static",
     0.85,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     4,
     8,
