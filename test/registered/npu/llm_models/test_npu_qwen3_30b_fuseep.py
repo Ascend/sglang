@@ -19,10 +19,6 @@ class TestQwen330Bw8a8FuseModeWithTwo(GSM8KAscendMixin, CustomTestCase):
 
     model = QWEN3_30B_A3B_W8A8_WEIGHTS_PATH
     accuracy = 0.90
-    """
-    Use dispatch_ffn_combine operator, when fuseep_mode = 2, fusion of dispatch + GMM + combine only for the decode phase
-    """
-    fuseep_mode = 2
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
@@ -35,8 +31,8 @@ class TestQwen330Bw8a8FuseModeWithTwo(GSM8KAscendMixin, CustomTestCase):
         4,
         "--moe-a2a-backend",
         "ascend_fuseep",
-        "--fuseep-mode",
-        fuseep_mode,
+        "--fuseep-mode", #Use dispatch_ffn_combine operator, when fuseep_mode = 2, fusion of dispatch + GMM + combine only for the decode phase
+        "2",
     ]
 
     env = {
@@ -46,16 +42,42 @@ class TestQwen330Bw8a8FuseModeWithTwo(GSM8KAscendMixin, CustomTestCase):
     }
 
 
-class TestQwen330Bw8a8FuseModeWithOne(TestQwen330Bw8a8FuseModeWithTwo):
+class TestQwen330Bw8a8FuseModeWithOne(GSM8KAscendMixin, CustomTestCase):
     """
     Use dispatch_gmm_combine_decode operator, when fuseep_mode = 1, Integrate dispatch, the entire FFN (including GMM),
     and combine into one large operator.
     """
-    fuseep_mode = 1
+
+    model = QWEN3_30B_A3B_W8A8_WEIGHTS_PATH
+    accuracy = 0.90
     other_args = [
-        *TestQwen330Bw8a8FuseModeWithTwo.other_args[:-1],
-        fuseep_mode,
+        "--trust-remote-code",
+        "--mem-fraction-static",
+        0.8,
+        "--attention-backend",
+        "ascend",
+        "--cuda-graph-max-bs-decode",
+        128,
+        "--tp-size",
+        8,
+        "--ep-size",
+        "8",
+        "--moe-a2a-backend",
+        "ascend_fuseep",
+        "--fuseep-mode",
+        1,
+        "--max-prefill-tokens",
+        2048,
+        "--chunked-prefill-size",
+        2048,
     ]
+
+    env = {
+        **os.environ,
+        "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
+        "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
+        "HCCL_BUFFSIZE": "1024",
+    }
 
 
 if __name__ == "__main__":
