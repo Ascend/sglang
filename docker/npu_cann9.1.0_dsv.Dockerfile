@@ -80,12 +80,11 @@ RUN python3 -m pip install --no-cache-dir pybind11 setuptools wheel && \
     git clone --branch br_v4.1_a5 https://gitcode.com/victor7wang/memfabric_hybrid.git /tmp/memfabric_hybrid && \
     cd /tmp/memfabric_hybrid && \
     bash script/build.sh && \
-    echo "=== *.run ===" && find /tmp/memfabric_hybrid -maxdepth 3 -name '*.run' && \
-    echo "=== *.whl ===" && find /tmp/memfabric_hybrid -maxdepth 3 -name '*.whl' && \
-    PKG=$$(find /tmp/memfabric_hybrid -maxdepth 3 -name '*memfabric*.run' | head -n1) && \
-    echo "install pkg = [$$PKG]" && \
-    test -n "$$PKG" && \
-    "$$PKG" --install && \
+    echo "=== artifacts ===" && \
+    find /tmp/memfabric_hybrid -maxdepth 3 -name '*.run' -print && \
+    find /tmp/memfabric_hybrid -maxdepth 3 -name '*.whl' -print && \
+    test -n "$(ls -1 ./*.run)" && \
+    $(ls -1 ./*.run | head -n1) --install && \
     source /usr/local/memfabric_hybrid/set_env.sh && \
     cd / && rm -rf /tmp/memfabric_hybrid
 
