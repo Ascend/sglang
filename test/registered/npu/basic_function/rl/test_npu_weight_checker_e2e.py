@@ -5,6 +5,7 @@ WeightChecker chain on a real Ascend NPU engine. Unit tests in
 test/registered/unit/utils/test_weight_checker.py cover the in-module
 logic; this file is the thin integration cover plus interaction with
 update_weights_from_tensor."""
+
 import tempfile
 import unittest
 from typing import List, Tuple
@@ -47,7 +48,6 @@ class TestWeightCheckerE2E(CustomTestCase):
     [Test Category] Parameter
     [Test Target] --model-checksum
     """
-
 
     @classmethod
     def setUpClass(cls):
@@ -243,6 +243,7 @@ class TestWeightCheckerE2E(CustomTestCase):
         self.out_file.seek(0)
         content = self.out_file.read()
         self.assertIn("[ModelFileVerifier] All 7 files verified successfully.", content)
+
 
 if __name__ == "__main__":
     unittest.main()
