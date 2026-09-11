@@ -454,3 +454,5 @@ jobs:
             exit 1
           fi
           echo "All nightly test jobs passed"
+
+# rerun trigger
