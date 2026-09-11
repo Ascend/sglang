@@ -74,13 +74,19 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+RUN . /etc/environment_new && \
+    (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
+    && (${PIP_INSTALL} ${PTA_URL})
 
 ### Install MemFabric
 RUN python3 -m pip install --no-cache-dir pybind11 setuptools wheel && \
     git clone --branch br_v4.1_a5 https://gitcode.com/victor7wang/memfabric_hybrid.git /tmp/memfabric_hybrid && \
     cd /tmp/memfabric_hybrid && \
+    printf '#!/bin/sh\necho "0000:03:00.0 Processing accelerators: Huawei Technologies Co., Ltd. Device d806"\n' > /usr/local/bin/lspci && \
+    chmod +x /usr/local/bin/lspci && \
     bash script/build_and_pack_run.sh && \
     bash output/memfabric_hybrid-*.run && \
+    rm -f /usr/local/bin/lspci && \
     source /usr/local/memfabric_hybrid/set_env.sh && \
     cd / && rm -rf /tmp/memfabric_hybrid
 
@@ -90,13 +96,6 @@ RUN echo "source /usr/local/memfabric_hybrid/set_env.sh" >> /root/.bashrc
 RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
-
-
-### Install PyTorch and PTA
-RUN . /etc/environment_new && \
-    (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
-    && (${PIP_INSTALL} ${PTA_URL})
-
 
 ## Install triton-ascend
 RUN . /etc/environment_new && \
