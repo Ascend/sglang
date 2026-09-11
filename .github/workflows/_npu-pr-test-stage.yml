@@ -222,6 +222,7 @@ jobs:
             pip install websocket
             pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp
             pip install watchfiles granian whisper_normalizer msgpack
+            pip install fastokens
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
             sglang_source_path=$(pwd)
