@@ -20,12 +20,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(
-    est_time=3600,
-    suite="full-16-npu-a3",
-    nightly=True,
-    disabled="accuracy testcase",
-)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 _MIMO_BASE_ARGS = [
     "--tp-size",
@@ -39,10 +34,9 @@ _MIMO_BASE_ARGS = [
     "mimo",
     "--attention-backend",
     "ascend",
-    "--disable-piecewise-cuda-graph",
     "--base-gpu-id",
     0,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
@@ -181,17 +175,15 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
             "Pool size log not found in server stdout. "
             "Look for 'Use sliding window memory pool' in server logs.",
         )
-        ratio = swa / full
+        expected_swa = int(full * 0.3) // 128 * 128
         print(
             f"\n  [SWA Pool Info] full={full}, swa={swa}, "
-            f"ratio={ratio:.4f} (config=0.3)"
+            f"expected_swa={expected_swa}"
         )
-        # The parameter - swa full tokens ratio is configured to 0.3, insert assertions
-        self.assertAlmostEqual(
-            ratio,
-            0.3,
-            delta=0.01,
-            msg=f"SWA/Full ratio {ratio:.4f} deviates from config 0.3",
+        self.assertEqual(
+            swa,
+            expected_swa,
+            f"SWA pool size mismatch: swa={swa}, expected_swa={expected_swa}",
         )
 
 
