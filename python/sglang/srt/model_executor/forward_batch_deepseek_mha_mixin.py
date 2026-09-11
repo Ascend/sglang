@@ -61,7 +61,19 @@ class ForwardBatchDeepSeekMHAMixin:
 
     def set_attn_attend_prefix_cache(self, attn_attend_prefix_cache: bool):
         self.attn_attend_prefix_cache = attn_attend_prefix_cache
-
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
+    # KV Indices for MHA_ONE_SHOT forward method
     def prepare_chunked_kv_indices(self, device: torch.device):
         self.prefix_chunk_kv_indices = []
         req_to_token = get_req_to_token_pool().req_to_token
