@@ -74,12 +74,17 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+
+### Install PyTorch and PTA
 RUN . /etc/environment_new && \
     (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
     && (${PIP_INSTALL} ${PTA_URL})
 
 ### Install MemFabric
-RUN python3 -m pip install --no-cache-dir pybind11 setuptools wheel && \
+RUN source /usr/local/Ascend/cann-${CANN_VERSION}/set_env.sh && \
+    source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh && \
+    python3 -c "import torch, torch_npu; print('torch', torch.__version__, 'npu', torch_npu.__version__)" && \
+    python3 -m pip install --no-cache-dir pybind11 setuptools wheel && \
     git clone --branch br_v4.1_a5 https://gitcode.com/victor7wang/memfabric_hybrid.git /tmp/memfabric_hybrid && \
     cd /tmp/memfabric_hybrid && \
     printf '#!/bin/sh\necho "0000:03:00.0 Processing accelerators: Huawei Technologies Co., Ltd. Device d806"\n' > /usr/local/bin/lspci && \
@@ -97,6 +102,7 @@ RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
 
+
 ## Install triton-ascend
 RUN . /etc/environment_new && \
     ${PIP_INSTALL} pybind11 && \
@@ -109,6 +115,7 @@ RUN . /etc/environment_new && \
         exit 1; \
     fi
 
+## Install tilelang
 RUN ${PIP_INSTALL} "https://sglang-ascend.obs.cn-east-3.myhuaweicloud.com:443/dsv41/tilelang-0.1.2%2Bubuntu.22.4.npuir-cp312-cp312-linux_aarch64.whl?AccessKeyId=HPUAXT4YM0U8JNTERLST&Expires=1789681639&Signature=n%2FbGuUSIGPa7OGPpkRS%2B54h3lfA%3D"
 
 # Install SGLang
