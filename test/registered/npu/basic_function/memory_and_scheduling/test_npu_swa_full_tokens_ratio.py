@@ -175,6 +175,7 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
             "Pool size log not found in server stdout. "
             "Look for 'Use sliding window memory pool' in server logs.",
         )
+        # Calculate the expected SWA value . --swa-full-tokens-ratio: 0.3  page_size: 128
         expected_swa = int(full * 0.3) // 128 * 128
         print(
             f"\n  [SWA Pool Info] full={full}, swa={swa}, "
