@@ -1,31 +1,29 @@
-name: Build and Push Development Docker Images
+name: Release Docker Images Nightly
 
 on:
   workflow_dispatch:
     inputs:
       tag_suffix:
-        description: 'tag_suffix,for example:B021,release20260203'
+        description: 'tag后缀，如 B021, release20260810'
         required: true
         type: string
 
-permissions:
-  contents: write
-
 jobs:
   build:
-    runs-on: ubuntu-22.04-arm
-    env:
-      BUILDX_NO_DEFAULT_ATTESTATIONS: '1'
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        cann_version: ["9.0.0"]
-        device_type: ["a3", "910b"]
+        include:
+          - device_type: a3
+            dockerfile: docker/npu2-test-a3.Dockerfile
+          - device_type: 950
+            dockerfile: docker/npu2-test-950.Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Free up disk space
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
         with:
           tool-cache: true
           docker-images: false
@@ -35,7 +33,7 @@ jobs:
 
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}" >> $GITHUB_ENV  
+          echo "FULL_TAG=cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -44,7 +42,7 @@ jobs:
           images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
           tags: ${{ env.FULL_TAG }}
 
-      - name: Log into docker hub
+      - name: Log into SWR
         uses: docker/login-action@v3
         if: ${{ github.repository == 'Ascend/sglang' }}
         with:
@@ -52,61 +50,26 @@ jobs:
           username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
           password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
 
-      # Enable Docker multi-architecture build environment
-      # Emulate non-native architectures
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      # Required for building and pushing multi-arch Docker images
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
       - name: Build and push Docker image
-        id: build-and-push
         uses: docker/build-push-action@v6
         with:
           context: docker
-          file: docker/npu1.Dockerfile
-          platforms: linux/arm64, linux/amd64
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/arm64,linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           outputs: ${{ github.repository == 'Ascend/sglang' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
-          # Keep in sync with the manifest job's build_args below, otherwise the
-          # dashboard reports args this image was not actually built with.
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=2026.08.21
-            CANN_VERSION=${{ matrix.cann_version }}
+            SGLANG_KERNEL_NPU_TAG=2026.9.0.post1
+            CANN_VERSION=9.1.0
             DEVICE_TYPE=${{ matrix.device_type }}
-
-  # Record the image dependency manifest (pip packages, sglang commit, ...)
-  # into a JSON artifact by inspecting the freshly built & pushed image.
-  manifest:
-    needs: build
-    if: ${{ github.repository == 'Ascend/sglang' }}
-    uses: ./.github/workflows/generate-image-manifest.yml
-    secrets: inherit
-    concurrency:
-      # Unique per workflow + matrix leg + tag: the reusable manifest workflow
-      # is shared by several release-*.yml files, and each manifest job expands
-      # into one job per device_type. A fixed group name makes them cancel each
-      # other while queued ("Canceling since a higher priority waiting request
-      # for manifest-deploy exists").
-      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
-      cancel-in-progress: false
-    strategy:
-      matrix:
-        cann_version: ["9.0.0"]
-        device_type: ["a3", "910b"]
-    with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
-      dockerfile: docker/npu1.Dockerfile
-      # Same block as the build job's build-args above.
-      build_args: |
-        SGLANG_KERNEL_NPU_TAG=2026.08.21
-        CANN_VERSION=${{ matrix.cann_version }}
-        DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
-      deploy_pages: 'true'
+          secrets: |
+            gitcode_token=${{ secrets.GITCODE_TOKEN }}
