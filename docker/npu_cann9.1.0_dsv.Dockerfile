@@ -46,7 +46,7 @@ RUN pip config set global.index-url $PIP_INDEX_URL
 RUN if [ -n "$APTMIRROR" ];then sed -i "s|.*.ubuntu.com|$APTMIRROR|g" /etc/apt/sources.list ;fi
 
 # Install development tools and utilities
-RUN apt-get update -y && apt upgrade -y && apt-get install -y \
+RUN apt-get update -y && apt-get install -y \
     unzip \
     build-essential \
     cmake \
