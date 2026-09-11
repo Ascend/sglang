@@ -123,7 +123,7 @@ RUN git clone https://github.com/sgl-project/sglang /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang && git fetch --depth 1 origin refs/pull/${SGLANG_PR}/head:sglang_pr && git checkout sglang_pr && \
     git log -1 --oneline && \
     cd python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
-    sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
+    sed -i '/memfabric-hybrid==/d; /memfabric-zbal==/d' pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
 RUN mkdir cann-custom-ops && \
