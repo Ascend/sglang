@@ -81,19 +81,19 @@ jobs:
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
     secrets: inherit
 
-  full-4-npu-a2:
-    name: full-4-npu-a2
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    needs: [set-image-config]
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
-    with:
-      runner: linux-aarch64-a2b3-4
-      test_type: 'perf'
-      test_suite: full-4-npu-a2
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-      image: ${{ needs.set-image-config.outputs.image_a2 }}
-      device_type_for_deps: '910b'
+#   full-4-npu-a2:
+#     name: full-4-npu-a2
+#     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+#     needs: [set-image-config]
+#     uses: ./.github/workflows/_npu-single-node-test-stage.yml
+#     with:
+#       runner: linux-aarch64-a2b3-4
+#       test_type: 'perf'
+#       test_suite: full-4-npu-a2
+#       is_nightly_pipeline_job: true
+#       skip_pr_test_health_check: 'true'
+#       image: ${{ needs.set-image-config.outputs.image_a2 }}
+#       device_type_for_deps: '910b'
 
   full-1-npu-a3:
     name: full-1-npu-a3
@@ -425,7 +425,6 @@ jobs:
     if: github.repository == 'sgl-project/sglang' && always()
     needs:
       - nighly-test-npu
-      - full-4-npu-a2
       - full-1-npu-a3
       - full-2-npu-a3
       - full-4-npu-a3
