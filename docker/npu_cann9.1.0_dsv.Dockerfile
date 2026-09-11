@@ -1,15 +1,3 @@
-# =============================================================================
-# SGLang + Engram Offload + Triton + TileLang  (Ascend A5 / 950)
-# 基础镜像: quay.io/ascend/cann:9.1.0-950-ubuntu22.04-py3.12
-#
-# 相对原始 Dockerfile 的改动:
-#   1) sglang 不再 clone main, 改为拉取 sgl-project/sglang#38950 的 PR head
-#   2) memfabric-hybrid 不再 pip 安装, 改为 gitcode br_v4.1_a5 源码编译并安装 run 包
-#   3) custom ops 增加 dsv41 版 cann-ops-transformer-custom .run 包安装
-#   4) 新增 tilelang NPUIR wheel 安装
-#   5) 统一 env(profile.d + /opt/ascend_env.sh), RUN 里用 bash 而不是 dash
-# =============================================================================
-
 ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
