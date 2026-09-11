@@ -76,11 +76,11 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN ${PIP_INSTALL} pybind11 && \
+RUN python3 -m pip install --no-cache-dir pybind11 setuptools wheel && \
     git clone --branch br_v4.1_a5 https://gitcode.com/victor7wang/memfabric_hybrid.git /tmp/memfabric_hybrid && \
     cd /tmp/memfabric_hybrid && \
     bash script/build.sh && \
-    ./memfabric_hybrid-1.2.1_linux_aarch64.run --install && \
+    ./memfabric_hybrid-*_linux-$(arch).run --install && \
     source /usr/local/memfabric_hybrid/set_env.sh && \
     cd / && rm -rf /tmp/memfabric_hybrid
 
