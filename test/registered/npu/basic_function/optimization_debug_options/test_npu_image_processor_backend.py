@@ -27,7 +27,6 @@ def _generate_test_image_b64():
     import struct
     import zlib
 
-    # Minimal PNG: 1x1 red pixel
     def _make_chunk(chunk_type, data):
         chunk = chunk_type + data
         crc = struct.pack(">I", zlib.crc32(chunk) & 0xFFFFFFFF)

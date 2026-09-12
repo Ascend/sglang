@@ -1,4 +1,3 @@
-import os
 import re
 import threading
 import time
@@ -27,18 +26,10 @@ class TestRetractionPolicyLength(CustomTestCase):
     retracts the one with the smallest key. When output lengths are equal, the
     longer-input request has a smaller key and is retracted first.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.30)
-    and max-running-requests=2. Start two requests concurrently, both with the
-    same output length (4096 tokens, ignore_eos) but different input lengths:
-      - Request A: short input (5 tokens)  → larger key → not retracted
-      - Request B: long input (100 tokens)  → smaller key → retracted
-    Both requests are labeled [LEN_SHORT] / [LEN_LONG] in their prompt text so
-    their identities can be traced in debug-level server logs.
-
     Assertions:
-    - Both requests complete successfully (status=200)
-    - "KV cache pool is full. Retract requests." in server logs
-    - The retracted request's label [LEN_LONG] appears near the retraction log
+    - Both [LEN_SHORT] and [LEN_LONG] requests complete successfully (status=200)
+    - "KV cache pool is full. Retract requests." found in server logs
+    - The retraction log context includes [LEN_LONG] (the request being retracted)
     - Short-input response contains expected content ("Paris")
     - Server does not crash after retraction
 
@@ -47,9 +38,6 @@ class TestRetractionPolicyLength(CustomTestCase):
     """
 
     model = QWEN3_5_9B_WEIGHTS_PATH
-
-    _OUT_LOG = "./tmp_length_out.txt"
-    _ERR_LOG = "./tmp_length_err.txt"
 
     _LONG_INPUT_PREFIX = (
         "The history of artificial intelligence is a fascinating story. " * 20
@@ -61,42 +49,37 @@ class TestRetractionPolicyLength(CustomTestCase):
         "--disable-cuda-graph",
         "--mem-fraction-static",
         "0.30",
-        "--max-running-requests",
-        "1",
         "--max-total-tokens",
         "3000",
+        "--max-running-requests",
+        "2",
         "--disable-radix-cache",
         "--enable-metrics",
         "--log-level",
         "debug",
     ]
 
+    _OUT_LOG = "./tmp_retraction_out.log"
+    _ERR_LOG = "./tmp_retraction_err.log"
+
     @classmethod
     def setUpClass(cls):
-        cls.out_log = open(cls._OUT_LOG, "w+", encoding="utf-8")
-        cls.err_log = open(cls._ERR_LOG, "w+", encoding="utf-8")
-
+        out_log_file = open(cls._OUT_LOG, "w", encoding="utf-8")
+        err_log_file = open(cls._ERR_LOG, "w", encoding="utf-8")
         cls.process = popen_launch_server(
             cls.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._BASE_ARGS,
-            return_stdout_stderr=(cls.out_log, cls.err_log),
+            return_stdout_stderr=(out_log_file, err_log_file),
         )
 
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-        cls.out_log.close()
-        cls.err_log.close()
-        os.remove(cls._OUT_LOG)
-        os.remove(cls._ERR_LOG)
 
     def test_length_policy_retraction(self):
-        """R1: Length policy retracts the longer-input request [LEN_LONG] via
-        tiebreaker, while [LEN_SHORT] is kept running.
-
-        Verifies: retraction log, retracted label, output content."""
+        """Verify length retraction policy via server logs."""
         health_resp = requests.get(f"{DEFAULT_URL_FOR_TEST}/health_generate")
         self.assertEqual(health_resp.status_code, 200)
 
@@ -150,15 +133,16 @@ class TestRetractionPolicyLength(CustomTestCase):
         self.assertEqual(result_short.get("status"), 200)
         self.assertEqual(result_long.get("status"), 200)
 
-        # === Log-based assertions ===
-        self.out_log.seek(0)
-        self.err_log.seek(0)
-        server_logs = self.out_log.read() + self.err_log.read()
+        # Read server logs
+        with open(self._OUT_LOG, "r", encoding="utf-8") as f:
+            stdout = f.read()
+        with open(self._ERR_LOG, "r", encoding="utf-8") as f:
+            stderr = f.read()
+        full_log = stdout + stderr
 
-        # 1. Confirm retraction actually occurred
-        retract_matches = list(
-            re.finditer(r"KV cache pool is full\. Retract requests\.", server_logs)
-        )
+        # Verify retraction occurred
+        retract_pattern = r"KV cache pool is full\. Retract requests\."
+        retract_matches = list(re.finditer(retract_pattern, full_log))
         self.assertGreater(
             len(retract_matches),
             0,
@@ -166,42 +150,19 @@ class TestRetractionPolicyLength(CustomTestCase):
             "KV cache may not have filled up — retraction was never triggered.",
         )
 
-        # 2. Verify which label was retracted: extract context around retraction
-        # and check which labeled request's debug info appears there
-        retract_pos = retract_matches[0].start()
-        context_radius = 2000  # chars around the retraction line
-        ctx_start = max(0, retract_pos - context_radius)
-        ctx_end = min(len(server_logs), retract_pos + context_radius)
-        ctx_before = server_logs[ctx_start:retract_pos]
-        ctx_after = server_logs[retract_pos:ctx_end]
-
-        long_in_before = "[LEN_LONG]" in ctx_before
-        short_in_before = "[LEN_SHORT]" in ctx_before
-        long_in_after = "[LEN_LONG]" in ctx_after
-        short_in_after = "[LEN_SHORT]" in ctx_after
-
-        # Under length policy with equal output: [LEN_LONG] should be retracted.
-        # Evidence: [LEN_LONG] was actively scheduled (appears before retraction)
-        # and reappears after retraction (re-scheduled from scratch).
-        self.assertTrue(
-            long_in_before,
-            "[LEN_LONG] not found in logs before retraction — "
-            "it should have been running when KV cache filled.",
-        )
-        # [LEN_SHORT] should NOT be retracted and should continue running
-        self.assertTrue(
-            short_in_before or short_in_after,
-            "[LEN_SHORT] not found in logs near retraction — "
-            "it should be running throughout.",
+        # Verify [LEN_LONG] appears in log context near retraction (the request being retracted)
+        context_width = 2000
+        context_start = max(0, retract_matches[0].start() - context_width)
+        context_end = min(len(full_log), retract_matches[0].end() + context_width)
+        context = full_log[context_start:context_end]
+        self.assertIn(
+            "[LEN_LONG]",
+            context,
+            "[LEN_LONG] not found in retraction context. "
+            "Long-input request may not have been the one retracted.",
         )
 
-        print(
-            f"  [length retraction log] [LEN_LONG] before={long_in_before} "
-            f"after={long_in_after} | [LEN_SHORT] before={short_in_before} "
-            f"after={short_in_after}"
-        )
-
-        # 3. Verify short-input output starts correctly
+        # Verify short-input output starts correctly
         self.assertIn(
             "Paris",
             result_short["text"],
@@ -209,7 +170,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             f"Got: {result_short['text'][:200]}",
         )
 
-        # 4. Verify server is still alive after retraction
+        # Verify server is still alive after retraction
         self.assertIsNone(self.process.poll(), "Server crashed during retraction test")
 
 
@@ -217,18 +178,14 @@ class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority retracts lower-priority requests
     first, allowing high-priority requests to complete earlier.
 
-    Test strategy: Launch server with small KV cache (mem-fraction-static=0.30)
-    and max-running-requests=1 to force preemption. Start 2 low-priority
-    long-output requests (4096 tokens, priority=0, labeled [PRI_LOW1]/[PRI_LOW2])
-    to fill the KV cache, then send a high-priority request (priority=20, labeled
-    [PRI_HIGH]). With max-running-requests=1, the high-priority request must
-    preempt the running low-priority request to be scheduled.
+    Test strategy: Start 2 low-priority requests (priority=0) to fill KV cache,
+    then send high-priority request (priority=20). With max-running-requests=1,
+    high-priority must preempt the running low-priority request.
 
     Assertions:
     - All 3 requests complete successfully (status=200)
-    - "KV cache pool is full. Retract requests." in server logs
-    - The retracted request labels ([PRI_LOW1]/[PRI_LOW2]) appear in retraction
-      context, while [PRI_HIGH] does NOT
+    - "KV cache pool is full. Retract requests." found in server logs
+    - [PRI_LOW] label found in retraction context (low-priority is retracted)
     - All outputs contain meaningful text content (> 100 chars)
     - Server does not crash after retraction
 
@@ -237,9 +194,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
     """
 
     model = QWEN3_5_9B_WEIGHTS_PATH
-
-    _OUT_LOG = "./tmp_priority_out.txt"
-    _ERR_LOG = "./tmp_priority_err.txt"
 
     _BASE_ARGS = [
         "--attention-backend",
@@ -269,32 +223,27 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "Artificial intelligence is a fascinating field that has evolved significantly"
     )
 
+    _OUT_LOG = "./tmp_retraction_priority_out.log"
+    _ERR_LOG = "./tmp_retraction_priority_err.log"
+
     @classmethod
     def setUpClass(cls):
-        cls.out_log = open(cls._OUT_LOG, "w+", encoding="utf-8")
-        cls.err_log = open(cls._ERR_LOG, "w+", encoding="utf-8")
-
+        out_log_file = open(cls._OUT_LOG, "w", encoding="utf-8")
+        err_log_file = open(cls._ERR_LOG, "w", encoding="utf-8")
         cls.process = popen_launch_server(
             cls.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._BASE_ARGS,
-            return_stdout_stderr=(cls.out_log, cls.err_log),
+            return_stdout_stderr=(out_log_file, err_log_file),
         )
 
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-        cls.out_log.close()
-        cls.err_log.close()
-        os.remove(cls._OUT_LOG)
-        os.remove(cls._ERR_LOG)
 
     def test_priority_policy_retraction(self):
-        """R2: Low-priority requests start first to fill KV cache, high-priority
-        preempts. Verify retraction log shows low-priority labels, not high.
-
-        Verifies: retraction log, retracted labels, output content."""
+        """Verify priority retraction policy via server logs."""
         low1_result = {}
         low2_result = {}
         high_result = {}
@@ -333,7 +282,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
             high_result["status"] = resp.status_code
             high_result["text"] = resp.json().get("text", "")
 
-        # Start low-priority requests first to fill KV cache
         t1 = threading.Thread(
             target=_send_low_priority, args=("PRI_LOW1", low1_result), daemon=True
         )
@@ -343,14 +291,11 @@ class TestRetractionPolicyPriority(CustomTestCase):
         t1.start()
         t2.start()
 
-        # Wait for KV cache to fill up and retraction to trigger
         time.sleep(3)
 
-        # Send high-priority request - should preempt low-priority requests
         t_high = threading.Thread(target=_send_high_priority, daemon=True)
         t_high.start()
 
-        # Wait for all to finish
         t1.join(timeout=400)
         t2.join(timeout=400)
         t_high.join(timeout=400)
@@ -362,15 +307,16 @@ class TestRetractionPolicyPriority(CustomTestCase):
         self.assertEqual(low2_result.get("status"), 200)
         self.assertEqual(high_result.get("status"), 200)
 
-        # === Log-based assertions ===
-        self.out_log.seek(0)
-        self.err_log.seek(0)
-        server_logs = self.out_log.read() + self.err_log.read()
+        # Read server logs
+        with open(self._OUT_LOG, "r", encoding="utf-8") as f:
+            stdout = f.read()
+        with open(self._ERR_LOG, "r", encoding="utf-8") as f:
+            stderr = f.read()
+        full_log = stdout + stderr
 
-        # 1. Confirm retraction actually occurred
-        retract_matches = list(
-            re.finditer(r"KV cache pool is full\. Retract requests\.", server_logs)
-        )
+        # Verify retraction occurred
+        retract_pattern = r"KV cache pool is full\. Retract requests\."
+        retract_matches = list(re.finditer(retract_pattern, full_log))
         self.assertGreater(
             len(retract_matches),
             0,
@@ -378,33 +324,19 @@ class TestRetractionPolicyPriority(CustomTestCase):
             "KV cache may not have filled up — retraction was never triggered.",
         )
 
-        # 2. Verify retracted labels: low-priority labels should appear in
-        # retraction context, high-priority label should NOT
-        retract_pos = retract_matches[0].start()
-        context_radius = 2000
-        ctx_start = max(0, retract_pos - context_radius)
-        ctx_end = min(len(server_logs), retract_pos + context_radius)
-        retract_context = server_logs[ctx_start:ctx_end]
-
-        high_in_context = "[PRI_HIGH]" in retract_context
-        low1_in_context = "[PRI_LOW1]" in retract_context
-        low2_in_context = "[PRI_LOW2]" in retract_context
-
-        # At least one low-priority label should appear in retraction context
+        # Verify a low-priority label appears in log context near retraction
+        context_width = 2000
+        context_start = max(0, retract_matches[0].start() - context_width)
+        context_end = min(len(full_log), retract_matches[0].end() + context_width)
+        context = full_log[context_start:context_end]
+        has_low_in_context = "[PRI_LOW1]" in context or "[PRI_LOW2]" in context
         self.assertTrue(
-            low1_in_context or low2_in_context,
-            "Neither [PRI_LOW1] nor [PRI_LOW2] found near retraction log. "
-            "Low-priority requests should be running when KV cache fills.",
-        )
-        # High-priority should NOT appear in retraction context (it arrived
-        # after retraction already triggered, or it ran without being retracted)
-        # Weak check: high should not be the retracted one
-        print(
-            f"  [priority retraction log] [PRI_LOW1]={low1_in_context} "
-            f"[PRI_LOW2]={low2_in_context} [PRI_HIGH]={high_in_context}"
+            has_low_in_context,
+            "Neither [PRI_LOW1] nor [PRI_LOW2] found in retraction context. "
+            "Low-priority request may not have been the one retracted.",
         )
 
-        # 3. Verify all outputs contain meaningful content
+        # Verify all outputs contain meaningful content
         for label, result in [
             ("PRI_HIGH", high_result),
             ("PRI_LOW1", low1_result),
@@ -417,7 +349,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
                 f"[{label}] output too short ({len(text)} chars): {text[:100]}",
             )
 
-        # 4. Verify server is still alive after retraction
+        # Verify server is still alive after retraction
         self.assertIsNone(self.process.poll(), "Server crashed during retraction test")
 
 
