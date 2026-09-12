@@ -54,6 +54,10 @@ on:
         description: 'Partition config to parallelize a suite across jobs, e.g. {"size":3,"arr":[0,1,2]}. Each element of arr is a partition id; the template expands one matrix job per element. size is passed to run_suite.py --auto-partition-size.'
         type: string
         default: '{"size":1,"arr":[0]}'
+      max_parallel:
+        description: 'Maximum number of partition jobs running concurrently. Set 1 to run partition groups serially.'
+        type: number
+        default: 100
       github-token:
         description: 'GitHub token for API calls'
         type: string
@@ -71,6 +75,7 @@ jobs:
     name: ${{ inputs.test_suite }}
     strategy:
       fail-fast: false
+      max-parallel: ${{ inputs.max_parallel }}
       matrix:
         partition: ${{ fromJson(inputs.partitions).arr }}
     runs-on: ${{ inputs.runner }}
@@ -187,7 +192,6 @@ jobs:
           npu-smi info
 
       - name: Install sglang dependencies
-        if: ${{ inputs.install_sglang_deps == true }}
         shell: bash
         env:
           TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
@@ -200,7 +204,9 @@ jobs:
           sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
           pip config set global.index-url http://${CACHING_URL}/pypi/simple
           pip config set global.trusted-host "${CACHING_URL}"
-          bash scripts/ci/npu/npu_ci_install_dependency.sh ${{ inputs.device_type_for_deps }}
+          if [ "${{ inputs.install_sglang_deps }}" = "true" ]; then
+            bash scripts/ci/npu/npu_ci_install_dependency.sh ${{ inputs.device_type_for_deps }}
+          fi
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           curl -o /tmp/test.jsonl -L https://gh-proxy.test.osinfra.cn/https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl
 

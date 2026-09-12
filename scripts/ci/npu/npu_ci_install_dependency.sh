@@ -49,14 +49,14 @@ PYTORCH_VERSION="2.10.0"
 TORCHVISION_VERSION="0.25.0"
 TORCHAUDIO_VERSION="2.10.0"
 ${UV_PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url ${TORCH_CACHE_URL:="https://download.pytorch.org/whl/cpu"} --extra-index-url ${PYPI_CACHE_URL:="https://pypi.org/simple/"}
-PTA_URL="https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl"
+#PTA_URL="https://gitcode.com/Ascend/pytorch/releases/download/v26.0.0-pytorch2.10.0/torch_npu-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl"
 # GitCode does not allow UV downloads.
-${PIP_INSTALL} ${PTA_URL}
+#${PIP_INSTALL} ${PTA_URL}
 
 ### Install zbal
-${UV_PIP_INSTALL} memfabric-zbal==1.2.0
+#${UV_PIP_INSTALL} memfabric-zbal==1.2.0
 ### Install Triton-Ascend
-${PIP_INSTALL} triton-ascend==3.2.1.dev20260530 --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly --trusted-host triton-ascend.osinfra.cn
+#${PIP_INSTALL} triton-ascend==3.2.1.dev20260530 --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly --trusted-host triton-ascend.osinfra.cn
 
 
 ### Install sgl-kernel-npu
