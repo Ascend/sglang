@@ -29,27 +29,52 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
     environment variables from the PD GSM8K test.
     """
 
-    model = QWEN3_30B_A3B_WEIGHTS_PATH
-    other_args = [
-        "--trust-remote-code",
-        "--mem-fraction-static",
-        "0.7",
-        "--max-running-requests",
-        "32",
-        "--attention-backend",
-        "ascend",
-        "--tp-size",
-        "4",
-        "--moe-dp-size",
-        "2",
-        "--attn-cp-size",
-        "2",
-        "--cuda-graph-max-bs-decode",
-        "32",
-        "--enable-prefill-cp",
-    ]
+    @classmethod
+    def setUpClass(cls):
+        cls.model = QWEN3_30B_A3B_WEIGHTS_PATH
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.out_file = tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".txt", delete=False
+        )
+        cls.err_file = tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".txt", delete=False
+        )
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=[
+                "--trust-remote-code",
+                "--mem-fraction-static",
+                "0.7",
+                "--max-running-requests",
+                "32",
+                "--attention-backend",
+                "ascend",
+                "--tp-size",
+                "4",
+                "--moe-dp-size",
+                "2",
+                "--attn-cp-size",
+                "2",
+                "--cuda-graph-max-bs-decode",
+                "32",
+                "--enable-prefill-cp",
+            ],
+            return_stdout_stderr=(cls.out_file, cls.err_file),
+            env={
+                **os.environ,
+                "ASCEND_USE_FIA": "1",
+            },
+        )
 
-    env = {**os.environ, "ASCEND_USE_FIA": "1"}
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+        cls.out_file.close()
+        cls.err_file.close()
+        os.unlink(cls.out_file.name)
+        os.unlink(cls.err_file.name)
 
     # GSM8K Configs
     accuracy = 0.92  # GSM8K accuracy ≥0.92
