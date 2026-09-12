@@ -46,7 +46,7 @@ QWEN3_5_397B_128K_PREFIX_OTHER_ARGS = [
     320,
     "--prefill-max-requests",
     10,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
