@@ -7,15 +7,17 @@ NPU adaptations:
 - --cuda-graph-backend-prefill=disabled -> --disable-cuda-graph
 - --page-size 256 -> 128 (NPU page_size constraint)
 - added --attention-backend ascend
-- uses the NPU kit sglang.test.ascend.streaming_session_kit
+- uses the NPU kit sglang.test.ascend.npu_streaming_session_kit
 """
 
 import unittest
 
-from sglang.test.ascend.streaming_session_kit import StreamingSessionKitMixin
+from sglang.test.ascend.npu_streaming_session_kit import (
+    AbortLeakReproKitMixin,
+    StreamingSessionKitMixin,
+)
 from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_BF16_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.kits.streaming_session_kit import AbortLeakReproKitMixin
 from sglang.test.server_fixtures.streaming_session_fixture import (
     ABORT_REPRO_CHUNKED_PREFILL_SIZE,
     ABORT_REPRO_CONTEXT_LEN,

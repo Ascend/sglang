@@ -31,7 +31,7 @@ import unittest
 
 from sglang.srt.environ import envs
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
-from sglang.test.ascend.streaming_session_kit import StreamingSessionKitMixin
+from sglang.test.ascend.npu_streaming_session_kit import StreamingSessionKitMixin
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_8B_EAGLE3_WEIGHTS_PATH,
     QWEN3_8B_WEIGHTS_PATH,
