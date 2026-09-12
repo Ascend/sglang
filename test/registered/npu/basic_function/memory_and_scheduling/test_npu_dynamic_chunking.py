@@ -44,7 +44,7 @@ class TestDynamicChunking(CustomTestCase):
         "--chunked-prefill-size",
         "1024",
         "--mem-fraction-static",
-        "0.90",
+        "0.80",
     ]
 
     @classmethod
