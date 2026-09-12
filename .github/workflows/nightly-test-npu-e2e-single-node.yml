@@ -176,6 +176,7 @@ jobs:
           echo "ASCEND_CUSTOM_OPP_PATH ${ASCEND_CUSTOM_OPP_PATH}"
           echo "LD_LIBRARY_PATH ${LD_LIBRARY_PATH}"
           export LD_DEBUG=libs
+          export LD_DEBUG_OUTPUT=/tmp/wf_ld_debug
           echo "Running test case ${test_case}"
           test_exit_code=0
           ${PYTHON_FOR_SGLANG} -u ${test_case} 2>&1 | tee /tmp/test_output.log || test_exit_code=$?
@@ -195,7 +196,7 @@ jobs:
 
           echo "## ${tc_name}  ${status_icon} ${test_status}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null || echo 0)
+          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null); metric_count=${metric_count:-0}
           if [ "${metric_count}" -gt 0 ]; then
             echo "| Metric | Value | Pass |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|------|" >> $GITHUB_STEP_SUMMARY
@@ -247,7 +248,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ld-debug-${{ inputs.test_config_name }}
-          path: /root/.cache/tests/output/**/ld_debug.tar.gz
+          path: |
+            /root/.cache/tests/output/**/ld_debug.tar.gz
+            /tmp/wf_ld_debug*
           retention-days: 7
           if-no-files-found: ignore
 
