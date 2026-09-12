@@ -123,13 +123,6 @@ class TestImageProcessorBackendE2E(CustomTestCase):
             temperature=0,
             max_tokens=64,
         )
-        self.assertEqual(
-            response.status_code,
-            200,
-            f"Image request through encoder+language servers failed with "
-            f"status {response.status_code}. "
-            f"Response body: {response.text[:300]}",
-        )
         output = response.choices[0].message.content
         self.assertGreater(
             len(output), 5, f"Output too short with {backend=}: {output!r}"

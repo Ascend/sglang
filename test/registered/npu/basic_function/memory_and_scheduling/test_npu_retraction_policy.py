@@ -69,115 +69,121 @@ class TestRetractionPolicyLength(CustomTestCase):
         "debug",
     ]
 
+    @classmethod
+    def setUpClass(cls):
+        cls.out_log = open(cls._OUT_LOG, "w+", encoding="utf-8")
+        cls.err_log = open(cls._ERR_LOG, "w+", encoding="utf-8")
+
+        cls.process = popen_launch_server(
+            cls.model,
+            DEFAULT_URL_FOR_TEST,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=cls._BASE_ARGS,
+            return_stdout_stderr=(cls.out_log, cls.err_log),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+        cls.out_log.close()
+        cls.err_log.close()
+        os.remove(cls._OUT_LOG)
+        os.remove(cls._ERR_LOG)
+
     def test_length_policy_retraction(self):
         """R1: Length policy retracts the longer-input request via tiebreaker,
         so the short-input request finishes first.
         Verifies: retraction log, finish order, output content."""
-        out_log = open(self._OUT_LOG, "w+", encoding="utf-8")
-        err_log = open(self._ERR_LOG, "w+", encoding="utf-8")
+        health_resp = requests.get(f"{DEFAULT_URL_FOR_TEST}/health_generate")
+        self.assertEqual(health_resp.status_code, 200)
 
-        process = popen_launch_server(
-            self.model,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=self._BASE_ARGS,
-            return_stdout_stderr=(out_log, err_log),
+        result_short = {}
+        result_long = {}
+
+        def _send_short_input():
+            resp = requests.post(
+                f"{DEFAULT_URL_FOR_TEST}/generate",
+                json={
+                    "text": "The capital of France is",
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": 8192,
+                        "ignore_eos": True,
+                    },
+                },
+                timeout=400,
+            )
+            result_short["status"] = resp.status_code
+            result_short["text"] = resp.json().get("text", "")
+            result_short["finished_at"] = time.monotonic()
+
+        def _send_long_input():
+            resp = requests.post(
+                f"{DEFAULT_URL_FOR_TEST}/generate",
+                json={
+                    "text": f"{self._LONG_INPUT_PREFIX}. The capital of France is",
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": 8192,
+                        "ignore_eos": True,
+                    },
+                },
+                timeout=400,
+            )
+            result_long["status"] = resp.status_code
+            result_long["finished_at"] = time.monotonic()
+
+        t_short = threading.Thread(target=_send_short_input, daemon=True)
+        t_long = threading.Thread(target=_send_long_input, daemon=True)
+        t_short.start()
+        t_long.start()
+
+        t_short.join(timeout=400)
+        t_long.join(timeout=400)
+        self.assertFalse(t_short.is_alive(), "Short-input request timed out")
+        self.assertFalse(t_long.is_alive(), "Long-input request timed out")
+
+        self.assertEqual(result_short.get("status"), 200)
+        self.assertEqual(result_long.get("status"), 200)
+
+        # Length policy tiebreaker: long-input retracted first → finishes later
+        self.assertLess(
+            result_short["finished_at"],
+            result_long["finished_at"],
+            f"Short-input request should finish before long-input request "
+            f"under length policy tiebreaker: "
+            f"short_input={result_short['finished_at']:.1f} "
+            f"long_input={result_long['finished_at']:.1f}",
         )
-        try:
-            health_resp = requests.get(f"{DEFAULT_URL_FOR_TEST}/health_generate")
-            self.assertEqual(health_resp.status_code, 200)
 
-            result_short = {}
-            result_long = {}
+        # Verify retraction actually occurred via server logs
+        self.out_log.seek(0)
+        self.err_log.seek(0)
+        server_logs = (self.out_log.read() + self.err_log.read()).lower()
+        self.assertIn(
+            "retract",
+            server_logs,
+            "No retraction event found in server logs. "
+            "KV cache may not have filled up — retraction was never triggered.",
+        )
 
-            def _send_short_input():
-                resp = requests.post(
-                    f"{DEFAULT_URL_FOR_TEST}/generate",
-                    json={
-                        "text": "The capital of France is",
-                        "sampling_params": {
-                            "temperature": 0,
-                            "max_new_tokens": 8192,
-                            "ignore_eos": True,
-                        },
-                    },
-                    timeout=400,
-                )
-                result_short["status"] = resp.status_code
-                result_short["text"] = resp.json().get("text", "")
-                result_short["finished_at"] = time.monotonic()
+        # Verify short-input output starts correctly
+        self.assertIn(
+            "Paris",
+            result_short["text"],
+            f"Short-input output missing 'Paris'. Got: {result_short['text'][:200]}",
+        )
 
-            def _send_long_input():
-                resp = requests.post(
-                    f"{DEFAULT_URL_FOR_TEST}/generate",
-                    json={
-                        "text": f"{self._LONG_INPUT_PREFIX}. The capital of France is",
-                        "sampling_params": {
-                            "temperature": 0,
-                            "max_new_tokens": 8192,
-                            "ignore_eos": True,
-                        },
-                    },
-                    timeout=400,
-                )
-                result_long["status"] = resp.status_code
-                result_long["finished_at"] = time.monotonic()
+        # Verify server is still alive after retraction
+        self.assertIsNone(
+            self.process.poll(), "Server crashed during retraction test"
+        )
 
-            t_short = threading.Thread(target=_send_short_input, daemon=True)
-            t_long = threading.Thread(target=_send_long_input, daemon=True)
-            t_short.start()
-            t_long.start()
-
-            t_short.join(timeout=400)
-            t_long.join(timeout=400)
-            self.assertFalse(t_short.is_alive(), "Short-input request timed out")
-            self.assertFalse(t_long.is_alive(), "Long-input request timed out")
-
-            self.assertEqual(result_short.get("status"), 200)
-            self.assertEqual(result_long.get("status"), 200)
-
-            # Length policy tiebreaker: long-input retracted first → finishes later
-            self.assertLess(
-                result_short["finished_at"],
-                result_long["finished_at"],
-                f"Short-input request should finish before long-input request "
-                f"under length policy tiebreaker: "
-                f"short_input={result_short['finished_at']:.1f} "
-                f"long_input={result_long['finished_at']:.1f}",
-            )
-
-            # Verify retraction actually occurred via server logs
-            out_log.seek(0)
-            err_log.seek(0)
-            server_logs = (out_log.read() + err_log.read()).lower()
-            self.assertIn(
-                "retract",
-                server_logs,
-                "No retraction event found in server logs. "
-                "KV cache may not have filled up — retraction was never triggered.",
-            )
-
-            # Verify short-input output starts correctly
-            self.assertIn(
-                "Paris",
-                result_short["text"],
-                f"Short-input output missing 'Paris'. Got: {result_short['text'][:200]}",
-            )
-
-            # Verify server is still alive after retraction
-            self.assertIsNone(process.poll(), "Server crashed during retraction test")
-
-            print(
-                f"  [length retraction] short={result_short['finished_at']:.2f} "
-                f"long={result_long['finished_at']:.2f} "
-                f"→ short_first={result_short['finished_at'] < result_long['finished_at']}"
-            )
-        finally:
-            kill_process_tree(process.pid)
-            out_log.close()
-            err_log.close()
-            os.remove(self._OUT_LOG)
-            os.remove(self._ERR_LOG)
+        print(
+            f"  [length retraction] short={result_short['finished_at']:.2f} "
+            f"long={result_long['finished_at']:.2f} "
+            f"→ short_first={result_short['finished_at'] < result_long['finished_at']}"
+        )
 
 
 class TestRetractionPolicyPriority(CustomTestCase):
@@ -241,145 +247,154 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "Artificial intelligence is a fascinating field that has evolved significantly"
     )
 
+    @classmethod
+    def setUpClass(cls):
+        cls.out_log = open(cls._OUT_LOG, "w+", encoding="utf-8")
+        cls.err_log = open(cls._ERR_LOG, "w+", encoding="utf-8")
+
+        cls.process = popen_launch_server(
+            cls.model,
+            DEFAULT_URL_FOR_TEST,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            other_args=cls._BASE_ARGS,
+            return_stdout_stderr=(cls.out_log, cls.err_log),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        kill_process_tree(cls.process.pid)
+        cls.out_log.close()
+        cls.err_log.close()
+        os.remove(cls._OUT_LOG)
+        os.remove(cls._ERR_LOG)
+
     def test_priority_policy_retraction(self):
         """R2: Low-priority requests start first to fill KV cache, high-priority
         preempts and finishes first despite arriving later.
 
         Verifies: retraction log, finish order (high < low1, high < low2),
         output content on all 3 requests."""
-        out_log = open(self._OUT_LOG, "w+", encoding="utf-8")
-        err_log = open(self._ERR_LOG, "w+", encoding="utf-8")
+        low1_result = {}
+        low2_result = {}
+        high_result = {}
 
-        process = popen_launch_server(
-            self.model,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=self._BASE_ARGS,
-            return_stdout_stderr=(out_log, err_log),
+        def _send_low_priority(request_id, result_dict):
+            resp = requests.post(
+                f"{DEFAULT_URL_FOR_TEST}/generate",
+                json={
+                    "text": f"low{request_id}: {self._LONG_PROMPT}",
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": 8192,
+                        "ignore_eos": True,
+                    },
+                    "priority": 0,
+                },
+                timeout=400,
+            )
+            result_dict["status"] = resp.status_code
+            result_dict["text"] = resp.json().get("text", "")
+            result_dict["finished_at"] = time.monotonic()
+
+        def _send_high_priority():
+            resp = requests.post(
+                f"{DEFAULT_URL_FOR_TEST}/generate",
+                json={
+                    "text": f"high: {self._LONG_PROMPT}",
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": 8192,
+                        "ignore_eos": True,
+                    },
+                    "priority": 20,
+                },
+                timeout=400,
+            )
+            high_result["status"] = resp.status_code
+            high_result["text"] = resp.json().get("text", "")
+            high_result["finished_at"] = time.monotonic()
+
+        # Start low-priority requests first to fill KV cache
+        t1 = threading.Thread(
+            target=_send_low_priority, args=(1, low1_result), daemon=True
         )
-        try:
-            low1_result = {}
-            low2_result = {}
-            high_result = {}
+        t2 = threading.Thread(
+            target=_send_low_priority, args=(2, low2_result), daemon=True
+        )
+        t1.start()
+        t2.start()
 
-            def _send_low_priority(request_id, result_dict):
-                resp = requests.post(
-                    f"{DEFAULT_URL_FOR_TEST}/generate",
-                    json={
-                        "text": f"low{request_id}: {self._LONG_PROMPT}",
-                        "sampling_params": {
-                            "temperature": 0,
-                            "max_new_tokens": 8192,
-                            "ignore_eos": True,
-                        },
-                        "priority": 0,
-                    },
-                    timeout=400,
-                )
-                result_dict["status"] = resp.status_code
-                result_dict["text"] = resp.json().get("text", "")
-                result_dict["finished_at"] = time.monotonic()
+        # Wait for KV cache to fill up and retraction to trigger
+        time.sleep(3)
 
-            def _send_high_priority():
-                resp = requests.post(
-                    f"{DEFAULT_URL_FOR_TEST}/generate",
-                    json={
-                        "text": f"high: {self._LONG_PROMPT}",
-                        "sampling_params": {
-                            "temperature": 0,
-                            "max_new_tokens": 8192,
-                            "ignore_eos": True,
-                        },
-                        "priority": 20,
-                    },
-                    timeout=400,
-                )
-                high_result["status"] = resp.status_code
-                high_result["text"] = resp.json().get("text", "")
-                high_result["finished_at"] = time.monotonic()
+        # Send high-priority request - should preempt low-priority requests
+        t_high = threading.Thread(target=_send_high_priority, daemon=True)
+        t_high.start()
 
-            # Start low-priority requests first to fill KV cache
-            t1 = threading.Thread(
-                target=_send_low_priority, args=(1, low1_result), daemon=True
-            )
-            t2 = threading.Thread(
-                target=_send_low_priority, args=(2, low2_result), daemon=True
-            )
-            t1.start()
-            t2.start()
+        # Wait for all to finish
+        t1.join(timeout=400)
+        t2.join(timeout=400)
+        t_high.join(timeout=400)
+        self.assertFalse(t1.is_alive(), "Low-priority-1 request timed out")
+        self.assertFalse(t2.is_alive(), "Low-priority-2 request timed out")
+        self.assertFalse(t_high.is_alive(), "High-priority request timed out")
 
-            # Wait for KV cache to fill up and retraction to trigger
-            time.sleep(3)
+        self.assertEqual(low1_result.get("status"), 200)
+        self.assertEqual(low2_result.get("status"), 200)
+        self.assertEqual(high_result.get("status"), 200)
 
-            # Send high-priority request - should preempt low-priority requests
-            t_high = threading.Thread(target=_send_high_priority, daemon=True)
-            t_high.start()
+        # High-priority should finish before both low-priority requests
+        # despite starting later, proving priority retraction works
+        self.assertLess(
+            high_result["finished_at"],
+            low1_result["finished_at"],
+            f"High-priority should finish before low-priority-1: "
+            f"high={high_result['finished_at']:.1f} "
+            f"low1={low1_result['finished_at']:.1f}",
+        )
+        self.assertLess(
+            high_result["finished_at"],
+            low2_result["finished_at"],
+            f"High-priority should finish before low-priority-2: "
+            f"high={high_result['finished_at']:.1f} "
+            f"low2={low2_result['finished_at']:.1f}",
+        )
 
-            # Wait for all to finish
-            t1.join(timeout=400)
-            t2.join(timeout=400)
-            t_high.join(timeout=400)
-            self.assertFalse(t1.is_alive(), "Low-priority-1 request timed out")
-            self.assertFalse(t2.is_alive(), "Low-priority-2 request timed out")
-            self.assertFalse(t_high.is_alive(), "High-priority request timed out")
+        # Verify retraction actually occurred via server logs
+        self.out_log.seek(0)
+        self.err_log.seek(0)
+        server_logs = (self.out_log.read() + self.err_log.read()).lower()
+        self.assertIn(
+            "retract",
+            server_logs,
+            "No retraction event found in server logs. "
+            "KV cache may not have filled up — retraction was never triggered.",
+        )
 
-            self.assertEqual(low1_result.get("status"), 200)
-            self.assertEqual(low2_result.get("status"), 200)
-            self.assertEqual(high_result.get("status"), 200)
-
-            # High-priority should finish before both low-priority requests
-            # despite starting later, proving priority retraction works
-            self.assertLess(
-                high_result["finished_at"],
-                low1_result["finished_at"],
-                f"High-priority should finish before low-priority-1: "
-                f"high={high_result['finished_at']:.1f} "
-                f"low1={low1_result['finished_at']:.1f}",
-            )
-            self.assertLess(
-                high_result["finished_at"],
-                low2_result["finished_at"],
-                f"High-priority should finish before low-priority-2: "
-                f"high={high_result['finished_at']:.1f} "
-                f"low2={low2_result['finished_at']:.1f}",
+        # Verify all outputs contain meaningful content
+        for label, result in [
+            ("high", high_result),
+            ("low1", low1_result),
+            ("low2", low2_result)
+        ]:
+            text = result.get("text", "")
+            self.assertGreater(
+                len(text),
+                100,
+                f"{label}-priority output too short ({len(text)} chars): {text[:100]}",
             )
 
-            # Verify retraction actually occurred via server logs
-            out_log.seek(0)
-            err_log.seek(0)
-            server_logs = (out_log.read() + err_log.read()).lower()
-            self.assertIn(
-                "retract",
-                server_logs,
-                "No retraction event found in server logs. "
-                "KV cache may not have filled up — retraction was never triggered.",
-            )
+        # Verify server is still alive after retraction
+        self.assertIsNone(
+            self.process.poll(), "Server crashed during retraction test"
+        )
 
-            # Verify all outputs contain meaningful content (not empty, starts reasonably)
-            for label, result in [
-                ("high", high_result), ("low1", low1_result), ("low2", low2_result)
-            ]:
-                text = result.get("text", "")
-                self.assertGreater(
-                    len(text), 100,
-                    f"{label}-priority output too short ({len(text)} chars): {text[:100]}",
-                )
-
-            # Verify server is still alive after retraction
-            self.assertIsNone(process.poll(), "Server crashed during retraction test")
-
-            print(
-                f"  [priority retraction] high={high_result['finished_at']:.2f} "
-                f"low1={low1_result['finished_at']:.2f} "
-                f"low2={low2_result['finished_at']:.2f} "
-                f"→ high_first={high_result['finished_at'] < low1_result['finished_at']}"
-            )
-        finally:
-            kill_process_tree(process.pid)
-            out_log.close()
-            err_log.close()
-            os.remove(self._OUT_LOG)
-            os.remove(self._ERR_LOG)
+        print(
+            f"  [priority retraction] high={high_result['finished_at']:.2f} "
+            f"low1={low1_result['finished_at']:.2f} "
+            f"low2={low2_result['finished_at']:.2f} "
+            f"→ high_first={high_result['finished_at'] < low1_result['finished_at']}"
+        )
 
 
 if __name__ == "__main__":
