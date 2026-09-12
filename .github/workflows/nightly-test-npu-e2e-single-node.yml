@@ -242,6 +242,15 @@ jobs:
           path: /tmp/metrics.json
           retention-days: 7
 
+      - name: Upload ld_debug archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ld-debug-${{ inputs.test_config_name }}
+          path: /root/.cache/tests/output/**/ld_debug.tar.gz
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Backup plog
         if: always()
         shell: bash
