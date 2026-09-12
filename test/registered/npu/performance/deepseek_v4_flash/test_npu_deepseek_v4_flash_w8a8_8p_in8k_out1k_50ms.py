@@ -1,15 +1,25 @@
+import os
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import wait_server_ready
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
-    DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    # DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
+    logger,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=1200, suite="base-c-test-perf-16-npu-a3")
-register_npu_ci(est_time=1200, suite="nightly-perf-16-npu-a3", nightly=True)
+register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
+
+# 外部服务模式开关：设置 SGLANG_EXTERNAL_SERVER_URL（如 http://127.0.0.1:30000）后，
+# 用例不再通过框架 popen_launch_server 拉服务，而是直连该已启动的服务。
+# 用于 CI 中先用 shell 脚本（scripts/ci/npu/launch_dsv4_flash_w8a8_server.sh，
+# 即 .claude/2.sh 的 CI 适配版）拉起服务，隔离"框架拉起方式"引入的问题。
+# 不设置该环境变量时保持原有行为，完全向后兼容。
+EXTERNAL_SERVER_URL_ENV = "SGLANG_EXTERNAL_SERVER_URL"
+DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
@@ -21,11 +31,12 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     # deepep
-    "DEEPEP_HCCL_BUFFSIZE": "1000",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
+    "DEEPEP_HCCL_BUFFSIZE": "2048",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
+    # war barrier
+    "SGLANG_ENABLE_WAR_BARRIER": "1",
+    "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
     # skip gpu branch
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
@@ -37,9 +48,17 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # MTP (EAGLE) related envs
+    # mtp
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    # DSPARK
+    "SGLANG_RAGGED_VERIFY_MODE": "static",
+    "SGLANG_DSPARK_FAST_KERNEL": "0", 
+    # EXPARA
+    # LD_DEBUG 输出由动态链接器直接写 stderr，量大且无法用日志级别过滤；
+    # 通过 LD_DEBUG_OUTPUT 重定向到独立文件（每进程一个 <prefix>.<pid>，父目录需已存在）。
+    "LD_DEBUG": "libs",
+    "LD_DEBUG_OUTPUT": "/tmp/dsv4_ld_debug",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -51,17 +70,16 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--trust-remote-code",
     "--device",
     "npu",
+    "--prefill-max-requests",
+    2,
     "--attention-backend",
     "dsv4",
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.6,
-    "--prefill-max-requests",
-    2,
-    "--disable-radix-cache",
+    0.68,
     "--chunked-prefill-size",
-    -1,
+    131072,
     "--max-running-requests",
     160,
     "--dp-size",
@@ -76,21 +94,25 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--enable-dp-lm-head",
     "--kv-cache-dtype",
     "bfloat16",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
     8,
     10,
-    # MTP (EAGLE) configuration.
+    # MTP (DSPARK) configuration.
     "--speculative-algorithm",
-    "EAGLE",
-    "--speculative-num-steps",
-    2,
-    "--speculative-eagle-topk",
-    1,
+    "DSPARK",
+    "--speculative-draft-model-path",
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
+    "--speculative-draft-model-quantization",
+    "modelslim",
+    "--speculative-draft-attention-backend",
+    "ascend",
     "--speculative-num-draft-tokens",
-    3,
+    6,
+    "--speculative-dspark-block-size",
+    5,
 ]
 
 
@@ -99,20 +121,59 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    model = DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH
+    model = DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     dataset_name = "random"
+    dataset_path = "/root/.cache/modelscope/hub/datasets/gsm8k_deepseekv4/cache0_8000/formal_run1_160_8000_cache0.json"
     input_len = 8000
     output_len = 1000
     num_prompts = 160
     max_concurrency = 160
     random_range_ratio = 1
-    warmup_requests = 0
+    warmup_requests = 16
     request_rate = float("inf")
     seed = 1
     tpot = 50
-    output_token_throughput = 1708
+    max_attempts = 3
+    output_token_throughput = 2825
+
+    @classmethod
+    def setUpClass(cls):
+        external_url = os.environ.get(EXTERNAL_SERVER_URL_ENV, "")
+        if not external_url:
+            super().setUpClass()
+            return
+
+        # 外部服务模式：服务已由 CI 中的 shell 脚本拉起，这里只等待就绪并直连，
+        # 跳过框架内置的 popen_launch_server（含其 envs/other_args 注入逻辑）。
+        cls._setup_per_case_output()
+        cls.base_url = external_url
+        wait_server_ready(f"{cls.base_url}/health")
+        # 故意不设置 cls.process：tearDownClass 检测到无 process 便不会 kill
+        # 外部服务，服务的生命周期由 CI 的启动/清理步骤统一管理。
+
+    @classmethod
+    def tearDownClass(cls):
+        # 在框架 kill 进程树之前，把 LD_DEBUG 重定向出的 so 加载日志
+        # 收集进用例产物目录（随 plog/metrics 一起保留），供事后分析。
+        # 文件为每进程一个 <prefix>.<pid>，打包压缩避免产物过大。
+        try:
+            import glob
+            import tarfile
+
+            ld_files = glob.glob("/tmp/dsv4_ld_debug.*")
+            if ld_files:
+                dst = os.path.join(cls.metrics_data_file, "ld_debug.tar.gz")
+                with tarfile.open(dst, "w:gz") as tar:
+                    for f in ld_files:
+                        tar.add(f, arcname=os.path.basename(f))
+                logger.info("Backed up %d LD_DEBUG files to %s", len(ld_files), dst)
+                for f in ld_files:
+                    os.remove(f)
+        except Exception as e:
+            logger.warning("Failed to backup LD_DEBUG output: %s", e)
+        super().tearDownClass()
 
     def test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms(self):
         """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in8k out1k."""
