@@ -9,7 +9,7 @@ Adapted for Ascend NPU backend:
     float16 while the main model hidden state is bfloat16, a combination
     not in the supported list).
   - Adds `--attention-backend ascend`, `--disable-cuda-graph`,
-    `--disable-piecewise-cuda-graph` to all server launches.
+    `--cuda-graph-backend-decode disabled` to all server launches.
   - Sets `PYTORCH_NPU_ALLOC_CONF=expandable_segments:True` and a longer
     `HCCL_EXEC_TIMEOUT` for stability under multi-turn streaming workloads.
   - Adapts `--page-size` to NPU-friendly values (128/4 instead of 256),
@@ -90,7 +90,8 @@ _NPU_COMMON_ARGS = [
     "--attention-backend",
     "ascend",
     "--disable-cuda-graph",
-    "--disable-piecewise-cuda-graph",
+    "--cuda-graph-backend-decode",
+    "disabled",
     "--enable-streaming-session",
     "--mem-fraction-static",
     "0.7",
