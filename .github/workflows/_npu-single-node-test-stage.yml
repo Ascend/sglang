@@ -58,6 +58,10 @@ on:
         description: 'GitHub token for API calls'
         type: string
         default: ${{ github.token }}
+      coverage_run_id:
+        description: 'Unique identifier for coverage data grouping. Pass caller run_id-run_attempt to enable coverage.'
+        type: string
+        default: ''
 
 env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
@@ -204,6 +208,65 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           curl -o /tmp/test.jsonl -L https://gh-proxy.test.osinfra.cn/https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl
 
+      - name: Install coverage
+        if: ${{ inputs.coverage_run_id != '' }}
+        shell: bash
+        run: |
+          python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+          SITE_PKG=$(python -c "import site; print(site.getsitepackages()[0])")
+          # cov_periodic: starts subprocess coverage (via COVERAGE_PROCESS_START)
+          # and a periodic-save thread, so measurements survive SIGKILL at test
+          # teardown (kill_process_tree never runs atexit). Interval is
+          # configurable via COVERAGE_SAVE_INTERVAL (default: 5 seconds).
+          cat > $SITE_PKG/cov_periodic.py <<'EOF'
+          import os
+          import threading
+
+
+          def _cov_start():
+              try:
+                  import coverage
+
+                  coverage.process_startup()
+              except Exception:
+                  pass
+
+              try:
+                  interval = float(os.environ.get("COVERAGE_SAVE_INTERVAL", "5"))
+              except (TypeError, ValueError):
+                  interval = 5.0
+              if interval <= 0:
+                  return
+
+              def _save_loop():
+                  import time
+
+                  while True:
+                      time.sleep(interval)
+                      try:
+                          import coverage
+
+                          cov = coverage.Coverage.current()
+                          if cov is not None:
+                              cov.save()
+                      except Exception:
+                          pass
+
+              try:
+                  threading.Thread(
+                      target=_save_loop, name="cov-periodic-save", daemon=True
+                  ).start()
+              except Exception:
+                  pass
+
+
+          _cov_start()
+          EOF
+          echo "import numpy; import torch; import torchvision; import triton; import requests; import cov_periodic" > $SITE_PKG/coverage.pth
+          rm -f $SITE_PKG/a1_coverage.pth
+          mkdir -p /tmp/coverage_data
+          cp $GITHUB_WORKSPACE/.coveragerc /tmp/coverage_data/.coveragerc
+
       - name: Run test
         timeout-minutes: 300
         env:
@@ -212,6 +275,9 @@ jobs:
           SGLANG_IS_IN_CI: true
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
+          COVERAGE_FILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coverage' || '' }}
+          COVERAGE_RCFILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
+          COVERAGE_PROCESS_START: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
         shell: bash
         run: |
           # Fail fast on any command error, undefined variable, or pipe failure.
@@ -401,7 +467,10 @@ jobs:
           export test_status tc_name
           echo "## ${tc_name}  ${status_icon} ${test_status}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null || echo 0)
+          # grep -c prints "0" and exits 1 on no match; "|| echo 0" would then
+          # produce a multi-line "0\n0" and break the integer test below.
+          metric_count=$(grep -c '\[METRIC\]' /tmp/test_output.log 2>/dev/null || true)
+          metric_count=${metric_count:-0}
           if [ "${metric_count}" -gt 0 ]; then
             echo "| Metric | Value | Pass |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|------|" >> $GITHUB_STEP_SUMMARY
@@ -416,3 +485,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           exit ${test_exit_code}
+
+      - name: Upload coverage data
+        if: ${{ always() && inputs.coverage_run_id != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.coverage_run_id }}-${{ inputs.test_suite }}-p${{ matrix.partition }}
+          path: /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          retention-days: 7

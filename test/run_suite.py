@@ -253,6 +253,11 @@ def filter_tests(
     enabled_tests = [t for t in ci_tests if t.disabled is None]
     skipped_tests = [t for t in ci_tests if t.disabled is not None]
 
+    # TEMP SMOKE TEST: keep only 1 test per suite to verify the CI pipeline
+    # (coverage upload, metrics collection, artifact merge) quickly.
+    # Revert this commit after verification.
+    enabled_tests = enabled_tests[:1]
+
     return enabled_tests, skipped_tests
 
 
@@ -336,8 +341,10 @@ def run_a_suite(args):
             os.path.join(script_dir, "registered", "**", "*.py"), recursive=True
         )
         # conftest.py / __init__.py are pytest+package structure, never
-        # registered tests, and must not be executed as one.
-        if os.path.basename(f) not in ("conftest.py", "__init__.py")
+        # registered tests, and must not be executed as one. utils.py files
+        # are helper modules imported by registered tests (e.g. cpu tests),
+        # they contain no CI registries and must be skipped too.
+        if os.path.basename(f) not in ("conftest.py", "__init__.py", "utils.py")
     ]
 
     # Strict: all discovered files must have proper registration

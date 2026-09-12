@@ -1,11 +1,11 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - testcases-260813
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -59,13 +59,13 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a2 }}" ]; then
-            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-910b" >> $GITHUB_OUTPUT
+            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-910b-20260904" >> $GITHUB_OUTPUT
           else
             echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260904" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -79,11 +79,13 @@ jobs:
       ref:  ${{ needs.set-image-config.outputs.ref }}
       job_filter: ${{ needs.set-image-config.outputs.job_filter }}
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-4-npu-a2:
     name: full-4-npu-a2
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -94,10 +96,14 @@ jobs:
       skip_pr_test_health_check: 'true'
       image: ${{ needs.set-image-config.outputs.image_a2 }}
       device_type_for_deps: '910b'
+      # Perf suites run WITHOUT coverage: instrumentation distorts perf metrics
+      # and slows server startup (A/B comparison: runs 34210201362 vs 34234219033).
+      coverage_run_id: ''
 
   full-1-npu-a3:
     name: full-1-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -109,6 +115,7 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-2-npu-a3:
@@ -125,11 +132,13 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-4-npu-a3:
     name: full-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -141,11 +150,13 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-8-npu-a3:
     name: full-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -157,6 +168,7 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-16-npu-a3:
@@ -173,6 +185,7 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-acc-2-npu-a3:
@@ -186,14 +199,16 @@ jobs:
       test_suite: full-acc-2-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      install_sglang_deps: true
+      install_sglang_deps: false
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-acc-4-npu-a3:
     name: full-acc-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -202,9 +217,10 @@ jobs:
       test_suite: full-acc-4-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      install_sglang_deps: true
+      install_sglang_deps: false
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-acc-16-npu-a3:
@@ -218,14 +234,16 @@ jobs:
       test_suite: full-acc-16-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      install_sglang_deps: true
+      install_sglang_deps: false
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
     secrets: inherit
 
   full-perf-2-npu-a3:
     name: full-perf-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP: disabled for fast coverage validation; re-enable afterwards.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -237,11 +255,13 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ''
     secrets: inherit
 
   full-perf-4-npu-a3:
     name: full-perf-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -253,11 +273,13 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ''
     secrets: inherit
 
   full-perf-8-npu-a3:
     name: full-perf-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP SMOKE: disabled; only full-2/full-16 + one mix multi-node case run.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -269,11 +291,13 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ''
     secrets: inherit
 
   full-perf-16-npu-a3:
     name: full-perf-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP: disabled for fast coverage validation; re-enable afterwards.
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -285,12 +309,14 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ''
     secrets: inherit
 
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
+    # TEMP SMOKE: disabled; only the mix glm5_1 multi-node case runs.
+    if: false
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -304,63 +330,64 @@ jobs:
             test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
-            prefill_size: 4
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms
-            prefill_size: 3
-            decode_size: 1
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
+          # TEMP SMOKE TEST: other cases commented out to run only 1 case per job.
+          # - name: glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
+          #   prefill_size: 4
+          #   decode_size: 2
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          # - name: glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms
+          #   prefill_size: 3
+          #   decode_size: 1
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          # - name: glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms
+          #   prefill_size: 2
+          #   decode_size: 2
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          # - name: glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms
+          #   prefill_size: 2
+          #   decode_size: 2
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
           # glm5.1 performance tests
-          - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
+          # - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
+          #   prefill_size: 2
+          #   decode_size: 2
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          # - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
+          #   prefill_size: 2
+          #   decode_size: 2
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          # - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
+          #   prefill_size: 2
+          #   decode_size: 2
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
+          # - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
+          #   prefill_size: 2
+          #   decode_size: 2
+          #   router_size: 1
+          #   test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
+          #   test_type: 'perf'
+          #   prefill_decode_deployment: 'separation'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-amd64-cpu-8
@@ -374,21 +401,23 @@ jobs:
       install_sglang_from_source: false
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
+      coverage_run_id: ''
 
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    # TEMP: disabled for fast coverage validation; re-enable afterwards.
+    if: false
     needs: [set-image-config]
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
         test_config:
-          # kimi_k2_6 performance tests
-          - name: kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25
-            node_size: 2
-            test_case: test/registered/npu/accuracy/kimi_k2_6/test_npu_kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25.py
-            test_type: 'accuracy'
+          # TEMP SMOKE: kimi case commented out, keep only 1 multi-node case.
+          # - name: kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25
+          #   node_size: 2
+          #   test_case: test/registered/npu/accuracy/kimi_k2_6/test_npu_kimi_k2_6_w4a8_16p_in64k_out1k_100ms_aime25.py
+          #   test_type: 'accuracy'
           # glm5.1 mix tests
           - name: glm5_1_w4a8_16p_in3k5_out1k5_50ms
             node_size: 2
@@ -405,6 +434,7 @@ jobs:
       install_sglang_from_source: false
       prefill_decode_deployment: 'mix'
       transformers_version: ''
+      coverage_run_id: ''
 
   check-all-jobs:
     if: github.repository == 'sgl-project/sglang' && always()
@@ -440,3 +470,89 @@ jobs:
             exit 1
           fi
           echo "All nightly test jobs passed"
+
+  coverage-report:
+    # Must wait for ALL coverage-producing jobs (same list as check-all-jobs,
+    # plus set-image-config for image/ref), otherwise artifacts from jobs that
+    # are still running are missed by download-artifact.
+    needs:
+      [
+        set-image-config,
+        nighly-test-npu,
+        full-4-npu-a2,
+        full-1-npu-a3,
+        full-2-npu-a3,
+        full-4-npu-a3,
+        full-8-npu-a3,
+        full-16-npu-a3,
+        full-acc-2-npu-a3,
+        full-acc-4-npu-a3,
+        full-acc-16-npu-a3,
+        full-perf-2-npu-a3,
+        full-perf-4-npu-a3,
+        full-perf-8-npu-a3,
+        full-perf-16-npu-a3,
+        full-poc-multi-node-tests,
+        full-poc-multi-node-mix-tests,
+      ]
+    if: always()
+    runs-on: linux-aarch64-a3-2
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+
+      - name: Mark repository safe
+        run: |
+          git config --system --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: /tmp/coverage_data
+          merge-multiple: true
+
+      - name: Upload all raw coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-all-data-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/coverage_data/.coverage*
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Combine and generate report
+        run: |
+          DATA_DIR=/tmp/coverage_data
+          echo "=== Coverage data files ==="
+          ls -la "$DATA_DIR"/.coverage* 2>/dev/null || echo "No .coverage files found"
+          if ls "$DATA_DIR"/.coverage* 1>/dev/null 2>&1; then
+            python -c "import coverage" 2>/dev/null || pip install coverage --retries 3 || pip install coverage -i https://pypi.tuna.tsinghua.edu.cn/simple/
+            coverage combine "$DATA_DIR"
+            # 诊断：combine 后生成的合并数据文件（存在但为 0 字节 = 无有效测量数据）。
+            ls -la ./.coverage 2>/dev/null || echo "combine produced no .coverage file"
+            coverage report -m
+            coverage html
+          else
+            echo "No coverage data found, skipping report generation."
+            mkdir -p htmlcov
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ github.run_id }}-${{ github.run_attempt }}
+          # Include the combined .coverage data file (hidden, so
+          # include-hidden-files is required) alongside the HTML report.
+          path: |
+            htmlcov/
+            .coverage
+          include-hidden-files: true
+          retention-days: 30
