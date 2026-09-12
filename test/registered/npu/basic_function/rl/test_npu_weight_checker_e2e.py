@@ -5,6 +5,7 @@ WeightChecker chain on a real Ascend NPU engine. Unit tests in
 test/registered/unit/utils/test_weight_checker.py cover the in-module
 logic; this file is the thin integration cover plus interaction with
 update_weights_from_tensor."""
+
 import os
 import tempfile
 import unittest

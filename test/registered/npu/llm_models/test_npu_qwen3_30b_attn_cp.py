@@ -90,6 +90,5 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
             self.assertIn(f"MOE_DP{i}", content)
 
 
-
 if __name__ == "__main__":
     unittest.main()
