@@ -103,7 +103,7 @@ jobs:
     secrets: inherit
 
   base-b-test-1-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
+    needs: [check-changes, pr-gate, set-image-config, base-a-test-1-npu-a2]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -112,10 +112,11 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '60'
       timeout_per_file: '3600'
+      upload_test_logs: true
     secrets: inherit
 
   base-b-test-2-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
+    needs: [check-changes, pr-gate, set-image-config, base-a-test-1-npu-a2]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -124,10 +125,11 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '60'
       timeout_per_file: '3600'
+      upload_test_logs: true
     secrets: inherit
 
   base-b-test-4-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
+    needs: [check-changes, pr-gate, set-image-config, base-a-test-1-npu-a2]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -137,10 +139,11 @@ jobs:
       run_timeout_minutes: '120'
       timeout_per_file: '3600'
       partitions: '{"size":2,"arr":[0, 1]}'
+      upload_test_logs: true
     secrets: inherit
 
   base-b-test-8-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
+    needs: [check-changes, pr-gate, set-image-config, base-a-test-1-npu-a2]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -149,10 +152,11 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '60'
       timeout_per_file: '3600'
+      upload_test_logs: true
     secrets: inherit
 
   base-b-test-16-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
+    needs: [check-changes, pr-gate, set-image-config, base-a-test-1-npu-a2]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -161,12 +165,17 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '120'
       timeout_per_file: '3600'
+      upload_test_logs: true
     secrets: inherit
 
   multimodal-gen-test-1-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
+    needs: [check-changes, pr-gate, set-image-config, base-a-test-1-npu-a2]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.multimodal_gen == 'true' }}
     runs-on: linux-aarch64-a3-800t-2
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1]
     container:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
     steps:
@@ -194,7 +203,7 @@ jobs:
           bash scripts/ci/npu/npu_ci_install_dependency.sh a3
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          # copy gsm8k dataset
+          # copy gsm8k dataset from cache
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
 
       - name: Run test
@@ -209,21 +218,28 @@ jobs:
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
         run: |
           cd python
-          python3 sglang/multimodal_gen/test/run_suite.py --suite 1-npu
+          python3 sglang/multimodal_gen/test/run_suite.py \
+            --suite 1-npu \
+            --partition-id ${{ matrix.part }} \
+            --total-partitions 2
 
       - name: Upload diffusion failure artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: diffusion-failures-npu-1-${{ github.run_attempt }}
+          name: diffusion-failures-npu-1-part${{ matrix.part }}-${{ github.run_attempt }}
           path: diffusion-failures/
           if-no-files-found: ignore
           retention-days: 7
 
-  multimodal-gen-test-2-npu-a3:
-    needs: [check-changes, pr-gate, set-image-config]
-    if: false  # Temporarily disabled; will be restored once the issue is fixed.
-    runs-on: linux-aarch64-a3-800t-2
+  multimodal-gen-test-4-npu-a3:
+    needs: [check-changes, pr-gate, set-image-config, base-a-test-1-npu-a2]
+    if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.multimodal_gen == 'true' }}
+    runs-on: linux-aarch64-a3-800t-4
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1]
     container:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
     steps:
@@ -266,20 +282,23 @@ jobs:
           SGLANG_DIFFUSION_ARTIFACT_DIR: ${{ github.workspace }}/diffusion-failures
         run: |
           cd python
-          python3 sglang/multimodal_gen/test/run_suite.py --suite 2-npu
+          python3 sglang/multimodal_gen/test/run_suite.py \
+            --suite 2-npu \
+            --partition-id ${{ matrix.part }} \
+            --total-partitions 2
 
       - name: Upload diffusion failure artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: diffusion-failures-npu-2-${{ github.run_attempt }}
+          name: diffusion-failures-npu-2-part${{ matrix.part }}-${{ github.run_attempt }}
           path: diffusion-failures/
           if-no-files-found: ignore
           retention-days: 7
 
   base-c-test-acc-2-npu-a3:
     name: base-c-test-acc-2-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config ]
+    needs: [ check-changes, pr-gate, set-image-config, base-b-test-1-npu-a3, base-b-test-2-npu-a3, base-b-test-4-npu-a3, base-b-test-8-npu-a3, base-b-test-16-npu-a3 ]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -289,36 +308,12 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       install_sglang_deps: true
       device_type_for_deps: 'a3'
-
-  base-c-test-acc-4-npu-a3:
-    name: base-c-test-acc-4-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config ]
-    if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
-    with:
-      runner: linux-aarch64-a3-4-
-      test_type: 'accuracy'
-      test_suite: base-c-test-acc-4-npu-a3
-      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
-      install_sglang_deps: true
-      device_type_for_deps: 'a3'
-
-  base-c-test-acc-8-npu-a3:
-    name: base-c-test-acc-8-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config ]
-    if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
-    with:
-      runner: linux-aarch64-a3-8-
-      test_type: 'accuracy'
-      test_suite: base-c-test-acc-8-npu-a3
-      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
-      install_sglang_deps: true
-      device_type_for_deps: 'a3'
+      partitions: '{"size":2,"arr":[0,1]}'
+      upload_test_logs: true
 
   base-c-test-acc-16-npu-a3:
     name: base-c-test-acc-16-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config ]
+    needs: [ check-changes, pr-gate, set-image-config, base-b-test-1-npu-a3, base-b-test-2-npu-a3, base-b-test-4-npu-a3, base-b-test-8-npu-a3, base-b-test-16-npu-a3 ]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -328,10 +323,11 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       install_sglang_deps: true
       device_type_for_deps: 'a3'
+      upload_test_logs: true
 
   base-c-test-perf-2-npu-a3:
     name: base-c-test-perf-2-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config, base-c-test-acc-2-npu-a3 ]
+    needs: [ check-changes, pr-gate, set-image-config, base-c-test-acc-2-npu-a3, base-c-test-acc-16-npu-a3 ]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -341,36 +337,11 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       install_sglang_deps: true
       device_type_for_deps: 'a3'
-
-  base-c-test-perf-4-npu-a3:
-    name: base-c-test-perf-4-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config, base-c-test-acc-4-npu-a3 ]
-    if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
-    with:
-      runner: linux-aarch64-a3-800t-4
-      test_type: 'perf'
-      test_suite: base-c-test-perf-4-npu-a3
-      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
-      install_sglang_deps: true
-      device_type_for_deps: 'a3'
-
-  base-c-test-perf-8-npu-a3:
-    name: base-c-test-perf-8-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config, base-c-test-acc-8-npu-a3 ]
-    if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
-    with:
-      runner: linux-aarch64-a3-800t-8
-      test_type: 'perf'
-      test_suite: base-c-test-perf-8-npu-a3
-      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
-      install_sglang_deps: true
-      device_type_for_deps: 'a3'
+      upload_test_logs: true
 
   base-c-test-perf-16-npu-a3:
     name: base-c-test-perf-16-npu-a3
-    needs: [ check-changes, pr-gate, set-image-config, base-c-test-acc-16-npu-a3 ]
+    needs: [ check-changes, pr-gate, set-image-config, base-c-test-acc-2-npu-a3, base-c-test-acc-16-npu-a3 ]
     if: ${{ !failure() && !cancelled() && needs.check-changes.outputs.main_package == 'true' }}
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -380,7 +351,130 @@ jobs:
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       install_sglang_deps: true
       device_type_for_deps: 'a3'
+      test_timeout_minutes: '180'
+      upload_test_logs: true
 
+
+  # ==================== Recommend Tests from Coverage ==================== #
+  # Downloads the pre-built coverage baseline (test_case_map.json + covstub)
+  # from OBS and runs test_selector.py to recommend affected test cases for
+  # the current PR. continue-on-error: true so it never blocks the PR gate.
+  recommend-tests-from-coverage:
+    name: Recommend tests from coverage
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    if: github.event_name == 'pull_request'
+    outputs:
+      coverage_paths: ${{ steps.export-paths.outputs.coverage_paths }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout sglang scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Download test case map
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            --retry 3 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "https://sglang-ascend.obs.cn-east-3.myhuaweicloud.com/test_case_map.json" \
+            -o test_case_map.json
+          test -s test_case_map.json
+          echo "Downloaded test_case_map.json"
+          du -h test_case_map.json
+
+      - name: Download coverage package and extract covstub
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            --retry 3 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "https://sglang-ascend.obs.cn-east-3.myhuaweicloud.com/outputs.tar.gz" \
+            -o outputs.tar.gz
+          test -s outputs.tar.gz
+          echo "Downloaded outputs.tar.gz"
+          du -h outputs.tar.gz
+          tar xzf outputs.tar.gz outputs/covstub
+          test -d outputs/covstub
+          echo "Extracted outputs/covstub"
+          find outputs/covstub -maxdepth 2 -type d | head -20 || true
+
+      - name: Recommend tests for current PR
+        run: |
+          set -euo pipefail
+          if ! python3 -c "import regex" >/dev/null 2>&1; then
+            echo "regex not found for $(python3 -V); bootstrapping pip and installing regex"
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python3 get-pip.py --break-system-packages
+            python3 -m pip install --break-system-packages regex
+          fi
+          python3 -c "import regex; print('regex ok:', regex.__file__)"
+          PR_SPEC="${{ github.repository }}#${{ github.event.pull_request.number }}"
+          echo "Selecting tests for PR: ${PR_SPEC}"
+          # test_selector.py resolves relative paths against the script's own dir,
+          # so pass absolute paths for files downloaded to the workspace root.
+          python3 scripts/ci/npu/precise-test/test_selector.py \
+            --github-pr "${PR_SPEC}" \
+            --source-dir "$PWD/outputs/covstub" \
+            --map-file "$PWD/test_case_map.json"
+
+      - name: Export coverage paths output
+        id: export-paths
+        if: always()
+        run: |
+          FILE="scripts/ci/npu/precise-test/recommended_pytest_paths.txt"
+          if [ -f "$FILE" ]; then
+            {
+              echo "coverage_paths<<EOF"
+              cat "$FILE"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "Exported $(wc -l < "$FILE") recommended paths"
+          else
+            echo "coverage_paths=" >> "$GITHUB_OUTPUT"
+            echo "::notice::recommended_pytest_paths.txt not found"
+          fi
+
+  # ==================== Analyze Failure Report ==================== #
+  # Runs after all test jobs and the coverage-based test recommender.
+  # Calls the reusable failure-analysis workflow to collect logs, cross-
+  # reference them with the recommended test paths, and produce a report.
+  # if: always() so it runs even when tests fail (which is the whole point).
+  analyze-failure-report:
+    name: Analyze failure report
+    needs:
+      [
+        base-a-test-1-npu-a2,
+        base-b-test-1-npu-a3,
+        base-b-test-2-npu-a3,
+        base-b-test-4-npu-a3,
+        base-b-test-8-npu-a3,
+        base-b-test-16-npu-a3,
+
+        multimodal-gen-test-1-npu-a3,
+        multimodal-gen-test-4-npu-a3,
+
+        base-c-test-acc-2-npu-a3,
+        base-c-test-acc-16-npu-a3,
+        base-c-test-perf-2-npu-a3,
+        base-c-test-perf-16-npu-a3,
+
+        recommend-tests-from-coverage,
+      ]
+    if: always()
+    uses: ./.github/workflows/_analyze_failure.yaml
+    with:
+      log_artifact_pattern: selected-test-logs-*
+      recommendations_file: recommended_pytest_paths.txt
+      recommendations_content: ${{ needs.recommend-tests-from-coverage.outputs.coverage_paths || '' }}
 
   pr-test-npu-finish:
     needs:
@@ -395,15 +489,11 @@ jobs:
         base-b-test-16-npu-a3,
 
         multimodal-gen-test-1-npu-a3,
-        multimodal-gen-test-2-npu-a3,
+        multimodal-gen-test-4-npu-a3,
 
         base-c-test-acc-2-npu-a3,
-        base-c-test-acc-4-npu-a3,
-        base-c-test-acc-8-npu-a3,
         base-c-test-acc-16-npu-a3,
         base-c-test-perf-2-npu-a3,
-        base-c-test-perf-4-npu-a3,
-        base-c-test-perf-8-npu-a3,
         base-c-test-perf-16-npu-a3,
       ]
     if: always()

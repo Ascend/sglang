@@ -186,7 +186,6 @@ NIGHTLY_SUITES = {
     ],
 }
 
-
 OTHER_SUITES = {
     HWBackend.CPU: [
         "default",
@@ -198,7 +197,6 @@ OTHER_SUITES = {
         "weekly-test-8-gpu-h200",
     ],
 }
-
 
 _SUITE_CHECKED_BACKENDS = {
     HWBackend.CUDA,
