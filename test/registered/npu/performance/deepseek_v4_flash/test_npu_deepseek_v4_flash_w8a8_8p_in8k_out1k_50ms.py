@@ -1,5 +1,7 @@
+import os
 import unittest
 
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import wait_server_ready
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -8,8 +10,15 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=1200, suite="base-c-test-perf-16-npu-a3")
-register_npu_ci(est_time=1200, suite="nightly-perf-16-npu-a3", nightly=True)
+register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
+
+# 外部服务模式开关：设置 SGLANG_EXTERNAL_SERVER_URL（如 http://127.0.0.1:30000）后，
+# 用例不再通过框架 popen_launch_server 拉服务，而是直连该已启动的服务。
+# 用于 CI 中先用 shell 脚本（scripts/ci/npu/launch_dsv4_flash_w8a8_server.sh，
+# 即 .claude/2.sh 的 CI 适配版）拉起服务，隔离"框架拉起方式"引入的问题。
+# 不设置该环境变量时保持原有行为，完全向后兼容。
+EXTERNAL_SERVER_URL_ENV = "SGLANG_EXTERNAL_SERVER_URL"
+DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
@@ -21,11 +30,14 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
     # deepep
-    "DEEPEP_HCCL_BUFFSIZE": "1000",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "DEEPEP_HCCL_BUFFSIZE": "1000",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
+    # war barrier
+    "SGLANG_ENABLE_WAR_BARRIER": "1",
+    "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
     # skip gpu branch
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
@@ -37,9 +49,11 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # MTP (EAGLE) related envs
+    # mtp
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "35",
+    "LD_DEBUG": "libs"
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -51,17 +65,16 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--trust-remote-code",
     "--device",
     "npu",
+    "--prefill-max-requests",
+    2,
     "--attention-backend",
     "dsv4",
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.6,
-    "--prefill-max-requests",
-    2,
-    "--disable-radix-cache",
+    0.68,
     "--chunked-prefill-size",
-    -1,
+    131072,
     "--max-running-requests",
     160,
     "--dp-size",
@@ -76,7 +89,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--enable-dp-lm-head",
     "--kv-cache-dtype",
     "bfloat16",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
@@ -91,6 +104,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     3,
+    "--disable-radix-cache",
 ]
 
 
@@ -103,16 +117,33 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     dataset_name = "random"
+    dataset_path = "/root/.cache/modelscope/hub/datasets/gsm8k_deepseekv4/cache0_8000/formal_run1_160_8000_cache0.json"
     input_len = 8000
     output_len = 1000
     num_prompts = 160
     max_concurrency = 160
     random_range_ratio = 1
-    warmup_requests = 0
+    warmup_requests = 16
     request_rate = float("inf")
     seed = 1
     tpot = 50
-    output_token_throughput = 1708
+    max_attempts = 3
+    output_token_throughput = 2825
+
+    @classmethod
+    def setUpClass(cls):
+        external_url = os.environ.get(EXTERNAL_SERVER_URL_ENV, "")
+        if not external_url:
+            super().setUpClass()
+            return
+
+        # 外部服务模式：服务已由 CI 中的 shell 脚本拉起，这里只等待就绪并直连，
+        # 跳过框架内置的 popen_launch_server（含其 envs/other_args 注入逻辑）。
+        cls._setup_per_case_output()
+        cls.base_url = external_url
+        wait_server_ready(f"{cls.base_url}/health")
+        # 故意不设置 cls.process：tearDownClass 检测到无 process 便不会 kill
+        # 外部服务，服务的生命周期由 CI 的启动/清理步骤统一管理。
 
     def test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms(self):
         """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in8k out1k."""
