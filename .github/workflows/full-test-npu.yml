@@ -417,7 +417,7 @@ jobs:
       matrix:
         test_config:
           - name: dynamic_chunking
-            runner: linux-aarch64-a3-2
+            runner: linux-aarch64-a3-4
             test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_dynamic_chunking.py
 #          - name: swa_full_tokens_ratio
 #            runner: linux-aarch64-a3-16
