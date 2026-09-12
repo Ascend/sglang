@@ -341,9 +341,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             "Expected low-priority request to be the one retracted.",
         )
 
-        #
         # 4. Output content checks
-        #
         for label, result in [
             ("PRI_HIGH", high_result),
             ("PRI_LOW1", low1_result),
