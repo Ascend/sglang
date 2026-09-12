@@ -76,7 +76,7 @@ class TestDynamicChunking(CustomTestCase):
         os.remove(cls._ERR_LOG)
 
     def test_dynamic_chunking_pp_size_two(self):
-        """C1: pp_size=2 + --enable-dynamic-chunking.
+        """C1: pp_size=4 + --enable-dynamic-chunking.
         Dynamic chunking should be enabled and adjust chunk sizes
         based on PP stage profiling. Server starts and inference succeeds.
         """
