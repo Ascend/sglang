@@ -30,7 +30,7 @@ on:
         default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B060'
 
 concurrency:
-  group: full-test-npu-${{ inputs.ref || github.ref }}
+  group: full-test-npu-${{ inputs.ref || github.ref }}-${{ github.sha }}
   cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 jobs:
