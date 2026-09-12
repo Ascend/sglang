@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 import unittest
@@ -36,7 +37,9 @@ class TestRetractionPolicyLength(CustomTestCase):
 
     Assertions:
     - Both requests complete successfully (status=200)
-    - Short-input request (A) finishes before long-input request (B) — policy verified
+    - Short-input request (A) finishes before long-input request (B)
+    - Retraction log messages present in server output
+    - Short-input response contains expected content ("Paris")
     - Server does not crash after retraction
 
     [Test Category] Parameter
@@ -44,6 +47,9 @@ class TestRetractionPolicyLength(CustomTestCase):
     """
 
     model = QWEN3_5_9B_WEIGHTS_PATH
+
+    _OUT_LOG = "./tmp_length_out.txt"
+    _ERR_LOG = "./tmp_length_err.txt"
 
     _LONG_INPUT_PREFIX = (
         "The history of artificial intelligence is a fascinating story. " * 20
@@ -65,15 +71,19 @@ class TestRetractionPolicyLength(CustomTestCase):
 
     def test_length_policy_retraction(self):
         """R1: Length policy retracts the longer-input request via tiebreaker,
-        so the short-input request finishes first."""
+        so the short-input request finishes first.
+        Verifies: retraction log, finish order, output content."""
+        out_log = open(self._OUT_LOG, "w+", encoding="utf-8")
+        err_log = open(self._ERR_LOG, "w+", encoding="utf-8")
+
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=self._BASE_ARGS,
+            return_stdout_stderr=(out_log, err_log),
         )
         try:
-            # Verify server is healthy
             health_resp = requests.get(f"{DEFAULT_URL_FOR_TEST}/health_generate")
             self.assertEqual(health_resp.status_code, 200)
 
@@ -94,7 +104,8 @@ class TestRetractionPolicyLength(CustomTestCase):
                     timeout=400,
                 )
                 result_short["status"] = resp.status_code
-                result_short["finished_at"] = time.time()
+                result_short["text"] = resp.json().get("text", "")
+                result_short["finished_at"] = time.monotonic()
 
             def _send_long_input():
                 resp = requests.post(
@@ -110,26 +121,22 @@ class TestRetractionPolicyLength(CustomTestCase):
                     timeout=400,
                 )
                 result_long["status"] = resp.status_code
-                result_long["finished_at"] = time.time()
+                result_long["finished_at"] = time.monotonic()
 
-            # Start both requests concurrently
             t_short = threading.Thread(target=_send_short_input, daemon=True)
             t_long = threading.Thread(target=_send_long_input, daemon=True)
             t_short.start()
             t_long.start()
 
-            # Wait for both to finish
             t_short.join(timeout=400)
             t_long.join(timeout=400)
             self.assertFalse(t_short.is_alive(), "Short-input request timed out")
             self.assertFalse(t_long.is_alive(), "Long-input request timed out")
 
-            # Both requests should complete successfully after retraction
             self.assertEqual(result_short.get("status"), 200)
             self.assertEqual(result_long.get("status"), 200)
 
-            # Length policy: both have similar output, but long-input request
-            # has smaller key (-input_tokens) → retracted first → finishes later
+            # Length policy tiebreaker: long-input retracted first → finishes later
             self.assertLess(
                 result_short["finished_at"],
                 result_long["finished_at"],
@@ -139,16 +146,38 @@ class TestRetractionPolicyLength(CustomTestCase):
                 f"long_input={result_long['finished_at']:.1f}",
             )
 
-            print(
-                f"  [length retraction] short_input={result_short['finished_at']:.2f} "
-                f"long_input={result_long['finished_at']:.2f} "
-                f"→ short_first={result_short['finished_at'] < result_long['finished_at']}"
+            # Verify retraction actually occurred via server logs
+            out_log.seek(0)
+            err_log.seek(0)
+            server_logs = (out_log.read() + err_log.read()).lower()
+            self.assertIn(
+                "retract",
+                server_logs,
+                "No retraction event found in server logs. "
+                "KV cache may not have filled up — retraction was never triggered.",
+            )
+
+            # Verify short-input output starts correctly
+            self.assertIn(
+                "Paris",
+                result_short["text"],
+                f"Short-input output missing 'Paris'. Got: {result_short['text'][:200]}",
             )
 
             # Verify server is still alive after retraction
             self.assertIsNone(process.poll(), "Server crashed during retraction test")
+
+            print(
+                f"  [length retraction] short={result_short['finished_at']:.2f} "
+                f"long={result_long['finished_at']:.2f} "
+                f"→ short_first={result_short['finished_at'] < result_long['finished_at']}"
+            )
         finally:
             kill_process_tree(process.pid)
+            out_log.close()
+            err_log.close()
+            os.remove(self._OUT_LOG)
+            os.remove(self._ERR_LOG)
 
 
 class TestRetractionPolicyPriority(CustomTestCase):
@@ -162,13 +191,29 @@ class TestRetractionPolicyPriority(CustomTestCase):
     the high-priority request must preempt the running low-priority request
     to be scheduled. The retracted low-priority request is restarted from
     scratch, so the high-priority request finishes first.
-    This proves --retraction-policy=priority is working correctly.
+
+    Note: max-running-requests=1 means only 1 request runs at a time, so the
+    retraction policy has no "choice" to make (only 1 running request). However,
+    the retraction policy is still invoked during preemption to retract the
+    running low-priority request. The key verification is that priority-based
+    preemption works correctly: the high-priority request finishes before both
+    low-priority requests despite arriving later.
+
+    Assertions:
+    - All 3 requests complete successfully (status=200)
+    - High-priority finishes before both low-priority requests
+    - Retraction log messages present in server output
+    - All outputs contain meaningful text content
+    - Server does not crash after retraction
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
     """
 
     model = QWEN3_5_9B_WEIGHTS_PATH
+
+    _OUT_LOG = "./tmp_priority_out.txt"
+    _ERR_LOG = "./tmp_priority_err.txt"
 
     _BASE_ARGS = [
         "--attention-backend",
@@ -200,17 +245,17 @@ class TestRetractionPolicyPriority(CustomTestCase):
         """R2: Low-priority requests start first to fill KV cache, high-priority
         preempts and finishes first despite arriving later.
 
-        Low-priority requests run first to fill the KV cache. The high-priority
-        request (priority=20) arrives later and preempts a running low-priority
-        request via priority scheduling. The retracted low-priority request is
-        restarted from scratch, so the high-priority request finishes first.
-        This proves --retraction-policy=priority is working correctly.
-        """
+        Verifies: retraction log, finish order (high < low1, high < low2),
+        output content on all 3 requests."""
+        out_log = open(self._OUT_LOG, "w+", encoding="utf-8")
+        err_log = open(self._ERR_LOG, "w+", encoding="utf-8")
+
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=self._BASE_ARGS,
+            return_stdout_stderr=(out_log, err_log),
         )
         try:
             low1_result = {}
@@ -232,7 +277,8 @@ class TestRetractionPolicyPriority(CustomTestCase):
                     timeout=400,
                 )
                 result_dict["status"] = resp.status_code
-                result_dict["finished_at"] = time.time()
+                result_dict["text"] = resp.json().get("text", "")
+                result_dict["finished_at"] = time.monotonic()
 
             def _send_high_priority():
                 resp = requests.post(
@@ -249,7 +295,8 @@ class TestRetractionPolicyPriority(CustomTestCase):
                     timeout=400,
                 )
                 high_result["status"] = resp.status_code
-                high_result["finished_at"] = time.time()
+                high_result["text"] = resp.json().get("text", "")
+                high_result["finished_at"] = time.monotonic()
 
             # Start low-priority requests first to fill KV cache
             t1 = threading.Thread(
@@ -297,6 +344,30 @@ class TestRetractionPolicyPriority(CustomTestCase):
                 f"low2={low2_result['finished_at']:.1f}",
             )
 
+            # Verify retraction actually occurred via server logs
+            out_log.seek(0)
+            err_log.seek(0)
+            server_logs = (out_log.read() + err_log.read()).lower()
+            self.assertIn(
+                "retract",
+                server_logs,
+                "No retraction event found in server logs. "
+                "KV cache may not have filled up — retraction was never triggered.",
+            )
+
+            # Verify all outputs contain meaningful content (not empty, starts reasonably)
+            for label, result in [
+                ("high", high_result), ("low1", low1_result), ("low2", low2_result)
+            ]:
+                text = result.get("text", "")
+                self.assertGreater(
+                    len(text), 100,
+                    f"{label}-priority output too short ({len(text)} chars): {text[:100]}",
+                )
+
+            # Verify server is still alive after retraction
+            self.assertIsNone(process.poll(), "Server crashed during retraction test")
+
             print(
                 f"  [priority retraction] high={high_result['finished_at']:.2f} "
                 f"low1={low1_result['finished_at']:.2f} "
@@ -305,6 +376,10 @@ class TestRetractionPolicyPriority(CustomTestCase):
             )
         finally:
             kill_process_tree(process.pid)
+            out_log.close()
+            err_log.close()
+            os.remove(self._OUT_LOG)
+            os.remove(self._ERR_LOG)
 
 
 if __name__ == "__main__":
