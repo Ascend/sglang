@@ -29,7 +29,7 @@ class TestRetractionPolicyLength(CustomTestCase):
 
     Test strategy: Launch server with small KV cache (mem-fraction-static=0.30)
     and max-running-requests=2. Start two requests concurrently, both with the
-    same output length (8192 tokens, ignore_eos) but different input lengths:
+    same output length (4096 tokens, ignore_eos) but different input lengths:
       - Request A: short input (5 tokens)  → larger key → not retracted
       - Request B: long input (100 tokens)  → smaller key → retracted
     Both requests are labeled [LEN_SHORT] / [LEN_LONG] in their prompt text so
@@ -108,7 +108,7 @@ class TestRetractionPolicyLength(CustomTestCase):
                     "text": "[LEN_SHORT] The capital of France is",
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 8192,
+                        "max_new_tokens": 4096,
                         "ignore_eos": True,
                     },
                 },
@@ -127,7 +127,7 @@ class TestRetractionPolicyLength(CustomTestCase):
                     ),
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 8192,
+                        "max_new_tokens": 4096,
                         "ignore_eos": True,
                     },
                 },
@@ -155,9 +155,7 @@ class TestRetractionPolicyLength(CustomTestCase):
 
         # 1. Confirm retraction actually occurred
         retract_matches = list(
-            re.finditer(
-                r"KV cache pool is full\. Retract requests\.", server_logs
-            )
+            re.finditer(r"KV cache pool is full\. Retract requests\.", server_logs)
         )
         self.assertGreater(
             len(retract_matches),
@@ -210,9 +208,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         )
 
         # 4. Verify server is still alive after retraction
-        self.assertIsNone(
-            self.process.poll(), "Server crashed during retraction test"
-        )
+        self.assertIsNone(self.process.poll(), "Server crashed during retraction test")
 
 
 class TestRetractionPolicyPriority(CustomTestCase):
@@ -221,7 +217,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
 
     Test strategy: Launch server with small KV cache (mem-fraction-static=0.30)
     and max-running-requests=1 to force preemption. Start 2 low-priority
-    long-output requests (8192 tokens, priority=0, labeled [PRI_LOW1]/[PRI_LOW2])
+    long-output requests (4096 tokens, priority=0, labeled [PRI_LOW1]/[PRI_LOW2])
     to fill the KV cache, then send a high-priority request (priority=20, labeled
     [PRI_HIGH]). With max-running-requests=1, the high-priority request must
     preempt the running low-priority request to be scheduled.
@@ -306,7 +302,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
                     "text": f"[{label}] {self._LONG_PROMPT}",
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 8192,
+                        "max_new_tokens": 4096,
                         "ignore_eos": True,
                     },
                     "priority": 0,
@@ -323,7 +319,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
                     "text": f"[PRI_HIGH] {self._LONG_PROMPT}",
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 8192,
+                        "max_new_tokens": 4096,
                         "ignore_eos": True,
                     },
                     "priority": 20,
@@ -369,9 +365,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
 
         # 1. Confirm retraction actually occurred
         retract_matches = list(
-            re.finditer(
-                r"KV cache pool is full\. Retract requests\.", server_logs
-            )
+            re.finditer(r"KV cache pool is full\. Retract requests\.", server_logs)
         )
         self.assertGreater(
             len(retract_matches),
@@ -420,9 +414,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             )
 
         # 4. Verify server is still alive after retraction
-        self.assertIsNone(
-            self.process.poll(), "Server crashed during retraction test"
-        )
+        self.assertIsNone(self.process.poll(), "Server crashed during retraction test")
 
 
 if __name__ == "__main__":
