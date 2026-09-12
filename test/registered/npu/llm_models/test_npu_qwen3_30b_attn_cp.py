@@ -1,10 +1,17 @@
 import os
+import tempfile
 import unittest
 
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
 from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import CustomTestCase
+from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
+    popen_launch_server,
+)
 
 register_npu_ci(est_time=500, suite="full-4-npu-a3", nightly=True)
 
@@ -49,6 +56,13 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
     gsm8k_parallel = 32
     num_questions = 100
     gsm8k_num_shots = 5
+
+    # Setting the --moe-dp-size parameter, MOE_DP log will output
+    def test_moe_dp(self):
+        self.err_file.seek(0)
+        content = self.err_file.read()
+        for i in range(2):
+            self.assertIn(f"MOE_DP{i}", content)
 
 
 if __name__ == "__main__":
