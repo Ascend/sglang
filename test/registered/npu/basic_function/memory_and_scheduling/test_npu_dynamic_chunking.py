@@ -1,12 +1,3 @@
-"""Tests for --enable-dynamic-chunking parameter.
-
-The parameter enables dynamic adjustment of chunked prefill size based on
-PP stage profiling, reducing pipeline bubbles. Only effective when pp_size > 1.
-
-One test scenarios:
-- C1: pp_size > 1, dynamic chunking adjusts chunk size (core scenario)
-"""
-
 import os
 import unittest
 
