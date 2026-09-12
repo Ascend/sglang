@@ -5,8 +5,9 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import wait_server_ready
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
-    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
+    # DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
+    logger,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -54,7 +55,10 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_RAGGED_VERIFY_MODE": "static",
     "SGLANG_DSPARK_FAST_KERNEL": "0", 
     # EXPARA
+    # LD_DEBUG 输出由动态链接器直接写 stderr，量大且无法用日志级别过滤；
+    # 通过 LD_DEBUG_OUTPUT 重定向到独立文件（每进程一个 <prefix>.<pid>，父目录需已存在）。
     "LD_DEBUG": "libs",
+    "LD_DEBUG_OUTPUT": "/tmp/dsv4_ld_debug",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -148,6 +152,28 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
         wait_server_ready(f"{cls.base_url}/health")
         # 故意不设置 cls.process：tearDownClass 检测到无 process 便不会 kill
         # 外部服务，服务的生命周期由 CI 的启动/清理步骤统一管理。
+
+    @classmethod
+    def tearDownClass(cls):
+        # 在框架 kill 进程树之前，把 LD_DEBUG 重定向出的 so 加载日志
+        # 收集进用例产物目录（随 plog/metrics 一起保留），供事后分析。
+        # 文件为每进程一个 <prefix>.<pid>，打包压缩避免产物过大。
+        try:
+            import glob
+            import tarfile
+
+            ld_files = glob.glob("/tmp/dsv4_ld_debug.*")
+            if ld_files:
+                dst = os.path.join(cls.metrics_data_file, "ld_debug.tar.gz")
+                with tarfile.open(dst, "w:gz") as tar:
+                    for f in ld_files:
+                        tar.add(f, arcname=os.path.basename(f))
+                logger.info("Backed up %d LD_DEBUG files to %s", len(ld_files), dst)
+                for f in ld_files:
+                    os.remove(f)
+        except Exception as e:
+            logger.warning("Failed to backup LD_DEBUG output: %s", e)
+        super().tearDownClass()
 
     def test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms(self):
         """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in8k out1k."""
