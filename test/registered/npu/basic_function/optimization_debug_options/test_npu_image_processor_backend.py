@@ -124,6 +124,7 @@ class TestImageProcessorBackendE2E(CustomTestCase):
             max_tokens=64,
         )
         output = response.choices[0].message.content
+        print(f"  [image-processor-backend={backend}] output: {output!r}")
         self.assertGreater(
             len(output), 5, f"Output too short with {backend=}: {output!r}"
         )
