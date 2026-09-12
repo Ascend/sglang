@@ -43,6 +43,8 @@ class TestDynamicChunking(CustomTestCase):
         "--disable-cuda-graph",
         "--chunked-prefill-size",
         "1024",
+        "--mem-fraction-static",
+        "0.90",
     ]
 
     @classmethod
