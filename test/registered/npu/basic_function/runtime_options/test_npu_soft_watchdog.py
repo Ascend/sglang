@@ -123,7 +123,7 @@ class BaseTestDetokenizerWatchdog:
         if self.ci_mode is True and self.set_soft_watchdog is False:
             self.assertTrue(self.launch_success, "Server launch failed")
             self.assertIn(
-                "'soft_watchdog_timeout':300",
+                "'soft_watchdog_timeout': 300",
                 combined_log,
                 "Scenario 1: CI default soft watchdog (300s) was not applied",
             )

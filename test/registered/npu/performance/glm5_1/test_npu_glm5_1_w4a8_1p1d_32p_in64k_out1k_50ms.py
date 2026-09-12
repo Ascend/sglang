@@ -85,7 +85,7 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     "unquant",
     "--enable-prefill-cp",
     "--cp-strategy",
-    "in-seq-split",
+    "zigzag",
     "--attn-cp-size",
     4,
     "--enable-dp-lm-head",

@@ -3,7 +3,7 @@ import unittest
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
-    DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -37,9 +37,9 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # MTP (EAGLE) related envs
-    "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    # DSPARK
+    "SGLANG_RAGGED_VERIFY_MODE": "static",
+    "SGLANG_DSPARK_FAST_KERNEL": "0",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -82,15 +82,19 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     4,
     8,
     10,
-    # MTP (EAGLE) configuration.
+    # DSPARK configuration.
     "--speculative-algorithm",
-    "EAGLE",
-    "--speculative-num-steps",
-    2,
-    "--speculative-eagle-topk",
-    1,
+    "DSPARK",
+    "--speculative-draft-model-path",
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
+    "--speculative-draft-model-quantization",
+    "modelslim",
+    "--speculative-draft-attention-backend",
+    "ascend",
     "--speculative-num-draft-tokens",
-    3,
+    6,
+    "--speculative-dspark-block-size",
+    5,
 ]
 
 
@@ -99,7 +103,7 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
-    model = DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH
+    model = DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_8P_ENVS
     dataset_name = "random"
