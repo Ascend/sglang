@@ -66,7 +66,7 @@ class TestImageProcessorBackendE2E(CustomTestCase):
         "ascend_attn",
         "--disable-cuda-graph",
         "--mem-fraction-static",
-        "0.80",
+        "0.81",
         "--tp-size",
         "1",
     ]

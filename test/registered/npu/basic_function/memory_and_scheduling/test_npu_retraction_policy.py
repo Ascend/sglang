@@ -159,11 +159,11 @@ class TestRetractionPolicyLength(CustomTestCase):
         # Verify retraction actually occurred via server logs
         self.out_log.seek(0)
         self.err_log.seek(0)
-        server_logs = (self.out_log.read() + self.err_log.read()).lower()
+        server_logs = self.out_log.read() + self.err_log.read()
         self.assertIn(
-            "retract",
+            "Retract requests.",
             server_logs,
-            "No retraction event found in server logs. "
+            "No 'KV cache pool is full. Retract requests.' found in server logs. "
             "KV cache may not have filled up — retraction was never triggered.",
         )
 
@@ -175,9 +175,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         )
 
         # Verify server is still alive after retraction
-        self.assertIsNone(
-            self.process.poll(), "Server crashed during retraction test"
-        )
+        self.assertIsNone(self.process.poll(), "Server crashed during retraction test")
 
         print(
             f"  [length retraction] short={result_short['finished_at']:.2f} "
@@ -363,11 +361,11 @@ class TestRetractionPolicyPriority(CustomTestCase):
         # Verify retraction actually occurred via server logs
         self.out_log.seek(0)
         self.err_log.seek(0)
-        server_logs = (self.out_log.read() + self.err_log.read()).lower()
+        server_logs = self.out_log.read() + self.err_log.read()
         self.assertIn(
-            "retract",
+            "Retract requests.",
             server_logs,
-            "No retraction event found in server logs. "
+            "No 'KV cache pool is full. Retract requests.' found in server logs. "
             "KV cache may not have filled up — retraction was never triggered.",
         )
 
@@ -375,7 +373,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         for label, result in [
             ("high", high_result),
             ("low1", low1_result),
-            ("low2", low2_result)
+            ("low2", low2_result),
         ]:
             text = result.get("text", "")
             self.assertGreater(
@@ -385,9 +383,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             )
 
         # Verify server is still alive after retraction
-        self.assertIsNone(
-            self.process.poll(), "Server crashed during retraction test"
-        )
+        self.assertIsNone(self.process.poll(), "Server crashed during retraction test")
 
         print(
             f"  [priority retraction] high={high_result['finished_at']:.2f} "
