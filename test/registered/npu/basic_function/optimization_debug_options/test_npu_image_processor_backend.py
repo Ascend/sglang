@@ -133,15 +133,15 @@ class TestImageProcessorBackendE2E(CustomTestCase):
         )
 
     def test_e2e_auto(self):
-        """ Launch VLM server with --image-processor-backend auto."""
+        """Launch VLM server with --image-processor-backend auto."""
         self._verify_response("auto")
 
     def test_e2e_torchvision(self):
-        """ Launch VLM server with --image-processor-backend torchvision."""
+        """Launch VLM server with --image-processor-backend torchvision."""
         self._verify_response("torchvision")
 
     def test_e2e_pil(self):
-        """ Launch VLM server with --image-processor-backend pil."""
+        """Launch VLM server with --image-processor-backend pil."""
         self._verify_response("pil")
 
 
