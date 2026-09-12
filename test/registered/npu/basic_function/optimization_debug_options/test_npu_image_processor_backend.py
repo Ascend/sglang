@@ -71,72 +71,79 @@ class TestImageProcessorBackendE2E(CustomTestCase):
         "1",
     ]
 
+    _BACKEND_MAP = {
+        "test_e2e_auto": "auto",
+        "test_e2e_torchvision": "torchvision",
+        "test_e2e_pil": "pil",
+    }
+
     @classmethod
     def setUpClass(cls):
-        """Pre-download a test image for all test cases."""
-        # Use a minimal solid-color image (1x1 red pixel PNG) to avoid network issues
         cls._image_b64 = _generate_test_image_b64()
 
-    def _launch_and_verify(self, backend):
-        """Launch a VLM server with the given image-processor-backend
-        and verify it starts successfully and can handle multimodal input.
-        """
+    def setUp(self):
+        backend = self._BACKEND_MAP[self._testMethodName]
         other_args = self._BASE_ARGS + ["--image-processor-backend", backend]
-        process = popen_launch_server(
+        self._process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
             timeout=self.timeout,
             other_args=other_args,
         )
-        try:
-            # Server started successfully -> multimodal processor initialized
-            self.assertIsNone(
-                process.poll(),
-                f"Server exited prematurely with {backend=}",
-            )
+        self.assertIsNone(
+            self._process.poll(),
+            f"Server exited prematurely with {backend=}",
+        )
+        self._client = openai.Client(
+            api_key="sk-123456",
+            base_url=f"{DEFAULT_URL_FOR_TEST}/v1",
+        )
 
-            # Send a multimodal request via OpenAI-compatible endpoint
-            client = openai.Client(
-                api_key="sk-123456",
-                base_url=f"{DEFAULT_URL_FOR_TEST}/v1",
-            )
-            response = client.chat.completions.create(
-                model="default",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": self._image_b64},
-                            },
-                            {
-                                "type": "text",
-                                "text": "Describe this image in a short sentence.",
-                            },
-                        ],
-                    },
-                ],
-                temperature=0,
-                max_tokens=64,
-            )
-            output = response.choices[0].message.content
-            self.assertIsNotNone(output, f"No output with {backend=}")
-            self.assertGreater(len(output), 0, f"Empty output with {backend=}")
-        finally:
-            kill_process_tree(process.pid)
+    def tearDown(self):
+        kill_process_tree(self._process.pid)
+
+    def _verify_response(self, backend):
+        response = self._client.chat.completions.create(
+            model="default",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": self._image_b64},
+                        },
+                        {
+                            "type": "text",
+                            "text": "Describe this image in a short sentence.",
+                        },
+                    ],
+                },
+            ],
+            temperature=0,
+            max_tokens=64,
+        )
+        output = response.choices[0].message.content
+        self.assertGreater(
+            len(output), 5, f"Output too short with {backend=}: {output!r}"
+        )
+        self.assertIn(
+            "red",
+            output.lower(),
+            f"Output should describe the red image with {backend=}: {output!r}",
+        )
 
     def test_e2e_auto(self):
         """I6: Launch VLM server with --image-processor-backend auto."""
-        self._launch_and_verify("auto")
+        self._verify_response("auto")
 
     def test_e2e_torchvision(self):
         """I6: Launch VLM server with --image-processor-backend torchvision."""
-        self._launch_and_verify("torchvision")
+        self._verify_response("torchvision")
 
     def test_e2e_pil(self):
         """I6: Launch VLM server with --image-processor-backend pil."""
-        self._launch_and_verify("pil")
+        self._verify_response("pil")
 
 
 if __name__ == "__main__":
