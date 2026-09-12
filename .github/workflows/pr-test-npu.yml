@@ -417,18 +417,20 @@ jobs:
             python3 -m pip install --break-system-packages regex
           fi
           python3 -c "import regex; print('regex ok:', regex.__file__)"
-          PR_SPEC="sgl-project/sglang#${{ github.event.pull_request.number }}"
+          PR_SPEC="${{ github.repository }}#${{ github.event.pull_request.number }}"
           echo "Selecting tests for PR: ${PR_SPEC}"
-          python3 scripts/test_selector.py \
+          # test_selector.py resolves relative paths against the script's own dir,
+          # so pass absolute paths for files downloaded to the workspace root.
+          python3 scripts/ci/npu/precise-test/test_selector.py \
             --github-pr "${PR_SPEC}" \
-            --source-dir ./outputs/covstub \
-            --map-file test_case_map.json
+            --source-dir "$PWD/outputs/covstub" \
+            --map-file "$PWD/test_case_map.json"
 
       - name: Export coverage paths output
         id: export-paths
         if: always()
         run: |
-          FILE="recommended_pytest_paths.txt"
+          FILE="scripts/ci/npu/precise-test/recommended_pytest_paths.txt"
           if [ -f "$FILE" ]; then
             {
               echo "coverage_paths<<EOF"
