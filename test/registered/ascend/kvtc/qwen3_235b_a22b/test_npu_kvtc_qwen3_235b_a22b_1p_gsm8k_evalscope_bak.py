@@ -89,6 +89,7 @@ OTHER_ARGS = [
 
 BENCHMARK_SIZE_LIMIT = None
 KVTC_CALIBRATION_LIMIT = None
+HICACHE_SIZE = 30
 
 class TestNPUQwen3_235BA22B_1P_gsm8k_cr_8(TestAscendPerformanceKvtcTestCaseLME, CustomTestCase):
     """Qwen 3 gsm8k lm-eval Test for NPU"""
@@ -98,7 +99,7 @@ class TestNPUQwen3_235BA22B_1P_gsm8k_cr_8(TestAscendPerformanceKvtcTestCaseLME, 
     other_args = OTHER_ARGS
     kvtc_keys_compression_ratio = 8
     kvtc_values_compression_ratio = 8
-    kvtc_hicache_size = 50
+    kvtc_hicache_size = HICACHE_SIZE
     envs = ENVS
     benchmark_size_limit = BENCHMARK_SIZE_LIMIT
     kvtc_limit_calibration = KVTC_CALIBRATION_LIMIT
@@ -130,7 +131,7 @@ class TestNPUQwen3_235BA22B_1P_gsm8k_cr_16(TestAscendPerformanceKvtcTestCaseLME,
     other_args = OTHER_ARGS
     kvtc_keys_compression_ratio = 16
     kvtc_values_compression_ratio = 16
-    kvtc_hicache_size = 50
+    kvtc_hicache_size = HICACHE_SIZE
     envs = ENVS
     benchmark_size_limit = BENCHMARK_SIZE_LIMIT
     kvtc_limit_calibration = KVTC_CALIBRATION_LIMIT
@@ -161,7 +162,7 @@ class TestNPUQwen3_235BA22B_1P_gsm8k_cr32(TestAscendPerformanceKvtcTestCaseLME, 
     other_args = OTHER_ARGS
     kvtc_keys_compression_ratio = 32
     kvtc_values_compression_ratio = 32
-    kvtc_hicache_size = 50
+    kvtc_hicache_size = HICACHE_SIZE
     envs = ENVS
     benchmark_size_limit = BENCHMARK_SIZE_LIMIT
     kvtc_limit_calibration = KVTC_CALIBRATION_LIMIT
