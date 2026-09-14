@@ -12,11 +12,12 @@ ARG DEVICE_TYPE
 ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
+# torch_npu 2.10.0.post6 requires torch==2.10.0, so PYTORCH_VERSION stays at 2.10.0
 ARG PYTORCH_VERSION="2.10.0"
 ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
-ARG PTA_URL_ARM64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_aarch64.whl"
-ARG PTA_URL_AMD64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_x86_64.whl"
+ARG TORCH_NPU_VERSION="2.10.0.post6"
+ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post1
@@ -25,15 +26,8 @@ ARG DEVICE_TYPE
 
 
 
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      echo "Using x86_64 dependencies"; \
-      echo "export PTA_URL=$PTA_URL_AMD64" >> /etc/environment_new; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-      echo "Using aarch64 dependencies"; \
-      echo "export PTA_URL=$PTA_URL_ARM64" >> /etc/environment_new; \
-    else \
-      echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1; \
-    fi
+# Later RUN steps source /etc/environment_new, so make sure it exists
+RUN touch /etc/environment_new
  
 WORKDIR /workspace
 
@@ -85,7 +79,7 @@ RUN ${PIP_INSTALL} sglang-router
 ### Install PyTorch and PTA
 RUN . /etc/environment_new && \
     (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
-    && (${PIP_INSTALL} ${PTA_URL})
+    && (${PIP_INSTALL} torch-npu==${TORCH_NPU_VERSION} --extra-index-url ${TORCH_NPU_INDEX_URL})
 
 
 ## Install triton-ascend
