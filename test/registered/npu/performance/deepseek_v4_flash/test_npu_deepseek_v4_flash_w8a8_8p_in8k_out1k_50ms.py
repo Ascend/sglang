@@ -58,12 +58,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     # DSPARK
     "SGLANG_RAGGED_VERIFY_MODE": "static",
-    "SGLANG_DSPARK_FAST_KERNEL": "0", 
-    # EXPARA
-    # LD_DEBUG 输出由动态链接器直接写 stderr，量大且无法用日志级别过滤；
-    # 通过 LD_DEBUG_OUTPUT 重定向到独立文件（每进程一个 <prefix>.<pid>，父目录需已存在）。
-    "LD_DEBUG": "libs",
-    "LD_DEBUG_OUTPUT": "/tmp/dsv4_ld_debug",
+    "SGLANG_DSPARK_FAST_KERNEL": "0",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -218,28 +213,6 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
                     f"Server failed to start in {cls.timeout}s. Check server log: {server_log}"
                 )
             time.sleep(check_interval)
-
-    @classmethod
-    def tearDownClass(cls):
-        # 在框架 kill 进程树之前，把 LD_DEBUG 重定向出的 so 加载日志
-        # 收集进用例产物目录（随 plog/metrics 一起保留），供事后分析。
-        # 文件为每进程一个 <prefix>.<pid>，打包压缩避免产物过大。
-        try:
-            import glob
-            import tarfile
-
-            ld_files = glob.glob("/tmp/dsv4_ld_debug.*")
-            if ld_files:
-                dst = os.path.join(cls.metrics_data_file, "ld_debug.tar.gz")
-                with tarfile.open(dst, "w:gz") as tar:
-                    for f in ld_files:
-                        tar.add(f, arcname=os.path.basename(f))
-                logger.info("Backed up %d LD_DEBUG files to %s", len(ld_files), dst)
-                for f in ld_files:
-                    os.remove(f)
-        except Exception as e:
-            logger.warning("Failed to backup LD_DEBUG output: %s", e)
-        super().tearDownClass()
 
     def test_npu_deepseek_v4_flash_w8a8_8p_in8k_out1k_50ms(self):
         """Run NPU performance test for DeepSeek-V4-Flash W8A8 8p in8k out1k."""
