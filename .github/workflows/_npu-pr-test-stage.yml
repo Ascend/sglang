@@ -233,7 +233,16 @@ jobs:
 
             git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
             cd ./lmms-eval
-            python3 -m pip install . > lmmslog.txt 2>&1 || { cat lmmslog.txt; exit 1; }
+            install_lmms() {
+              for index in "https://pypi.org/simple/" "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple" "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"; do
+                echo "lmms-eval: try install via ${index}"
+                if python3 -m pip install . -i "${index}" > lmmslog.txt 2>&1; then return 0; fi
+                echo "lmms-eval: install via ${index} failed, trying next source"
+              done
+              cat lmmslog.txt
+              return 1
+            }
+            install_lmms || exit 1
             python3 -c "import lmms_eval" || { echo "lmms_eval import check failed"; cat lmmslog.txt; exit 1; }
             cd ../
             hf download MMMU/MMMU --repo-type dataset
