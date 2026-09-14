@@ -11,8 +11,8 @@ from sgl_kernel_npu.attention.sinks_attention import (
 )
 
 from sglang.srt.configs.model_config import AttentionArch
-from sglang.srt.dllm.config import DllmConfig
 from sglang.srt.distributed import get_attn_cp_group
+from sglang.srt.dllm.config import DllmConfig
 from sglang.srt.hardware_backend.npu.attention.ascend_torch_native_backend import (
     AscendTorchNativeAttnBackend,
 )
@@ -617,9 +617,7 @@ class AscendAttnBackend(AttentionBackend):
                     (0, 0), dtype=torch.int32, device=self.device
                 )
             self.forward_metadata.seq_lens = empty_seq_lens
-            self.forward_metadata.seq_lens_cpu_int = torch.empty(
-                0, dtype=torch.int32
-            )
+            self.forward_metadata.seq_lens_cpu_int = torch.empty(0, dtype=torch.int32)
             self.forward_metadata.seq_lens_cpu_list = []
             self.graph_mode = False
             return
@@ -3058,9 +3056,7 @@ class AscendAttnBackend(AttentionBackend):
             forward_batch.is_speculative_idle_participation
             or forward_batch.num_token_non_padded_cpu == 0
         ):
-            return q.new_zeros(
-                (q.shape[0], layer.tp_q_head_num * layer.v_head_dim)
-            )
+            return q.new_zeros((q.shape[0], layer.tp_q_head_num * layer.v_head_dim))
         if save_kv_cache:
             if self.use_mla:
                 k = k.view(-1, layer.tp_k_head_num, self.kv_lora_rank)

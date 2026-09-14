@@ -14,6 +14,7 @@ from itertools import accumulate
 from typing import Any, Optional
 
 import torch
+
 from sglang.srt.runtime_context import get_parallel
 from sglang.srt.server_args import get_global_server_args
 from sglang.srt.utils import is_npu

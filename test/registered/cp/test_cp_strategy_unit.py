@@ -46,14 +46,14 @@ from sglang.srt.model_executor.forward_batch_info import (
     CaptureHiddenMode,
     ForwardMode,
 )
+from sglang.srt.model_executor.runner.prefill_cuda_graph_runner import (
+    PrefillCudaGraphRunner,
+)
 from sglang.srt.models.deepseek_common.attention_backend_handler import (
     handle_attention_ascend,
 )
 from sglang.srt.models.deepseek_common.attention_forward_methods.forward_methods import (
     AttnForwardMethod,
-)
-from sglang.srt.model_executor.runner.prefill_cuda_graph_runner import (
-    PrefillCudaGraphRunner,
 )
 from sglang.srt.runtime_context import get_parallel
 from sglang.test.ci.ci_register import register_cpu_ci

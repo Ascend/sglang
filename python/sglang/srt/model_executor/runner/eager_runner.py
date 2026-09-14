@@ -395,9 +395,7 @@ class EagerRunner(BaseRunner):
             if (pp_proxy_tensors := kwargs.get("pp_proxy_tensors")) is not None:
                 model_kwargs["pp_proxy_tensors"] = pp_proxy_tensors
             cp_model_getter = getattr(model, "get_context_parallel_model", None)
-            cp_model = (
-                cp_model_getter() if cp_model_getter is not None else model.model
-            )
+            cp_model = cp_model_getter() if cp_model_getter is not None else model.model
             hidden_states = cp_model(
                 forward_batch.input_ids,
                 sharded_positions,

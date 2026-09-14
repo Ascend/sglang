@@ -10,13 +10,13 @@ from sglang.kernels.ops.mamba.causal_conv1d_triton import (
 )
 from sglang.srt.environ import envs
 from sglang.srt.layers.attention.hybrid_linear_attn_backend import MambaAttnBackendBase
-from sglang.srt.layers.attention.linear.kernels.kda_flashinfer import (
-    build_fused_accept_indices,
-)
 from sglang.srt.layers.attention.linear.kda_cp import (
     build_kda_fla_cp_context,
     kda_use_fla_prefill_cp,
     prepare_kda_cp_conv_states,
+)
+from sglang.srt.layers.attention.linear.kernels.kda_flashinfer import (
+    build_fused_accept_indices,
 )
 from sglang.srt.layers.attention.linear.kernels.kda_triton import TritonKDAKernel
 from sglang.srt.layers.attention.linear.utils import (
