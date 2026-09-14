@@ -25,6 +25,9 @@ ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post1
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
+# modelscope / evalscope versions (leave empty to install the latest release)
+ARG MODELSCOPE_VERSION=""
+ARG EVALSCOPE_VERSION=""
 
 
 
@@ -82,6 +85,17 @@ RUN ${PIP_INSTALL} sglang-router
 RUN . /etc/environment_new && \
     (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
     && (${PIP_INSTALL} torch-npu==${TORCH_NPU_VERSION} --extra-index-url ${TORCH_NPU_INDEX_URL})
+
+
+### Install ModelScope & EvalScope
+# Installed right after torch/torch-npu so their dependencies resolve against the pinned torch.
+# MODELSCOPE_VERSION / EVALSCOPE_VERSION are empty by default -> latest release.
+RUN . /etc/environment_new && \
+    MS_PKG="modelscope" && \
+    ES_PKG="evalscope" && \
+    if [ -n "${MODELSCOPE_VERSION}" ]; then MS_PKG="modelscope==${MODELSCOPE_VERSION}"; fi && \
+    if [ -n "${EVALSCOPE_VERSION}" ]; then ES_PKG="evalscope==${EVALSCOPE_VERSION}"; fi && \
+    ${PIP_INSTALL} "${MS_PKG}" "${ES_PKG}"
 
 
 ## Install triton-ascend
