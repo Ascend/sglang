@@ -68,6 +68,7 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
     unzip \
     build-essential \
     cmake \
+    ninja-build \
     vim \
     wget \
     curl \
@@ -96,7 +97,7 @@ ENV LC_ALL=en_US.UTF-8
 ### Build & install MemFabric Hybrid from ${MEMFABRIC_REF}
 RUN set -ex; \
     python3 -c 'import os, sysconfig; h = os.path.join(sysconfig.get_path("include"), "Python.h"); assert os.path.exists(h), "python headers not found: " + h'; \
-    ${PIP_INSTALL} pybind11 "wheel==0.45.1"; \
+    ${PIP_INSTALL} "setuptools>=68.0" pybind11 "wheel==0.45.1"; \
     python3 -m pip uninstall -y memfabric-hybrid memfabric-zbal || true; \
     git clone --depth 1 --branch "${MEMFABRIC_REF}" "${MEMFABRIC_REPO}" "${MEMFABRIC_SRC_DIR}"; \
     cd "${MEMFABRIC_SRC_DIR}"; \
@@ -115,7 +116,6 @@ RUN if [ "${MF_PREINSTALL_AICPU_KERNEL}" = "ON" ]; then \
       export ASCEND_HOME_PATH="${ASCEND_HOME_PATH:-${ASCEND_CANN_PATH}/latest}"; \
       bash script/kernel/build_ops_run.sh; \
       chmod +x output/memfabric_hybrid_aicpu_kernel.run; \
-      ./output/memfabric_hybrid_aicpu_kernel.run --install --install-for-all; \
       ./output/memfabric_hybrid_aicpu_kernel.run --install --install-for-all --force; \
     else \
       echo "[memfabric] skip AICPU kernel pre-install (MF_PREINSTALL_AICPU_KERNEL=OFF)"; \
