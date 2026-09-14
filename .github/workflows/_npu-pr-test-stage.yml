@@ -238,9 +238,9 @@ jobs:
             # conditional core dependency so pip can resolve the rest.
             sed -i "/decord; platform_system/d" pyproject.toml
             install_lmms() {
-              for index in "https://pypi.org/simple/" "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple" "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"; do
+              for index in "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple" "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple" "https://pypi.org/simple/"; do
                 echo "lmms-eval: try install via ${index}"
-                if python3 -m pip install . -i "${index}" > lmmslog.txt 2>&1; then return 0; fi
+                if python3 -m pip install . -i "${index}" --timeout 30 --retries 2 > lmmslog.txt 2>&1; then return 0; fi
                 echo "lmms-eval: install via ${index} failed, trying next source"
               done
               cat lmmslog.txt
