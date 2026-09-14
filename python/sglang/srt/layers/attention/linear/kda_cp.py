@@ -15,8 +15,7 @@ from typing import Any, Optional
 
 import torch
 
-from sglang.srt.runtime_context import get_parallel
-from sglang.srt.server_args import get_global_server_args
+from sglang.srt.runtime_context import get_parallel, mamba_cache_chunk_size
 from sglang.srt.utils import is_npu
 
 
@@ -213,7 +212,7 @@ def build_kda_fla_cp_context(
             prefix_lens_cpu = (
                 forward_batch.extend_prefix_lens.detach().cpu().tolist()[:bs]
             )
-        cache_chunk_size = get_global_server_args().mamba_cache_chunk_size
+        cache_chunk_size = mamba_cache_chunk_size()
         for request_id, should_track in enumerate(track_mask):
             if not should_track:
                 continue
