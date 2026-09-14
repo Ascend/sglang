@@ -22,9 +22,9 @@ class TestRetractionPolicyLength(CustomTestCase):
     """Verify --retraction-policy=length (default) retracts the longer-input
     request when KV cache is full and output lengths are equal.
 
-    Service launch follows retraction-policy.sh (with --mem-fraction-static
-    adjusted to 0.296 - the minimum viable value for single-card NPU):
-    - No --max-total-tokens to avoid scheduler clipping of max_new_tokens.
+    Service launch follows retraction-policy.sh:
+    - --mem-fraction-static=0.08 limits KV cache to minimal size so it fills
+      quickly (no --max-total-tokens to avoid scheduler clipping).
     - No --max-running-requests to let scheduler manage concurrency naturally.
 
     Strategy:
@@ -58,7 +58,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.296",
+        "0.08",
         "--trust-remote-code",
         "--enable-metrics",
         "--log-level",
@@ -193,8 +193,8 @@ class TestRetractionPolicyLength(CustomTestCase):
 class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority works with priority scheduling.
 
-    Service launch follows retraction-policy.sh (with --mem-fraction-static
-    adjusted to 0.296 - the minimum viable value for single-card NPU):
+    Service launch follows retraction-policy.sh:
+    - --mem-fraction-static=0.08 limits KV cache to minimal size
     - --enable-priority-scheduling and --schedule-conservativeness 0.0 for
       aggressive priority-based scheduling
     - No --max-total-tokens or --max-running-requests to let scheduler
@@ -228,7 +228,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.296",
+        "0.08",
         "--trust-remote-code",
         "--enable-metrics",
         "--retraction-policy",
