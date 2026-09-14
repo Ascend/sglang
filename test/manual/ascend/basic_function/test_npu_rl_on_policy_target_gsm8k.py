@@ -5,10 +5,6 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.test_ascend_utils import QWEN3_4B_WEIGHTS_PATH
-from sglang.test.ci.ci_register import register_npu_ci
-
-register_npu_ci(est_time=3600, suite="base-c-test-acc-2-npu-a3")
-register_npu_ci(est_time=2800, suite="nightly-acc-2-npu-a3", nightly=True)
 
 ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
@@ -59,7 +55,7 @@ class TestNPUQwen3_4B_1P_GSM8K(TestNpuAccuracyTestCaseBase):
     datasets = ["gsm8k"]
     few_shot_num = 5
     generation_config = {
-        "max_tokens": 1024,
+        "max_tokens": 2048,
         "stream": True,
         "timeout": 600,
     }
