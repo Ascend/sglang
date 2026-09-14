@@ -32,8 +32,9 @@ except ImportError:
 
 from transformers import AutoModelForCausalLM
 
-from sglang.test.ascend.test_ascend_utils import QWEN3_5_4B_WEIGHTS_PATH
+
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+from sglang.test.ascend.test_ascend_utils import QWEN3_5_4B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.runners import SRTRunner
 from sglang.test.test_utils import DEFAULT_PORT_FOR_SRT_TEST_RUNNER, CustomTestCase
@@ -254,9 +255,7 @@ class TestLoRATiedLMHead(CustomTestCase):
             # sides scoring the same token ids.
             hf_lp = torch.tensor(hf_score_sequence(hf_model, seq))
             parity_diff = (srt_lora_lp - hf_lp).abs().max().item()
-            print(
-                f"Prompt {i} logprob max_diff (SGLang vs HF+PEFT): {parity_diff:.6e}"
-            )
+            print(f"Prompt {i} logprob max_diff (SGLang vs HF+PEFT): {parity_diff:.6e}")
             self.assertLess(
                 parity_diff,
                 LOGPROB_THRESHOLD,
@@ -274,4 +273,3 @@ if __name__ == "__main__":
         pass
 
     unittest.main(warnings="ignore")
-
