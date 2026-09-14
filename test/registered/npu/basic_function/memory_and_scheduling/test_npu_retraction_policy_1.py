@@ -22,9 +22,10 @@ class TestRetractionPolicyLength(CustomTestCase):
     """Verify --retraction-policy=length (default) retracts the longer-input
     request when KV cache is full and output lengths are equal.
 
-    Service launch follows retraction-policy.sh:
-    - --mem-fraction-static=0.08 limits KV cache to minimal size so it fills
-      quickly (no --max-total-tokens to avoid scheduler clipping).
+    Service launch follows retraction-policy.sh (with --mem-fraction-static
+    adjusted to 0.296 - the minimum viable value for single-card NPU):
+    - No --max-total-tokens to avoid scheduler clipping of max_new_tokens.
+    - No --max-running-requests to let scheduler manage concurrency naturally.
 
     Strategy:
     - Two concurrent requests with high max_new_tokens (50000+) and different
@@ -52,14 +53,13 @@ class TestRetractionPolicyLength(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--device",
-        "npu",
         "--tp-size",
         "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.08",
+        "0.296",
+        "--trust-remote-code",
         "--enable-metrics",
         "--log-level",
         "debug",
@@ -78,6 +78,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._BASE_ARGS,
             return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
+            device="npu",
             env={"SGLANG_TEST_RETRACT": "1"},
         )
 
@@ -192,8 +193,8 @@ class TestRetractionPolicyLength(CustomTestCase):
 class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority works with priority scheduling.
 
-    Service launch follows retraction-policy.sh:
-    - --mem-fraction-static=0.08 limits KV cache to minimal size
+    Service launch follows retraction-policy.sh (with --mem-fraction-static
+    adjusted to 0.296 - the minimum viable value for single-card NPU):
     - --enable-priority-scheduling and --schedule-conservativeness 0.0 for
       aggressive priority-based scheduling
     - No --max-total-tokens or --max-running-requests to let scheduler
@@ -222,14 +223,13 @@ class TestRetractionPolicyPriority(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--device",
-        "npu",
         "--tp-size",
         "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.08",
+        "0.296",
+        "--trust-remote-code",
         "--enable-metrics",
         "--retraction-policy",
         "priority",
@@ -258,6 +258,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=cls._BASE_ARGS,
             return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
+            device="npu",
             env={"SGLANG_TEST_RETRACT": "1"},
         )
 
