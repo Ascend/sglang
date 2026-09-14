@@ -292,6 +292,7 @@ jobs:
           cp -r python/sglang "${COVSTUB}/"
 
       - name: Build test case map
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -349,6 +350,7 @@ jobs:
         env:
           OBS_ACCESS_KEY: ${{ secrets.OBS_ACCESS_KEY_PRECISION }}
           OBS_SECRET_KEY: ${{ secrets.OBS_SECRET_ACCESS_KEY_PRECISION }}
+        shell: bash
         run: |
           set -euo pipefail
 
