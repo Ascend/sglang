@@ -16,6 +16,10 @@ from sgl_kernel_npu.fla.utils import prepare_chunk_indices
 from sglang.kernels.ops.attention.fla.cumsum import chunk_local_cumsum
 from sglang.kernels.ops.attention.fla.kda import chunk_kda_scaled_dot_kkt_fwd
 from sglang.kernels.ops.attention.fla.l2norm import l2norm_fwd
+from sglang.srt.hardware_backend.npu.kda_kernel_capabilities import (
+    check_kda_fla_cp_kernel_compatibility,
+    kda_prefill_kernel_uses_key_value_state,
+)
 from sglang.srt.layers.attention.linear.kda_backend import (
     KDAAttnBackend,
     ragged_verify_dense_scatter_indices,
@@ -98,6 +102,17 @@ def _kda_decode_key_value_state_npu(
 class _AscendKDAExtendKernel:
     """Ascend-only KDA prefill decomposition backed by sgl-kernel-npu."""
 
+    def __init__(self) -> None:
+        self._uses_key_value_state = kda_prefill_kernel_uses_key_value_state()
+        self._fla_cp_compatible, self._fla_cp_incompatibility = (
+            check_kda_fla_cp_kernel_compatibility()
+        )
+
+    def _persistent_state_for_kernel(self, ssm_states: torch.Tensor) -> torch.Tensor:
+        if self._uses_key_value_state:
+            return ssm_states
+        return ssm_states.transpose(-1, -2)
+
     def extend(
         self,
         q: torch.Tensor,
@@ -115,6 +130,11 @@ class _AscendKDAExtendKernel:
         chunk_size = 64
         cp_context = kwargs.get("cp_context")
         if cp_context is not None:
+            if not self._fla_cp_compatible:
+                raise RuntimeError(
+                    "KDA FLA PCP reached an incompatible sgl-kernel-npu: "
+                    f"{self._fla_cp_incompatibility}"
+                )
             # Keep PCP-off KDA compatible with kernel packages that predate
             # the affine-state operator. The new symbol is required only when
             # FLA prefill context parallelism is actually selected.
@@ -159,7 +179,11 @@ class _AscendKDAExtendKernel:
             chunk_indices=chunk_indices,
         )
         del triangular
-        kernel_state_source = ssm_states
+        # The versioned PCP kernel consumes the framework's persistent
+        # [H, K, V] state directly.  Older kernels use the original [H, V, K]
+        # wrapper contract; PCP is disabled for them, but ordinary prefill
+        # remains correct through this zero-copy transposed view.
+        kernel_state_source = self._persistent_state_for_kernel(ssm_states)
         kernel_state_indices = cache_indices
         if cp_context is not None:
             local_affine = chunk_gated_delta_rule_fwd_affine_npu(

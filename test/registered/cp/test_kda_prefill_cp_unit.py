@@ -73,6 +73,21 @@ def _context(group, rank, local_lens=(1, 1), split_list=(1, 1, 1, 1)):
 
 
 class TestKDAPrefillCP(unittest.TestCase):
+    @unittest.skipIf(
+        _AscendKDAExtendKernel is None,
+        "requires an importable sgl-kernel-npu KDA prefill kernel",
+    )
+    def test_legacy_prefill_kernel_gets_value_key_state_view(self):
+        kernel = _AscendKDAExtendKernel()
+        kernel._uses_key_value_state = False
+        state = torch.arange(24).reshape(1, 2, 3, 4)
+
+        legacy_state = kernel._persistent_state_for_kernel(state)
+
+        self.assertEqual(legacy_state.shape, (1, 2, 4, 3))
+        self.assertEqual(legacy_state.data_ptr(), state.data_ptr())
+        torch.testing.assert_close(legacy_state, state.transpose(-1, -2))
+
     def test_fla_affine_composes_natural_zigzag_order(self):
         # Natural transforms are 2x+1, 3x+2, 4x+3, 5x+4.
         all_rank_affine = [
