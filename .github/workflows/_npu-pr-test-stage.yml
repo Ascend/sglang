@@ -224,6 +224,7 @@ jobs:
             pip install watchfiles granian whisper_normalizer msgpack
             pip install fastokens
             pip install mindstudio-probe --pre
+            pip install "uvicorn[standard]"
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
             sglang_source_path=$(pwd)
