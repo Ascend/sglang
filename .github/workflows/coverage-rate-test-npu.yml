@@ -284,6 +284,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug run context
+        shell: bash
+        run: |
+          # github.* below are interpolated server-side by GitHub (always
+          # available, independent of the custom runner's env injection).
+          # The GITHUB_* lines show what the custom k8s runner actually
+          # injects into the container.
+          echo "github.run_id='${{ github.run_id }}'"
+          echo "github.run_attempt='${{ github.run_attempt }}'"
+          echo "env GITHUB_RUN_ID='${GITHUB_RUN_ID:-<unset>}'"
+          echo "env GITHUB_RUN_ATTEMPT='${GITHUB_RUN_ATTEMPT:-<unset>}'"
+          echo "env GITHUB_RUN_STARTED_AT='${GITHUB_RUN_STARTED_AT:-<unset>}'"
+
       - name: Copy sglang source to covstub
         run: |
           RUN_DIR="/root/.cache/tests/precise-test/${RUN_ID}-attempt-${RUN_ATTEMPT}"
