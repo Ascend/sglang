@@ -255,7 +255,6 @@ jobs:
           tar -czf "${RUN_DIR}/outputs.tar.gz" -C "${RUN_DIR}" outputs
 
       - name: Upload outputs and map to OBS
-        continue-on-error: true
         env:
           OBS_ACCESS_KEY: ${{ secrets.OBS_ACCESS_KEY_PRECISION }}
           OBS_SECRET_KEY: ${{ secrets.OBS_SECRET_ACCESS_KEY_PRECISION }}
