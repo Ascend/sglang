@@ -297,11 +297,17 @@ jobs:
           set -euo pipefail
 
           RUN_DIR="/root/.cache/tests/precise-test/${RUN_ID}-attempt-${RUN_ATTEMPT}"
-          # Date tag derivation must match scripts/ci/npu/precise-test/run_tests_with_coverage.sh
-          # (GITHUB_RUN_STARTED_AT is identical across all jobs of one run,
-          # immune to cross-midnight splits).
-          COV_DATE_TAG="${GITHUB_RUN_STARTED_AT:0:10}"
-          COV_DATE_TAG="${COV_DATE_TAG//-/}"
+          # Date tag derivation must match scripts/ci/npu/precise-test/run_tests_with_coverage.sh.
+          # The custom k8s runner only injects explicitly-set env vars, so
+          # GITHUB_RUN_STARTED_AT may be absent (set -u would abort); fall back
+          # to local date exactly like run_tests_with_coverage.sh does, so both
+          # sides derive the same tag.
+          if [ -n "${GITHUB_RUN_STARTED_AT:-}" ]; then
+            COV_DATE_TAG="${GITHUB_RUN_STARTED_AT:0:10}"
+            COV_DATE_TAG="${COV_DATE_TAG//-/}"
+          else
+            COV_DATE_TAG="$(date +%Y%m%d)"
+          fi
           COV_ROOT="${RUN_DIR}/outputs/sglang@${COV_DATE_TAG}"
           COVSTUB="${RUN_DIR}/outputs/covstub"
           # Placed outside outputs/ so it is NOT included in outputs.tar.gz.
