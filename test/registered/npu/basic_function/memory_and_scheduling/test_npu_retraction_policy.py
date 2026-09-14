@@ -82,10 +82,10 @@ class TestRetractionPolicyLength(CustomTestCase):
         cls._err_log_file.close()
 
     def _read_logs(self):
-        """Flush and read server logs.  Close handles first to ensure
-        all buffered writes reach disk before reading."""
-        self._out_log_file.close()
-        self._err_log_file.close()
+        """Flush and read server logs without closing handles,
+        so background dump threads can continue writing."""
+        self._out_log_file.flush()
+        self._err_log_file.flush()
         with open(self._OUT_LOG, "r", encoding="utf-8") as f:
             stdout = f.read()
         with open(self._ERR_LOG, "r", encoding="utf-8") as f:
@@ -165,11 +165,16 @@ class TestRetractionPolicyLength(CustomTestCase):
         retract_line = full_log[stats_start:stats_end].split("\n")[0]
         print(f"[Retraction log] {retract_line}")
 
-        # Verify short-input output is correct
+        # Verify both short-input and long-input outputs are correct
         self.assertIn(
             "Paris",
             result_short["text"],
             f"Short output missing 'Paris'. Got: {result_short['text'][:200]}",
+        )
+        self.assertIn(
+            "Paris",
+            result_long.get("text", ""),
+            f"Long output missing 'Paris'. Got: {result_long.get('text', '')[:200]}",
         )
         self.assertIsNone(self.process.poll(),
                           "Server crashed during retraction test")
@@ -182,10 +187,11 @@ class TestRetractionPolicyPriority(CustomTestCase):
     - --max-total-tokens=2000 caps KV cache so it fills quickly
     - max-running-requests=1 forces single-request execution, so the
       high-priority request must preempt a running low-priority one
-    - Three requests sent concurrently: 2 low-priority (priority=0) +
-      1 high-priority (priority=20)
-    - High-priority should finish first (preempted via priority scheduling),
-      and KV cache fills forcing retraction on the running request
+    - Low-priority request sent first to occupy the running slot, then
+      high-priority (priority=20) + another low-priority (priority=0)
+      after a short delay so preemption is required
+    - High-priority should finish first by preempting the running
+      low-priority request, and KV cache fills forcing retraction
 
     Assertions:
     - All 3 requests complete (status=200)
@@ -249,9 +255,10 @@ class TestRetractionPolicyPriority(CustomTestCase):
         cls._err_log_file.close()
 
     def _read_logs(self):
-        """Flush and read server logs."""
-        self._out_log_file.close()
-        self._err_log_file.close()
+        """Flush and read server logs without closing handles,
+        so background dump threads can continue writing."""
+        self._out_log_file.flush()
+        self._err_log_file.flush()
         with open(self._OUT_LOG, "r", encoding="utf-8") as f:
             stdout = f.read()
         with open(self._ERR_LOG, "r", encoding="utf-8") as f:
@@ -299,16 +306,21 @@ class TestRetractionPolicyPriority(CustomTestCase):
             high_result["text"] = resp.json().get("text", "")
             high_result["finished_at"] = time.monotonic()
 
-        # All three requests start concurrently; with max-running-requests=1
-        # and priority scheduling, high-priority should run first.
+        # Start low-priority request first to occupy the running slot.
+        # Then send high-priority which should preempt the low-priority
+        # request that is already running, not just get scheduled first.
         t1 = threading.Thread(
             target=_send_low, args=("PRI_LOW1", low1_result), daemon=True
         )
+        t1.start()
+
+        # Wait for low1 to begin execution before sending high-priority
+        time.sleep(2)
+
         t2 = threading.Thread(
             target=_send_low, args=("PRI_LOW2", low2_result), daemon=True
         )
         t_high = threading.Thread(target=_send_high, daemon=True)
-        t1.start()
         t2.start()
         t_high.start()
 
