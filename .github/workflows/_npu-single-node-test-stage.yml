@@ -66,13 +66,12 @@ on:
 env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
 
-concurrency:
-  group: ascend-nightly-e2e-singlenode-${{ github.workflow_ref }}-${{ github.ref }}-${{ inputs.test_suite }}-${{ matrix.partition }}
-  cancel-in-progress: true
-
 jobs:
   e2e:
     name: ${{ inputs.test_suite }}
+    concurrency:
+      group: ascend-nightly-e2e-singlenode-${{ github.workflow_ref }}-${{ github.ref }}-${{ inputs.test_suite }}-${{ matrix.partition }}
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       max-parallel: ${{ inputs.max_parallel }}
