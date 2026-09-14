@@ -2,6 +2,62 @@
   "manifests": [
     {
       "schema_version": 1,
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-950-20260914",
+      "dockerfile": "docker/npu_cann9.1.0_python312_950.Dockerfile",
+      "generated_at": "2026-09-14T08:44:01.435835+00:00",
+      "build_args": {
+        "CANN_VERSION": "9.1.0",
+        "DEVICE_TYPE": "950",
+        "OS": "ubuntu22.04",
+        "PYTHON_VERSION": "py3.12",
+        "arch": "",
+        "PIP_INDEX_URL": "https://pypi.org/simple/",
+        "PYTORCH_VERSION": "2.10.0",
+        "TORCHVISION_VERSION": "0.25.0",
+        "TORCHAUDIO_VERSION": "2.10.0",
+        "TORCH_NPU_VERSION": "2.10.0.post6",
+        "TORCH_NPU_INDEX_URL": "https://ascend.devcloud.huaweicloud.com/pypi/simple/",
+        "SGLANG_TAG": "main",
+        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
+        "SGLANG_KERNEL_NPU_TAG": "2026.9.0.post1",
+        "PIP_INSTALL": "python3 -m pip install --no-cache-dir"
+      },
+      "git_clones": [
+        {
+          "remote": "https://github.com/sgl-project/sglang",
+          "branch": "main",
+          "dir": "/sgl-workspace/sglang"
+        }
+      ],
+      "declared_pip_pins": [
+        "memfabric-hybrid==1.2.0",
+        "memfabric-zbal==1.2.21004.post1",
+        "torch==2.10.0",
+        "torchvision==0.25.0",
+        "torchaudio==2.10.0",
+        "torch-npu==2.10.0.post6",
+        "wheel==0.45.1"
+      ],
+      "sglang": {
+        "dir": "/sgl-workspace/sglang",
+        "remote": "https://github.com/sgl-project/sglang",
+        "branch": "main",
+        "commit": "5200508b0fd25733752c2c5e3af5539508023c27",
+        "describe": "gateway-v0.3.1-9484-g5200508b0f",
+        "commit_date": "2026-09-14T00:35:15-07:00"
+      },
+      "os": {
+        "distro": "Ubuntu 22.04.5 LTS",
+        "kernel": "6.8.0-1064-azure",
+        "arch": "aarch64"
+      },
+      "cann": {
+        "toolkit": "latest set_env.sh",
+        "version_files": ""
+      }
+    },
+    {
+      "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260914",
       "dockerfile": "docker/npu_cann9.1.0_python312_a3.Dockerfile",
       "generated_at": "2026-09-14T08:40:39.458361+00:00",
