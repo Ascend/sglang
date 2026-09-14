@@ -1,10 +1,15 @@
 import os
+import subprocess
+import time
 import unittest
+
+import requests
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import wait_server_ready
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
+    DEFAULT_URL_FOR_TEST,
     # DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
     TestNpuPerformanceTestCaseBase,
     logger,
@@ -141,17 +146,77 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
     @classmethod
     def setUpClass(cls):
         external_url = os.environ.get(EXTERNAL_SERVER_URL_ENV, "")
-        if not external_url:
-            super().setUpClass()
+        if external_url:
+            # 外部服务模式：服务已由 CI 中的 shell 脚本拉起，这里只等待就绪并直连，
+            # 跳过框架内置的 popen_launch_server（含其 envs/other_args 注入逻辑）。
+            cls._setup_per_case_output()
+            cls.base_url = external_url
+            wait_server_ready(f"{cls.base_url}/health")
+            # 故意不设置 cls.process：tearDownClass 检测到无 process 便不会 kill
+            # 外部服务，服务的生命周期由 CI 的启动/清理步骤统一管理。
             return
 
-        # 外部服务模式：服务已由 CI 中的 shell 脚本拉起，这里只等待就绪并直连，
-        # 跳过框架内置的 popen_launch_server（含其 envs/other_args 注入逻辑）。
+        # 直接用 python -m sglang.launch_server 拉起，绕过框架 popen_launch_server
+        # 的 "sglang serve" 入口及其 offline/cache 附加逻辑。
+        # envs/other_args 注入行为与框架 setUpClass 保持一致。
         cls._setup_per_case_output()
-        cls.base_url = external_url
-        wait_server_ready(f"{cls.base_url}/health")
-        # 故意不设置 cls.process：tearDownClass 检测到无 process 便不会 kill
-        # 外部服务，服务的生命周期由 CI 的启动/清理步骤统一管理。
+        cls.base_url = DEFAULT_URL_FOR_TEST
+
+        env = os.environ.copy()
+        for key, value in env.items():
+            logger.info(f"ENV_VAR_SYS {key}:{value}")
+        if cls.envs:
+            for key, value in cls.envs.items():
+                logger.info(f"ENV_VAR_CASE {key}:{value}")
+                env[key] = value
+
+        # base_url 形如 http://127.0.0.1:30066，拆出 --host/--port
+        url_part = cls.base_url.split("://", 1)[1]
+        host, port = url_part.split(":", 1)
+
+        cmd = [
+            "python",
+            "-m",
+            "sglang.launch_server",
+            cls.model,
+            "--host",
+            host,
+            "--port",
+            port,
+            *[str(x) for x in cls.other_args],
+        ]
+        logger.info("Launch server: %s", " ".join(cmd))
+        server_log = os.path.join(cls.metrics_data_file, "server.log")
+        cls.server_log_path = server_log
+        with open(server_log, "w") as log_f:
+            cls.process = subprocess.Popen(
+                cmd,
+                env=env,
+                stdout=log_f,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        # 等待就绪；期间检测进程早退，避免服务已死还傻等整个超时周期
+        start_time = time.perf_counter()
+        check_interval = 10
+        while True:
+            ret = cls.process.poll()
+            if ret is not None:
+                raise RuntimeError(
+                    f"Server process exited with code {ret}. Check server log: {server_log}"
+                )
+            try:
+                if requests.get(f"{cls.base_url}/health", timeout=30).status_code == 200:
+                    logger.info("Server %s is ready!", cls.base_url)
+                    break
+            except Exception:
+                pass
+            elapsed = time.perf_counter() - start_time
+            if elapsed > cls.timeout:
+                raise RuntimeError(
+                    f"Server failed to start in {cls.timeout}s. Check server log: {server_log}"
+                )
+            time.sleep(check_interval)
 
     @classmethod
     def tearDownClass(cls):
