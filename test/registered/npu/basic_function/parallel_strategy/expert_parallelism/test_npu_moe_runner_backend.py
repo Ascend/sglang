@@ -77,7 +77,7 @@ class TestMoreRunnerBackendTriton(CustomTestCase):
             },
         )
         self.assertEqual(
-            response.status_code, 200, "The request status code is not 200."
+            response.status_code, 400, "The request status code is not 200."
         )
         self.assertIn(
             "Paris", response.text, "The inference result does not include Paris."

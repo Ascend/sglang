@@ -73,7 +73,7 @@ DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-V3.2-W8A8"
 )
 DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH = os.path.join(
-    MODEL_WEIGHTS_DIR, "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"
+    MODEL_WEIGHTS_DIR, "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct1"
 )
 DEEPSEEK_CODER_1_3_B_BASE_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "deepseek-ai/deepseek-coder-1.3b-base"
@@ -237,7 +237,7 @@ QWEN3_4B_GGUF_Q4_K_M_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-4B-GGUF/Qwen3-4B-Q4_K_M.gguf"
 )
 QWEN3_8B_INT4_AUTOROUND_WEIGHTS_PATH = os.path.join(
-    MODEL_WEIGHTS_DIR, "Intel/Qwen3-8B-int4-AutoRound"
+    MODEL_WEIGHTS_DIR, "Intel/Qwen3-8B-int4-AutoRound1"
 )
 QWEN3_8B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-8B")
 QWEN3_8B_EAGLE3_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-8B_eagle3")
