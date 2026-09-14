@@ -10,6 +10,7 @@ from sglang.kernels.ops.sampling.murmur_hash import murmur_hash32
 from sglang.srt.distributed import get_tp_group
 from sglang.srt.environ import envs
 from sglang.srt.layers.dp_attention import (
+    broadcast_tensor_within_attention_dp_group,
     is_dp_attention_enabled,
 )
 from sglang.srt.layers.logits_processor import LogitsProcessorOutput
@@ -527,6 +528,12 @@ class Sampler(nn.Module):
     def _sync_token_ids_across_tp(
         self, batch_next_token_ids: torch.Tensor, sampling_info: SamplingBatchInfo
     ):
+        if is_dp_attention_enabled() and get_parallel().attn_cp_size > 1:
+            # CP schedulers represent one logical request and must advance with
+            # the same sampled token.
+            broadcast_tensor_within_attention_dp_group(batch_next_token_ids)
+            return
+
         if SYNC_TOKEN_IDS_ACROSS_TP or sampling_info.grammars:
             # For performance reasons, SGLang does not sync the final token IDs across TP ranks by default.
             # This saves one all-reduce, but the correctness of this approach depends on the determinism of several operators:

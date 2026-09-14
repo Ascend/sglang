@@ -392,6 +392,18 @@ def is_allocation_symmetric() -> bool:
     return not is_dp_attention_enabled() or is_dp_max_padding()
 
 
+def broadcast_tensor_within_attention_dp_group(
+    tensor: torch.Tensor,
+) -> torch.Tensor:
+    """Broadcast a tensor from the (attention-CP0, attention-TP0) DP leader."""
+    parallel = get_parallel()
+    if parallel.attn_tp_size > 1 and parallel.attn_cp_rank == 0:
+        parallel.attn_tp_group.broadcast(tensor, src=0)
+    if parallel.attn_cp_size > 1:
+        parallel.attn_cp_group.broadcast(tensor, src=0)
+    return tensor
+
+
 def get_attention_dp_rank() -> int:
     assert _ATTN_DP_RANK is not None, "dp attention not initialized!"
     return _ATTN_DP_RANK
