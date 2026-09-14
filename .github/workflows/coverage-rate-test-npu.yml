@@ -121,21 +121,21 @@ jobs:
           # Write to GITHUB_OUTPUT and print to the log in one command.
           echo "run_start_metadata=${RUN_START_METADATA}" | tee -a $GITHUB_OUTPUT
 
-  base-b-test-1-npu-a3:
-    needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: base-b-test-1-npu-a3
-      runner_config: linux-aarch64-a3-800t-2
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      run_timeout_minutes: '60'
-      timeout_per_file: '3600'
-      partitions: '{"size":2,"arr":[0, 1]}'
-      use_coverage_runner: true
-      is_nightly_pipeline_job: true
-      upload_test_logs: false
-    secrets: inherit
+#  base-b-test-1-npu-a3:
+#    needs: [ set-image-config ]
+#    if: ${{ !cancelled() }}
+#    uses: ./.github/workflows/_npu-pr-test-stage.yml
+#    with:
+#      self_name: base-b-test-1-npu-a3
+#      runner_config: linux-aarch64-a3-800t-2
+#      image: ${{ needs.set-image-config.outputs.image_a3 }}
+#      run_timeout_minutes: '60'
+#      timeout_per_file: '3600'
+#      partitions: '{"size":2,"arr":[0, 1]}'
+#      use_coverage_runner: true
+#      is_nightly_pipeline_job: true
+#      upload_test_logs: false
+#    secrets: inherit
 
 #  base-b-test-2-npu-a3:
 #    needs: [ set-image-config ]
@@ -268,20 +268,25 @@ jobs:
     needs:
       [
         set-image-config,
-        base-b-test-1-npu-a3,
+#        base-b-test-1-npu-a3,
 #        base-b-test-2-npu-a3,
       ]
     if: always()
     runs-on: linux-aarch64-a3-800t-2
     container:
-      image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    env:
+      # Hardcoded for local reproduction of run 34819612076-attempt-1.
+      # Revert to: RUN_ID: ${{ github.run_id }}  /  RUN_ATTEMPT: ${{ github.run_attempt }}
+      RUN_ID: "34819612076"
+      RUN_ATTEMPT: "1"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Copy sglang source to covstub
         run: |
-          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+          RUN_DIR="/root/.cache/tests/precise-test/${RUN_ID}-attempt-${RUN_ATTEMPT}"
           COVSTUB="${RUN_DIR}/outputs/covstub"
           mkdir -p "${COVSTUB}"
           cp -r python/sglang "${COVSTUB}/"
@@ -290,7 +295,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+          RUN_DIR="/root/.cache/tests/precise-test/${RUN_ID}-attempt-${RUN_ATTEMPT}"
           # Date tag derivation must match scripts/ci/npu/precise-test/run_tests_with_coverage.sh
           # (GITHUB_RUN_STARTED_AT is identical across all jobs of one run,
           # immune to cross-midnight splits).
@@ -336,7 +341,7 @@ jobs:
 
       - name: Archive outputs
         run: |
-          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+          RUN_DIR="/root/.cache/tests/precise-test/${RUN_ID}-attempt-${RUN_ATTEMPT}"
           tar -czf "${RUN_DIR}/outputs.tar.gz" -C "${RUN_DIR}" outputs
 
       - name: Upload outputs and map to OBS
@@ -347,7 +352,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+          RUN_DIR="/root/.cache/tests/precise-test/${RUN_ID}-attempt-${RUN_ATTEMPT}"
           export RUN_DIR
 
           # Skip upload when no coverage data was collected this run (map build
@@ -396,7 +401,7 @@ jobs:
   pr-test-npu-finish:
     needs:
       [
-        base-b-test-1-npu-a3,
+#        base-b-test-1-npu-a3,
 #        base-b-test-2-npu-a3,
         setup-covstub,
       ]
