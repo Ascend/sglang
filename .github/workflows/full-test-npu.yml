@@ -59,13 +59,13 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a2 }}" ]; then
-            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-910b" >> $GITHUB_OUTPUT
+            echo "image_a2=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-910b-B060" >> $GITHUB_OUTPUT
           else
             echo "image_a2=${{ inputs.image_a2 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B060" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -195,7 +195,7 @@ jobs:
       test_suite: full-acc-2-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      install_sglang_deps: true
+      install_sglang_deps: false
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
       coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -212,7 +212,7 @@ jobs:
       test_suite: full-acc-4-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      install_sglang_deps: true
+      install_sglang_deps: false
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
       coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -229,7 +229,7 @@ jobs:
       test_suite: full-acc-16-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      install_sglang_deps: true
+      install_sglang_deps: false
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
       coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
