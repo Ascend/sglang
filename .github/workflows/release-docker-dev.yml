@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - device_type: 950
-            dockerfile: docker/npu_cann9.1.0_dsv.Dockerfile
+            dockerfile: docker/npu_cann9.1.0_dsv1_950.Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
