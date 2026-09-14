@@ -13,7 +13,6 @@ from sgl_kernel_npu.fla.kda_prefill import (
 from sgl_kernel_npu.fla.kda_target_verify import kda_target_verify_npu
 from sgl_kernel_npu.fla.solve_tril import solve_tril_npu
 from sgl_kernel_npu.fla.utils import prepare_chunk_indices
-
 from sglang.kernels.ops.attention.fla.cumsum import chunk_local_cumsum
 from sglang.kernels.ops.attention.fla.kda import chunk_kda_scaled_dot_kkt_fwd
 from sglang.kernels.ops.attention.fla.l2norm import l2norm_fwd
@@ -458,7 +457,6 @@ class AscendKDAAttnBackend(KDAAttnBackend):
             intermediate_states_buffer=intermediate_state,
             intermediate_state_indices=intermediate_indices,
             cache_steps=draft_token_num,
-            lower_bound=None,
             gates_are_preactivated=True,
         )
         if dense_token_indices is None:
@@ -538,9 +536,7 @@ class AscendKDAHybridLinearAttnBackend:
                     ]
                 )
 
-                mamba_caches = (
-                    self.linear_attn_backend.req_to_token_pool.get_speculative_mamba2_params_all_layers()
-                )
+                mamba_caches = self.linear_attn_backend.req_to_token_pool.get_speculative_mamba2_params_all_layers()
 
                 conv_states = mamba_caches.conv[0]
                 ssm_states = mamba_caches.temporal

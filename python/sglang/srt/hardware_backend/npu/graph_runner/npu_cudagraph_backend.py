@@ -12,14 +12,12 @@ non-NPU hosts.
 
 from __future__ import annotations
 
-import threading
 from contextlib import AbstractContextManager, contextmanager
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import numpy as np
 import torch
-
 from sglang.srt.constants import GPU_MEMORY_TYPE_CUDA_GRAPH
 from sglang.srt.distributed.device_communicators.pynccl_allocator import (
     set_graph_pool_id,
@@ -150,8 +148,10 @@ class NPUCudaGraphBackend(BaseCudaGraphBackend):
         attr_type: Any = None,
         cpu_update_input: list = None,
     ) -> Any:
-        """Rebind seq_lens on the recorded NPU graph in a background
-        thread, then replay. Used when the model is not deepseek-nsa.
+        """Rebind seq_lens on the recorded NPU graph, then replay.
+
+        NPUGraph.update must complete before replay can consume the updated
+        KV lengths. Used when the model is not deepseek-nsa.
 
         Two calling conventions:
         1. (legacy) seq_lens + attr_name + attr_type:
@@ -166,14 +166,9 @@ class NPUCudaGraphBackend(BaseCudaGraphBackend):
 
         graph = self._graphs[shape_key]
 
-        def _update():
-            self._device_module.set_device(self._device_id)
-            graph.update(cpu_update_input=cpu_update_input)
-
-        thread = threading.Thread(target=_update)
-        thread.start()
+        self._device_module.set_device(self._device_id)
+        graph.update(cpu_update_input=cpu_update_input)
         graph.replay()
-        thread.join()
         return self._outputs[shape_key]
 
     def cleanup(self) -> None:

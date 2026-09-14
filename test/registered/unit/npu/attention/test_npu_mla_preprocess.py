@@ -7,8 +7,9 @@ import unittest
 from unittest.mock import patch
 
 import torch
-
+from sglang.srt.environ import envs
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=4, suite="stage-a-unit-test-npu")
 
@@ -173,7 +174,7 @@ class TestIsMlaPreprocessEnabled(unittest.TestCase):
             self.assertTrue(is_mla_preprocess_enabled())
 
 
-class TestIsFiaNz(unittest.TestCase):
+class TestIsFiaNz(CustomTestCase):
     def setUp(self):
         is_mla_preprocess_enabled.cache_clear()
         is_fia_nz.cache_clear()
@@ -195,12 +196,13 @@ class TestIsFiaNz(unittest.TestCase):
         ):
             self.assertTrue(is_fia_nz())
 
-    def test_fia_nz_without_mlapo_raises(self):
-        with patch.dict(os.environ):
-            os.environ.pop("SGLANG_NPU_USE_MLAPO", None)
-            os.environ["SGLANG_USE_FIA_NZ"] = "1"
-            with self.assertRaises(AssertionError):
-                is_fia_nz()
+    def test_fia_nz_without_mlapo_returns_true(self):
+        with (
+            envs.SGLANG_NPU_USE_MLAPO.override(False),
+            envs.SGLANG_USE_FIA_NZ.override(True),
+        ):
+            self.assertTrue(is_fia_nz())
+            self.assertFalse(is_mla_preprocess_enabled())
 
 
 if __name__ == "__main__":
