@@ -1680,7 +1680,7 @@ class TestDSparkPrefillCPArgs(unittest.TestCase):
         args = SimpleNamespace(
             device="npu",
             enable_prefill_cp=True,
-            get_model_config=lambda: SimpleNamespace(
+            _model_config=SimpleNamespace(
                 hf_config=SimpleNamespace(
                     model_type="kimi_k3",
                     architectures=["KimiK3ForConditionalGeneration"],
@@ -1699,7 +1699,7 @@ class TestDSparkPrefillCPArgs(unittest.TestCase):
 
     def test_other_npu_target_remains_rejected(self):
         args = self._make_args(
-            get_model_config=lambda: SimpleNamespace(
+            _model_config=SimpleNamespace(
                 hf_config=SimpleNamespace(
                     model_type="qwen3", architectures=["Qwen3ForCausalLM"]
                 )

@@ -360,7 +360,7 @@ def _supports_dspark_prefill_cp(server_args: ServerArgs) -> bool:
     ):
         return False
 
-    hf_config = server_args.get_model_config().hf_config
+    hf_config = model_config_of(server_args).hf_config
     model_type = getattr(hf_config, "model_type", None)
     architectures = getattr(hf_config, "architectures", None) or []
     return model_type == "kimi_k3" or "KimiK3ForConditionalGeneration" in architectures
