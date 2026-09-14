@@ -18,7 +18,6 @@ from sglang.kernels.ops.attention.fla.kda import chunk_kda_scaled_dot_kkt_fwd
 from sglang.kernels.ops.attention.fla.l2norm import l2norm_fwd
 from sglang.srt.hardware_backend.npu.kda_kernel_capabilities import (
     check_kda_fla_cp_kernel_compatibility,
-    kda_prefill_kernel_uses_key_value_state,
 )
 from sglang.srt.layers.attention.linear.kda_backend import (
     KDAAttnBackend,
@@ -103,14 +102,13 @@ class _AscendKDAExtendKernel:
     """Ascend-only KDA prefill decomposition backed by sgl-kernel-npu."""
 
     def __init__(self) -> None:
-        self._uses_key_value_state = kda_prefill_kernel_uses_key_value_state()
         self._fla_cp_compatible, self._fla_cp_incompatibility = (
             check_kda_fla_cp_kernel_compatibility()
         )
 
     def _persistent_state_for_kernel(self, ssm_states: torch.Tensor) -> torch.Tensor:
-        if self._uses_key_value_state:
-            return ssm_states
+        # Keep the established Ascend wrapper ABI [H, V, K]. The framework's
+        # speculative state is [H, K, V], so adapt it at this call boundary.
         return ssm_states.transpose(-1, -2)
 
     def extend(
@@ -179,10 +177,9 @@ class _AscendKDAExtendKernel:
             chunk_indices=chunk_indices,
         )
         del triangular
-        # The versioned PCP kernel consumes the framework's persistent
-        # [H, K, V] state directly.  Older kernels use the original [H, V, K]
-        # wrapper contract; PCP is disabled for them, but ordinary prefill
-        # remains correct through this zero-copy transposed view.
+        # The framework keeps persistent KDA state as [H, K, V], while the
+        # established Ascend wrapper accepts [H, V, K]. Adapt only at the
+        # wrapper boundary; its Triton kernel still computes on [H, K, V].
         kernel_state_source = self._persistent_state_for_kernel(ssm_states)
         kernel_state_indices = cache_indices
         if cp_context is not None:
@@ -199,7 +196,7 @@ class _AscendKDAExtendKernel:
                 cache_indices,
                 cp_context,
             )
-            kernel_state_source = local_initial_kv
+            kernel_state_source = local_initial_kv.transpose(-1, -2)
             kernel_state_indices = cp_context.local_segment_indices
             if kernel_state_indices is None:
                 kernel_state_indices = torch.arange(

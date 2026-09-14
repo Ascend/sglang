@@ -17,30 +17,14 @@ register_cpu_ci(est_time=1, suite="base-a-test-cpu")
 
 def _compatible_module():
     return SimpleNamespace(
-        KDA_FLA_CP_API_VERSION=1,
-        KDA_PREFILL_STATE_LAYOUT="key_value",
         chunk_gated_delta_rule_fwd_affine_npu=lambda: None,
         merge_kda_cp_affine_states=lambda: None,
     )
 
 
-def test_kda_fla_cp_kernel_capability_requires_version_layout_and_operators():
+def test_kda_fla_cp_kernel_capability_requires_affine_operators():
     with patch("importlib.import_module", return_value=_compatible_module()):
         assert check_kda_fla_cp_kernel_compatibility() == (True, "compatible")
-
-    old_module = _compatible_module()
-    del old_module.KDA_FLA_CP_API_VERSION
-    with patch("importlib.import_module", return_value=old_module):
-        compatible, reason = check_kda_fla_cp_kernel_compatibility()
-    assert not compatible
-    assert "too old" in reason
-
-    wrong_layout = _compatible_module()
-    wrong_layout.KDA_PREFILL_STATE_LAYOUT = "value_key"
-    with patch("importlib.import_module", return_value=wrong_layout):
-        compatible, reason = check_kda_fla_cp_kernel_compatibility()
-    assert not compatible
-    assert "state layout" in reason
 
     missing_operator = _compatible_module()
     del missing_operator.merge_kda_cp_affine_states

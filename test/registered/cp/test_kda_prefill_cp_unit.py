@@ -79,7 +79,6 @@ class TestKDAPrefillCP(unittest.TestCase):
     )
     def test_legacy_prefill_kernel_gets_value_key_state_view(self):
         kernel = _AscendKDAExtendKernel()
-        kernel._uses_key_value_state = False
         state = torch.arange(24).reshape(1, 2, 3, 4)
 
         legacy_state = kernel._persistent_state_for_kernel(state)
@@ -215,7 +214,10 @@ class TestKDAPrefillCP(unittest.TestCase):
             )
 
         self.assertNotIn("state_value_major", compose.call_args.kwargs)
-        self.assertIs(state_kernel.call_args.kwargs["initial_state"], local_initial)
+        kernel_state = state_kernel.call_args.kwargs["initial_state"]
+        self.assertEqual(kernel_state.shape[-2:], (value_dim, key_dim))
+        self.assertEqual(kernel_state.data_ptr(), local_initial.data_ptr())
+        torch.testing.assert_close(kernel_state, local_initial.transpose(-1, -2))
 
     def test_fla_conv_uses_only_segment_tails(self):
         local_inputs = [
