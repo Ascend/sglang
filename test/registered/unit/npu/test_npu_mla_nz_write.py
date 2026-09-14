@@ -70,6 +70,80 @@ class TestMLANZWrite(CustomTestCase):
                 with self.assertRaises(ValueError):
                     _mla_fia_nz_scatter_indices(loc, head_dim, page_size)
 
+    def test_empty_write_preserves_all_layers(self):
+        def scatter(dst, indices, src):
+            dst.index_copy_(0, indices.flatten().long(), src)
+
+        for is_nz in (False, True):
+            with self.subTest(is_nz=is_nz):
+                pool = make_pool(is_nz)
+                before_k, before_v = pool.k_buffer.clone(), pool.v_buffer.clone()
+                npu = SimpleNamespace(npu_scatter_nd_update_=scatter)
+                with patch.object(memory_pool_npu, "torch_npu", npu, create=True):
+                    pool.set_kv_buffer(
+                        SimpleNamespace(layer_id=4),
+                        torch.empty(0, dtype=torch.int32),
+                        torch.empty(0, 1, 576),
+                        None,
+                    )
+                self.assertTrue(torch.equal(pool.k_buffer, before_k))
+                self.assertTrue(torch.equal(pool.v_buffer, before_v))
+
+    def test_noncontiguous_inputs_preserve_token_and_feature_order(self):
+        def scatter(dst, indices, src):
+            dst.index_copy_(0, indices.flatten().long(), src)
+
+        values = torch.arange(3 * 1152).reshape(3, 1, 1152).float() % 113
+        values = values[..., ::2]
+        self.assertFalse(values.is_contiguous())
+        loc = torch.tensor([47, 16, 31], dtype=torch.int64)
+        for is_nz in (False, True):
+            with self.subTest(is_nz=is_nz):
+                pool = make_pool(is_nz)
+                npu = SimpleNamespace(npu_scatter_nd_update_=scatter)
+                with patch.object(memory_pool_npu, "torch_npu", npu, create=True):
+                    pool.set_kv_buffer(
+                        SimpleNamespace(layer_id=3), loc, *values.split((512, 64), -1)
+                    )
+                for cache, source in zip(
+                    (pool.k_buffer, pool.v_buffer), values.split((512, 64), -1)
+                ):
+                    expected = torch.full_like(cache[0], -1)
+                    expected.flatten(0, 1)[loc] = source.to(pool.dtype)
+                    ids = torch.tensor([0, 1, 2, 3])
+                    actual = gather_mla_cache_pages(cache[0], ids, is_nz=is_nz)
+                    torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+                    self.assertTrue(torch.all(cache[1] == -1))
+
+    def test_fp8_storage_reinterprets_bytes_after_combined_kv_conversion(self):
+        def scatter(dst, indices, src):
+            self.assertEqual(dst.dtype, torch.uint8)
+            self.assertEqual(src.dtype, torch.uint8)
+            dst.index_copy_(0, indices.flatten().long(), src)
+
+        values = (torch.arange(2 * 576).reshape(2, 1, 576).float() % 29) - 14
+        loc = torch.tensor([15, 16], dtype=torch.int32)
+        for is_nz in (False, True):
+            with self.subTest(is_nz=is_nz):
+                pool = make_pool(is_nz)
+                pool.dtype, pool.store_dtype = torch.float8_e4m3fn, torch.uint8
+                pool.k_buffer = torch.full(pool.k_buffer.shape, 255, dtype=torch.uint8)
+                pool.v_buffer = torch.full(pool.v_buffer.shape, 255, dtype=torch.uint8)
+                npu = SimpleNamespace(npu_scatter_nd_update_=scatter)
+                with patch.object(memory_pool_npu, "torch_npu", npu, create=True):
+                    pool.set_kv_buffer(SimpleNamespace(layer_id=4), loc, values, None)
+                for cache, source in zip(
+                    (pool.k_buffer, pool.v_buffer), values.split((512, 64), -1)
+                ):
+                    expected = torch.full_like(cache[1], 255)
+                    expected.flatten(0, 1)[loc.long()] = source.to(pool.dtype).view(
+                        pool.store_dtype
+                    )
+                    ids = torch.tensor([1, 0, 2, 3])
+                    actual = gather_mla_cache_pages(cache[1], ids, is_nz=is_nz)
+                    self.assertTrue(torch.equal(actual, expected[ids]))
+                    self.assertTrue(torch.all(cache[0] == 255))
+
     def test_combined_and_separate_writes_round_trip(self):
         def scatter(dst, indices, src):
             dst.index_copy_(0, indices.flatten().long(), src)

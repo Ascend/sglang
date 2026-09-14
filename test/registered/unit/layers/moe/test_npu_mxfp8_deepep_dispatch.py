@@ -80,6 +80,80 @@ class TestNPUMXFP8DeepEPDispatch(CustomTestCase):
         kwargs = buffer.low_latency_dispatch.call_args.kwargs
         self.assertEqual(kwargs["quant_mode"], "mx_fp8_e4m3")
 
+    def test_switching_from_mxfp8_clears_quant_mode(self):
+        dispatcher = object.__new__(deepep._DeepEPDispatcherImplLowLatency)
+        dispatcher.quant_config = {}
+        for dtype, expected_fp8, expected_mode in (
+            (DispatcherOutputDtype.MXFP8, True, "mx_fp8_e4m3"),
+            (DispatcherOutputDtype.BF16, False, None),
+            (DispatcherOutputDtype.MXFP8, True, "mx_fp8_e4m3"),
+            (DispatcherOutputDtype.INT8, True, None),
+        ):
+            with self.subTest(dtype=dtype), patch.object(deepep, "_is_npu", True):
+                with patch.object(
+                    deepep, "get_deepep_output_dtype", return_value=dtype
+                ):
+                    dispatcher.set_deepep_dispatcher_dtype()
+                self.assertEqual(dispatcher.deepep_output_dtype, dtype)
+                self.assertEqual(dispatcher.use_fp8, expected_fp8)
+                self.assertFalse(dispatcher.use_nvfp4)
+                self.assertEqual(dispatcher.quant_mode, expected_mode)
+
+    def test_legacy_dispatch_omits_mxfp8_keyword_for_both_completion_modes(self):
+        hidden = torch.zeros(2, 128, dtype=torch.bfloat16)
+        ids = torch.zeros(2, 2, dtype=torch.int64)
+        weights = torch.ones(2, 2)
+        for recv_hook in (False, True):
+            with self.subTest(recv_hook=recv_hook):
+                dispatcher = object.__new__(deepep._DeepEPDispatcherImplLowLatency)
+                dispatcher.quant_config = {}
+                dispatcher.num_max_dispatch_tokens_per_rank = 64
+                dispatcher.num_experts = 512
+                dispatcher.use_fp8 = dispatcher.use_nvfp4 = False
+                dispatcher.quant_mode = None
+                dispatcher.return_recv_hook = recv_hook
+                packed, counts, handle, event, hook = (object() for _ in range(5))
+                buffer = Mock()
+                buffer.low_latency_dispatch.return_value = (
+                    packed,
+                    counts,
+                    handle,
+                    event,
+                    hook,
+                )
+                dispatcher._get_buffer = Mock(return_value=buffer)
+                with patch.object(deepep, "_deepep_precompile_tp_barrier"):
+                    output = dispatcher._dispatch_core(hidden, ids, weights)
+                kwargs = buffer.low_latency_dispatch.call_args.kwargs
+                self.assertNotIn("quant_mode", kwargs)
+                self.assertNotIn("use_nvfp4", kwargs)
+                self.assertFalse(kwargs["use_fp8"])
+                self.assertEqual(kwargs["return_recv_hook"], recv_hook)
+                self.assertEqual(kwargs["async_finish"], not recv_hook)
+                self.assertEqual(output, (packed, counts, event, hook))
+                self.assertIs(dispatcher.handle, handle)
+
+    def test_missing_mode_override_falls_back_to_generic_dtype(self):
+        with (
+            get_context().override_server_args(deepep_dispatcher_output_dtype="auto"),
+            moe_utils.envs.SGLANG_DEEPEP_BF16_DISPATCH.override(False),
+        ):
+            for mode, expected in (
+                (DeepEPMode.NORMAL, DispatcherOutputDtype.BF16),
+                (DeepEPMode.LOW_LATENCY, DispatcherOutputDtype.MXFP8),
+            ):
+                with self.subTest(mode=mode):
+                    dispatcher = SimpleNamespace(
+                        dispatch_mode=mode,
+                        quant_config={
+                            "dispatcher_output_dtype": "bf16",
+                            "low_latency_dispatcher_output_dtype": "mxfp8",
+                        },
+                    )
+                    self.assertEqual(
+                        moe_utils.get_deepep_output_dtype(dispatcher), expected
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()

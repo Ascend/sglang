@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import numpy as np
+import torch
 from sglang.srt.configs.model_config import AttentionArch
 from sglang.srt.hardware_backend.npu.graph_runner.npu_cudagraph_backend import (
     NPUCudaGraphBackend,
@@ -74,6 +75,58 @@ class TestDSparkGraphUpdate(CustomTestCase):
         with self.assertRaisesRegex(RuntimeError, "update failed"):
             backend.replay_with_input_update("shape", None, cpu_update_input=[])
         graph.replay.assert_not_called()
+
+    def test_legacy_list_and_tensor_metadata_survive_page_boundaries(self):
+        backend = object.__new__(NPUCudaGraphBackend)
+        graph = Mock()
+        backend._graphs = {"shape": graph}
+        backend._outputs = {"shape": object()}
+        backend._device_module = Mock()
+        backend._device_id = 2
+        lengths = [0, 127, 128, 129, 256]
+        for attr_name, attr_type in (
+            ("actual_seq_lengths_kv", []),
+            ("context_lens", torch.empty(0)),
+        ):
+            with self.subTest(attr_name=attr_name):
+                graph.reset_mock()
+                output = backend.replay_with_input_update(
+                    "shape", lengths, attr_name=attr_name, attr_type=attr_type
+                )
+                metadata = graph.update.call_args.kwargs["cpu_update_input"]
+                self.assertEqual(len(metadata), 1)
+                self.assertEqual(set(metadata[0]), {attr_name})
+                actual = metadata[0][attr_name]
+                if isinstance(attr_type, torch.Tensor):
+                    self.assertEqual(actual.dtype, torch.int32)
+                    self.assertEqual(actual.device.type, "cpu")
+                    self.assertEqual(actual.tolist(), lengths)
+                else:
+                    self.assertEqual(actual, lengths)
+                graph.replay.assert_called_once_with()
+                self.assertIs(output, backend._outputs["shape"])
+                backend._device_module.set_device.assert_called_with(2)
+
+    def test_explicit_multistep_metadata_updates_only_selected_graph(self):
+        backend = object.__new__(NPUCudaGraphBackend)
+        selected, untouched = Mock(), Mock()
+        backend._graphs = {"small": untouched, "large": selected}
+        backend._outputs = {"small": object(), "large": object()}
+        backend._device_module = Mock()
+        backend._device_id = 0
+        metadata = [
+            {"actual_seq_kvlen": [127, 0]},
+            {"actual_seq_kvlen": [128, 0]},
+            {"actual_seq_kvlen": [129, 0]},
+        ]
+        output = backend.replay_with_input_update(
+            "large", [999], attr_name="unused", cpu_update_input=metadata
+        )
+        self.assertIs(selected.update.call_args.kwargs["cpu_update_input"], metadata)
+        selected.replay.assert_called_once_with()
+        untouched.update.assert_not_called()
+        untouched.replay.assert_not_called()
+        self.assertIs(output, backend._outputs["large"])
 
 
 if __name__ == "__main__":
