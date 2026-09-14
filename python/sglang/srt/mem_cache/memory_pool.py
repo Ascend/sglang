@@ -138,6 +138,16 @@ def get_tensor_size_bytes(t: Union[torch.Tensor, List[torch.Tensor]]):
     return np.prod(t.shape) * t.dtype.itemsize
 
 
+def _use_npu_kda_pcp_state_layout(cache_params: BaseLinearStateParams) -> bool:
+    """Use the contiguous [H, K, V] state layout only for active NPU PCP."""
+    if not (_is_npu and cache_params.is_kda):
+        return False
+    parallel = get_parallel()
+    return bool(
+        parallel.enable_prefill_context_parallel and parallel.attn_cp_size > 1
+    )
+
+
 def _set_kv_buffer_impl(
     k: torch.Tensor,
     v: torch.Tensor,
@@ -530,6 +540,9 @@ class MambaPool:
 
         self.size = size
         self.device = device
+        self.kda_state_key_value_layout = _use_npu_kda_pcp_state_layout(
+            cache_params
+        )
         self.debug_memory_pool = envs.SGLANG_DEBUG_MEMORY_POOL.get()
         self.enable_linear_replayssm = enable_linear_replayssm
         self.linear_replayssm_cache_len = linear_replayssm_cache_len
@@ -718,26 +731,29 @@ class MambaPool:
                         device=device,
                     )
 
+            if self.kda_state_key_value_layout:
+                # FLA PCP composes recurrent states in [H, K, V]. Reinterpret
+                # the allocation as a contiguous row-major [K, V] matrix only
+                # for a service whose effective topology enables PCP. PCP-off
+                # keeps the established Ascend [H, V, K] cache contract.
+                temporal_state_shape = (
+                    *temporal_state_shape[:-2],
+                    temporal_state_shape[-1],
+                    temporal_state_shape[-2],
+                )
+                temporal_state = temporal_state.view(
+                    *temporal_state.shape[:-3],
+                    *temporal_state_shape,
+                )
+
             if speculative_num_draft_tokens is not None:
-                if _is_npu:
-                    npu_temporal_state_shape = (
+                if _is_npu and not self.kda_state_key_value_layout:
+                    temporal_state_shape = (
                         *temporal_state_shape[:-2],
                         temporal_state_shape[-1],
                         temporal_state_shape[-2],
                     )
-                    if cache_params.is_kda:
-                        # KDA FLA kernels address each recurrent state as a
-                        # contiguous row-major [K, V] matrix. Reinterpret the
-                        # existing allocation instead of returning a strided
-                        # transpose; Kimi's K == V shape cannot reveal the
-                        # difference through shape validation alone.
-                        temporal_state = temporal_state.view(
-                            *temporal_state.shape[:-3],
-                            *npu_temporal_state_shape,
-                        )
-                    else:
-                        temporal_state = temporal_state.transpose(-1, -2)
-                    temporal_state_shape = npu_temporal_state_shape
+                    temporal_state = temporal_state.transpose(-1, -2)
                 # Cache intermediate SSM states per draft token during target verify
                 # Shape: [num_layers, size + 1, speculative_num_draft_tokens, HV, K, V]
                 #

@@ -20,6 +20,7 @@ from sglang.srt.layers.attention.linear.kda_cp import (
     kda_use_fla_prefill_cp,
     prepare_kda_cp_conv_states,
 )
+from sglang.srt.mem_cache.memory_pool import _use_npu_kda_pcp_state_layout
 from sglang.test.ci.ci_register import register_cpu_ci
 
 register_cpu_ci(est_time=2, suite="base-a-test-cpu")
@@ -73,12 +74,42 @@ def _context(group, rank, local_lens=(1, 1), split_list=(1, 1, 1, 1)):
 
 
 class TestKDAPrefillCP(unittest.TestCase):
+    def test_key_value_cache_layout_is_scoped_to_active_pcp(self):
+        kda_params = SimpleNamespace(is_kda=True)
+        with (
+            patch("sglang.srt.mem_cache.memory_pool._is_npu", True),
+            patch(
+                "sglang.srt.mem_cache.memory_pool.get_parallel",
+                return_value=SimpleNamespace(
+                    enable_prefill_context_parallel=True,
+                    attn_cp_size=2,
+                ),
+            ),
+        ):
+            self.assertTrue(_use_npu_kda_pcp_state_layout(kda_params))
+
+        with (
+            patch("sglang.srt.mem_cache.memory_pool._is_npu", True),
+            patch(
+                "sglang.srt.mem_cache.memory_pool.get_parallel",
+                return_value=SimpleNamespace(
+                    enable_prefill_context_parallel=False,
+                    attn_cp_size=1,
+                ),
+            ),
+        ):
+            self.assertFalse(_use_npu_kda_pcp_state_layout(kda_params))
+
+        non_kda_params = SimpleNamespace(is_kda=False)
+        with patch("sglang.srt.mem_cache.memory_pool._is_npu", True):
+            self.assertFalse(_use_npu_kda_pcp_state_layout(non_kda_params))
+
     @unittest.skipIf(
         _AscendKDAExtendKernel is None,
         "requires an importable sgl-kernel-npu KDA prefill kernel",
     )
-    def test_legacy_prefill_kernel_gets_value_key_state_view(self):
-        kernel = _AscendKDAExtendKernel()
+    def test_pcp_prefill_kernel_gets_value_key_state_view(self):
+        kernel = _AscendKDAExtendKernel(state_key_value_layout=True)
         state = torch.arange(24).reshape(1, 2, 3, 4)
 
         legacy_state = kernel._persistent_state_for_kernel(state)
@@ -86,6 +117,18 @@ class TestKDAPrefillCP(unittest.TestCase):
         self.assertEqual(legacy_state.shape, (1, 2, 4, 3))
         self.assertEqual(legacy_state.data_ptr(), state.data_ptr())
         torch.testing.assert_close(legacy_state, state.transpose(-1, -2))
+
+    @unittest.skipIf(
+        _AscendKDAExtendKernel is None,
+        "requires an importable sgl-kernel-npu KDA prefill kernel",
+    )
+    def test_pcp_off_prefill_keeps_community_state_layout(self):
+        kernel = _AscendKDAExtendKernel(state_key_value_layout=False)
+        state = torch.arange(24).reshape(1, 2, 3, 4)
+
+        kernel_state = kernel._persistent_state_for_kernel(state)
+
+        self.assertIs(kernel_state, state)
 
     def test_fla_affine_composes_natural_zigzag_order(self):
         # Natural transforms are 2x+1, 3x+2, 4x+3, 5x+4.
@@ -201,7 +244,7 @@ class TestKDAPrefillCP(unittest.TestCase):
                 return_value=v,
             ),
         ):
-            _AscendKDAExtendKernel().extend(
+            _AscendKDAExtendKernel(state_key_value_layout=True).extend(
                 q=q,
                 k=k,
                 v=v,

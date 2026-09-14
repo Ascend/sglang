@@ -48,10 +48,10 @@ def _kda_decode_key_value_state_npu(
     state_indices: torch.Tensor,
     lower_bound: Optional[float],
 ) -> torch.Tensor:
-    """Decode one token per request against speculative ``[H, K, V]`` state.
+    """Decode one token per request against PCP ``[H, K, V]`` state.
 
-    NPU speculative allocation exposes the persistent KDA state as contiguous
-    ``[H, K, V]`` so target verification and its snapshots use the same layout.
+    NPU PCP allocation exposes the persistent KDA state as contiguous
+    ``[H, K, V]`` so affine composition and target verification share a layout.
     The shared recurrent Triton fallback assumes the ordinary ``[H, V, K]``
     layout and Kimi's K == V shape cannot expose that mismatch.  Keep this
     batched and tensor-only so it remains safe during NPU graph capture.
@@ -101,15 +101,18 @@ def _kda_decode_key_value_state_npu(
 class _AscendKDAExtendKernel:
     """Ascend-only KDA prefill decomposition backed by sgl-kernel-npu."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, state_key_value_layout: bool = False) -> None:
+        self._state_key_value_layout = state_key_value_layout
         self._fla_cp_compatible, self._fla_cp_incompatibility = (
             check_kda_fla_cp_kernel_compatibility()
         )
 
     def _persistent_state_for_kernel(self, ssm_states: torch.Tensor) -> torch.Tensor:
-        # Keep the established Ascend wrapper ABI [H, V, K]. The framework's
-        # speculative state is [H, K, V], so adapt it at this call boundary.
-        return ssm_states.transpose(-1, -2)
+        # The established Ascend wrapper ABI is [H, V, K]. Only an active PCP
+        # service stores KDA state as [H, K, V] and needs this zero-copy view.
+        if self._state_key_value_layout:
+            return ssm_states.transpose(-1, -2)
+        return ssm_states
 
     def extend(
         self,
@@ -177,12 +180,16 @@ class _AscendKDAExtendKernel:
             chunk_indices=chunk_indices,
         )
         del triangular
-        # The framework keeps persistent KDA state as [H, K, V], while the
-        # established Ascend wrapper accepts [H, V, K]. Adapt only at the
-        # wrapper boundary; its Triton kernel still computes on [H, K, V].
+        # PCP keeps persistent KDA state as [H, K, V], while the established
+        # Ascend wrapper accepts [H, V, K]. PCP-off already uses that wrapper
+        # layout and therefore needs no extra boundary view.
         kernel_state_source = self._persistent_state_for_kernel(ssm_states)
         kernel_state_indices = cache_indices
         if cp_context is not None:
+            if not self._state_key_value_layout:
+                raise RuntimeError(
+                    "KDA FLA PCP requires the PCP-specific [H, K, V] state layout"
+                )
             local_affine = chunk_gated_delta_rule_fwd_affine_npu(
                 k=gated_k,
                 w=w,
@@ -268,8 +275,16 @@ class AscendKDAAttnBackend(KDAAttnBackend):
                 conv_pool_shape[-2],
             )
         )
-        self._state_key_value_layout = model_runner.spec_algorithm.is_speculative()
-        self.kernel_dispatcher.extend_kernel = _AscendKDAExtendKernel()
+        self._state_key_value_layout = bool(
+            getattr(
+                model_runner.req_to_token_pool.mamba_pool,
+                "kda_state_key_value_layout",
+                False,
+            )
+        )
+        self.kernel_dispatcher.extend_kernel = _AscendKDAExtendKernel(
+            state_key_value_layout=self._state_key_value_layout
+        )
 
     def _get_conv_weights_t(
         self, layer: RadixLinearAttention, dtype: torch.dtype
@@ -318,10 +333,10 @@ class AscendKDAAttnBackend(KDAAttnBackend):
             run_mode=1,
         )
 
-        # Speculative NPU allocation exposes contiguous [H, K, V] state, while
+        # NPU PCP allocation exposes contiguous [H, K, V] state, while
         # the shared recurrent fallback consumes [H, V, K]. Dispatch the
-        # validated graph-safe recurrence before the generic path;
-        # non-speculative [H, V, K] caches remain unchanged.
+        # validated graph-safe recurrence before the generic path. PCP-off
+        # [H, V, K] caches remain on the established community path.
         if self._state_key_value_layout:
             q, k, v = qkv.split([layer.q_dim, layer.k_dim, layer.v_dim], dim=-1)
             q = q.unflatten(-1, (-1, layer.head_q_dim)).unsqueeze(0)
