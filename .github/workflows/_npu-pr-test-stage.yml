@@ -233,6 +233,7 @@ jobs:
 
             git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
             cd ./lmms-eval
+            sed -i "/decord; platform_system/d" pyproject.toml
             python3 -m pip install . > lmmslog.txt 2>&1 || { cat lmmslog.txt; exit 1; }
             python3 -c "import lmms_eval" || { echo "lmms_eval import check failed"; cat lmmslog.txt; exit 1; }
             cd ../
