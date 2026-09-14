@@ -98,6 +98,15 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
         resp = requests.get(self.base_url + "/health", timeout=30)
         self.assertEqual(resp.status_code, 200)
 
+        # Verify --mm-enable-dp-encoder took effect across TP ranks (server log)
+        with open(self.err_file.name) as f:
+            log_content = f.read()
+        self.assertIn(
+            "--mm-enable-dp-encoder is enabled across TP=4",
+            log_content,
+            "Expected '--mm-enable-dp-encoder is enabled across TP=4' not found in server log",
+        )
+
         # Video chat request matching the reference curl command
         data = {
             "model": "Qwen3-VL-30B-A3B-Instruct",
