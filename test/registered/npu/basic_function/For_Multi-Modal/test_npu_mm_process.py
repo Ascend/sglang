@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=600, suite="nightly-4-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
 
 # Video processing config matching the reference command
 _MM_PROCESS_CONFIG = json.dumps(
@@ -52,8 +52,7 @@ _COMMON_ARGS = [
 
 
 class TestMmProcessConfigDpEncoder(CustomTestCase):
-    """--mm-process-config + --mm-enable-dp-encoder -- verify video chat
-    completion works.
+    """"Testcase：Verify --mm-process-config + --mm-enable-dp-encoder -- verify video chat completion works with custom video preprocessing and DP encoder.
 
     [Test Category] Parameter
     [Test Target] --mm-process-config, --mm-enable-dp-encoder
