@@ -62,6 +62,10 @@ on:
         description: 'Unique identifier for coverage data grouping. Pass caller run_id-run_attempt to enable coverage.'
         type: string
         default: ''
+      coverage_save_interval:
+        description: 'Seconds between periodic coverage saves. Raise (e.g. 60) for memory-sensitive tests; 0 disables.'
+        type: string
+        default: '5'
 
 env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
@@ -278,6 +282,7 @@ jobs:
           COVERAGE_FILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coverage' || '' }}
           COVERAGE_RCFILE: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
           COVERAGE_PROCESS_START: ${{ inputs.coverage_run_id && '/tmp/coverage_data/.coveragerc' || '' }}
+          COVERAGE_SAVE_INTERVAL: ${{ inputs.coverage_run_id && inputs.coverage_save_interval || '0' }}
         shell: bash
         run: |
           # Fail fast on any command error, undefined variable, or pipe failure.
