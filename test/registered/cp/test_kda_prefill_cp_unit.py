@@ -7,11 +7,13 @@ import torch
 try:
     from sglang.srt.hardware_backend.npu.attention.ascend_kda_backend import (
         AscendKDAAttnBackend,
+        _AscendKDAExtendKernel,
     )
 except ModuleNotFoundError as exc:
     if not (exc.name or "").startswith("sgl_kernel_npu"):
         raise
     AscendKDAAttnBackend = None
+    _AscendKDAExtendKernel = None
 from sglang.srt.layers.attention.linear.kda_cp import (
     KDAFLACPContext,
     compose_kda_cp_affine_states,
@@ -108,6 +110,97 @@ class TestKDAPrefillCP(unittest.TestCase):
             state_value_major=True,
         )
         torch.testing.assert_close(state_pool, torch.tensor([[[[959.0]]]]))
+
+    @unittest.skipIf(
+        _AscendKDAExtendKernel is None,
+        "requires the matching sgl-kernel-npu KDA affine-state PR",
+    )
+    def test_ascend_cp_extend_keeps_key_value_state_layout(self):
+        context = _context(None, rank=0)
+        key_dim, value_dim = 2, 3
+        q = torch.zeros(1, 2, 1, key_dim)
+        k = torch.zeros_like(q)
+        v = torch.zeros(1, 2, 1, value_dim)
+        g = torch.zeros_like(q)
+        beta = torch.zeros(1, 2, 1)
+        state_pool = torch.arange(6, dtype=torch.float32).reshape(
+            1, 1, key_dim, value_dim
+        )
+        local_initial = torch.arange(12, dtype=torch.float32).reshape(
+            2, 1, key_dim, value_dim
+        )
+        local_affine = torch.zeros(2, 1, key_dim, key_dim + value_dim)
+        chunk_states = torch.zeros(1, 1, 1, key_dim, value_dim)
+        new_values = torch.zeros_like(v)
+        compose = Mock(return_value=local_initial)
+        state_kernel = Mock(return_value=(chunk_states, new_values))
+
+        with (
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "l2norm_fwd",
+                side_effect=lambda value: value,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "prepare_chunk_indices",
+                return_value=torch.tensor([[0, 0]], dtype=torch.int32),
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "chunk_local_cumsum",
+                side_effect=lambda value, **_kwargs: value,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "chunk_kda_scaled_dot_kkt_fwd",
+                return_value=(torch.zeros(1), torch.zeros(1)),
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "solve_tril_npu",
+                side_effect=lambda A, **_kwargs: A,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "recompute_w_u_fwd_npu",
+                return_value=(torch.zeros_like(k), torch.zeros_like(v), k),
+            ),
+            patch(
+                "sgl_kernel_npu.fla.kda_chunk_delta_h."
+                "chunk_gated_delta_rule_fwd_affine_npu",
+                return_value=local_affine,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "compose_kda_cp_affine_states",
+                compose,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "chunk_gated_delta_rule_fwd_h_npu",
+                state_kernel,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
+                "chunk_gla_fwd_o_gk_npu",
+                return_value=v,
+            ),
+        ):
+            _AscendKDAExtendKernel().extend(
+                q=q,
+                k=k,
+                v=v,
+                g=g,
+                beta=beta,
+                ssm_states=state_pool,
+                cache_indices=torch.tensor([0], dtype=torch.int32),
+                query_start_loc=context.local_cu_seqlens,
+                cp_context=context,
+            )
+
+        self.assertNotIn("state_value_major", compose.call_args.kwargs)
+        self.assertIs(state_kernel.call_args.kwargs["initial_state"], local_initial)
 
     def test_fla_conv_uses_only_segment_tails(self):
         local_inputs = [

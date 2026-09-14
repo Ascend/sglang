@@ -174,9 +174,8 @@ class _AscendKDAExtendKernel:
                 ssm_states,
                 cache_indices,
                 cp_context,
-                state_value_major=True,
             )
-            kernel_state_source = local_initial_kv.transpose(-1, -2).contiguous()
+            kernel_state_source = local_initial_kv
             kernel_state_indices = cp_context.local_segment_indices
             if kernel_state_indices is None:
                 kernel_state_indices = torch.arange(
