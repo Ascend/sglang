@@ -64,6 +64,7 @@ from enum import Enum, IntEnum, auto
 
 import torch
 import torch.distributed as dist
+
 from sglang.srt.runtime_context import get_resources
 
 _use_aiter = get_bool_env_var("SGLANG_USE_AITER") and is_hip()

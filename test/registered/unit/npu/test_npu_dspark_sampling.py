@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import torch
+
 from sglang.kernels.ops.speculative.dspark import dspark_accept
 from sglang.test.ci.ci_register import register_cpu_ci
 from sglang.test.test_utils import CustomTestCase
@@ -20,7 +21,9 @@ class TestDSparkSamplingStride(CustomTestCase):
                     candidates = torch.zeros((bs, width), dtype=torch.int64)
                     buffers = tuple(
                         torch.zeros((bs, width), dtype=torch.int32) for _ in range(5)
-                    ) + (torch.zeros(bs, dtype=torch.int32),)
+                    ) + (
+                        torch.zeros(bs, dtype=torch.int32),
+                    )
                     sample = Mock()
                     with (
                         patch.object(dspark_accept, "_is_npu", is_npu),

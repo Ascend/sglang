@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import torch
 import torch_npu  # noqa: F401
+
 from sglang.srt.environ import envs
 from sglang.srt.hardware_backend.npu.attention.ascend_backend import AscendAttnBackend
 from sglang.srt.hardware_backend.npu.attention.mla_cache import gather_mla_cache_pages

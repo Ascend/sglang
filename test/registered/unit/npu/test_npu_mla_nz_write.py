@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import torch
+
 from sglang.srt.hardware_backend.npu import memory_pool_npu
 from sglang.srt.hardware_backend.npu.attention.mla_cache import gather_mla_cache_pages
 from sglang.srt.hardware_backend.npu.memory_pool_npu import (

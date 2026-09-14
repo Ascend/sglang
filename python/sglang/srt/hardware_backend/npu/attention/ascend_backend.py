@@ -9,6 +9,7 @@ from sgl_kernel_npu.attention.sinks_attention import (
     attention_sinks_prefill_triton,
     attention_sinks_triton,
 )
+
 from sglang.srt.configs.model_config import AttentionArch
 from sglang.srt.dllm.config import DllmConfig
 from sglang.srt.environ import envs
@@ -2202,9 +2203,9 @@ class AscendAttnBackend(AttentionBackend):
                 # V2 consumes it with BNSD queries; keep the cache unchanged.
                 batch_size = len(actual_seq_lengths_kv)
                 query_seq_len = self.speculative_num_draft_tokens
-                assert q_nope.shape[0] == batch_size * query_seq_len, (
-                    "FIAS V2 target verify requires one fixed draft block per request"
-                )
+                assert (
+                    q_nope.shape[0] == batch_size * query_seq_len
+                ), "FIAS V2 target verify requires one fixed draft block per request"
                 if batch_size == 0:
                     attn_output = torch.empty_like(q_nope)
                 else:

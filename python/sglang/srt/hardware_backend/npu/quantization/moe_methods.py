@@ -2,10 +2,11 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+from torch.nn.parameter import Parameter
+
 from sglang.srt.environ import envs
 from sglang.srt.hardware_backend.npu.utils import npu_format_cast
 from sglang.srt.layers.quantization.base_config import FusedMoEMethodBase
-from torch.nn.parameter import Parameter
 
 if TYPE_CHECKING:
     from sglang.srt.layers.moe.moe_runner.ascend import AscendQuantInfo

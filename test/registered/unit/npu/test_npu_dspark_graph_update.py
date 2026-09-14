@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import numpy as np
 import torch
+
 from sglang.srt.configs.model_config import AttentionArch
 from sglang.srt.hardware_backend.npu.graph_runner.npu_cudagraph_backend import (
     NPUCudaGraphBackend,

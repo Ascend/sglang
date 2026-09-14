@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import torch
 import torch_npu  # noqa: F401
+
 from sglang.kernels.ops.speculative.dspark.dspark_accept import AcceptSampling
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase

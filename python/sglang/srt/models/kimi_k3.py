@@ -12,6 +12,8 @@ from functools import cached_property
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import torch
+from torch import nn
+
 from sglang.kernels.ops.attention.fla.fused_norm_gate import FusedRMSNormGated
 from sglang.srt.configs.kimi_k3 import KimiK3Config
 from sglang.srt.configs.kimi_linear import KimiLinearConfig
@@ -131,7 +133,6 @@ from sglang.srt.utils.common import (
     require_mlp_sync,
     set_weight_attrs,
 )
-from torch import nn
 
 logger = logging.getLogger(__name__)
 _is_hip = is_hip()
@@ -776,6 +777,7 @@ class KimiK3MoE(nn.Module):
         backend (combine returns fully-summed rows; `_reduce_latent` then only
         applies the norm)."""
         import deep_gemm
+
         from sglang.kernels.ops.attention.dsv4 import mega_moe_pre_dispatch
         from sglang.srt.distributed.parallel_state import get_moe_ep_group
         from sglang.srt.environ import envs

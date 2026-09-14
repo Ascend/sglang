@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import numpy as np
 import torch
+
 from sglang.srt.constants import GPU_MEMORY_TYPE_CUDA_GRAPH
 from sglang.srt.distributed.device_communicators.pynccl_allocator import (
     set_graph_pool_id,

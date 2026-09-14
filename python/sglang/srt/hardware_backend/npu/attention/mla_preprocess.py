@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional
 
 import torch
 import torch.nn.functional as F
+
 from sglang.srt.environ import envs
 from sglang.srt.hardware_backend.npu.utils import npu_format_cast
 from sglang.srt.model_executor.forward_context import (
