@@ -250,6 +250,7 @@ jobs:
           name: ld-debug-${{ inputs.test_config_name }}
           path: |
             /root/.cache/tests/output/**/ld_debug.tar.gz
+            /root/.cache/tests/output/**/server.log
             /tmp/wf_ld_debug*
           retention-days: 7
           if-no-files-found: ignore

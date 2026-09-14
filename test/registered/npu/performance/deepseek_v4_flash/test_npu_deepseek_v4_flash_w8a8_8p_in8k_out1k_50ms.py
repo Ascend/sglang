@@ -178,6 +178,7 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
             "python",
             "-m",
             "sglang.launch_server",
+            "--model-path",
             cls.model,
             "--host",
             host,
