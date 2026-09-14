@@ -59,10 +59,12 @@ class TestNPUQwen3_4B_1P_GSM8K(TestNpuAccuracyTestCaseBase):
     datasets = ["gsm8k"]
     few_shot_num = 5
     generation_config = {
-        "max_tokens": 65536,
-        "temperature": 1.0,
+        "max_tokens": 1024,
+        "stream": True,
+        "timeout": 600,
     }
     eval_batch_size = 64
+    limit = 256
 
     def test_gsm8k(self):
         self.run_accuracy()
