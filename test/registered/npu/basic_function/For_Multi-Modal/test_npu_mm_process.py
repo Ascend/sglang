@@ -53,7 +53,7 @@ _COMMON_ARGS = [
 
 class TestMmProcessConfigDpEncoder(CustomTestCase):
     """--mm-process-config + --mm-enable-dp-encoder -- verify video chat
-    completion works with custom video processing and DP encoder.
+    completion works.
 
     [Test Category] Parameter
     [Test Target] --mm-process-config, --mm-enable-dp-encoder
@@ -135,8 +135,6 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
         self.assertIsInstance(content, str)
         self.assertGreater(len(content), 0)
 
-        # With temperature=0.0 the output is deterministic; verify the video
-        # content description (verified on Ascend NPU CI, see 1.log)
         self.assertIn(
             "In this video, a man is standing on a stage in front of a large screen",
             content,
