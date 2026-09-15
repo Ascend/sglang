@@ -152,7 +152,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         self.assertIn(
             retract_pattern,
             full_log,
-            "No 'KV cache pool is full. Retract requests.' found in server logs. "
+            "No 'KV cache pool is full. Retract requests.' found in server logs. ",
         )
 
         # Assert 2: both requests completed correctly
@@ -317,7 +317,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
         self.assertIn(
             retract_pattern,
             full_log,
-            "No 'KV cache pool is full. Retract requests.' found in server logs. "
+            "No 'KV cache pool is full. Retract requests.' found in server logs. ",
         )
 
         # Assert 2: both requests completed correctly
