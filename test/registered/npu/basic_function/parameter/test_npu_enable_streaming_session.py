@@ -30,7 +30,6 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
-LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH = "/mnt/paas/weights/Llama-3.2-1B-Instruct"
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
 
