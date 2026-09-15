@@ -6,7 +6,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 )
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    GLM_5_2_W4A8_MODEL_PATH,
+    GLM_5_2_W8A8_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -17,7 +17,7 @@ register_npu_ci(
     disabled="accuracy testcase",
 )
 
-GLM_5_2_W4A8_16P_TWO_NODE_ENVS = {
+GLM_5_2_W8A8_16P_TWO_NODE_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "SGLANG_SET_CPU_AFFINITY": "1",
@@ -28,12 +28,13 @@ GLM_5_2_W4A8_16P_TWO_NODE_ENVS = {
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
+    "DEEPEP_HYBRID_DEPLOYMENT": "1",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
-GLM_5_2_W4A8_16P_TWO_NODE_OTHER_ARGS = [
+GLM_5_2_W8A8_16P_TWO_NODE_OTHER_ARGS = [
     "--attention-backend",
     "ascend",
     "--device",
@@ -55,7 +56,7 @@ GLM_5_2_W4A8_16P_TWO_NODE_OTHER_ARGS = [
     "--context-length",
     135000,
     "--served-model-name",
-    "glm-5.2-w4a8",
+    "glm-5.2-w8a8",
     "--cuda-graph-max-bs-decode",
     4,
     "--max-running-requests",
@@ -86,21 +87,19 @@ GLM_5_2_W4A8_16P_TWO_NODE_OTHER_ARGS = [
     "unquant",
 ]
 
-GLM_5_2_W4A8_16P_TWO_NODE_MODEL_CONFIG = {
-    "model_path": GLM_5_2_W4A8_MODEL_PATH,
-    "other_args": GLM_5_2_W4A8_16P_TWO_NODE_OTHER_ARGS,
-    "node_envs": GLM_5_2_W4A8_16P_TWO_NODE_ENVS,
+GLM_5_2_W8A8_16P_TWO_NODE_MODEL_CONFIG = {
+    "model_path": GLM_5_2_W8A8_MODEL_PATH,
+    "other_args": GLM_5_2_W8A8_16P_TWO_NODE_OTHER_ARGS,
+    "node_envs": GLM_5_2_W8A8_16P_TWO_NODE_ENVS,
 }
 
 
-class TestNPUGLM_5_2_W4A8_16P_GPQA(TestNpuAccuracyMultiNodePdMixTestCaseBase):
-    """Test NPU accuracy for GLM-5.2-w4a8 16p two nodes on gpqa_diamond"""
+class TestNPUGLM_5_2_W8A8_16P_GPQA(TestNpuAccuracyMultiNodePdMixTestCaseBase):
+    """Test NPU accuracy for GLM-5.2-w8a8 16p two nodes on gpqa_diamond"""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
-    model_config = GLM_5_2_W4A8_16P_TWO_NODE_MODEL_CONFIG
+    model_config = GLM_5_2_W8A8_16P_TWO_NODE_MODEL_CONFIG
     accuracy = 0.912
-    # Run GPQA only once; fail without retrying when accuracy misses the threshold.
-    accuracy_max_retries = 1
     datasets = ["gpqa_diamond"]
     # eval_batch_size = 16
     # generation_config = {"max_tokens": 131072, "temperature": 1.0}
@@ -114,8 +113,8 @@ class TestNPUGLM_5_2_W4A8_16P_GPQA(TestNpuAccuracyMultiNodePdMixTestCaseBase):
         "stream": True,
     }
 
-    def test_npu_glm_5_2_w4a8_16p_gpqa(self):
-        """Run NPU accuracy test for GLM-5.2-w4a8 16p two nodes on gpqa_diamond"""
+    def test_npu_glm_5_2_w8a8_16p_gpqa(self):
+        """Run NPU accuracy test for GLM-5.2-w8a8 16p two nodes on gpqa_diamond"""
         self.run_accuracy()
 
 

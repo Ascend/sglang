@@ -405,9 +405,9 @@ jobs:
             test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_16p_in3k5_out1k5_50ms.py
             test_type: 'perf'
           # glm5.2 mix tests
-          - name: glm_5_2_w4a8_16p_gpqa
+          - name: glm_5_2_w8a8_16p_gpqa
             node_size: 2
-            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w4a8_16p_gpqa.py
+            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w8a8_16p_gpqa.py
             test_type: 'perf'
           # kimi_k3 mix tests
           - name: kimi_k3_w4a8_32p_gpqa
