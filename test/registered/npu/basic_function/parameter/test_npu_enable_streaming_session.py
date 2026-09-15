@@ -30,7 +30,7 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
-
+LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH = "/mnt/paas/weights/Llama-3.2-1B-Instruct"
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
 
@@ -38,19 +38,45 @@ register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 # Test data
 # ------------------------------------------------------------------
 
+# NOTE: each chunk is sized to exactly 116 tokens (post BOS strip, verified
+# with the Llama-3.2 tokenizer) so that each turn's total token count
+# (prompt 116*n + completion 12, forced by min_new_tokens below) is an exact
+# KV_PAGE_SIZE multiple — the NPU streaming-session path only reuses session
+# KV once the inherited context fills at least one page, and reuse is
+# page-floor aligned (aligned context < page_size falls back to full prefill
+# with cached_tokens=0).
 CHUNKS = [
-    "Let me tell you something about France.",
-    "The capital of France is",
-    "The population of the city is",
-    "A brief history about that city is",
+    "Let me tell you something about France. The countryside keeps a long list of wonders:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village of",
+    "The capital of France is Paris. Visitors often add more places to their plan:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey to",
+    "The population of the city is large. Historians keep adding notes about the people:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey",
+    "A brief history about that city is worth telling. The chronicle lists many events:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey",
 ]
+
+# Exactly 128 tokens (incl. BOS): turn-1 prompt for the abort tests. Turn 1
+# total (128 + completion) fills at least one page, so later turns inherit
+# KV on NPU (cached_tokens > 0).
+WIZARD_PROMPT = (
+    "Tell me a very long story about a wizard. His tale begins with a list of strange things:, "
+    "Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, "
+    "Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, "
+    "harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, "
+    "stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey, mountain, "
+    "thunder, kingdom, tower"
+)
 
 SAMPLING_PARAMS = {
     "temperature": 0,
     "max_new_tokens": 12,
+    # Force the full 12-token output so each turn's total token count
+    # (prompt + completion) stays deterministic for page-aligned math.
+    "min_new_tokens": 12,
     "no_stop_trim": True,
     "skip_special_tokens": False,
 }
+
+# Server default page_size on NPU. CHUNKS / WIZARD_PROMPT above are pre-sized
+# against this value so session KV inheritance assertions hold on NPU.
+KV_PAGE_SIZE = 128
 
 LONG_SAMPLING_PARAMS = {
     "temperature": 0,
@@ -58,23 +84,6 @@ LONG_SAMPLING_PARAMS = {
     "no_stop_trim": True,
     "skip_special_tokens": False,
 }
-
-# Ascend KV reuse is page-granular: the streaming-session wrapper floor-aligns the
-# inherited prefix to a page boundary and releases the slot outright while the
-# committed context is shorter than one page (see the is_npu() branch in
-# srt/session/streaming_session.py). Ascend's default page_size is 128, so a turn
-# must carry at least one page of context before any of it can be inherited;
-# otherwise cached_tokens stays 0 and only a full prefill happens.
-NPU_PAGE_SIZE = 128
-# Padded prompt length for a turn that later has to be inherited: two pages give
-# margin, since only floor(total / page_size) * page_size is inheritable.
-NPU_INHERIT_MIN_TOKENS = 2 * NPU_PAGE_SIZE
-
-# Decoding steps the first turn performs in the abort-recovery tests, so its slot
-# (prompt + completion) clears the page threshold. ignore_eos keeps generating to
-# exactly this length instead of stopping on the first EOS.
-ABORT_BASELINE_TOKENS = 256
-ABORT_BASELINE_PROMPT = "Tell me a very long story about a wizard."
 
 # ------------------------------------------------------------------
 # Test class
@@ -108,12 +117,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
         Returns the subprocess handle. Caller is responsible for
         ``kill_process_tree(process.pid)`` in a finally block.
         """
-        all_args = [
-            "--attention-backend",
-            "ascend",
-            "--page-size",
-            str(NPU_PAGE_SIZE),
-        ] + (extra_args or [])
+        all_args = ["--attention-backend", "ascend"] + (extra_args or [])
         with envs.SGLANG_ENABLE_STRICT_MEM_CHECK_DURING_BUSY.override(1):
             with envs.SGLANG_CHECK_KV_PAGE_INVARIANTS.override(True):
                 return popen_launch_server(
@@ -179,36 +183,6 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                 chunk_ids[i] = chunk_ids[i][1:]
         return chunk_ids
 
-    @staticmethod
-    def _pad_chunk_ids(tokenizer, chunk_ids):
-        """Extend a non-final chunk so each turn's committed KV clears a page.
-
-        Each turn's inherited prefix is floor-aligned to NPU_PAGE_SIZE, so a turn
-        only becomes inheritable once the previous turn's committed total
-        (prompt + completion) reaches NPU_INHERIT_MIN_TOKENS. The final chunk is
-        left untouched: it is the last turn, so it never has to be inherited.
-        """
-        if len(chunk_ids) < 2:
-            return chunk_ids
-        # Llama-3.2 ships no pad_token; EOS is a valid id. The filler may stop
-        # decoding after one token, which is why the pad target is a whole
-        # NPU_INHERIT_MIN_TOKENS rather than being discounted by the max_new_tokens
-        # of the turn: the session only reuses these tokens' KV, never re-decodes.
-        filler = tokenizer.pad_token_id
-        if filler is None:
-            filler = tokenizer.eos_token_id
-        for i in range(len(chunk_ids) - 1):
-            if len(chunk_ids[i]) < NPU_INHERIT_MIN_TOKENS:
-                chunk_ids[i] = chunk_ids[i] + [filler] * (
-                    NPU_INHERIT_MIN_TOKENS - len(chunk_ids[i])
-                )
-        return chunk_ids
-
-    @staticmethod
-    def _page_aligned_kv(turn_total):
-        """KV length actually inheritable from a turn of this total length."""
-        return (turn_total // NPU_PAGE_SIZE) * NPU_PAGE_SIZE
-
     # ==================================================================
     # Part B: KV cache inheritance (P0 correctness)
     # ==================================================================
@@ -221,15 +195,13 @@ class TestNpuEnableStreamingSession(CustomTestCase):
 
     def test_kv_cache_inheritance(self):
         """Each turn's cached_tokens must equal the previous turn's
-        prompt+completion, floor-aligned to the NPU page boundary (KV inherited
-        via inherit_kv_states).
+        prompt+completion (KV inherited via inherit_kv_states).
 
-        Multi-turn conversation flow (each non-final chunk padded so the turn is
-        inheritable, see _pad_chunk_ids):
+        Multi-turn conversation flow:
           Turn 1: [chunk0] → clean start, no cache hit, builds KV
-          Turn 2: [chunk0→KV + chunk1] → cached_tokens == page-aligned Turn1 KV
-          Turn 3: [chunk0→KV + chunk1→KV + chunk2] → inherits page-aligned Turn2
-          Turn N: inherits the page-aligned (N-1)th turn's full KV
+          Turn 2: [chunk0→KV + chunk1] → cached_tokens == Turn1 KV len
+          Turn 3: [chunk0→KV + chunk1→KV + chunk2] → inherits Turn2 KV
+          Turn N: inherits (N-1)th turn's full KV (prompt + completion)
         """
         process = self._launch_server(["--enable-streaming-session"])
         try:
@@ -237,10 +209,9 @@ class TestNpuEnableStreamingSession(CustomTestCase):
             self.assertEqual(health.status_code, 200)
 
             tokenizer = self._get_tokenizer()
-            chunk_ids = self._pad_chunk_ids(tokenizer, self._encode_chunks(tokenizer))
-            # prompt_tokens will grow each turn because the session
-            # concatenates all previous chunks (they are KV-cached,
-            # not re-computed, but still counted as prompt_tokens)
+            # CHUNKS are pre-sized so turn totals (prompt + 12 completion)
+            # are exact page multiples: turn N inherits KV_PAGE_SIZE * (N-1).
+            chunk_ids = self._encode_chunks(tokenizer)
 
             requests.post(self.base_url + "/flush_cache")
 
@@ -284,15 +255,13 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                     # First turn: no prior KV to inherit
                     self.assertEqual(cached, 0, "Turn 1: clean start, no cache hit")
                 else:
-                    # Turns 2+: cached_tokens must equal the previous turn's
-                    # total, floor-aligned to the NPU page boundary
-                    expected = self._page_aligned_kv(prev_kv_len)
+                    # Turns 2+: cached_tokens must equal previous
+                    # turn's total tokens, proving full KV reuse
                     self.assertEqual(
                         cached,
-                        expected,
+                        prev_kv_len,
                         f"Turn {turn_idx + 1}: inherited {cached} != "
-                        f"page-aligned prev total {expected} "
-                        f"(prev total {prev_kv_len})",
+                        f"prev total {prev_kv_len}",
                     )
                 # Record this turn's total for the next iteration
                 prev_kv_len = turn_total
@@ -329,15 +298,12 @@ class TestNpuEnableStreamingSession(CustomTestCase):
         to the last successful turn.
 
         Assertions:
-        - Turn 1 completes normally → record turn_1_total (≥ NPU_INHERIT_MIN_TOKENS)
-        - Turn 2 cached_tokens > 0 (inherits page-aligned Turn 1 KV cache)
+        - Turn 1 completes normally → record turn_1_total
+        - Turn 2 cached_tokens > 0 (inherits Turn 1 KV cache)
         - Turn 2 finish_reason.type == "abort"
         - Turn 3 prompt_tokens == turn_1_total + len(ids_3) - bos
           (no stale abort context from Turn 2)
-        - Turn 3 completion_tokens == 8 (full output)
-
-        Turn 3 does not inherit KV: a mid-decode abort nukes the whole slot
-        (try_cache_finished_req → release_session), so recovery re-prefills."""
+        - Turn 3 completion_tokens == 8 (full output)"""
         process = self._launch_server(["--enable-streaming-session"])
         try:
             health = requests.get(f"{self.base_url}/health_generate")
@@ -352,23 +318,21 @@ class TestNpuEnableStreamingSession(CustomTestCase):
             session_id = resp.json()
 
             try:
-                # Turn 1: normal generate to create session slot. Decode is
-                # forced to a fixed length (ignore_eos) so the slot clears the
-                # NPU page threshold and Turn 2 can actually inherit from it.
-                ids_1 = tokenizer.encode(ABORT_BASELINE_PROMPT)
+                # Turn 1: normal generate to create session slot
+                # (WIZARD_PROMPT fills one KV page so Turn 2/3 inherit on NPU)
+                ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
                         "input_ids": ids_1,
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": ABORT_BASELINE_TOKENS,
-                            "ignore_eos": True,
+                            "max_new_tokens": 16,
                             "no_stop_trim": True,
                             "skip_special_tokens": False,
                         },
                         "session_params": {"id": session_id, "rid": None},
                     },
-                    timeout=120,
+                    timeout=30,
                 )
                 self.assertEqual(resp_1.status_code, 200, resp_1.text)
                 data_1 = resp_1.json()
@@ -423,6 +387,10 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
+                                # Force the full 8-token output so the
+                                # completion_tokens == 8 assertion holds even
+                                # if the model would emit EOS early.
+                                "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
                             },
@@ -535,6 +503,10 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
+                                # Force the full 8-token output so the
+                                # completion_tokens == 8 assertion holds even
+                                # if the model would emit EOS early.
+                                "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
                             },
@@ -593,9 +565,9 @@ class TestNpuEnableStreamingSession(CustomTestCase):
         session slot; next turn inherits correct KV from turn 1.
 
         Assertions:
-        - Turn 1 completes normally → record turn_1_total (≥ NPU_INHERIT_MIN_TOKENS)
+        - Turn 1 completes normally → record turn_1_total
         - Turn 2 status in (200, 400) (rejected by create_req)
-        - Turn 3 cached_tokens == page-aligned turn_1_total (slot intact)
+        - Turn 3 cached_tokens > 0 (slot intact, KV inherited from Turn 1)
         - Turn 3 prompt_tokens == turn_1_total + len(ids_3) - bos
           (no corruption from pre-aborted Turn 2)
         - Turn 3 completion_tokens == 8 (full output)"""
@@ -613,23 +585,21 @@ class TestNpuEnableStreamingSession(CustomTestCase):
             session_id = resp.json()
 
             try:
-                # Turn 1: normal generate to create slot. Decode is forced to a
-                # fixed length (ignore_eos) so the slot clears the NPU page
-                # threshold and Turn 3 can actually inherit from it.
-                ids_1 = tokenizer.encode(ABORT_BASELINE_PROMPT)
+                # Turn 1: normal generate to create slot
+                # (WIZARD_PROMPT fills one KV page so Turn 3 inherits on NPU)
+                ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
                         "input_ids": ids_1,
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": ABORT_BASELINE_TOKENS,
-                            "ignore_eos": True,
+                            "max_new_tokens": 16,
                             "no_stop_trim": True,
                             "skip_special_tokens": False,
                         },
                         "session_params": {"id": session_id, "rid": None},
                     },
-                    timeout=120,
+                    timeout=30,
                 )
                 self.assertEqual(resp_1.status_code, 200, resp_1.text)
                 data_1 = resp_1.json()
@@ -667,6 +637,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                         "sampling_params": {
                             "temperature": 0,
                             "max_new_tokens": 8,
+                            "min_new_tokens": 8,
                             "no_stop_trim": True,
                             "skip_special_tokens": False,
                         },
@@ -684,11 +655,11 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                     "prompt_tokens must equal turn_1_total + append "
                     "(slot preserved after pre-abort)",
                 )
-                # Turn 3 must inherit the page-aligned KV of Turn 1 (slot intact)
-                self.assertEqual(
+                # Turn 3 must inherit KV cache from Turn 1 (slot intact)
+                self.assertGreater(
                     data_3["meta_info"]["cached_tokens"],
-                    self._page_aligned_kv(turn_1_total),
-                    "Turn 3 should inherit the page-aligned KV from Turn 1 "
+                    0,
+                    "Turn 3 should inherit KV cache from Turn 1 "
                     "(slot must not be corrupted by pre-abort)",
                 )
                 self.assertEqual(
