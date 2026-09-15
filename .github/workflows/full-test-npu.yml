@@ -97,24 +97,56 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
+  discover-multi-node:
+    name: discover-multi-node-matrix
+    needs: [ set-image-config ]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_separation: ${{ steps.discover.outputs.matrix_separation }}
+      matrix_mix: ${{ steps.discover.outputs.matrix_mix }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.ref }}
+
+      - name: Discover multi-node test matrix from CI registries
+        id: discover
+        run: |
+          # Only kimi_k2_6 cases carry npu_multi_node registration for now;
+          # remove --filter once more cases are migrated to the registry.
+          python3 python/sglang/test/ci/gen_npu_multi_node_matrix.py \
+            --test-dir test/registered/npu \
+            --deployment separation \
+            --filter kimi_k2_6 > /tmp/matrix_separation.json
+          python3 python/sglang/test/ci/gen_npu_multi_node_matrix.py \
+            --test-dir test/registered/npu \
+            --deployment mix \
+            --filter kimi_k2_6 > /tmp/matrix_mix.json
+          cat /tmp/matrix_separation.json
+          cat /tmp/matrix_mix.json
+          {
+            echo "matrix_separation<<EOF"
+            cat /tmp/matrix_separation.json
+            echo "EOF"
+            echo "matrix_mix<<EOF"
+            cat /tmp/matrix_mix.json
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
   nightly-poc-multi-node-tests:
     name: multi-node-poc
-    needs: [ set-image-config ]
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') }}
+    needs: [ set-image-config, discover-multi-node ]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.discover-multi-node.outputs.matrix_separation != '[]' }}
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
-        test_config:
-          # ===== G1 batch: kimi_k2_6 1p1d_16p, 4 cases sharing the same resource
-          # profile (1p/1d/1r, same model). Plan A runs them in one Pod allocation.
-          - name: G1_kimi_k2_6_w4a8_1p1d_16p_batch
-            prefill_size: 1
-            decode_size: 1
-            router_size: 1
-            test_case: test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_100ms.py test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_100ms.py test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in128k_out1k_prefix90_100ms.py test/registered/npu/performance/kimi_k2_6/test_npu_kimi_k2_6_w4a8_1p1d_16p_in64k_out1k5_prefix90_100ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
+        # Generated from register_npu_ci(..., npu_multi_node={...}) in the
+        # registered test files; cases with the same resource profile are
+        # batched into one Pod allocation.
+        test_config: ${{ fromJson(needs.discover-multi-node.outputs.matrix_separation) }}
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-amd64-cpu-4
@@ -129,10 +161,33 @@ jobs:
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
 
+  nightly-poc-multi-node-mix-tests:
+    name: multi-node-mix-poc
+    needs: [ set-image-config, discover-multi-node ]
+    if: ${{ !cancelled() && (needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'poc' || needs.set-image-config.outputs.test_scope == 'no_nightly' || needs.set-image-config.outputs.test_scope == 'poc_no_nightly') && needs.discover-multi-node.outputs.matrix_mix != '[]' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_config: ${{ fromJson(needs.discover-multi-node.outputs.matrix_mix) }}
+    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
+    with:
+      runner: linux-amd64-cpu-4
+      test_type: ${{ matrix.test_config.test_type }}
+      test_config_name: ${{ matrix.test_config.name }}
+      node_size: ${{ matrix.test_config.node_size }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+      install_sglang_from_source: false
+      prefill_decode_deployment: 'mix'
+      transformers_version: ''
+
   check-all-jobs:
     needs:
       - set-image-config
+      - discover-multi-node
       - nightly-poc-multi-node-tests
+      - nightly-poc-multi-node-mix-tests
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
@@ -149,25 +204,22 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           has_metrics=false
-          for dir in /tmp/metrics/metrics-*/; do
-            file="${dir}metrics.json"
-            if [ -f "$file" ]; then
-              has_metrics=true
-              echo "import json" > /tmp/parse_metrics.py
-              echo "with open('$file') as f:" >> /tmp/parse_metrics.py
-              echo "    d = json.load(f)" >> /tmp/parse_metrics.py
-              echo "tc = d.get('test_case', '-')" >> /tmp/parse_metrics.py
-              echo "tp = d.get('test_type', '-')" >> /tmp/parse_metrics.py
-              echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
-              echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
-              echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
-              echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
-              echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
-              echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
-              echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
-              python3 /tmp/parse_metrics.py
-            fi
-          done > /tmp/metrics_table.txt
+          while IFS= read -r file; do
+            has_metrics=true
+            echo "import json" > /tmp/parse_metrics.py
+            echo "with open('$file') as f:" >> /tmp/parse_metrics.py
+            echo "    d = json.load(f)" >> /tmp/parse_metrics.py
+            echo "tc = d.get('test_case', '-')" >> /tmp/parse_metrics.py
+            echo "tp = d.get('test_type', '-')" >> /tmp/parse_metrics.py
+            echo "st = d.get('status', 'unknown')" >> /tmp/parse_metrics.py
+            echo "icon = '✅' if st == 'pass' else '❌'" >> /tmp/parse_metrics.py
+            echo "metrics = d.get('metrics', {})" >> /tmp/parse_metrics.py
+            echo "baselines = d.get('baselines', {})" >> /tmp/parse_metrics.py
+            echo "mstr = ', '.join(f'{k}={v}' for k,v in metrics.items()) if metrics else '-'" >> /tmp/parse_metrics.py
+            echo "bstr = ', '.join(f'{k}={v}' for k,v in baselines.items()) if baselines else '-'" >> /tmp/parse_metrics.py
+            echo "print(f'| {tc} | {tp} | {icon} {st} | {mstr} | {bstr} |')" >> /tmp/parse_metrics.py
+            python3 /tmp/parse_metrics.py
+          done < <(find /tmp/metrics -name metrics.json | sort) > /tmp/metrics_table.txt
 
           if [ "${has_metrics}" = "true" ]; then
             echo "| Test Case | Type | Status | Metrics | Baseline |" >> $GITHUB_STEP_SUMMARY
@@ -180,4 +232,5 @@ jobs:
 
           FAIL=0
           ${{ needs.nightly-poc-multi-node-tests.result != 'success' && needs.nightly-poc-multi-node-tests.result != 'skipped' }} && FAIL=1
+          ${{ needs.nightly-poc-multi-node-mix-tests.result != 'success' && needs.nightly-poc-multi-node-mix-tests.result != 'skipped' }} && FAIL=1
           exit $FAIL

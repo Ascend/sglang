@@ -12,6 +12,13 @@ register_npu_ci(
     est_time=1800,
     suite="nightly-pd-sep-2-node",
     nightly=True,
+    npu_multi_node={
+        "deployment": "separation",
+        "prefill_size": 1,
+        "decode_size": 1,
+        "router_size": 1,
+        "test_type": "perf",
+    },
 )
 
 PREFILL_ENVS = {

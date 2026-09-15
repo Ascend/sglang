@@ -654,7 +654,8 @@ def run_npu_e2e_test_case(
     except Exception as e:
         logger.warning(f"Failed to write /tmp/kube_job_name.txt: {e}")
     # run_label is injected into the pod as RUN_LABEL to build the pod log directory prefix.
-    # nightly (>=4 segments after `output`): first two segments {branch}-{date}-{run_id}-{run_attempt}/{workflow}
+    # nightly (>=3 segments after `output`): first two segments {branch}-{date}-{run_id}-{run_attempt}/{workflow}
+    # (per-case dirs are appended in-Pod, so the metrics path ends at {test_type})
     # PR legacy layout: fall back to the date segment to keep the original {date}/{tc_name}/{host} path.
     parts = (
         metrics_data_file.split("/output/")[-1]
@@ -663,7 +664,7 @@ def run_npu_e2e_test_case(
     )
     if parts:
         segments = parts.split("/")
-        if len(segments) >= 4:
+        if len(segments) >= 3:
             run_label = "/".join(segments[:2])
         else:
             run_label = segments[1] if len(segments) > 1 else "unknown"
