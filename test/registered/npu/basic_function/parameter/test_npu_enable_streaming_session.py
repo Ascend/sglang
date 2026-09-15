@@ -199,6 +199,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
             # prompt_tokens will grow each turn because the session
             # concatenates all previous chunks (they are KV-cached,
             # not re-computed, but still counted as prompt_tokens)
+
             requests.post(self.base_url + "/flush_cache")
 
             resp = self._open_session(streaming=True, capacity=1000)
@@ -372,9 +373,6 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
-                                # Force the full 8-token output so the
-                                # completion_tokens == 8 assertion holds even
-                                # if the model would emit EOS early.
                                 "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
@@ -488,9 +486,6 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
-                                # Force the full 8-token output so the
-                                # completion_tokens == 8 assertion holds even
-                                # if the model would emit EOS early.
                                 "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
@@ -571,7 +566,6 @@ class TestNpuEnableStreamingSession(CustomTestCase):
 
             try:
                 # Turn 1: normal generate to create slot
-                # (WIZARD_PROMPT fills one KV page so Turn 3 inherits on NPU)
                 ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
