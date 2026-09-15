@@ -16,7 +16,9 @@ Test cases:
   - TC-MM-OPENAI-CHAT-012: max_completion_tokens + multimodal
 """
 
+import runpy
 import unittest
+from pathlib import Path
 
 import openai
 
@@ -37,10 +39,12 @@ from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    is_in_ci,
     popen_launch_server,
 )
 
-register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+# Include a cold build of the batch-invariant extension in CI partition estimates.
+register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 # ---------------------------------------------------------------------------
@@ -77,11 +81,11 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         "ascend_attn",
         "--mem-fraction-static",
         "0.75",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         1,
         2,
         4,
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--tp-size",
         1,
@@ -91,6 +95,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         "bfloat16",
         "--tool-call-parser",
         "qwen",
+        "--enable-deterministic-inference",
     ]
     _spec_args = [
         "--speculative-algorithm",
@@ -107,6 +112,14 @@ class TestMultimodalParameterInteractions(CustomTestCase):
     @classmethod
     def setUpClass(cls):
         """Start the SGLang server for VLM inference on Qwen3.5-9B."""
+        if is_in_ci():
+            # Install only when CI executes this file, never during discovery.
+            installer = (
+                Path(__file__).resolve().parents[5]
+                / "scripts/ci/npu/install_batch_invariant_ops.py"
+            )
+            runpy.run_path(str(installer))["install"]()
+
         cls.api_key = "sk-123456"
         cls.base_url = DEFAULT_URL_FOR_TEST
 
@@ -423,7 +436,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         resp_multi = self._request(
             self._build_msg(
                 image_b64,
-                "Describe the image briefly. " "End with either STOPEND or FINISHED",
+                "Describe the image briefly. End with either STOPEND or FINISHED",
             ),
             temperature=0,
             max_tokens=512,
