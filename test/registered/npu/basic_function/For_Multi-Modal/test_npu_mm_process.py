@@ -75,9 +75,11 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
                 *_COMMON_ARGS,
-                "--mm-enable-dp-encoder",
-                "--mm-process-config",
-                _MM_PROCESS_CONFIG,
+                # [Comparison experiment] disable both params to measure
+                # prompt_tokens without --mm-process-config / --mm-enable-dp-encoder
+                # "--mm-enable-dp-encoder",
+                # "--mm-process-config",
+                # _MM_PROCESS_CONFIG,
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
         )
@@ -97,14 +99,14 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
         resp = requests.get(self.base_url + "/health", timeout=30)
         self.assertEqual(resp.status_code, 200)
 
-        # Verify --mm-enable-dp-encoder took effect across TP ranks (server log)
-        with open(self.err_file.name) as f:
-            log_content = f.read()
-        self.assertIn(
-            "--mm-enable-dp-encoder is enabled across TP=4",
-            log_content,
-            "Expected '--mm-enable-dp-encoder is enabled across TP=4' not found in server log",
-        )
+        # [Comparison experiment] dp-encoder is disabled in this run, skip log check
+        # with open(self.err_file.name) as f:
+        #     log_content = f.read()
+        # self.assertIn(
+        #     "--mm-enable-dp-encoder is enabled across TP=4",
+        #     log_content,
+        #     "Expected '--mm-enable-dp-encoder is enabled across TP=4' not found in server log",
+        # )
 
         # Video chat request matching the reference curl command
         data = {
@@ -149,6 +151,7 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
         )
 
         print(f"\nVideo chat response: {content[:200]}...")
+        print(f"[Comparison experiment] prompt_tokens: {result['usage']['prompt_tokens']}")
 
 
 if __name__ == "__main__":
