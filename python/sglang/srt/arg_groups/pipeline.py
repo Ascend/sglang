@@ -149,8 +149,8 @@ def run_resolution_pipeline(server_args: Any) -> None:
     # Normalize deprecated CP aliases before validations or model-specific
     # defaults inspect enable_prefill_cp/cp_strategy.
     from sglang.srt.arg_groups.parallel_hook import (
-        handle_context_parallelism,
         handle_context_parallel_kernel_compatibility,
+        handle_context_parallelism,
         handle_data_parallelism,
         handle_dcp_validation,
         handle_dwdp,

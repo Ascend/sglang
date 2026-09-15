@@ -141,8 +141,7 @@ def handle_context_parallel_kernel_compatibility(server_args: Any) -> None:
     if not (
         getattr(hf_config, "model_type", None) == "kimi_k3"
         or any(
-            architecture
-            in ("KimiK3ForConditionalGeneration", "KimiLinearForCausalLM")
+            architecture in ("KimiK3ForConditionalGeneration", "KimiLinearForCausalLM")
             for architecture in architectures
         )
     ):

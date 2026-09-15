@@ -143,9 +143,7 @@ def _use_npu_kda_pcp_state_layout(cache_params: BaseLinearStateParams) -> bool:
     if not (_is_npu and cache_params.is_kda):
         return False
     parallel = get_parallel()
-    return bool(
-        parallel.enable_prefill_context_parallel and parallel.attn_cp_size > 1
-    )
+    return bool(parallel.enable_prefill_context_parallel and parallel.attn_cp_size > 1)
 
 
 def _set_kv_buffer_impl(
@@ -540,9 +538,7 @@ class MambaPool:
 
         self.size = size
         self.device = device
-        self.kda_state_key_value_layout = _use_npu_kda_pcp_state_layout(
-            cache_params
-        )
+        self.kda_state_key_value_layout = _use_npu_kda_pcp_state_layout(cache_params)
         self.debug_memory_pool = envs.SGLANG_DEBUG_MEMORY_POOL.get()
         self.enable_linear_replayssm = enable_linear_replayssm
         self.linear_replayssm_cache_len = linear_replayssm_cache_len
