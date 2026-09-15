@@ -27,11 +27,21 @@ Usage:
 
 import argparse
 import glob
+import importlib.util
 import json
 import os
 import sys
 
-from sglang.test.ci.ci_register import collect_tests
+# Load ci_register.py directly from its file path instead of importing the
+# sglang package: this script runs on bare CI runners (discover-multi-node
+# job) where sglang and its heavy dependencies (torch/transformers) are not
+# installed, and `import sglang` would drag them in via sglang/__init__.py.
+# ci_register itself only needs the stdlib (ast/dataclasses/enum/typing).
+_CI_REGISTER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ci_register.py")
+_spec = importlib.util.spec_from_file_location("ci_register", _CI_REGISTER_PATH)
+ci_register = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(ci_register)
+collect_tests = ci_register.collect_tests
 
 
 def _tc_name(test_case: str) -> str:
