@@ -280,7 +280,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd ../
           cd test
-          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/sessions/test_npu_streaming_session.py"
+          python3 run_suite.py --hw npu --suite full-2-npu-a3 --nightly --continue-on-error --timeout-per-file 3600 --auto-partition-size 1 --auto-partition-id ${{ matrix.part }} --files "test/registered/npu/basic_function/openai_server/test_npu_serving_transcription.py"
 
 #  full-4-npu-a3:
 #    needs: [ set-image-config ]
