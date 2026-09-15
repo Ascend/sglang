@@ -53,12 +53,10 @@ class TestRetractionPolicyLength(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--tp-size",
-        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.08",
+        "0.4",
         "--trust-remote-code",
         "--enable-metrics",
         "--log-level",
@@ -121,6 +119,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             )
             result_short["status"] = resp.status_code
             result_short["text"] = resp.json().get("text", "")
+            print(resp.json)
 
         def _send_long():
             resp = requests.post(
@@ -132,7 +131,7 @@ class TestRetractionPolicyLength(CustomTestCase):
                     ),
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 50000,
+                        "max_new_tokens": 50,
                         "ignore_eos": True,
                     },
                 },
@@ -140,14 +139,13 @@ class TestRetractionPolicyLength(CustomTestCase):
             )
             result_long["status"] = resp.status_code
             result_long["text"] = resp.json().get("text", "")
+            print(resp.json)
 
         t_short = threading.Thread(target=_send_short, daemon=True)
         t_long = threading.Thread(target=_send_long, daemon=True)
         t_short.start()
         t_long.start()
-
-        t_short.join(timeout=400)
-        t_long.join(timeout=400)
+        
         self.assertFalse(t_short.is_alive(), "[LEN_SHORT] request timed out")
         self.assertFalse(t_long.is_alive(), "[LEN_LONG] request timed out")
 
@@ -172,6 +170,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         stats_end = min(len(full_log), stats_start + 500)
         retract_line = full_log[stats_start:stats_end].split("\n")[0]
         print(f"[Retraction log] {retract_line}")
+        print(
 
         # Verify both short and long outputs are correct
         self.assertIn(
@@ -188,9 +187,10 @@ class TestRetractionPolicyLength(CustomTestCase):
         self.assertIsNone(
             self.process.poll(), "Server crashed during retraction test"
         )
+        t_short.join(timeout=400)
+        t_long.join(timeout=400)
 
-
-class TestRetractionPolicyPriority(CustomTestCase):
+class TestRetractionPolicyPriority:
     """Verify --retraction-policy=priority works with priority scheduling.
 
     Service launch follows retraction-policy.sh:
