@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -31,6 +32,10 @@ class TestLagunXS2(GSM8KAscendMixin, CustomTestCase):
         "--tp-size",
         2,
     ]
+    env = {
+        **os.environ,
+        "ASCEND_USE_FIA": "1",
+    }
 
 
 if __name__ == "__main__":

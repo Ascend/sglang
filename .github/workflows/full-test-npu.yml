@@ -29,7 +29,7 @@ on:
         description: 'The a3 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260828'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B060'
       skip_install_flag:
         description: 'Indicates whether to skip the installation of sglang, defaulting to false.'
         required: false
@@ -93,7 +93,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260828" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B060" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -210,9 +210,10 @@ jobs:
           # Only run the selected test files for this suite via --files.
           # suite/nightly filtering is bypassed when --files is provided.
           FILES=$(printf '%s,' \
-            test/registered/npu/vlm_models/test_npu_deepseek_ocr_2_mmmu.py
+            test/registered/npu/llm_models/test_npu_laguna_xs_2.py
           )
-          # test/registered/npu/llm_models/test_npu_laguna_xs_2.py
+          #  test/registered/npu/vlm_models/test_npu_deepseek_ocr_2_mmmu.py
+          #  test/registered/npu/llm_models/test_npu_laguna_xs_2.py
           #  test/registered/npu/llm_models/test_npu_granite_4_0_micro.py
           #  test/registered/npu/llm_models/test_npu_granite_4_0_h_micro.py
           #  test/registered/npu/llm_models/test_npu_lfm2_5_1_2b_instruct.py
