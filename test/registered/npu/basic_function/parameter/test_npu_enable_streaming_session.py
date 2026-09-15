@@ -62,8 +62,6 @@ SAMPLING_PARAMS = {
     "skip_special_tokens": False,
 }
 
-KV_PAGE_SIZE = 128
-
 LONG_SAMPLING_PARAMS = {
     "temperature": 0,
     "max_new_tokens": 100000,  # Will be aborted mid-decode
