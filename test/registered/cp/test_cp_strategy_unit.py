@@ -1,12 +1,15 @@
 import unittest
 from contextlib import contextmanager
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import torch
 
 from sglang.srt.hardware_backend.npu.attention.ascend_backend import (
     AscendAttnBackend,
+)
+from sglang.srt.hardware_backend.npu.modules.deepseek_v2_attention_mla_npu import (
+    forward_mla_prepare_npu,
 )
 from sglang.srt.layers.cp.base import (
     ContextParallelStrategyKind,
@@ -123,13 +126,212 @@ class TestCPStrategyUnit(CustomTestCase):
             ),
             patch(
                 "sglang.srt.models.deepseek_common.attention_backend_handler."
-                "get_npu_mla_cp_ring_validation_error",
-                return_value=None,
+                "use_npu_mla_cp_ring",
+                return_value=True,
             ),
         ):
             method = handle_attention_ascend(attn, forward_batch)
 
         self.assertEqual(method, AttnForwardMethod.MHA_NPU)
+
+    def test_ascend_prefill_cp_ring_falls_back_to_mla(self):
+        forward_mode = SimpleNamespace(
+            is_extend=lambda: True,
+            is_target_verify=lambda: False,
+            is_draft_extend_v2=lambda: False,
+        )
+        forward_batch = SimpleNamespace(forward_mode=forward_mode)
+        attn = SimpleNamespace(
+            use_dsa=False,
+            mla_enable_prefill_cp=True,
+            qk_nope_head_dim=128,
+            qk_rope_head_dim=64,
+            v_head_dim=128,
+            _use_npu_mla_cp_ring=True,
+        )
+
+        with (
+            patch(
+                "sglang.srt.models.deepseek_common.attention_backend_handler."
+                "mla_use_prefill_cp",
+                return_value=True,
+            ),
+            patch(
+                "sglang.srt.models.deepseek_common.attention_backend_handler."
+                "use_npu_mla_cp_ring",
+                return_value=False,
+            ),
+        ):
+            method = handle_attention_ascend(attn, forward_batch)
+
+        self.assertEqual(method, AttnForwardMethod.MLA_NPU)
+
+    def test_ascend_prefill_cp_mla_preprocess_rebuilds_full_kv(self):
+        q_pe = torch.randn(4, 1, 2)
+        k_pe = torch.randn(4, 1, 2)
+        q_nope = torch.randn(4, 1, 3)
+        k_nope = torch.randn(4, 1, 3)
+        gathered_k_nope = torch.randn(8, 1, 3)
+        gathered_k_pe = torch.randn(8, 1, 2)
+        forward_batch = SimpleNamespace()
+        zero_allocator = object()
+        positions = torch.arange(4)
+        model = SimpleNamespace(
+            mla_enable_prefill_cp=True,
+            kv_lora_rank=3,
+            qk_rope_head_dim=2,
+            mla_preprocess=SimpleNamespace(
+                forward=Mock(
+                    return_value=(
+                        q_pe,
+                        k_pe,
+                        q_nope,
+                        k_nope,
+                        forward_batch,
+                        zero_allocator,
+                        positions,
+                    )
+                )
+            ),
+            rebuild_cp_kv_cache=Mock(return_value=(gathered_k_nope, gathered_k_pe)),
+        )
+
+        with (
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.is_mla_preprocess_enabled",
+                return_value=True,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.mla_use_prefill_cp",
+                return_value=True,
+            ),
+        ):
+            result = forward_mla_prepare_npu(
+                model,
+                positions,
+                torch.randn(4, 5),
+                forward_batch,
+                zero_allocator,
+                layer_scatter_modes=None,
+            )
+
+        self.assertIs(result[1], gathered_k_pe)
+        self.assertIs(result[3], gathered_k_nope)
+        model.rebuild_cp_kv_cache.assert_called_once()
+
+    def test_ascend_prefill_cp_mla_prepare_rebuilds_full_kv(self):
+        num_tokens = 4
+        qk_nope_head_dim = 3
+        qk_rope_head_dim = 2
+        kv_lora_rank = 3
+        q = torch.randn(num_tokens, qk_nope_head_dim + qk_rope_head_dim)
+        latent_cache = torch.randn(num_tokens, kv_lora_rank + qk_rope_head_dim)
+        gathered_k_nope = torch.randn(2 * num_tokens, 1, kv_lora_rank)
+        gathered_k_pe = torch.randn(2 * num_tokens, 1, qk_rope_head_dim)
+        forward_batch = SimpleNamespace()
+        model = SimpleNamespace(
+            q_lora_rank=None,
+            num_local_heads=1,
+            qk_head_dim=qk_nope_head_dim + qk_rope_head_dim,
+            qk_nope_head_dim=qk_nope_head_dim,
+            qk_rope_head_dim=qk_rope_head_dim,
+            kv_lora_rank=kv_lora_rank,
+            q_proj=Mock(return_value=(q,)),
+            kv_a_proj_with_mqa=Mock(return_value=(latent_cache,)),
+            kv_a_layernorm=Mock(side_effect=lambda value: value),
+            w_kc=torch.randn(1, qk_nope_head_dim, kv_lora_rank),
+            rotary_emb=None,
+            use_dsa=False,
+            mla_enable_prefill_cp=True,
+            rebuild_cp_kv_cache=Mock(return_value=(gathered_k_nope, gathered_k_pe)),
+        )
+
+        with (
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.is_mla_preprocess_enabled",
+                return_value=False,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.dsa_use_prefill_cp",
+                return_value=False,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.mla_use_prefill_cp",
+                return_value=True,
+            ),
+        ):
+            result = forward_mla_prepare_npu(
+                model,
+                torch.arange(num_tokens),
+                torch.randn(num_tokens, 5),
+                forward_batch,
+                zero_allocator=None,
+                layer_scatter_modes=None,
+            )
+
+        self.assertIs(result[1], gathered_k_pe)
+        self.assertIs(result[3], gathered_k_nope)
+        model.rebuild_cp_kv_cache.assert_called_once()
+
+    def test_ascend_mla_prepare_without_cp_keeps_local_kv(self):
+        num_tokens = 4
+        qk_nope_head_dim = 3
+        qk_rope_head_dim = 2
+        kv_lora_rank = 3
+        q = torch.randn(num_tokens, qk_nope_head_dim + qk_rope_head_dim)
+        latent_cache = torch.randn(num_tokens, kv_lora_rank + qk_rope_head_dim)
+        forward_batch = SimpleNamespace()
+        model = SimpleNamespace(
+            q_lora_rank=None,
+            num_local_heads=1,
+            qk_head_dim=qk_nope_head_dim + qk_rope_head_dim,
+            qk_nope_head_dim=qk_nope_head_dim,
+            qk_rope_head_dim=qk_rope_head_dim,
+            kv_lora_rank=kv_lora_rank,
+            q_proj=Mock(return_value=(q,)),
+            kv_a_proj_with_mqa=Mock(return_value=(latent_cache,)),
+            kv_a_layernorm=Mock(side_effect=lambda value: value),
+            w_kc=torch.randn(1, qk_nope_head_dim, kv_lora_rank),
+            rotary_emb=None,
+            use_dsa=False,
+            mla_enable_prefill_cp=False,
+            rebuild_cp_kv_cache=Mock(),
+        )
+
+        with (
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.is_mla_preprocess_enabled",
+                return_value=False,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.dsa_use_prefill_cp",
+                return_value=False,
+            ),
+            patch(
+                "sglang.srt.hardware_backend.npu.modules."
+                "deepseek_v2_attention_mla_npu.mla_use_prefill_cp",
+                return_value=False,
+            ),
+        ):
+            result = forward_mla_prepare_npu(
+                model,
+                torch.arange(num_tokens),
+                torch.randn(num_tokens, 5),
+                forward_batch,
+                zero_allocator=None,
+                layer_scatter_modes=None,
+            )
+
+        self.assertEqual(result[1].shape[0], num_tokens)
+        self.assertEqual(result[3].shape[0], num_tokens)
+        model.rebuild_cp_kv_cache.assert_not_called()
 
     def test_mla_cp_ring_batch_guard(self):
         metadata = SimpleNamespace(bs=1, split_list=[64] * 8)
