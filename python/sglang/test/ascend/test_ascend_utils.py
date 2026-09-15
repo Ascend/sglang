@@ -47,6 +47,8 @@ HF_MODEL_WEIGHTS_DIR = "/root/.cache/huggingface/hub/"
 IMAGES_DIR = "/root/.cache/modelscope/hub/datasets/images/"
 VIDEO_DIR = "/root/.cache/modelscope/hub/datasets/video/"
 WAV_PATH = "/root/.cache/modelscope/hub/datasets/wav/asr_en.wav"
+AUDIOS_DIR = "/root/.cache/modelscope/hub/datasets/audios/"
+DATASETS_DIR = "/root/.cache/modelscope/hub/datasets/"
 
 # LLM model weights path
 AFM_4_5B_BASE_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "arcee-ai/AFM-4.5B-Base")
@@ -444,6 +446,19 @@ QWEN3_VL_30B_A3B_THINKING_MODEL_PATH = os.path.join(
 QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Thinking"
 )
+
+GLM_4_6V_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/GLM-4.6V")
+QWEN3_RERANKER_8B_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Reranker-8B"
+)
+QWEN3_VL_RERANKER_2B_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-Reranker-2B"
+)
+QWEN3_ASR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-1.7B")
+QWEN3_OMNI_30B_A3B_INSTRUCT_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct"
+)
+
 # Images path
 IMAGES_EXAMPLE_PATH = os.path.join(IMAGES_DIR, "example_image.png")
 IMAGE_MAN_IRONING_PATH = os.path.join(IMAGES_DIR, "man_ironing_on_back_of_suv.png")
@@ -456,10 +471,17 @@ VIDEO_JOBS_PATH = os.path.join(VIDEO_DIR, "jobs.mp4")
 AUDIO_TRUMP_WEF_PATH = os.path.join(VIDEO_DIR, "audios_Trump_WEF_2018_10s.mp3")
 VIDEO_JOBS_PRESENTING_IPOD_PATH = os.path.join(VIDEO_DIR, "jobs_presenting_ipod.mp4")
 AUDIO_BIRD_SONG_PATH = os.path.join(VIDEO_DIR, "audios_bird_song.mp3")
+AUDIOS_BIRD_PATH = os.path.join(AUDIOS_DIR, "bird.mp3")
+AUDIOS_TRUMP_PATH = os.path.join(AUDIOS_DIR, "trump.mp3")
 INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
     IMAGES_DIR, "invoice_with_barcode_logo.jpeg"
 )
 # fmt: on
+
+# audio datasets
+AUDIO_DATASETS_LIBRISPEECH_ASR_PATH = os.path.join(
+    DATASETS_DIR, "openslr/librispeech_asr"
+)
 
 # Other
 DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/npu/basic_function/parameter/deepseek_coder.json"

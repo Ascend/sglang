@@ -11,9 +11,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="",
+    suite="full-acc-16-npu-a3",
     nightly=True,
-    disabled="accuracy testcase",
 )
 
 QWEN3_5_397B_W4A8_1P_HIGH_ENVS = {
