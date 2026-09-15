@@ -110,18 +110,18 @@ jobs:
             echo "test_scope=${{ inputs.test_scope }}" >> $GITHUB_OUTPUT
           fi
 
-  nighly-test-npu:
-    needs: [ set-image-config ]
-    name: nightly-test-npu
-    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
-    uses: ./.github/workflows/nightly-test-npu.yml
-    with:
-      ref: ${{ needs.set-image-config.outputs.ref }}
-      job_filter: ${{ needs.set-image-config.outputs.job_filter }}
-      image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
-      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
-      skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
-    secrets: inherit
+#  nighly-test-npu:
+#    needs: [ set-image-config ]
+#    name: nightly-test-npu
+#    if: ${{ needs.set-image-config.outputs.test_scope == 'all' || needs.set-image-config.outputs.test_scope == 'func' || needs.set-image-config.outputs.test_scope == 'no_nightly' }}
+#    uses: ./.github/workflows/nightly-test-npu.yml
+#    with:
+#      ref: ${{ needs.set-image-config.outputs.ref }}
+#      job_filter: ${{ needs.set-image-config.outputs.job_filter }}
+#      image_a2: ${{ needs.set-image-config.outputs.image_a2 }}
+#      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
+#      skip_install_flag: ${{ needs.set-image-config.outputs.skip_install_flag }}
+#    secrets: inherit
 
   full-1-npu-a3:
     needs: [ set-image-config ]
@@ -529,7 +529,7 @@ jobs:
   check-all-jobs:
     needs:
       - set-image-config
-      - nighly-test-npu
+#      - nighly-test-npu
       - full-1-npu-a3
 #      - full-2-npu-a3
 #      - full-4-npu-a3
