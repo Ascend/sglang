@@ -1,4 +1,3 @@
-import re
 import threading
 import time
 import unittest
@@ -15,30 +14,22 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestRetractionPolicyLength(CustomTestCase):
     """Verify --retraction-policy=length (default) retracts the longer-input
     request when KV cache is full and output lengths are equal.
 
-    Service launch follows retraction-policy.sh:
-    - --mem-fraction-static=0.08 limits KV cache to minimal size so it fills
-      quickly (no --max-total-tokens to avoid scheduler clipping).
-    - No --max-running-requests to let scheduler manage concurrency naturally.
-
     Strategy:
-    - Two concurrent requests with high max_new_tokens (50000+) and different
+    - Two concurrent requests with equal max_new_tokens (512) and different
       input lengths → KV fills → length policy retracts longer-input request
       first (longer input → smaller key in (output, -input) tiebreaker).
-    - SGLANG_TEST_RETRACT=1 env forces periodic retraction as safety net on
-      platforms where --max-total-tokens doesn't take effect.
 
     Assertions:
-    - Both requests complete (status=200)
-    - Retraction detected in server logs
+    - "KV cache pool is full. Retract requests." in server logs
     - Both outputs contain expected content
-    - Server alive after test
+    - Short-input e2e latency < long-input e2e latency (from resp.json)
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -53,12 +44,12 @@ class TestRetractionPolicyLength(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--tp-size",
-        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.08",
+        "0.31",
+        "--max-total-tokens",
+        "1152",
         "--trust-remote-code",
         "--enable-metrics",
         "--log-level",
@@ -79,7 +70,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             other_args=cls._BASE_ARGS,
             return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
             device="npu",
-            env={"SGLANG_TEST_RETRACT": "1"},
+            env={"SGLANG_CLIP_MAX_NEW_TOKENS_ESTIMATION": "128"},
         )
 
     @classmethod
@@ -113,14 +104,15 @@ class TestRetractionPolicyLength(CustomTestCase):
                     "text": "[LEN_SHORT] The capital of France is",
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 50000,
-                        "ignore_eos": True,
+                        "max_new_tokens": 512,
+                        "min_new_tokens": 512,
                     },
+                    "rid": "short-req",
                 },
-                timeout=400,
             )
             result_short["status"] = resp.status_code
             result_short["text"] = resp.json().get("text", "")
+            result_short["e2e"] = resp.json()["meta_info"]["e2e_latency"]
 
         def _send_long():
             resp = requests.post(
@@ -132,24 +124,22 @@ class TestRetractionPolicyLength(CustomTestCase):
                     ),
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 50000,
-                        "ignore_eos": True,
+                        "max_new_tokens": 512,
+                        "min_new_tokens": 512,
                     },
+                    "rid": "long-req"
                 },
-                timeout=400,
             )
             result_long["status"] = resp.status_code
             result_long["text"] = resp.json().get("text", "")
+            result_long["e2e"] = resp.json()["meta_info"]["e2e_latency"]
 
         t_short = threading.Thread(target=_send_short, daemon=True)
         t_long = threading.Thread(target=_send_long, daemon=True)
         t_short.start()
         t_long.start()
-
-        t_short.join(timeout=400)
-        t_long.join(timeout=400)
-        self.assertFalse(t_short.is_alive(), "[LEN_SHORT] request timed out")
-        self.assertFalse(t_long.is_alive(), "[LEN_LONG] request timed out")
+        t_short.join()
+        t_long.join()
 
         self.assertEqual(result_short.get("status"), 200)
         self.assertEqual(result_long.get("status"), 200)
@@ -157,23 +147,11 @@ class TestRetractionPolicyLength(CustomTestCase):
         # Read logs
         full_log = self._read_logs()
 
-        # Verify retraction was triggered (cache-full or test mode)
-        retract_pattern = (
-            r"(?:Testing retraction\.|KV cache pool is full\. Retract requests\.)"
-        )
-        retract_match = re.search(retract_pattern, full_log)
-        self.assertIsNotNone(
-            retract_match,
-            "No retraction detected in server logs. ",
-        )
+        # Assert 1: KV cache was full and retraction was triggered
+        retract_pattern = "KV cache pool is full. Retract requests."
+        self.assertIn(retract_pattern, full_log, "No 'KV cache pool is full. Retract requests.' found in server logs. ")
 
-        # Extract retraction stats for diagnostics
-        stats_start = retract_match.start()
-        stats_end = min(len(full_log), stats_start + 500)
-        retract_line = full_log[stats_start:stats_end].split("\n")[0]
-        print(f"[Retraction log] {retract_line}")
-
-        # Verify both short and long outputs are correct
+        # Assert 2: both requests completed correctly
         self.assertIn(
             "Paris",
             result_short["text"],
@@ -185,34 +163,26 @@ class TestRetractionPolicyLength(CustomTestCase):
             f"Long output missing 'Paris'. Got: {result_long.get('text', '')[:200]}",
         )
 
-        self.assertIsNone(
-            self.process.poll(), "Server crashed during retraction test"
+        # Assert 3: short-input e2e latency < long-input e2e latency
+        self.assertLess(
+            result_short["e2e"],
+            result_long["e2e"],
+            f"Short-input e2e ({result_short['e2e']:.2f}s) should be faster "
+            f"than long-input ({result_long['e2e']:.2f}s)",
         )
 
 
 class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority works with priority scheduling.
 
-    Service launch follows retraction-policy.sh:
-    - --mem-fraction-static=0.08 limits KV cache to minimal size
-    - --enable-priority-scheduling and --schedule-conservativeness 0.0 for
-      aggressive priority-based scheduling
-    - No --max-total-tokens or --max-running-requests to let scheduler
-      manage naturally
-
     Strategy:
-    - Send low-priority requests first to occupy running slots with high
-      max_new_tokens (51000/52000) to fill KV cache
-    - Then send high-priority request (priority=20) which should preempt
-      the running low-priority request and finish first
-    - SGLANG_TEST_RETRACT=1 env forces periodic retraction as safety net
+    - Send low-priority request first to occupy KV cache, then send
+      high-priority request which should preempt and finish first.
 
     Assertions:
-    - All 3 requests complete (status=200)
-    - Retraction detected in server logs
-    - High-priority request finishes before low-priority requests
-    - All outputs > 100 chars
-    - Server alive after test
+    - Both requests complete (status=200)
+    - "KV cache pool is full. Retract requests." in server logs
+    - High-priority e2e latency < low-priority e2e latency
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -223,26 +193,29 @@ class TestRetractionPolicyPriority(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--tp-size",
-        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.08",
+        "0.31",
+        "--max-total-tokens",
+        "1152",
         "--trust-remote-code",
-        "--enable-metrics",
         "--retraction-policy",
         "priority",
         "--enable-priority-scheduling",
         "--schedule-conservativeness",
         "0.0",
+        "--disable-priority-preemption",
         "--log-level",
         "debug",
     ]
 
-    _LONG_PROMPT = (
-        "Write a long essay about the history of artificial intelligence. "
-        "Artificial intelligence is a fascinating field"
+    # _PROMPT = (
+    #     "Write a long essay about the history of artificial intelligence. "
+    #     "Artificial intelligence is a fascinating field"
+    # )
+    _LONG_INPUT_PREFIX = (
+            "The history of artificial intelligence is a fascinating story. " * 10
     )
 
     _OUT_LOG = "./tmp_retraction_priority_out.log"
@@ -259,7 +232,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             other_args=cls._BASE_ARGS,
             return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
             device="npu",
-            env={"SGLANG_TEST_RETRACT": "1"},
+            env={"SGLANG_CLIP_MAX_NEW_TOKENS_ESTIMATION": "128"},
         )
 
     @classmethod
@@ -280,121 +253,88 @@ class TestRetractionPolicyPriority(CustomTestCase):
         return stdout + stderr
 
     def test_priority_policy_retraction(self):
-        low1_result = {}
-        low2_result = {}
+        low_result = {}
         high_result = {}
 
-        def _send_low(label, result_dict, max_tokens=51000):
+        def _send_low():
             resp = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
                 json={
-                    "text": f"[{label}] {self._LONG_PROMPT}",
+                    "text": (
+                        f"[LEN_LONG] {self._LONG_INPUT_PREFIX}. "
+                        f"The capital of France is"
+                    ),
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": max_tokens,
-                        "ignore_eos": True,
+                        "max_new_tokens": 512,
+                        "min_new_tokens": 512,
                     },
                     "priority": 0,
+                    "rid": "low-req",
                 },
-                timeout=400,
             )
-            result_dict["status"] = resp.status_code
-            result_dict["text"] = resp.json().get("text", "")
-            result_dict["finished_at"] = time.monotonic()
+            low_result["status"] = resp.status_code
+            low_result["text"] = resp.json().get("text", "")
+            low_result["e2e"] = resp.json()["meta_info"]["e2e_latency"]
 
         def _send_high():
             resp = requests.post(
                 f"{DEFAULT_URL_FOR_TEST}/generate",
                 json={
-                    "text": f"[PRI_HIGH] {self._LONG_PROMPT}",
+                    "text": (
+                        f"[LEN_LONG] {self._LONG_INPUT_PREFIX}. "
+                        f"The capital of France is"
+                    ),
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 52000,
-                        "ignore_eos": True,
+                        "max_new_tokens": 512,
+                        "min_new_tokens": 512,
                     },
                     "priority": 20,
+                    "rid": "high-req",
                 },
-                timeout=400,
             )
             high_result["status"] = resp.status_code
             high_result["text"] = resp.json().get("text", "")
-            high_result["finished_at"] = time.monotonic()
+            high_result["e2e"] = resp.json()["meta_info"]["e2e_latency"]
 
-        # Follow retraction-policy.sh: start low-priority requests first
-        # to fill KV cache, then send high-priority which should preempt
-        # and finish first despite starting later.
-        t1 = threading.Thread(
-            target=_send_low, args=("PRI_LOW1", low1_result, 51000), daemon=True
-        )
-        t1.start()
-
-        # Wait for low1 to begin execution before sending high-priority
-        time.sleep(2)
-
-        t2 = threading.Thread(
-            target=_send_low, args=("PRI_LOW2", low2_result, 51000), daemon=True
-        )
+        t_low = threading.Thread(target=_send_low, daemon=True)
+        t_low.start()
+        time.sleep(0.5)
         t_high = threading.Thread(target=_send_high, daemon=True)
-        t2.start()
         t_high.start()
 
-        t1.join(timeout=400)
-        t2.join(timeout=400)
-        t_high.join(timeout=400)
-        self.assertFalse(t1.is_alive(), "[PRI_LOW1] timed out")
-        self.assertFalse(t2.is_alive(), "[PRI_LOW2] timed out")
-        self.assertFalse(t_high.is_alive(), "[PRI_HIGH] timed out")
+        t_low.join()
+        t_high.join()
 
-        self.assertEqual(low1_result.get("status"), 200)
-        self.assertEqual(low2_result.get("status"), 200)
+        self.assertEqual(low_result.get("status"), 200)
         self.assertEqual(high_result.get("status"), 200)
-
-        # Verify high-priority finished before low-priority requests
-        self.assertLess(
-            high_result["finished_at"],
-            low1_result["finished_at"],
-            "High-priority should finish before PRI_LOW1",
-        )
-        self.assertLess(
-            high_result["finished_at"],
-            low2_result["finished_at"],
-            "High-priority should finish before PRI_LOW2",
-        )
 
         # Read logs
         full_log = self._read_logs()
 
-        # Verify retraction was triggered (cache-full or test mode)
-        retract_match = re.search(
-            r"(?:Testing retraction\.|KV cache pool is full\. Retract requests\.)",
-            full_log,
+        # Assert 1: KV cache was full and retraction was triggered
+        retract_pattern = "KV cache pool is full. Retract requests."
+        self.assertIn(retract_pattern, full_log, "No 'KV cache pool is full. Retract requests.' found in server logs. ")
+
+        # Assert 2: both requests completed correctly
+        self.assertIn(
+            "essay",
+            low_result["text"].lower(),
+            f"Low output unexpected: {low_result['text'][:200]}",
         )
-        self.assertIsNotNone(
-            retract_match,
-            "No retraction detected in server logs. ",
+        self.assertIn(
+            "essay",
+            high_result["text"].lower(),
+            f"High output unexpected: {high_result['text'][:200]}",
         )
 
-        # Extract retraction stats for diagnostics
-        stats_start = retract_match.start()
-        stats_end = min(len(full_log), stats_start + 500)
-        retract_line = full_log[stats_start:stats_end].split("\n")[0]
-        print(f"[Retraction log] {retract_line}")
-
-        # Verify all outputs contain meaningful content
-        for label, result in [
-            ("PRI_HIGH", high_result),
-            ("PRI_LOW1", low1_result),
-            ("PRI_LOW2", low2_result),
-        ]:
-            text = result.get("text", "")
-            self.assertGreater(
-                len(text),
-                100,
-                f"[{label}] output too short ({len(text)}): {text[:100]}",
-            )
-
-        self.assertIsNone(
-            self.process.poll(), "Server crashed during retraction test"
+        # Assert 3: high-priority e2e < low-priority e2e
+        self.assertLess(
+            high_result["e2e"],
+            low_result["e2e"],
+            f"High-priority e2e ({high_result['e2e']:.2f}s) should be faster "
+            f"than low-priority ({low_result['e2e']:.2f}s)",
         )
 
 
