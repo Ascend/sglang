@@ -16,9 +16,13 @@ register_cpu_ci(est_time=1, suite="base-a-test-cpu")
 
 
 def _compatible_module():
+    def state_kernel(*, initial_state_key_value_layout=False, block_value=32):
+        del initial_state_key_value_layout, block_value
+
     return SimpleNamespace(
         chunk_gated_delta_rule_fwd_affine_npu=lambda: None,
         merge_kda_cp_affine_states=lambda: None,
+        chunk_gated_delta_rule_fwd_h_npu=state_kernel,
     )
 
 
@@ -32,6 +36,17 @@ def test_kda_fla_cp_kernel_capability_requires_affine_operators():
         compatible, reason = check_kda_fla_cp_kernel_compatibility()
     assert not compatible
     assert "missing KDA FLA PCP operators" in reason
+
+
+def test_kda_fla_cp_kernel_capability_requires_native_state_options():
+    module = _compatible_module()
+    module.chunk_gated_delta_rule_fwd_h_npu = lambda: None
+
+    with patch("importlib.import_module", return_value=module):
+        compatible, reason = check_kda_fla_cp_kernel_compatibility()
+
+    assert not compatible
+    assert "state kernel is missing arguments" in reason
 
 
 def test_incompatible_kimi_k3_kernel_disables_prefill_cp(monkeypatch):

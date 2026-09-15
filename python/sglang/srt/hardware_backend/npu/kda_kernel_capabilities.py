@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 from types import ModuleType
 
 _KDA_CHUNK_MODULE = "sgl_kernel_npu.fla.kda_chunk_delta_h"
 _KDA_FLA_CP_OPERATORS = (
     "chunk_gated_delta_rule_fwd_affine_npu",
     "merge_kda_cp_affine_states",
+)
+_KDA_FLA_CP_STATE_KERNEL_ARGUMENTS = (
+    "initial_state_key_value_layout",
+    "block_value",
 )
 
 
@@ -32,4 +37,18 @@ def check_kda_fla_cp_kernel_compatibility() -> tuple[bool, str]:
     ]
     if missing:
         return False, "missing KDA FLA PCP operators: " + ", ".join(missing)
+
+    state_kernel = getattr(module, "chunk_gated_delta_rule_fwd_h_npu", None)
+    if not callable(state_kernel):
+        return False, "missing KDA FLA PCP state kernel"
+    state_kernel_parameters = inspect.signature(state_kernel).parameters
+    missing_arguments = [
+        name
+        for name in _KDA_FLA_CP_STATE_KERNEL_ARGUMENTS
+        if name not in state_kernel_parameters
+    ]
+    if missing_arguments:
+        return False, "KDA FLA PCP state kernel is missing arguments: " + ", ".join(
+            missing_arguments
+        )
     return True, "compatible"

@@ -107,13 +107,6 @@ class _AscendKDAExtendKernel:
             check_kda_fla_cp_kernel_compatibility()
         )
 
-    def _persistent_state_for_kernel(self, ssm_states: torch.Tensor) -> torch.Tensor:
-        # The established Ascend wrapper ABI is [H, V, K]. Only an active PCP
-        # service stores KDA state as [H, K, V] and needs this zero-copy view.
-        if self._state_key_value_layout:
-            return ssm_states.transpose(-1, -2)
-        return ssm_states
-
     def extend(
         self,
         q: torch.Tensor,
@@ -164,6 +157,8 @@ class _AscendKDAExtendKernel:
             scale=k.shape[-1] ** -0.5,
             cu_seqlens=query_start_loc,
             output_dtype=torch.float32,
+            inter_block_size=32 if cp_context is not None else None,
+            fused_full_chunk=cp_context is not None,
         )
         triangular = solve_tril_npu(
             A=triangular,
@@ -180,10 +175,11 @@ class _AscendKDAExtendKernel:
             chunk_indices=chunk_indices,
         )
         del triangular
-        # PCP keeps persistent KDA state as [H, K, V], while the established
-        # Ascend wrapper accepts [H, V, K]. PCP-off already uses that wrapper
-        # layout and therefore needs no extra boundary view.
-        kernel_state_source = self._persistent_state_for_kernel(ssm_states)
+        # PCP stores state natively as [H, K, V]. The matching kernel wrapper
+        # accepts that layout explicitly and updates it in place, avoiding the
+        # legacy [H, V, K] boundary materialization. PCP-off keeps the existing
+        # wrapper ABI and does not receive either opt-in argument.
+        kernel_state_source = ssm_states
         kernel_state_indices = cache_indices
         if cp_context is not None:
             if not self._state_key_value_layout:
@@ -203,7 +199,7 @@ class _AscendKDAExtendKernel:
                 cache_indices,
                 cp_context,
             )
-            kernel_state_source = local_initial_kv.transpose(-1, -2)
+            kernel_state_source = local_initial_kv
             kernel_state_indices = cp_context.local_segment_indices
             if kernel_state_indices is None:
                 kernel_state_indices = torch.arange(
@@ -212,6 +208,12 @@ class _AscendKDAExtendKernel:
                     device=cache_indices.device,
                 )
 
+        state_kernel_options = {}
+        if self._state_key_value_layout:
+            state_kernel_options = {
+                "initial_state_key_value_layout": True,
+                "block_value": 64 if cp_context is not None else 32,
+            }
         chunk_states, new_values = chunk_gated_delta_rule_fwd_h_npu(
             k=gated_k,
             w=w,
@@ -222,6 +224,7 @@ class _AscendKDAExtendKernel:
             cu_seqlens=query_start_loc,
             chunk_indices=chunk_indices,
             use_exp2=True,
+            **state_kernel_options,
         )
         del w, u, gated_k
         out = chunk_gla_fwd_o_gk_npu(

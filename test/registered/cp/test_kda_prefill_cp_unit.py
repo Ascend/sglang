@@ -104,32 +104,6 @@ class TestKDAPrefillCP(unittest.TestCase):
         with patch("sglang.srt.mem_cache.memory_pool._is_npu", True):
             self.assertFalse(_use_npu_kda_pcp_state_layout(non_kda_params))
 
-    @unittest.skipIf(
-        _AscendKDAExtendKernel is None,
-        "requires an importable sgl-kernel-npu KDA prefill kernel",
-    )
-    def test_pcp_prefill_kernel_gets_value_key_state_view(self):
-        kernel = _AscendKDAExtendKernel(state_key_value_layout=True)
-        state = torch.arange(24).reshape(1, 2, 3, 4)
-
-        legacy_state = kernel._persistent_state_for_kernel(state)
-
-        self.assertEqual(legacy_state.shape, (1, 2, 4, 3))
-        self.assertEqual(legacy_state.data_ptr(), state.data_ptr())
-        torch.testing.assert_close(legacy_state, state.transpose(-1, -2))
-
-    @unittest.skipIf(
-        _AscendKDAExtendKernel is None,
-        "requires an importable sgl-kernel-npu KDA prefill kernel",
-    )
-    def test_pcp_off_prefill_keeps_community_state_layout(self):
-        kernel = _AscendKDAExtendKernel(state_key_value_layout=False)
-        state = torch.arange(24).reshape(1, 2, 3, 4)
-
-        kernel_state = kernel._persistent_state_for_kernel(state)
-
-        self.assertIs(kernel_state, state)
-
     def test_fla_affine_composes_natural_zigzag_order(self):
         # Natural transforms are 2x+1, 3x+2, 4x+3, 5x+4.
         all_rank_affine = [
@@ -183,6 +157,9 @@ class TestKDAPrefillCP(unittest.TestCase):
         state_pool = torch.arange(6, dtype=torch.float32).reshape(
             1, 1, key_dim, value_dim
         )
+        pcp_off_state_pool = torch.arange(6, dtype=torch.float32).reshape(
+            1, 1, value_dim, key_dim
+        )
         local_initial = torch.arange(12, dtype=torch.float32).reshape(
             2, 1, key_dim, value_dim
         )
@@ -191,6 +168,7 @@ class TestKDAPrefillCP(unittest.TestCase):
         new_values = torch.zeros_like(v)
         compose = Mock(return_value=local_initial)
         state_kernel = Mock(return_value=(chunk_states, new_values))
+        scaled_dot_kernel = Mock(return_value=(torch.zeros(1), torch.zeros(1)))
 
         with (
             patch(
@@ -211,7 +189,7 @@ class TestKDAPrefillCP(unittest.TestCase):
             patch(
                 "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
                 "chunk_kda_scaled_dot_kkt_fwd",
-                return_value=(torch.zeros(1), torch.zeros(1)),
+                scaled_dot_kernel,
             ),
             patch(
                 "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
@@ -255,12 +233,37 @@ class TestKDAPrefillCP(unittest.TestCase):
                 query_start_loc=context.local_cu_seqlens,
                 cp_context=context,
             )
+            _AscendKDAExtendKernel(state_key_value_layout=False).extend(
+                q=q,
+                k=k,
+                v=v,
+                g=g,
+                beta=beta,
+                ssm_states=pcp_off_state_pool,
+                cache_indices=torch.tensor([0], dtype=torch.int32),
+                query_start_loc=context.local_cu_seqlens,
+            )
 
         self.assertNotIn("state_value_major", compose.call_args.kwargs)
-        kernel_state = state_kernel.call_args.kwargs["initial_state"]
-        self.assertEqual(kernel_state.shape[-2:], (value_dim, key_dim))
-        self.assertEqual(kernel_state.data_ptr(), local_initial.data_ptr())
-        torch.testing.assert_close(kernel_state, local_initial.transpose(-1, -2))
+        pcp_kernel_kwargs = state_kernel.call_args_list[0].kwargs
+        kernel_state = pcp_kernel_kwargs["initial_state"]
+        self.assertIs(kernel_state, local_initial)
+        self.assertEqual(kernel_state.shape[-2:], (key_dim, value_dim))
+        self.assertTrue(pcp_kernel_kwargs["initial_state_key_value_layout"])
+        self.assertEqual(pcp_kernel_kwargs["block_value"], 64)
+        self.assertEqual(
+            scaled_dot_kernel.call_args_list[0].kwargs["inter_block_size"], 32
+        )
+        self.assertTrue(scaled_dot_kernel.call_args_list[0].kwargs["fused_full_chunk"])
+
+        pcp_off_kernel_kwargs = state_kernel.call_args_list[1].kwargs
+        self.assertIs(pcp_off_kernel_kwargs["initial_state"], pcp_off_state_pool)
+        self.assertNotIn("initial_state_key_value_layout", pcp_off_kernel_kwargs)
+        self.assertNotIn("block_value", pcp_off_kernel_kwargs)
+        self.assertIsNone(
+            scaled_dot_kernel.call_args_list[1].kwargs["inter_block_size"]
+        )
+        self.assertFalse(scaled_dot_kernel.call_args_list[1].kwargs["fused_full_chunk"])
 
     def test_fla_conv_uses_only_segment_tails(self):
         local_inputs = [
