@@ -39,15 +39,25 @@ register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 # ------------------------------------------------------------------
 
 CHUNKS = [
-    "Let me tell you something about France.",
-    "The capital of France is",
-    "The population of the city is",
-    "A brief history about that city is",
+    "Let me tell you something about France. The countryside keeps a long list of wonders:, Paris, Seine, Normandy, Province, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village of",
+    "The capital of France is Paris. Visitors often add more places to their plan:, Paris, Seine, Normandy, Province, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey to",
+    "The population of the city is large. Historians keep adding notes about the people:, Paris, Seine, Normandy, Province, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey",
+    "A brief history about that city is worth telling. The chronicle lists many events:, Paris, Seine, Normandy, Province, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey",
 ]
+
+WIZARD_PROMPT = (
+    "Tell me a very long story about a wizard. His tale begins with a list of strange things:, "
+    "Paris, Seine, Normandy, Province, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, "
+    "Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, "
+    "harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, "
+    "stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey, mountain, "
+    "thunder, kingdom, tower"
+)
 
 SAMPLING_PARAMS = {
     "temperature": 0,
     "max_new_tokens": 12,
+    "min_new_tokens": 12,
     "no_stop_trim": True,
     "skip_special_tokens": False,
 }
@@ -294,7 +304,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
 
             try:
                 # Turn 1: normal generate to create session slot
-                ids_1 = tokenizer.encode("Tell me a very long story about a wizard.")
+                ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
                         "input_ids": ids_1,
@@ -361,6 +371,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
+                                "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
                             },
@@ -473,6 +484,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
+                                "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
                             },
@@ -552,7 +564,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
 
             try:
                 # Turn 1: normal generate to create slot
-                ids_1 = tokenizer.encode("Tell me a very long story about a wizard.")
+                ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
                         "input_ids": ids_1,
@@ -602,6 +614,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                         "sampling_params": {
                             "temperature": 0,
                             "max_new_tokens": 8,
+                            "min_new_tokens": 8,
                             "no_stop_trim": True,
                             "skip_special_tokens": False,
                         },
