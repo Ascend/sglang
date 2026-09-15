@@ -1,24 +1,10 @@
-"""Tests for --disable-hybrid-swa-memory parameter.
-
-When set on a Hybrid SWA model, this flag disables the independent SWA
-memory pool and falls back to a unified pool. The server log shows
-"Use sliding window memory pool" only when the independent SWA pool is active.
-
-Test strategy:
-- Launch MiMo V2 Flash model twice (with and without the flag)
-- Verify inference works both times
-- Verify the pool type from server logs
-"""
-
 import os
 import unittest
 
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    MIMO_V2_FLASH_MODEL_PATH,
-)
+from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_BF16_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -27,36 +13,19 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(
-    est_time=3600,
-    suite="",
-    nightly=True,
-    disabled="",
-)
+register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 _MIMO_BASE_ARGS = [
     "--tp-size",
-    16,
+    8,
     "--trust-remote-code",
     "--device",
     "npu",
     "--mem-fraction-static",
     0.85,
-    "--reasoning-parser",
-    "mimo",
     "--attention-backend",
     "ascend",
     "--disable-piecewise-cuda-graph",
-    "--base-gpu-id",
-    0,
-    "--cuda-graph-bs",
-    1,
-    2,
-    4,
-    8,
-    16,
-    "--dp-size",
-    4,
     "--enable-dp-attention",
     "--enable-dp-lm-head",
     "--quantization",
@@ -114,20 +83,11 @@ class TestDisableHybridSwaMemory(CustomTestCase):
 
     [Test Category] Parameter
     [Test Target] --disable-hybrid-swa-memory
-    [Scenario] D1: independent SWA pool (default, no flag)
-    [Scenario] D2: unified pool (--disable-hybrid-swa-memory)
     """
 
-    model = MIMO_V2_FLASH_MODEL_PATH
+    model = GPT_OSS_120B_BF16_WEIGHTS_PATH
 
     def _launch_and_check(self, extra_args, expect_swa_pool):
-        """Launch server, verify inference, and check pool type from logs.
-
-        Args:
-            extra_args: Additional CLI args (list or None).
-            expect_swa_pool: True if independent SWA pool is expected,
-                             False if unified pool is expected.
-        """
         label = "with --disable-hybrid-swa-memory" if extra_args else "without flag"
 
         out_log_file_name = "./tmp_out_log.txt"
@@ -187,17 +147,12 @@ class TestDisableHybridSwaMemory(CustomTestCase):
             os.remove(err_log_file_name)
 
     def test_disable_hybrid_swa_memory(self):
-        """D1+D2: Verify --disable-hybrid-swa-memory switches pool type.
-
-        D1 (disabled): unified pool
-        D2 (default): independent SWA pool
-        """
-        # D1: With --disable-hybrid-swa-memory → unified pool
+        # With --disable-hybrid-swa-memory → unified pool
         self._launch_and_check(
             extra_args=["--disable-hybrid-swa-memory"], expect_swa_pool=False
         )
 
-        # D2: Without --disable-hybrid-swa-memory → independent SWA pool
+        # Without --disable-hybrid-swa-memory → independent SWA pool
         self._launch_and_check(extra_args=None, expect_swa_pool=True)
 
 

@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-      - testcases-260813
+#      - testcases-260813
     paths:
       - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
@@ -422,15 +422,12 @@ jobs:
 #          - name: swa_full_tokens_ratio
 #            runner: linux-aarch64-a3-16
 #            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_swa_full_tokens_ratio.py
-#          - name: disable_hybrid_swa_memory
-#            runner: linux-aarch64-a3-16
-#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_disable_hybrid_swa_memory.py
+          - name: disable_hybrid_swa_memory
+            runner: linux-aarch64-a3-8
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_disable_hybrid_swa_memory.py
           - name: retraction_policy
-            runner: linux-aarch64-a3-4
+            runner: linux-aarch64-a3-2
             test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_retraction_policy.py
-#          - name: retraction_policy_1
-#            runner: linux-aarch64-a3-8
-#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_retraction_policy_1.py
 #          - name: image_processor_backend
 #            runner: linux-aarch64-a3-2
 #            test_case: test/registered/npu/basic_function/optimization_debug_options/test_npu_image_processor_backend.py

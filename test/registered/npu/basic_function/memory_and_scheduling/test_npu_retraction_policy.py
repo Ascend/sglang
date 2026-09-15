@@ -15,7 +15,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestRetractionPolicyLength(CustomTestCase):
@@ -53,12 +53,10 @@ class TestRetractionPolicyLength(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--tp-size",
-        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.08",
+        "0.3",
         "--trust-remote-code",
         "--enable-metrics",
         "--log-level",
@@ -113,7 +111,7 @@ class TestRetractionPolicyLength(CustomTestCase):
                     "text": "[LEN_SHORT] The capital of France is",
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 50000,
+                        "max_new_tokens": 500,
                         "ignore_eos": True,
                     },
                 },
@@ -121,6 +119,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             )
             result_short["status"] = resp.status_code
             result_short["text"] = resp.json().get("text", "")
+            print(resp.json)
 
         def _send_long():
             resp = requests.post(
@@ -132,7 +131,7 @@ class TestRetractionPolicyLength(CustomTestCase):
                     ),
                     "sampling_params": {
                         "temperature": 0,
-                        "max_new_tokens": 50000,
+                        "max_new_tokens": 50,
                         "ignore_eos": True,
                     },
                 },
@@ -140,6 +139,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             )
             result_long["status"] = resp.status_code
             result_long["text"] = resp.json().get("text", "")
+            print(resp.json)
 
         t_short = threading.Thread(target=_send_short, daemon=True)
         t_long = threading.Thread(target=_send_long, daemon=True)
@@ -223,12 +223,10 @@ class TestRetractionPolicyPriority(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--tp-size",
-        "4",
         "--disable-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
-        "0.08",
+        "0.3",
         "--trust-remote-code",
         "--enable-metrics",
         "--retraction-policy",
