@@ -97,16 +97,15 @@ class TestNPUStreamingSessionLargePage(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.7",
         "--page-size",
-        "256",
+        "128",
     ]
-    # Mirror --page-size 256. The first chunk is scaled (×40 ≈ 320 tokens
-    # + 12 completion) so turn-1 KV spans multiple 256-pages; with the
-    # original un-repeated chunk (20 tokens) the floored expectation would
-    # be 0 and the assert vacuous. The longer chunk needs a larger session
-    # capacity (~1560 chars).
-    kv_inherit_page_size = 256
-    kv_inherit_first_chunk_repeats = 40
-    kv_inherit_session_capacity = 4000
+    # Mirror --page-size 128 (NPU max supported page size). The first chunk
+    # is scaled (×20 ≈ 160 tokens + 12 completion) so turn-1 KV spans
+    # multiple 128-pages; with the original un-repeated chunk (20 tokens)
+    # the floored expectation would be 0 and the assert vacuous. The ~780-char
+    # chunk fits the kit-default session capacity (1000).
+    kv_inherit_page_size = 128
+    kv_inherit_first_chunk_repeats = 20
 
 
 class TestNPUStreamingSessionEagle3(TestNPUStreamingSession):
@@ -163,17 +162,17 @@ class TestNPUStreamingSessionEagle3LargePage(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.6",
         "--page-size",
-        "256",
+        "128",
     ]
     # NPU EAGLE3 may or may not commit the last sampled token before
     # max_new stops (kv_committed_len = input + output - 1 or +0).
     # Tolerate both behaviors.
     kv_inherit_offsets = (-1, 0)
-    # Mirror --page-size 256; scale the first chunk so turn-1 KV spans
-    # multiple pages (floored expectation 256, not 0).
-    kv_inherit_page_size = 256
-    kv_inherit_first_chunk_repeats = 40
-    kv_inherit_session_capacity = 4000
+    # Mirror --page-size 128 (NPU max supported page size); scale the first
+    # chunk so turn-1 KV spans multiple pages (floored expectation 128,
+    # not 0).
+    kv_inherit_page_size = 128
+    kv_inherit_first_chunk_repeats = 20
 
 
 class TestNPUStreamingSessionRetract(TestNPUStreamingSession):
@@ -248,15 +247,15 @@ class TestNPUStreamingSessionEagle3RetractLargePage(TestNPUStreamingSession):
         "--mem-fraction-static",
         "0.6",
         "--page-size",
-        "256",
+        "128",
     ]
     env_overrides = [("SGLANG_TEST_RETRACT", True)]
     kv_inherit_offsets = (-1,)
-    # Mirror --page-size 256; scale the first chunk so turn-1 KV spans
-    # multiple pages (floored expectation 256, not 0).
-    kv_inherit_page_size = 256
-    kv_inherit_first_chunk_repeats = 40
-    kv_inherit_session_capacity = 4000
+    # Mirror --page-size 128 (NPU max supported page size); scale the first
+    # chunk so turn-1 KV spans multiple pages (floored expectation 128,
+    # not 0).
+    kv_inherit_page_size = 128
+    kv_inherit_first_chunk_repeats = 20
 
 
 __all__ = [
