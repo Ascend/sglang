@@ -3,7 +3,7 @@ import unittest
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
-    DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
     TestNpuPerfMultiNodePdSepTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -36,18 +36,18 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # ZBAL
-    "HCCL_BUFFSIZE": "8",
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "62084",
-    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
-    "ZBAL_ENABLE_GRAPH": "1",
+    # # ZBAL
+    # "HCCL_BUFFSIZE": "8",
+    # "SGLANG_ZBAL_LOCAL_MEM_SIZE": "62084",
+    # "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    # "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    # "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+    # "ZBAL_ENABLE_GRAPH": "1",
     # PD disagg
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
-    # MTP
-    "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    # DSPARK
+    "SGLANG_RAGGED_VERIFY_MODE": "static",
+    "SGLANG_DSPARK_FAST_KERNEL": "0",
 }
 
 # Decode node environment variables for DSV4-Flash PD-Sep deployment.
@@ -77,9 +77,9 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # MTP
-    "SGLANG_ENABLE_SPEC_V2": "1",
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    # DSPARK
+    "SGLANG_RAGGED_VERIFY_MODE": "static",
+    "SGLANG_DSPARK_FAST_KERNEL": "0",
 }
 
 # Prefill node launch arguments for DSV4-Flash PD-Sep.
@@ -171,7 +171,7 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ARGS = [
     "--enable-dp-lm-head",
     "--kv-cache-dtype",
     "bfloat16",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
@@ -182,20 +182,24 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ARGS = [
     40,
     48,
     56,
-    # MTP (EAGLE) configuration.
+    # DSPARK configuration.
     "--speculative-algorithm",
-    "EAGLE",
-    "--speculative-num-steps",
-    2,
-    "--speculative-eagle-topk",
-    1,
+    "DSPARK",
+    "--speculative-draft-model-path",
+    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
+    "--speculative-draft-model-quantization",
+    "modelslim",
+    "--speculative-draft-attention-backend",
+    "ascend",
     "--speculative-num-draft-tokens",
-    3,
+    6,
+    "--speculative-dspark-block-size",
+    5,
 ]
 
 # Model config for DSV4-Flash W8A8 1P+1D PD-Sep deployment.
 DEEPSEEK_V4_FLASH_W8A8_1P1D_MODEL_CONFIG = {
-    "model_path": DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH,
+    "model_path": DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
     "prefill_args": DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ARGS,
     "decode_args": DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ARGS,
     "prefill_envs": DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ENVS,
