@@ -149,6 +149,7 @@ def run_resolution_pipeline(server_args: Any) -> None:
     # Normalize deprecated CP aliases before validations or model-specific
     # defaults inspect enable_prefill_cp/cp_strategy.
     from sglang.srt.arg_groups.parallel_hook import (
+        handle_context_parallel_kernel_compatibility,
         handle_context_parallelism,
         handle_data_parallelism,
         handle_dcp_validation,
@@ -160,6 +161,10 @@ def run_resolution_pipeline(server_args: Any) -> None:
     )
 
     handle_legacy_cp_arguments(server_args)
+    # Kimi-K3 shards model inputs at the CP-v2 boundary, so an unavailable
+    # model-specific kernel must disable CP before graph, memory, and process
+    # groups are resolved. A per-layer fallback would be too late.
+    handle_context_parallel_kernel_compatibility(server_args)
     from sglang.srt.arg_groups.kv_cache_hook import (
         handle_cache_compatibility,
         handle_kv4_compatibility,

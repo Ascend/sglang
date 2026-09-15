@@ -218,6 +218,13 @@ class PrefillBootstrapQueue:
         transfer_draft_cache = (
             not layer_shard_enabled or layer_shard_rank == layer_shard_size - 1
         )
+        draft_kv_as_state = (
+            self.scheduler.spec_algorithm.is_dspark()
+            and _is_npu
+            and isinstance(self.token_to_kv_pool, HybridLinearKVPool)
+            and self.is_mla_backend
+            and transfer_draft_cache
+        )
         kv_args.prefill_start_layer = (
             getattr(
                 self.token_to_kv_pool,
@@ -240,7 +247,13 @@ class PrefillBootstrapQueue:
             else getattr(self.token_to_kv_pool, "end_layer", None)
         )
 
-        draft_kv_pool = self.draft_token_to_kv_pool if transfer_draft_cache else None
+        if draft_kv_as_state and self.draft_token_to_kv_pool is None:
+            raise RuntimeError("PD dSparK Prefill requires an allocated draft KV pool.")
+        draft_kv_pool = (
+            self.draft_token_to_kv_pool
+            if transfer_draft_cache and not draft_kv_as_state
+            else None
+        )
         num_draft_entries = 0
         if draft_kv_pool is not None:
             # We should also transfer draft model kv cache. The indices are
@@ -282,6 +295,7 @@ class PrefillBootstrapQueue:
             self.draft_token_to_kv_pool if transfer_draft_cache else None,
             self.scheduler.model_config.num_hidden_layers,
             req_to_token_pool=req_to_token_pool,
+            draft_kv_as_state=draft_kv_as_state,
         )
 
         if isinstance(self.token_to_kv_pool, DeepSeekV4TokenToKVPool):
@@ -1281,6 +1295,7 @@ class SchedulerDisaggregationPrefillMixin:
                 StateType.MINIMAX_INDEX_K: _full_kv_pages_payload,
                 StateType.SWA_RING: _swa_ring_payload,
                 StateType.C128_STATE: _c128_state_payload,
+                StateType.DRAFT_KV: _full_kv_pages_payload,
                 StateType.BLOCK_SCALE: _full_kv_pages_payload,
                 StateType.BLOCK_SCALE_SWA: _swa_payload,
             }
