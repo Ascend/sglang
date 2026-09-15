@@ -30,6 +30,7 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
+
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
 
@@ -37,13 +38,6 @@ register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 # Test data
 # ------------------------------------------------------------------
 
-# NOTE: each chunk is sized to exactly 116 tokens (post BOS strip, verified
-# with the Llama-3.2 tokenizer) so that each turn's total token count
-# (prompt 116*n + completion 12, forced by min_new_tokens below) is an exact
-# KV_PAGE_SIZE multiple — the NPU streaming-session path only reuses session
-# KV once the inherited context fills at least one page, and reuse is
-# page-floor aligned (aligned context < page_size falls back to full prefill
-# with cached_tokens=0).
 CHUNKS = [
     "Let me tell you something about France. The countryside keeps a long list of wonders:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village of",
     "The capital of France is Paris. Visitors often add more places to their plan:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey to",
@@ -51,9 +45,6 @@ CHUNKS = [
     "A brief history about that city is worth telling. The chronicle lists many events:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey",
 ]
 
-# Exactly 128 tokens (incl. BOS): turn-1 prompt for the abort tests. Turn 1
-# total (128 + completion) fills at least one page, so later turns inherit
-# KV on NPU (cached_tokens > 0).
 WIZARD_PROMPT = (
     "Tell me a very long story about a wizard. His tale begins with a list of strange things:, "
     "Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, "
@@ -66,15 +57,11 @@ WIZARD_PROMPT = (
 SAMPLING_PARAMS = {
     "temperature": 0,
     "max_new_tokens": 12,
-    # Force the full 12-token output so each turn's total token count
-    # (prompt + completion) stays deterministic for page-aligned math.
     "min_new_tokens": 12,
     "no_stop_trim": True,
     "skip_special_tokens": False,
 }
 
-# Server default page_size on NPU. CHUNKS / WIZARD_PROMPT above are pre-sized
-# against this value so session KV inheritance assertions hold on NPU.
 KV_PAGE_SIZE = 128
 
 LONG_SAMPLING_PARAMS = {
@@ -208,10 +195,10 @@ class TestNpuEnableStreamingSession(CustomTestCase):
             self.assertEqual(health.status_code, 200)
 
             tokenizer = self._get_tokenizer()
-            # CHUNKS are pre-sized so turn totals (prompt + 12 completion)
-            # are exact page multiples: turn N inherits KV_PAGE_SIZE * (N-1).
             chunk_ids = self._encode_chunks(tokenizer)
-
+            # prompt_tokens will grow each turn because the session
+            # concatenates all previous chunks (they are KV-cached,
+            # not re-computed, but still counted as prompt_tokens)
             requests.post(self.base_url + "/flush_cache")
 
             resp = self._open_session(streaming=True, capacity=1000)
@@ -318,7 +305,6 @@ class TestNpuEnableStreamingSession(CustomTestCase):
 
             try:
                 # Turn 1: normal generate to create session slot
-                # (WIZARD_PROMPT fills one KV page so Turn 2/3 inherit on NPU)
                 ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
