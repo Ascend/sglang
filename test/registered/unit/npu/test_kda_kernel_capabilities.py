@@ -23,6 +23,7 @@ def _compatible_module():
         chunk_gated_delta_rule_fwd_affine_npu=lambda: None,
         merge_kda_cp_affine_states=lambda: None,
         chunk_gated_delta_rule_fwd_h_npu=state_kernel,
+        chunk_kda_scaled_dot_kkt_fwd_npu=lambda: None,
     )
 
 
@@ -47,6 +48,17 @@ def test_kda_fla_cp_kernel_capability_requires_native_state_options():
 
     assert not compatible
     assert "state kernel is missing arguments" in reason
+
+
+def test_kda_fla_cp_kernel_capability_requires_scaled_dot_operator():
+    module = _compatible_module()
+    del module.chunk_kda_scaled_dot_kkt_fwd_npu
+
+    with patch("importlib.import_module", return_value=module):
+        compatible, reason = check_kda_fla_cp_kernel_compatibility()
+
+    assert not compatible
+    assert "chunk_kda_scaled_dot_kkt_fwd_npu" in reason
 
 
 def test_incompatible_kimi_k3_kernel_disables_prefill_cp(monkeypatch):

@@ -135,6 +135,11 @@ class _AscendKDAExtendKernel:
             from sgl_kernel_npu.fla.kda_chunk_delta_h import (
                 chunk_gated_delta_rule_fwd_affine_npu,
             )
+            from sgl_kernel_npu.fla.kda_scaled_dot_kkt import (
+                chunk_kda_scaled_dot_kkt_fwd_npu as scaled_dot_kernel,
+            )
+        else:
+            scaled_dot_kernel = chunk_kda_scaled_dot_kkt_fwd
 
         q = l2norm_fwd(q.contiguous())
         k = l2norm_fwd(k.contiguous())
@@ -149,7 +154,7 @@ class _AscendKDAExtendKernel:
             chunk_indices=chunk_indices,
         )
 
-        triangular, query_key = chunk_kda_scaled_dot_kkt_fwd(
+        triangular, query_key = scaled_dot_kernel(
             q=q,
             k=k,
             gk=g,
@@ -157,8 +162,6 @@ class _AscendKDAExtendKernel:
             scale=k.shape[-1] ** -0.5,
             cu_seqlens=query_start_loc,
             output_dtype=torch.float32,
-            inter_block_size=32 if cp_context is not None else None,
-            fused_full_chunk=cp_context is not None,
         )
         triangular = solve_tril_npu(
             A=triangular,

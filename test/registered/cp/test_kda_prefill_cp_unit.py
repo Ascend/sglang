@@ -168,7 +168,8 @@ class TestKDAPrefillCP(unittest.TestCase):
         new_values = torch.zeros_like(v)
         compose = Mock(return_value=local_initial)
         state_kernel = Mock(return_value=(chunk_states, new_values))
-        scaled_dot_kernel = Mock(return_value=(torch.zeros(1), torch.zeros(1)))
+        pcp_scaled_dot_kernel = Mock(return_value=(torch.zeros(1), torch.zeros(1)))
+        default_scaled_dot_kernel = Mock(return_value=(torch.zeros(1), torch.zeros(1)))
 
         with (
             patch(
@@ -189,7 +190,12 @@ class TestKDAPrefillCP(unittest.TestCase):
             patch(
                 "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
                 "chunk_kda_scaled_dot_kkt_fwd",
-                scaled_dot_kernel,
+                default_scaled_dot_kernel,
+            ),
+            patch(
+                "sgl_kernel_npu.fla.kda_scaled_dot_kkt."
+                "chunk_kda_scaled_dot_kkt_fwd_npu",
+                pcp_scaled_dot_kernel,
             ),
             patch(
                 "sglang.srt.hardware_backend.npu.attention.ascend_kda_backend."
@@ -251,19 +257,13 @@ class TestKDAPrefillCP(unittest.TestCase):
         self.assertEqual(kernel_state.shape[-2:], (key_dim, value_dim))
         self.assertTrue(pcp_kernel_kwargs["initial_state_key_value_layout"])
         self.assertEqual(pcp_kernel_kwargs["block_value"], 64)
-        self.assertEqual(
-            scaled_dot_kernel.call_args_list[0].kwargs["inter_block_size"], 32
-        )
-        self.assertTrue(scaled_dot_kernel.call_args_list[0].kwargs["fused_full_chunk"])
+        pcp_scaled_dot_kernel.assert_called_once()
+        default_scaled_dot_kernel.assert_called_once()
 
         pcp_off_kernel_kwargs = state_kernel.call_args_list[1].kwargs
         self.assertIs(pcp_off_kernel_kwargs["initial_state"], pcp_off_state_pool)
         self.assertNotIn("initial_state_key_value_layout", pcp_off_kernel_kwargs)
         self.assertNotIn("block_value", pcp_off_kernel_kwargs)
-        self.assertIsNone(
-            scaled_dot_kernel.call_args_list[1].kwargs["inter_block_size"]
-        )
-        self.assertFalse(scaled_dot_kernel.call_args_list[1].kwargs["fused_full_chunk"])
 
     def test_fla_conv_uses_only_segment_tails(self):
         local_inputs = [
