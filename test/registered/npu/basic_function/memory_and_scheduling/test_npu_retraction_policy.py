@@ -127,7 +127,7 @@ class TestRetractionPolicyLength(CustomTestCase):
                         "max_new_tokens": 512,
                         "min_new_tokens": 512,
                     },
-                    "rid": "long-req"
+                    "rid": "long-req",
                 },
             )
             result_long["status"] = resp.status_code
@@ -149,7 +149,11 @@ class TestRetractionPolicyLength(CustomTestCase):
 
         # Assert 1: KV cache was full and retraction was triggered
         retract_pattern = "KV cache pool is full. Retract requests."
-        self.assertIn(retract_pattern, full_log, "No 'KV cache pool is full. Retract requests.' found in server logs. ")
+        self.assertIn(
+            retract_pattern,
+            full_log,
+            "No 'KV cache pool is full. Retract requests.' found in server logs. "
+        )
 
         # Assert 2: both requests completed correctly
         self.assertIn(
@@ -210,14 +214,9 @@ class TestRetractionPolicyPriority(CustomTestCase):
         "debug",
     ]
 
-    # _PROMPT = (
-    #     "Write a long essay about the history of artificial intelligence. "
-    #     "Artificial intelligence is a fascinating field"
-    # )
     _LONG_INPUT_PREFIX = (
-            "The history of artificial intelligence is a fascinating story. " * 10
+        "The history of artificial intelligence is a fascinating story. " * 10
     )
-
     _OUT_LOG = "./tmp_retraction_priority_out.log"
     _ERR_LOG = "./tmp_retraction_priority_err.log"
 
@@ -315,7 +314,11 @@ class TestRetractionPolicyPriority(CustomTestCase):
 
         # Assert 1: KV cache was full and retraction was triggered
         retract_pattern = "KV cache pool is full. Retract requests."
-        self.assertIn(retract_pattern, full_log, "No 'KV cache pool is full. Retract requests.' found in server logs. ")
+        self.assertIn(
+            retract_pattern,
+            full_log,
+            "No 'KV cache pool is full. Retract requests.' found in server logs. "
+        )
 
         # Assert 2: both requests completed correctly
         self.assertIn(

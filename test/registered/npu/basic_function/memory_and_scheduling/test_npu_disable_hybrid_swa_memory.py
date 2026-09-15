@@ -25,7 +25,6 @@ _MIMO_BASE_ARGS = [
     0.85,
     "--attention-backend",
     "ascend",
-    "--disable-piecewise-cuda-graph",
     "--enable-dp-attention",
     "--enable-dp-lm-head",
     "--quantization",
