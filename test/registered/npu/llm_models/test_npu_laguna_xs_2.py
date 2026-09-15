@@ -14,14 +14,14 @@ register_npu_ci(
 
 
 class TestLagunXS2(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the poolside/Laguna-XS.2 model on the GSM8K dataset is no less than 0.
+    """Testcase: Verify that the inference accuracy of the poolside/Laguna-XS.2 model on the GSM8K dataset is no less than 0.89.
 
     [Test Category] Model
     [Test Target] poolside/Laguna-XS.2
     """
 
     model = LAGUNA_XS_2_WEIGHTS_PATH
-    accuracy = 0
+    accuracy = 0.89
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
