@@ -319,12 +319,12 @@ class TestRetractionPolicyPriority(CustomTestCase):
 
         # Assert 2: both requests completed correctly
         self.assertIn(
-            "Paris",
+            "paris",
             low_result["text"].lower(),
             f"Low output unexpected: {low_result['text'][:200]}",
         )
         self.assertIn(
-            "Paris",
+            "paris",
             high_result["text"].lower(),
             f"High output unexpected: {high_result['text'][:200]}",
         )
