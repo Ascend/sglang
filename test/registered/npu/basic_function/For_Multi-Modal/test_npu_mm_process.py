@@ -20,7 +20,6 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=900, suite="full-4-npu-a3", nightly=True)
 
-# Video processing config matching the reference command
 _MM_PROCESS_CONFIG = json.dumps(
     {
         "video": {
