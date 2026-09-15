@@ -52,7 +52,7 @@ _COMMON_ARGS = [
 
 
 class TestMmProcessConfigDpEncoder(CustomTestCase):
-    """Verify video chat works with --mm-process-config (custom video
+    """Testcase: Verify video chat works with --mm-process-config (custom video
     preprocessing) and --mm-enable-dp-encoder enabled together.
 
     The server is launched twice with the same request:
@@ -63,7 +63,7 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
     tokens, so prompt_tokens with the config must be smaller than without it.
 
     [Test Category] Parameter
-    [Test Target] --mm-process-config, --mm-enable-dp-encoder
+    [Test Target] --mm-process-config; --mm-enable-dp-encoder
     """
 
     model = QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH
@@ -182,7 +182,6 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
             content,
         )
 
-        # ---- Switch to the server WITHOUT the two params ----
         type(self)._terminate_server()
         type(self)._launch_server([*_COMMON_ARGS])
 
