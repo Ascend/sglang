@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Git ref (branch, tag, or SHA) to test. If not provided, uses the default branch.'
+        description: 'Git ref (branch, tag, or SHA) to test. If not provided, uses the default branch'
         required: false
         type: string
         default: ''
