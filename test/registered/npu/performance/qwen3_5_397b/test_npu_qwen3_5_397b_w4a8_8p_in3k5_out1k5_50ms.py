@@ -10,7 +10,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-16-npu-a3")
 register_npu_ci(est_time=3600, suite="nightly-perf-16-npu-a3", nightly=True)
-register_npu_ci(est_time=3600, suite="validate-397b-p90-npu", nightly=True)
+# register_npu_ci(est_time=3600, suite="validate-397b-p90-npu", nightly=True)
 
 QWEN3_5_397B_A17B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
