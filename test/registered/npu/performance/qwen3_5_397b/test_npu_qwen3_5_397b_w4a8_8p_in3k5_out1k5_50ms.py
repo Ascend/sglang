@@ -10,6 +10,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3600, suite="base-c-test-perf-16-npu-a3")
 register_npu_ci(est_time=3600, suite="nightly-perf-16-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="validate-397b-p90-npu", nightly=True)
 
 QWEN3_5_397B_A17B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -28,11 +29,11 @@ QWEN3_5_397B_A17B_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
-#    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "59648",
-#    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-#    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
-#    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-#    "ZBAL_ENABLE_GRAPH": "1",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "59648",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "ZBAL_ENABLE_GRAPH": "1",
 }
 
 QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS = [
