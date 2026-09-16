@@ -1,25 +1,13 @@
 import unittest
 
-from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    TestNpuAccuracyTestCaseBase,
-)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     QWEN3_NEXT_80B_A3B_MODEL_PATH,
     QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH,
+    TestNpuPerformanceTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-# register_npu_ci(
-#     est_time=4800,
-#     suite="full-acc-4-npu-a3",
-#     nightly=True,
-# )
-
-register_npu_ci(
-    est_time=4800,
-    suite="full-4-npu-a3-heyao",
-    nightly=True,
-)
+register_npu_ci(est_time=3600, suite="base-c-test-perf-4-npu-a3")
 
 QWEN3_NEXT_80B_A3B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -101,24 +89,21 @@ QWEN3_NEXT_80B_A3B_OTHER_ARGS = [
 ]
 
 
-class TestQwen3Next80BA3B_aime25(TestNpuAccuracyTestCaseBase):
+class TestQwen3Next80BA3B(TestNpuPerformanceTestCaseBase):
+    max_attempts = 5
     model = QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH
-    envs = QWEN3_NEXT_80B_A3B_ENVS
     other_args = QWEN3_NEXT_80B_A3B_OTHER_ARGS
-    accuracy = 0.695
-    datasets = ["aime25"]
-    few_shot_num = 0
-    generation_config = {
-        "max_tokens": 65536,
-        "temperature": 0.7,
-        "top_p": 0.8,
-        "top_k": 20,
-        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
-    }
+    envs = QWEN3_NEXT_80B_A3B_ENVS
+    dataset_name = "random"
     max_concurrency = 16
+    num_prompts = 16
+    input_len = 6144
+    output_len = 1500
+    random_range_ratio = 1
+    tpot = 15.62
 
-    def test_aime25(self):
-        self.run_accuracy_multiple(n_runs=3)
+    def test_qwen3_next_80b_a3b(self):
+        self.run_throughput()
 
 
 if __name__ == "__main__":

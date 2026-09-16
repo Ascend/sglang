@@ -407,39 +407,79 @@ jobs:
 #      prefill_decode_deployment: 'mix'
 #      transformers_version: ''
 
-  full-poc-single-node-tests:
-    name: single-node-poc
+  full-2-npu-a3-heyao:
+    name: full-2-npu-a3-heyao
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        test_config:
-          - name: test_npu_enable_streaming_session
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/npu/basic_function/parameter/test_npu_enable_streaming_session.py
-          - name: test_npu_lora_tied_lm_head
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/npu/basic_function/lora/test_npu_lora_tied_lm_head.py
-          - name: test_npu_api_related_asr_max
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/npu/basic_function/api_related/test_npu_api_related_asr_max.py
-          - name: test_npu_qwen3_vl_reranker_2b
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/npu/rerank_models/test_npu_qwen3_vl_reranker_2b.py
-          - name: test_npu_metrics_bucket_boundary
-            runner: linux-aarch64-a3-2
-            test_case: test/registered/npu/basic_function/logging/test_npu_metrics_bucket_boundary.py
-    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
+    uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
-      runner: ${{ matrix.test_config.runner }}
-      test_type: ${{ matrix.test_config.test_type }}
-      test_config_name: ${{ matrix.test_config.name }}
-      test_case: ${{ matrix.test_config.test_case }}
+      self_name: full-2-npu-a3-heyao
+      runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      install_sglang_from_source: false
-      transformers_version: ''
+      run_timeout_minutes: '480'
+      job_timeout_minutes: '540'
+      timeout_per_file: '4800'
+      partitions: '{"size":2,"arr":[0,1]}'
+      ref: ${{ needs.set-image-config.outputs.ref }}
+      is_nightly_pipeline_job: true
+      skip_pr_test_health_check: 'true'
+    secrets: inherit
+
+  full-4-npu-a3-heyao:
+    name: full-4-npu-a3-heyao
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    needs: [ set-image-config ]
+    uses: ./.github/workflows/_npu-pr-test-stage.yml
+    with:
+      self_name: full-4-npu-a3-heyao
+      runner_config: linux-aarch64-a3-4
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+      run_timeout_minutes: '480'
+      job_timeout_minutes: '540'
+      timeout_per_file: '3600'
+      partitions: '{"size":2,"arr":[0,1]}'
+      ref: ${{ needs.set-image-config.outputs.ref }}
+      is_nightly_pipeline_job: true
+      skip_pr_test_health_check: 'true'
+    secrets: inherit
+
+
+#  full-poc-single-node-tests:
+#    name: single-node-poc
+#    needs: [ set-image-config ]
+#    if: ${{ !cancelled() }}
+#    strategy:
+#      fail-fast: false
+#      max-parallel: 3
+#      matrix:
+#        test_config:
+#          - name: test_npu_enable_streaming_session
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/npu/basic_function/parameter/test_npu_enable_streaming_session.py
+#          - name: test_npu_lora_tied_lm_head
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/npu/basic_function/lora/test_npu_lora_tied_lm_head.py
+#          - name: test_npu_api_related_asr_max
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/npu/basic_function/api_related/test_npu_api_related_asr_max.py
+#          - name: test_npu_qwen3_vl_reranker_2b
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/npu/rerank_models/test_npu_qwen3_vl_reranker_2b.py
+#          - name: test_npu_metrics_bucket_boundary
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/npu/basic_function/logging/test_npu_metrics_bucket_boundary.py
+#          - name: qwen3_next_80b_w8a8_2p_in6k_out1k5_bs16
+#            runner: linux-aarch64-a3-2
+#            test_case: test/registered/npu/performance/qwen3_next_80b_a3b_instruct/test_npu_qwen3_next_80b_w8a8_2p_in6k_out1k5_bs16.py
+#    uses: ./.github/workflows/nightly-test-npu-e2e-single-node.yml
+#    with:
+#      runner: ${{ matrix.test_config.runner }}
+#      test_type: ${{ matrix.test_config.test_type }}
+#      test_config_name: ${{ matrix.test_config.name }}
+#      test_case: ${{ matrix.test_config.test_case }}
+#      image: ${{ needs.set-image-config.outputs.image_a3 }}
+#      install_sglang_from_source: false
+#      transformers_version: ''
 
 #  check-all-jobs:
 #    if: github.repository == 'sgl-project/sglang' && always()
