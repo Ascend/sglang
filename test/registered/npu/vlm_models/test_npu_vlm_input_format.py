@@ -11,13 +11,17 @@ import torch
 import transformers.activations as _hf_activations
 from PIL import Image
 from transformers import (
+    AutoModel,
     AutoProcessor,
+    Gemma3ForConditionalGeneration,
     Qwen2_5_VLForConditionalGeneration,
 )
 
 from sglang.test.ascend.test_ascend_utils import (
+    GEMMA_3_4B_IT_WEIGHTS_PATH,
     IMAGE_MAN_IRONING_PATH,
     IMAGE_SGL_LOGO_PATH,
+    KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
     QWEN2_5_VL_3B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -39,7 +43,7 @@ from sglang.srt.entrypoints.openai.protocol import ChatCompletionRequest
 from sglang.srt.parser.conversation import generate_chat_conv
 from sglang.srt.utils.hf_transformers_utils import _fix_added_tokens_encoding
 
-register_npu_ci(est_time=747, suite="test-vlm", nightly=True)
+register_npu_ci(est_time=747, suite="full-2-npu-a3", nightly=True)
 
 # NPU devices on CI runners may have slight memory imbalance across cards
 # (e.g. residual memory from prior process or kernel-level allocations).
@@ -173,7 +177,6 @@ class VLMInputTestBase:
             image_data=self.main_image,
             sampling_params=dict(temperature=0.0, max_new_tokens=512),
         )
-        # print(f"[debug] test_accepts_image output is \n{output}")
         self.verify_response(output)
 
     async def test_accepts_precomputed_embeddings(self):
@@ -190,7 +193,6 @@ class VLMInputTestBase:
             ],
             sampling_params=dict(temperature=0.0, max_new_tokens=512),
         )
-        # print(f"[debug] test_accepts_precomputed_embeddings output is \n{output}")
         self.verify_response(output)
 
     async def test_accepts_processor_output(self):
@@ -201,7 +203,6 @@ class VLMInputTestBase:
             image_data=[self._processor_output_image_data(processor_output)],
             sampling_params=dict(temperature=0.0, max_new_tokens=512),
         )
-        # print(f"[debug] test_accepts_processor_output output is \n{output}")
         self.verify_response(output)
 
     def _precomputed_image_data(self, processor_output, precomputed_embeddings):
@@ -244,90 +245,90 @@ class TestQwenVLUnderstandsImage(VLMInputTestBase, unittest.IsolatedAsyncioTestC
         return dict(processor_output, format="processor_output")
 
 
-# class TestGemmaUnderstandsImage(VLMInputTestBase, unittest.IsolatedAsyncioTestCase):
-#     model_path = GEMMA_3_4B_IT_WEIGHTS_PATH
-#     chat_template = "gemma-it"
-#
-#     @classmethod
-#     def _init_visual(cls):
-#         model = Gemma3ForConditionalGeneration.from_pretrained(
-#             cls.model_path, torch_dtype=torch.bfloat16
-#         )
-#         base_model = model.model
-#
-#         cls.vision_tower = base_model.vision_tower.eval().to(cls.device)
-#
-#         if hasattr(base_model, "multi_modal_projector"):
-#             cls.mm_projector = base_model.multi_modal_projector.eval().to(cls.device)
-#         else:
-#             cls.mm_projector = model.multi_modal_projector.eval().to(cls.device)
-#
-#         cls.visual = lambda processor_output: cls.mm_projector(
-#             cls.vision_tower(
-#                 pixel_values=processor_output["pixel_values"]
-#             ).last_hidden_state
-#         )
-#
-#     def _processor_output_image_data(self, processor_output):
-#         return dict(processor_output, format="processor_output")
+class TestGemmaUnderstandsImage(VLMInputTestBase, unittest.IsolatedAsyncioTestCase):
+    model_path = GEMMA_3_4B_IT_WEIGHTS_PATH
+    chat_template = "gemma-it"
+
+    @classmethod
+    def _init_visual(cls):
+        model = Gemma3ForConditionalGeneration.from_pretrained(
+            cls.model_path, torch_dtype=torch.bfloat16
+        )
+        base_model = model.model
+
+        cls.vision_tower = base_model.vision_tower.eval().to(cls.device)
+
+        if hasattr(base_model, "multi_modal_projector"):
+            cls.mm_projector = base_model.multi_modal_projector.eval().to(cls.device)
+        else:
+            cls.mm_projector = model.multi_modal_projector.eval().to(cls.device)
+
+        cls.visual = lambda processor_output: cls.mm_projector(
+            cls.vision_tower(
+                pixel_values=processor_output["pixel_values"]
+            ).last_hidden_state
+        )
+
+    def _processor_output_image_data(self, processor_output):
+        return dict(processor_output, format="processor_output")
 
 
 # Updated Kimi-VL test to use the new input format.
-# class TestKimiVLImageUnderstandsImage(
-#     VLMInputTestBase, unittest.IsolatedAsyncioTestCase
-# ):
-#     model_path = KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH
-#     chat_template = "kimi-vl"
-#
-#     @classmethod
-#     def _init_visual(cls):
-#         import inspect
-#
-#         from transformers import AutoConfig
-#         from transformers.dynamic_module_utils import get_class_from_dynamic_module
-#
-#         config = AutoConfig.from_pretrained(cls.model_path, trust_remote_code=True)
-#
-#         # Transformers v5 auto-populates rope_scaling with
-#         # {"rope_theta": ..., "rope_type": "default"} even when the original
-#         # config had rope_scaling: null. The remote KimiVL code branches on
-#         # `if self.config.rope_scaling is None` so we must reset it.
-#         tc = getattr(config, "text_config", None)
-#         if tc is not None:
-#             rs = getattr(tc, "rope_scaling", None)
-#             if isinstance(rs, dict) and rs.get("rope_type") == "default":
-#                 tc.rope_scaling = None
-#
-#         # Transformers v5 calls tie_weights(recompute_mapping=False) in
-#         # post_init, but KimiVL's tie_weights doesn't accept that kwarg.
-#         auto_map = getattr(config, "auto_map", {})
-#         model_ref = auto_map.get("AutoModel")
-#         if model_ref:
-#             model_cls = get_class_from_dynamic_module(model_ref, cls.model_path)
-#             orig_tie = model_cls.tie_weights
-#             if "recompute_mapping" not in inspect.signature(orig_tie).parameters:
-#
-#                 def _patched_tie(self, **kwargs):
-#                     return orig_tie(self)
-#
-#                 model_cls.tie_weights = _patched_tie
-#
-#         model = AutoModel.from_pretrained(
-#             cls.model_path, config=config, trust_remote_code=True
-#         )
-#         cls.vision_tower = model.vision_tower.eval().to(cls.device)
-#         cls.mm_projector = model.multi_modal_projector.eval().to(cls.device)
-#         _vt_dtype = next(cls.vision_tower.parameters()).dtype
-#
-#         cls.visual = lambda tokenizer_output: cls.mm_projector(
-#             cls.vision_tower(
-#                 pixel_values=tokenizer_output["pixel_values"].to(_vt_dtype),
-#                 grid_hws=tokenizer_output["image_grid_hws"],
-#             )
-#         )
-#
-#     def _processor_output_image_data(self, processor_output):
-#         return dict(processor_output, format="processor_output")
+class TestKimiVLImageUnderstandsImage(
+    VLMInputTestBase, unittest.IsolatedAsyncioTestCase
+):
+    model_path = KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH
+    chat_template = "kimi-vl"
+
+    @classmethod
+    def _init_visual(cls):
+        import inspect
+
+        from transformers import AutoConfig
+        from transformers.dynamic_module_utils import get_class_from_dynamic_module
+
+        config = AutoConfig.from_pretrained(cls.model_path, trust_remote_code=True)
+
+        # Transformers v5 auto-populates rope_scaling with
+        # {"rope_theta": ..., "rope_type": "default"} even when the original
+        # config had rope_scaling: null. The remote KimiVL code branches on
+        # `if self.config.rope_scaling is None` so we must reset it.
+        tc = getattr(config, "text_config", None)
+        if tc is not None:
+            rs = getattr(tc, "rope_scaling", None)
+            if isinstance(rs, dict) and rs.get("rope_type") == "default":
+                tc.rope_scaling = None
+
+        # Transformers v5 calls tie_weights(recompute_mapping=False) in
+        # post_init, but KimiVL's tie_weights doesn't accept that kwarg.
+        auto_map = getattr(config, "auto_map", {})
+        model_ref = auto_map.get("AutoModel")
+        if model_ref:
+            model_cls = get_class_from_dynamic_module(model_ref, cls.model_path)
+            orig_tie = model_cls.tie_weights
+            if "recompute_mapping" not in inspect.signature(orig_tie).parameters:
+
+                def _patched_tie(self, **kwargs):
+                    return orig_tie(self)
+
+                model_cls.tie_weights = _patched_tie
+
+        model = AutoModel.from_pretrained(
+            cls.model_path, config=config, trust_remote_code=True
+        )
+        cls.vision_tower = model.vision_tower.eval().to(cls.device)
+        cls.mm_projector = model.multi_modal_projector.eval().to(cls.device)
+        _vt_dtype = next(cls.vision_tower.parameters()).dtype
+
+        cls.visual = lambda tokenizer_output: cls.mm_projector(
+            cls.vision_tower(
+                pixel_values=tokenizer_output["pixel_values"].to(_vt_dtype),
+                grid_hws=tokenizer_output["image_grid_hws"],
+            )
+        )
+
+    def _processor_output_image_data(self, processor_output):
+        return dict(processor_output, format="processor_output")
 
 
 if __name__ == "__main__":
