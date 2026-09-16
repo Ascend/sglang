@@ -25,6 +25,7 @@ from sglang.test.server_fixtures.streaming_session_fixture import (
 )
 
 register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a5", nightly=True)
 
 
 SWA_MODEL = GPT_OSS_120B_BF16_WEIGHTS_PATH

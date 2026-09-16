@@ -19,6 +19,12 @@ register_npu_ci(
     nightly=True,
     disabled="the compile is conflict with graph",
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a5",
+    nightly=True,
+    disabled="the compile is conflict with graph",
+)
 
 
 class TestEnableTorchCompileDebugMode(CustomTestCase):

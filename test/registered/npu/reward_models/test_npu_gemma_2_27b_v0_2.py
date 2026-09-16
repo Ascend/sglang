@@ -19,6 +19,12 @@ register_npu_ci(
     nightly=True,
     disabled="no longer being monitored",
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a5",
+    nightly=True,
+    disabled="no longer being monitored",
+)
 
 MODELS = [
     (SKYWORK_REWARD_GEMMA_2_27B_V0_2_WEIGHTS_PATH, 1, 4e-2),

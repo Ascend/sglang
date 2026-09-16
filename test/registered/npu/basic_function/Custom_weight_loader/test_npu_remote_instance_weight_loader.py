@@ -26,6 +26,7 @@ from sglang.utils import terminate_process
 mp.set_start_method("spawn", force=True)
 
 register_npu_ci(est_time=300, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=300, suite="full-1-npu-a5", nightly=True)
 
 
 def verify_params_close(params1, params2, error_msg):

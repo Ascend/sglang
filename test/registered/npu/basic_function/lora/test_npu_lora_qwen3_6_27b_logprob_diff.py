@@ -40,6 +40,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=90, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=90, suite="full-1-npu-a5", nightly=True)
 
 BASE_MODEL = QWEN3_6_27B_MODEL_WEIGHTS_PATH
 LORA_HF_REPO = QWEN3_6_27B_CYBERSECURITY_LORA_MODEL_WEIGHTS_PATH

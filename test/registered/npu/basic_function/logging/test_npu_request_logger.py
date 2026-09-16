@@ -18,6 +18,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=180, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=180, suite="full-1-npu-a5", nightly=True)
 
 TEST_ROUTING_KEY = "test-routing-key-12345"
 TEST_CUSTOM_HEADER_NAME = "X-Test-Header"

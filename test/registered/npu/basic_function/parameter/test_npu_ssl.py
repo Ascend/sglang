@@ -39,6 +39,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=300, suite="full-1-npu-a5", nightly=True)
 
 # Suppress InsecureRequestWarning for self-signed certs in HTTPS health checks
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

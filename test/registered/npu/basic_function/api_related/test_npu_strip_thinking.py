@@ -16,6 +16,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 HARNONY = (
     "Seth is twice as old as Brooke. In 2 years, the sum of their ages will be 28. How old is Seth?"
     * 20

@@ -16,6 +16,12 @@ register_npu_ci(
     nightly=True,
     disabled="accuracy testcase",
 )
+register_npu_ci(
+    est_time=1800,
+    suite="full-4-npu-a5",
+    nightly=True,
+    disabled="accuracy testcase",
+)
 
 ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",

@@ -16,6 +16,11 @@ register_npu_ci(
     suite="full-1-npu-a3",
     nightly=True,
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a5",
+    nightly=True,
+)
 
 MODELS = [
     (QWEN3_RERANKER_8B_WEIGHTS_PATH, 1, 1e-2),

@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Register CI task for NPU environment
 register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-1-npu-a5", nightly=True)
 
 
 class BaseTestDetokenizerWatchdog:

@@ -13,6 +13,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=150, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=150, suite="full-1-npu-a5", nightly=True)
 
 MODEL_PATH = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 LORA_PATH = LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH

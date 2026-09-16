@@ -17,6 +17,12 @@ register_npu_ci(
     nightly=True,
     disabled="performance testcase",
 )
+register_npu_ci(
+    est_time=2400,
+    suite="full-8-npu-a5",
+    nightly=True,
+    disabled="performance testcase",
+)
 
 DEEPSEEK_R1_BASE_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
