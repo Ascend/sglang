@@ -32,13 +32,13 @@ except ImportError:
 
 from transformers import AutoModelForCausalLM
 
-from sglang.test.ascend.test_ascend_utils import QWEN3_5_4B_WEIGHTS_PATH
+# from sglang.test.ascend.test_ascend_utils import QWEN3_5_4B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.runners import HFRunner, SRTRunner
 from sglang.test.test_utils import DEFAULT_PORT_FOR_SRT_TEST_RUNNER, CustomTestCase
 
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
-
+QWEN3_5_4B_WEIGHTS_PATH = "/mnt/paas/weights/Qwen3.5-4B"
 register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 # Use a small model with tie_word_embeddings=True
@@ -50,6 +50,7 @@ TEST_PROMPTS = [
 
 MAX_NEW_TOKENS = 16
 LOGPROB_THRESHOLD = 2.5e-1
+ADAPTER_SEED = 0
 
 
 def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
@@ -84,6 +85,7 @@ def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
         task_type="CAUSAL_LM",
     )
 
+    torch.manual_seed(ADAPTER_SEED)
     peft_model = get_peft_model(model, lora_config)
 
     # PEFT initializes lora_B to zeros by default, which makes the adapter
