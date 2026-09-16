@@ -5,6 +5,7 @@ python3 -m unittest test_vision_openai_server.TestOpenAIVisionServer.test_multi_
 """
 
 import os
+import subprocess
 import unittest
 
 import openai
@@ -75,22 +76,29 @@ class TestQwen2VLContextLengthServer(CustomTestCase):
         cls.model = QWEN2_VL_2B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.api_key = "sk-123456"
-        cls.process = popen_launch_server(
-            cls.model,
-            cls.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            api_key=cls.api_key,
-            other_args=[
-                "--context-length",
-                "300",
-                "--cuda-graph-max-bs-decode",
-                "4",
-                "--attention-backend",
-                "ascend",
-                "--mem-fraction-static",
-                "0.90",
-            ],
-        )
+        try:
+            cls.process = popen_launch_server(
+                cls.model,
+                cls.base_url,
+                timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+                api_key=cls.api_key,
+                other_args=[
+                    "--context-length",
+                    "300",
+                    "--cuda-graph-max-bs-decode",
+                    "4",
+                    "--attention-backend",
+                    "ascend",
+                    "--mem-fraction-static",
+                    "0.90",
+                ],
+            )
+        except Exception:
+            # popen_launch_server raises after the parent died; its
+            # reparented children can survive and hold the test port,
+            # which then poisons every subsequent case in the job.
+            subprocess.run(["pkill", "-9", "-f", "port 11000"], check=False)
+            raise
         cls.base_url += "/v1"
 
     @classmethod
