@@ -80,8 +80,13 @@ class TestQwen2VLContextLengthServer(CustomTestCase):
         # A leaked child of a previous case can inherit the listening
         # socket fd (fork) and survive kill_process_tree; preemptively
         # clear the test port before launching.
+        print("PORT_DIAG before launch:")
+        subprocess.run(["bash", "-c", "ss -tlnp | grep 11000 || echo 'port 11000 is free'"], check=False)
         if shutil.which("pkill"):
             subprocess.run(["pkill", "-9", "-f", "port 11000"], check=False)
+            print("PORT_DIAG pkill executed")
+        else:
+            print("PORT_DIAG pkill not available")
         try:
             cls.process = popen_launch_server(
                 cls.model,
