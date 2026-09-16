@@ -12,7 +12,6 @@ import os
 import random
 import re
 import shlex
-import signal
 import subprocess
 import sys
 import threading
@@ -558,13 +557,7 @@ def _subprocess_popen_with_outputs(
         torch.cuda.empty_cache()
 
     if not return_stdout_stderr:
-        return subprocess.Popen(
-            command,
-            stdout=None,
-            stderr=None,
-            env=env,
-            start_new_session=(os.name == "posix"),
-        )
+        return subprocess.Popen(command, stdout=None, stderr=None, env=env)
 
     process = subprocess.Popen(
         command,
@@ -573,7 +566,6 @@ def _subprocess_popen_with_outputs(
         env=env,
         text=True,
         bufsize=1,
-        start_new_session=(os.name == "posix"),
     )
 
     def _dump(src, sinks):
@@ -671,29 +663,6 @@ def _wait_for_server_health(
             time.sleep(10)
 
     return False, "Server failed to start within the timeout period"
-
-
-def _kill_launched_server(process) -> None:
-    """Kill a launched server and all of its surviving descendants.
-
-    The server is started in its own session, so killing the whole process
-    group also reaches children that were reparented after the parent died.
-    ``kill_process_tree`` on a dead parent is a no-op and leaks the orphans,
-    which then hold the test port for the rest of the job.
-    """
-    if os.name == "posix":
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
-    try:
-        process.wait(timeout=5)
-    except Exception:
-        pass
-    try:
-        kill_process_tree(process.pid)
-    except Exception:
-        pass
 
 
 def popen_launch_server(
@@ -809,7 +778,10 @@ def popen_launch_server(
 
         # Kill failed process
         try:
-            _kill_launched_server(process)
+            if process.poll() is None:
+                kill_process_tree(process.pid)
+            else:
+                process.wait(timeout=5)
         except Exception as e:
             print(f"CI_OFFLINE: Error cleaning up failed offline process: {e}")
 
@@ -834,7 +806,7 @@ def popen_launch_server(
 
         # Online retry also failed
         try:
-            _kill_launched_server(process)
+            kill_process_tree(process.pid)
         except Exception as e:
             print(f"CI_OFFLINE: Error killing process after online retry failure: {e}")
 
@@ -848,7 +820,7 @@ def popen_launch_server(
 
     # First attempt failed and offline was not enabled
     try:
-        _kill_launched_server(process)
+        kill_process_tree(process.pid)
     except Exception as e:
         print(f"CI_OFFLINE: Error killing process after first attempt failure: {e}")
 
