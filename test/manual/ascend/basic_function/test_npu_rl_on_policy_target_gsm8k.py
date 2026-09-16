@@ -5,6 +5,14 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.test_ascend_utils import QWEN3_4B_WEIGHTS_PATH
+from sglang.test.ci.ci_register import register_npu_ci
+
+register_npu_ci(
+    est_time=200,
+    suite="full-1-npu-a3",
+    nightly=True,
+    disabled="Dependency operator blue zone not available",
+)
 
 ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
@@ -17,6 +25,7 @@ ENVS = {
         f"{os.environ.get('LD_LIBRARY_PATH', '')}"
     ),
 }
+# When using the Cann9.1.0 version image, it is necessary to modify the environment variables
 
 OTHER_ARGS = [
     "--attention-backend",
@@ -46,6 +55,9 @@ class TestNPUQwen3_4B_1P_GSM8K(TestNpuAccuracyTestCaseBase):
     The shell script enables deterministic inference and rl-on-policy-target
     for RL training consistency. This test verifies GSM8K accuracy under
     these settings.
+
+    [Test Category] Parameter
+    [Test Target] --rl-on-policy-target
     """
 
     model = QWEN3_4B_WEIGHTS_PATH
