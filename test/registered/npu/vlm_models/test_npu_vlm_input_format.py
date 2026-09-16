@@ -43,7 +43,7 @@ from sglang.srt.entrypoints.openai.protocol import ChatCompletionRequest
 from sglang.srt.parser.conversation import generate_chat_conv
 from sglang.srt.utils.hf_transformers_utils import _fix_added_tokens_encoding
 
-register_npu_ci(est_time=747, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=747, suite="test-vlm", nightly=True)
 
 # NPU devices on CI runners may have slight memory imbalance across cards
 # (e.g. residual memory from prior process or kernel-level allocations).
