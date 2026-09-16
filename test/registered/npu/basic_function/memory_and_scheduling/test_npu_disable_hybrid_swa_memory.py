@@ -54,7 +54,6 @@ _SWA_HYBRID_LOG_MARKER = "Use sliding window memory pool"
 class TestDisableHybridSwaMemory(CustomTestCase):
     """Verify --disable-hybrid-swa-memory controls independent SWA pool vs unified pool.
 
-    Launches MiMo V2 Flash twice:
     - Without the flag: independent SWA pool → log contains the SWA pool marker
     - With the flag: unified pool → log does NOT contain the SWA pool marker
 
