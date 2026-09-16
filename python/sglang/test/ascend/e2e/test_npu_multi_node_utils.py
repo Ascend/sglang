@@ -1,19 +1,44 @@
+import glob
+import inspect
+import json
 import logging
 import os
 import re
-import socket
+import shutil
 import subprocess
+import sys
 import threading
 import time
+from datetime import datetime
 from functools import wraps
-from types import SimpleNamespace
-from typing import Iterable, Union
-
-import requests
+from urllib.parse import urlparse
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.few_shot_gsm8k import run_eval as run_eval_gsm8k
-from sglang.test.test_utils import CustomTestCase, popen_launch_server
+from sglang.test.ascend.e2e.gen_dataset_fixed_len import (
+    generate_gsm8k_dataset,
+    generate_mm_dataset,
+    generate_random_dataset,
+    save_jsonl,
+)
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    ACTIVE_TEST_CLASS,
+    CONFIGMAP_NAME,
+    NAMESPACE,
+    SERVICE_PORT,
+    check_role,
+    launch_pd_mix_node,
+    launch_pd_separation_node,
+    launch_router,
+    query_configmap,
+    wait_for_prefill_decode_exit,
+    wait_server_ready,
+)
+from sglang.test.test_utils import (
+    DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
+    dump_metric,
+    popen_launch_server,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,862 +47,1129 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-NAMESPACE = os.environ.get("NAMESPACE")
-CONFIGMAP_NAME = os.environ.get("KUBE_CONFIG_MAP")
-ACTIVE_TEST_CLASS = "active-test-class"
+AISBENCHMARK = "aisbench"
+BENCHSERVING = "bench-serving"
+BENCHMARK_TOOL_DEFAULT = BENCHSERVING
+AISBENCHMARK_DATASET_GSM8K = "gsm8k"
+AISBENCHMARK_DATASET_SHAREGPT = "sharegpt"
+AISBENCHMARK_DATASET_MM_CUSTOM_GEN = "mm-custom-gen"
+AISBENCHMARK_DATASET_DEFAULT = AISBENCHMARK_DATASET_GSM8K
 
-LOCAL_TIMEOUT = 3600
-ALL_ROLE_SET = {"prefill", "decode", "router", "master", "worker"}
-
-# Port numbers
-ASCEND_RT_VISIBLE_DEVICES = os.environ.get("ASCEND_RT_VISIBLE_DEVICES")
-SERVICE_PORT = (
-    6677
-    if not ASCEND_RT_VISIBLE_DEVICES
-    else 6677 + int(ASCEND_RT_VISIBLE_DEVICES.strip().split(",")[0])
+SHAREGPT_DATASET_TEST_FILE = "/tmp/ShareGPT_V3_unfiltered_cleaned_split.json"
+GSM8K_DATASET_TEST_FILE = (
+    "/root/.cache/modelscope/hub/datasets/grade_school_math/test.jsonl"
 )
-PREFILL_DECODE_PORT = 8000
-BOOTSTRAP_INIT_PORT = 8995
+GSM8K_DATASET_TRAIN_FILE = (
+    "/root/.cache/modelscope/hub/datasets/grade_school_math/train.jsonl"
+)
+
+PYTHON_FOR_TEST_TOOL = "python_venv_for_test_tool/bin/python"
+if not os.path.exists(PYTHON_FOR_TEST_TOOL) or not os.access(
+    PYTHON_FOR_TEST_TOOL, os.X_OK
+):
+    PYTHON_FOR_TEST_TOOL = "python3"
+logger.info(f"PYTHON_FOR_TEST_TOOL: {PYTHON_FOR_TEST_TOOL}")
+
+DEEPSEEK_R1_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Howeee/DeepSeek-R1-0528-w8a8"
+)
+DEEPSEEK_R1_W4A8_PER_CHANNEL_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/DeepSeek-R1-0528-w4a8-per-channel"
+)
+DEEPSEEK_V32_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/vllm-ascend/DeepSeek-V3.2-W8A8"
+)
+QWEN3_8B_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-8B-W8A8"
+QWEN3_8B_EAGLE_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Eagle3-Qwen3-8B-zh"
+QWEN3_14B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-14B"
+QWEN3_14B_LORA_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-14B-Lora/Qwen3-14B_lora"
+)
+QWEN3_14B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-14B-W8A8-Dynamic2"
+)
+QWEN3_14B_EAGLE_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/AngelSlim/Qwen3-14B_eagle3"
+)
+QWEN3_5_27B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-27B"
+QWEN3_5_27B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-27B-W8A8"
+)
+QWEN3_30B_A3B_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-Instruct-2507"
+)
+QWEN3_6_35B_A3B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-35B-A3B"
+QWEN3_6_27B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.6-27B"
+QWEN3_6_27B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.6-27B-w8a8"
+)
+QWEN3_30B_A3B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-w8a8"
+)
+QWEN3_30B_A3B_W8A8_VLLM_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/vllm-ascend/Qwen3-30B-A3B-W8A8"
+)
+QWEN3_A3B_EAGLE_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-a3B_eagle3"
+QWEN3_32B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-32B"
+QWEN3_32B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/aleoyang/Qwen3-32B-w8a8-MindIE"
+)
+QWEN3_32B_EAGLE_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Zjcxy-SmartAI/Eagle3-Qwen3-32B-zh"
+)
+QWEN3_235B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-235B-A22B"
+QWEN3_235B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/vllm-ascend/Qwen3-235B-A22B-W8A8"
+)
+QWEN3_235B_A22B_EAGLE_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-235B-A22B-Eagle3"
+)
+QWEN3_235B_A22B_INSTRUCT_2507_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/zcgy26/Qwen3-235B-A22B-Instruct-2507-w8a8"
+)
+QWEN3_480B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen3-Coder-480B-A35B-Instruct-w8a8-QuaRot"
+)
+QWEN3_NEXT_80B_A3B_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-Next-80B-A3B-Instruct"
+)
+QWEN3_NEXT_80B_A3B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/vllm-ascend/Qwen3-Next-80B-A3B-Instruct-W8A8"
+)
+QWEN3_CODER_NEXT_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-Coder-Next-W8A8"
+)
+GLM_4_6_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/GLM-4.6-w8a8_WITH_MTP"
+
+QWEN3_VL_8B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-VL-8B-Instruct"
+QWEN3_VL_30B_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-VL-30B-A3B-Instruct"
+)
+QWEN3_VL_235B_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-VL-235B-A22B-Instruct"
+)
+QWEN2_5_VL_72B_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-VL-72B-Instruct-w8a8"
+)
+KIMI_K2_5_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/Kimi-K2.5-w4a8"
+KIMI_K2_5_EAGLE3_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/lightseekorg/kimi-k2.5-eagle3"
+)
+GLM_4_7_FLASH_MODEL_PATH = "/root/.cache/modelscope/hub/models/ZhipuAI/GLM-4.7-Flash"
+QWEN3_5_9B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-9B"
+MOONLIGHT_16B_A3B_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/moonshotai/Moonlight-16B-A3B-Instruct"
+)
+GLM5_TOP64_PRUNED_GSM8K_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/yzgjhdxf/GLM-5-top64-pruned-gsm8k"
+)
+GLM_5_1_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.1-w4a8"
+GLM_5_2_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.2-w4a8"
+GLM_5_2_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.2-w8a8"
+MINIMAX_M2_5_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
+)
+MIMO_V2_FLASH_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/iridiumine/MiMo-V2-Flash-W8A8"
+)
+MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
+)
+
+QWEN3_5_397B_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w8a8-mtp"
+)
+DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-w8a8-mtp"
+)
+DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
+)
+QWEN3_5_397B_W4A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
+)
+KIMI_K2_6_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/Kimi-K2.6-w4a8"
+KIMI_K2_6_EAGLE3_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/lightseekorg/kimi-k2.6-eagle3"
+)
+KIMI_K3_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/sgl-npu/Kimi-K3-W4A8"
+KIMI_K3_DSPARK_MODEL_PATH = "/root/.cache/modelscope/hub/models/RadixArk/Kimi-K3-DSpark"
+GLM_4_6V_FLASH_MODEL_PATH = "/root/.cache/modelscope/hub/models/ZhipuAI/GLM-4.6V-Flash"
+QWEN3_VL_8B_THINKING_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-VL-8B-Thinking"
+)
+QWEN3_VL_30B_A3B_THINKING_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-VL-30B-A3B-Thinking"
+)
+QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-Omni-30B-A3B-Thinking"
+)
+ROUND_ROBIN = "round_robin"
+
+DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 3600
+MAX_SERVER_KEEP_ALIVE_TIME = 3600
 
 # Timeouts and delays
-ROUTER_CONFIGMAP_TIMEOUT = 300
-SERVER_INITIALIZATION_DELAY = 30
-SERVICE_EXIT_WAIT_SECONDS = 120
+SERVER_INITIALIZATION_DELAY = 120
+
+# Test parameters
+PROMPTS_MULTIPLIER = 4
+
+# Metrics thresholds
+TPOT_THRESHOLD = 50
+TPOT_TOLERANCE_LOW = 1.0  # +1 second
+TPOT_TOLERANCE_HIGH = 1.02  # +2%
+TTFT_TOLERANCE = 1.02  # +2%
+E2E_TOLERANCE = 1.02  # +2%
+OUTPUT_TOKEN_THROUGHPUT_TOLERANCE = 0.98  # -2%
+
+# Package filtering keywords
+PACKAGE_FILTER_KEYWORDS = [
+    "sglang",
+    "sgl",
+    "torch",
+    "deep-ep",
+    "memfabric_hybrid",
+]
+
+if os.environ.get("ASCEND_RT_VISIBLE_DEVICES"):
+    DEFAULT_SERVER_PORT_FOR_TEST = (
+        20000 + int(os.environ.get("ASCEND_RT_VISIBLE_DEVICES", "0")[0]) * 100
+    )
+else:
+    DEFAULT_SERVER_PORT_FOR_TEST = (
+        20000 + int(os.environ.get("ASCEND_VISIBLE_DEVICES", "0")[0]) * 100
+    )
+DEFAULT_URL_FOR_TEST = f"http://127.0.0.1:{DEFAULT_SERVER_PORT_FOR_TEST + 66}"
 
 
-def get_nic_name():
+def retry(max_attempts: int = None):
     """
-    Automatically identify the optimal network interface for SGLang multi-machine deployment
-    Returns: str - Valid network interface name; None - No valid interface found
-    """
-    # Define virtual interface prefixes to exclude (k8s/docker common)
-    exclude_prefixes = [
-        "lo",
-        "docker",
-        "tunl",
-        "cali",
-        "veth",
-        "br-",
-        "virbr",
-        "eth0@if",
-        "kube-",
-        "flannel",
-        "weave",
-        "cilium",
-    ]
-
-    proc_net_dev = "/proc/net/dev"
-    if not os.path.exists(proc_net_dev):
-        logger.error("Error: /proc/net/dev not found (not a Linux system)")
-        return None
-
-    # Store interfaces with traffic (rx_bytes + tx_bytes > 0)
-    interfaces_with_traffic = {}
-
-    with open(proc_net_dev, "r") as f:
-        # Skip header lines (first 2 lines)
-        lines = f.readlines()[2:]
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-
-            # Split interface name and stats (format: "ifname: rx_bytes rx_packets ... tx_bytes ...")
-            parts = re.split(r"\s+", line)
-            if len(parts) < 10:  # Ensure enough stats fields
-                continue
-
-            ifname = parts[0].rstrip(":")
-
-            # Skip virtual interfaces
-            if any(ifname.startswith(prefix) for prefix in exclude_prefixes):
-                continue
-
-            # Get rx/tx bytes (2nd field: rx_bytes, 10th field: tx_bytes)
-            try:
-                rx_bytes = int(parts[1])
-                tx_bytes = int(parts[9])
-                total_bytes = rx_bytes + tx_bytes
-            except (ValueError, IndexError):
-                continue
-
-            # Only keep interfaces with traffic (active link)
-            if total_bytes > 0:
-                interfaces_with_traffic[ifname] = total_bytes
-
-    # Priority 1: Select interface with most traffic (most active)
-    if interfaces_with_traffic:
-        # Sort by total bytes (descending) and pick first
-        sorted_interfaces = sorted(
-            interfaces_with_traffic.items(), key=lambda x: x[1], reverse=True
-        )
-        nic_name = sorted_interfaces[0][0]
-        logger.info(f"The nic name matched is {nic_name}")
-        return nic_name
-
-    # Priority 2: Fallback to first non-virtual interface (no traffic but exists)
-    # Re-read to get non-virtual interfaces (even with no traffic)
-    all_non_virtual = []
-    with open(proc_net_dev, "r") as f:
-        lines = f.readlines()[2:]
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            ifname = re.split(r"\s+", line)[0].rstrip(":")
-            if not any(ifname.startswith(p) for p in exclude_prefixes):
-                all_non_virtual.append(ifname)
-
-    if all_non_virtual:
-        nic_name = all_non_virtual[0]
-        logger.info(f"The nic name matched is {nic_name}")
-        return nic_name
-
-    # No valid interface found
-    logger.error("No valid interface found")
-    return None
-
-
-nic = get_nic_name()
-NIC_NAME = "lo" if nic is None else nic
-
-
-def get_host_name():
-    host_name = os.getenv("HOSTNAME")
-    if not host_name:
-        raise RuntimeError(
-            f"Missing required environment variables: HOSTNAME={host_name}"
-        )
-    return host_name
-
-
-def get_host_ip():
-    host_ip = os.getenv("POD_IP")
-    if not host_ip:
-        raise RuntimeError(f"Missing required environment variables: POD_IP={host_ip}")
-    return host_ip
-
-
-def get_k8s_api():
-    from kubernetes import client, config
-
-    kube_config = os.environ.get("KUBECONFIG")
-    config.load_kube_config(kube_config)
-    return client.CoreV1Api()
-
-
-# Query ConfigMap from Kubernetes
-def query_configmap(name, namespace):
-    """Query ConfigMap from Kubernetes.
-
+        Test case retry decorator
     Args:
-        name (str): ConfigMap name.
-        namespace (str): Kubernetes namespace.
-
-    Returns:
-        V1ConfigMap: ConfigMap object, or None if failed.
+        max_attempts (int): Maximum number of execution attempts. If None, use self.max_attempts.
     """
-    from kubernetes.client.rest import ApiException
-
-    k8s_api = get_k8s_api()
-    try:
-        configmap = k8s_api.read_namespaced_config_map(name, namespace)
-        logger.info(f"Successfully queried ConfigMap {name} in namespace {namespace}")
-        return configmap
-    except ApiException as e:
-        logger.error(f"Failed to query ConfigMap {name} in namespace {namespace}: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error querying ConfigMap: {e}")
-        return None
-
-
-def upsert_configmap_field_strict(
-    name: str,
-    namespace: str,
-    key: str,
-    value: str,
-):
-    """
-    Add or update a field in ConfigMap using patch.
-    Strict mode: fail if ConfigMap does not exist.
-    """
-    from kubernetes.client.rest import ApiException
-
-    k8s_api = get_k8s_api()
-    patch = {"data": {key: value}}
-
-    try:
-        k8s_api.patch_namespaced_config_map(name=name, namespace=namespace, body=patch)
-        logger.info(f"Upserted ConfigMap {name}: {key}={value}")
-    except ApiException as e:
-        if e.status == 404:
-            raise RuntimeError(
-                f"ConfigMap {name} does not exist in namespace {namespace}"
-            )
-        logger.error(f"Failed to upsert ConfigMap {name}: {e}")
-        raise
-
-
-def wait_for_prefill_decode_exit(
-    key: str,
-    value: str,
-    timeout: int = ROUTER_CONFIGMAP_TIMEOUT,
-    poll_interval: int = 15,
-):
-    start_time = time.time()
-
-    while time.time() - start_time < timeout:
-        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
-        if not configmap or not configmap.data:
-            logger.info(f"ConfigMap data is not available yet, waiting for 15s...")
-            time.sleep(poll_interval)
-            continue
-
-        existing_value = configmap.data.get(key)
-
-        upsert_configmap_field_strict(CONFIGMAP_NAME, NAMESPACE, key, value)
-
-        if existing_value is not None:
-            logger.info(
-                "%s already set (%s), waiting 120s for prefill/decode to exit ...",
-                key,
-                existing_value,
-            )
-            time.sleep(SERVICE_EXIT_WAIT_SECONDS)
-        else:
-            logger.info("%s set for the first time (%s)", key, value)
-
-        return
-
-
-# Get node count from Kubernetes
-def discover_worker_nodes():
-    """Discover worker nodes from Kubernetes.
-
-    Returns:
-        int: Number of worker nodes, or 0 if failed.
-    """
-    k8s_api = get_k8s_api()
-    try:
-        prefill_pods = k8s_api.list_namespaced_pod(
-            namespace=NAMESPACE, label_selector="volcano.sh/task-spec=sglang-prefill"
-        )
-        decode_pods = k8s_api.list_namespaced_pod(
-            namespace=NAMESPACE, label_selector="volcano.sh/task-spec=sglang-decode"
-        )
-
-        prefill_count = len(prefill_pods.items)
-        decode_count = len(decode_pods.items)
-        nodes_count = prefill_count + decode_count
-
-        logger.info(
-            f"Discovered {nodes_count} worker nodes (prefill: {prefill_count}, decode: {decode_count})"
-        )
-        return nodes_count
-
-    except Exception as e:
-        logger.error(f"Unexpected error discovering worker nodes: {e}")
-        return 0
-
-
-def set_environment_variables(env_vars, master_prefill_ip=None):
-    """Set environment variables.
-
-    Args:
-        env_vars (dict): Environment variables dictionary.
-        master_prefill_ip: Perfill's master node IP
-
-    Returns:
-        dict: Updated environment variables.
-    """
-    if not env_vars:
-        return {}
-
-    for key, value in env_vars.items():
-        if master_prefill_ip and key == "SGLANG_ZBAL_BOOTSTRAP_URL":
-            value = f"tcp://{master_prefill_ip}:24688"
-        logger.info(f"Setting ENV_VAR {key}={value}")
-        os.environ[key] = value
-
-    return env_vars
-
-
-def check_port_availability(host, port, timeout=3):
-    """Check if the port is available.
-
-    Args:
-        host (str): Host IP address.
-        port (int): Port number.
-        timeout (int): Connection timeout in seconds.
-
-    Returns:
-        bool: True if port is available, False otherwise.
-    """
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(timeout)
-            result = sock.connect_ex((host, int(port)))
-            if result == 0:
-                return True
-            else:
-                return False
-
-    except socket.timeout:
-        logger.error(f"Port check timeout for {host}:{port} after {timeout}s")
-        return False
-    except socket.gaierror as e:
-        logger.error(f"Port check address resolution error for {host}:{port}: {e}")
-        return False
-    except socket.error as e:
-        logger.error(f"Port check socket error for {host}:{port}: {e}")
-        return False
-    except ValueError as e:
-        logger.error(f"Port check invalid value for {host}:{port}: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"Port check unexpected error for {host}:{port}: {e}")
-        return False
-
-
-def wait_for_all_ports_ready(ips, port, timeout=LOCAL_TIMEOUT, check_interval=15):
-    """Wait for all nodes' ports to be ready.
-
-    Args:
-        ips (list): List of IP addresses.
-        port (int): Port number to check.
-        timeout (int): Total timeout in seconds.
-        check_interval (int): Interval between checks in seconds.
-
-    Returns:
-        bool: True if all ports are ready, False if timeout.
-    """
-    start_time = time.time()
-    node_status = {ip: False for ip in ips}
-
-    while time.time() - start_time < timeout:
-        ready_nodes = 0
-        status_changed = False
-
-        for ip in ips:
-            is_ready = check_port_availability(ip, port)
-            if is_ready != node_status[ip]:
-                node_status[ip] = is_ready
-                status_changed = True
-                if is_ready:
-                    logger.info(f"Node {ip}:{port} is ready")
-                else:
-                    logger.info(f"Node {ip}:{port} is not ready yet")
-            if is_ready:
-                ready_nodes += 1
-
-        if ready_nodes == len(ips):
-            logger.info(f"All {len(ips)} nodes' ports are ready!")
-            return True
-
-        if status_changed:
-            remaining_nodes = len(ips) - ready_nodes
-            logger.info(f"Waiting for {remaining_nodes} more nodes to be ready...")
-
-        time.sleep(check_interval)
-
-    logger.info(f"Timeout: Not all nodes are ready after {timeout} seconds")
-    return False
-
-
-def _get_nnodes_from_args(args_list):
-    for i, arg in enumerate(args_list):
-        if arg == "--nnodes" and i + 1 < len(args_list):
-            return int(args_list[i + 1])
-    return None
-
-
-def _get_pod_ip_by_keyword(configmap_data, keyword):
-    for pod_name, pod_ip in configmap_data.items():
-        if keyword in pod_name:
-            return pod_ip
-    return None
-
-
-def check_role(allowed_roles: Union[str, Iterable[str]]):
-    if isinstance(allowed_roles, str):
-        allowed_roles = {allowed_roles}
-    else:
-        allowed_roles = set(allowed_roles)
-
-    if not allowed_roles.issubset(ALL_ROLE_SET):
-        raise ValueError(f"Invalid allowed roles: {allowed_roles}")
 
     def decorator(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            current_role = getattr(self, "role", None)
-            if current_role in allowed_roles:
-                return func(self, *args, **kwargs)
-            else:
-                logger.info(
-                    f"The current node is {current_role}, skip this function {func.__name__}."
-                )
-                return None
+            # Store the last exception for final reporting
+            last_exception = None
+
+            # Get max_attempts from instance if not provided in decorator
+            attempts = max_attempts or getattr(self, "max_attempts", 2)
+
+            # Execute the test up to max_attempts times
+            for attempt in range(1, attempts + 1):
+                try:
+                    logger.info(f"Executing test attempt {attempt}/{attempts}")
+                    return func(
+                        self, *args, **kwargs
+                    )  # Return immediately if test passes
+                except (AssertionError, Exception) as e:
+                    last_exception = e
+                    logger.info(f"Test failed on attempt {attempt}")
+
+            # Raise the last exception if all attempts failed
+            raise last_exception
 
         return wrapper
 
     return decorator
 
 
-# Launch master/worker node
-def launch_pd_mix_node(model_config):
-    logger.info(f"Launch pd mix node start ......")
-    host_name = get_host_name()
-    last_part = host_name.rsplit("-", 1)[-1]
-    if not last_part.isdigit():
-        raise RuntimeError(
-            f"Unexpected hostname format, expected numeric suffix: {host_name}"
-        )
-    pod_index = int(last_part)
+def get_cann_version():
+    """Get CANN version info.
 
-    # Monitor ConfigMap to generate dist-init-addr and node-rank
-    is_ready = False
-    dist_init_addr = None
-    start_time = time.time()
-    while not is_ready and time.time() - start_time < LOCAL_TIMEOUT:
-        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
-        if not configmap or configmap.data is None:
-            logger.info(f"configmap is None, wait for 15s ......")
-            time.sleep(15)
-            continue
-        logger.info(f"monitor {configmap.data=}")
-
-        master_node_ip = None
-        for pod_name in configmap.data:
-            if pod_name.endswith("sglang-node-0"):
-                master_node_ip = configmap.data[pod_name]
-                break
-        if master_node_ip is None:
-            logger.info(f"Can not find master node in configmap: {configmap.data=}")
-            time.sleep(15)
-            continue
-
-        dist_init_addr = f"{master_node_ip}:5000"
-        logger.info(f"launch_node {dist_init_addr=}")
-        is_ready = True
-
-    if not is_ready:
-        raise RuntimeError(
-            f"Timeout: Failed to get master node information from ConfigMap after {LOCAL_TIMEOUT} seconds"
-        )
-
-    special_args = [
-        "--dist-init-addr",
-        dist_init_addr,
-        "--node-rank",
-        str(pod_index),
-    ]
-    other_args = model_config["other_args"]
-    for sa in special_args:
-        other_args.append(sa)
-
-    # if not "--model-type" in other_args:
-    #     other_args += ["--model-type", "llm"]
-
-    for key, value in model_config["node_envs"].items():
-        logger.info(f"ENV_VAR_CASE {key}:{value}")
-        os.environ[key] = value
-
-    host_ip = get_host_ip()
-    logger.info(f"Starting node, {host_ip=} {other_args=}")
-    try:
-        process = popen_launch_server(
-            model_config["model_path"],
-            f"http://{host_ip}:{SERVICE_PORT}",
-            timeout=LOCAL_TIMEOUT,
-            other_args=[
-                *other_args,
-            ],
-        )
-    except Exception as e:
-        raise RuntimeError(f"Failed to start node on {host_ip}: {e}")
-
-    return process
-
-
-# Launch prefill/decode separation node
-def launch_pd_separation_node(model_config):
-    logger.info(f"Launch pd separation node start ......")
-    host_name = get_host_name()
-    last_part = host_name.rsplit("-", 1)[-1]
-    if not last_part.isdigit():
-        raise RuntimeError(
-            f"Unexpected hostname format, expected numeric suffix: {host_name}"
-        )
-    pod_index = int(last_part)
-    role = "prefill" if "prefill" in host_name else "decode"
-
-    bootstrap_init_port = BOOTSTRAP_INIT_PORT
-    master_prefill_ip = None
-    master_decode_ip = None
-
-    is_prefill_instance_multi_node = "--node-rank" not in model_config["prefill_args"]
-    is_decode_instance_multi_node = "--node-rank" not in model_config["decode_args"]
-
-    # Monitor ConfigMap ready
-    is_ready = False
-    start_time = time.time()
-    configmap_data = None
-    while not is_ready and time.time() - start_time < LOCAL_TIMEOUT:
-        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
-        if not configmap or not configmap.data:
-            logger.info(f"ConfigMap data is not available yet, waiting for 15s...")
-            time.sleep(15)
-            continue
-
-        configmap_data = configmap.data
-        logger.info(f"Retrieved ConfigMap data: {configmap_data}")
-
-        for pod_name, pod_ip in configmap_data.items():
-            if pod_name.endswith("prefill-0"):
-                master_prefill_ip = pod_ip
-            if pod_name.endswith("decode-0"):
-                master_decode_ip = pod_ip
-
-        if master_prefill_ip and master_decode_ip:
-            is_ready = True
-        else:
-            logger.info(
-                f"Missing master node information - prefill: {master_prefill_ip}, decode: {master_decode_ip}"
-            )
-            logger.info("Retrying in 15s...")
-            time.sleep(15)
-    if not is_ready:
-        raise RuntimeError(
-            f"Timeout: Failed to get master node information from ConfigMap"
-        )
-
-    # Generate prefill/decode run command
-    service_args = list()
-
-    mf_addr = f"tcp://{master_prefill_ip}:24666"
-    os.environ["ASCEND_MF_STORE_URL"] = mf_addr
-    logger.info(f"Setting ENV_VAR ASCEND_MF_STORE_URL={mf_addr}")
-
-    if role == "prefill":
-        # Current node is prefill
-        set_environment_variables(model_config.get("prefill_envs"), master_prefill_ip)
-
-        prefill_args = model_config["prefill_args"]
-        if is_prefill_instance_multi_node:
-            nnodes = _get_nnodes_from_args(prefill_args)
-            if nnodes and nnodes > 1:
-                instance_master_index = (pod_index // nnodes) * nnodes
-                node_rank = pod_index % nnodes
-                instance_group_index = pod_index // nnodes
-                master_pod_keyword = f"prefill-{instance_master_index}"
-                instance_master_ip = _get_pod_ip_by_keyword(
-                    configmap_data, master_pod_keyword
-                )
-                if not instance_master_ip:
-                    raise RuntimeError(
-                        f"Failed to find instance master {master_pod_keyword} in ConfigMap"
-                    )
-                dist_init_addr = f"{instance_master_ip}:5000"
-                logger.info(
-                    f"Multi-node prefill with nnodes={nnodes}: "
-                    f"pod_index={pod_index}, node_rank={node_rank}, "
-                    f"instance_master={master_pod_keyword}, dist_init_addr={dist_init_addr}"
-                )
-                prefill_args.extend(
-                    [
-                        "--node-rank",
-                        node_rank,
-                        "--dist-init-addr",
-                        dist_init_addr,
-                        "--disaggregation-bootstrap-port",
-                        str(bootstrap_init_port + instance_group_index),
-                    ]
-                )
-            else:
-                logger.info(
-                    "No node-rank specified - each prefill node is an independent instance."
-                )
-                prefill_args.extend(
-                    [
-                        "--node-rank",
-                        0,
-                        "--disaggregation-bootstrap-port",
-                        str(bootstrap_init_port + pod_index),
-                    ]
-                )
-        else:
-            logger.info("Node-rank specified - each prefill node is an instance.")
-            prefill_args.extend(
-                [
-                    "--disaggregation-bootstrap-port",
-                    str(bootstrap_init_port + pod_index),
-                ]
-            )
-
-        service_args.extend(prefill_args)
-
-    elif role == "decode":
-        set_environment_variables(model_config.get("decode_envs"))
-
-        decode_args = model_config["decode_args"]
-        if is_decode_instance_multi_node:
-            nnodes = _get_nnodes_from_args(decode_args)
-            if nnodes and nnodes > 1:
-                instance_master_index = (pod_index // nnodes) * nnodes
-                node_rank = pod_index % nnodes
-                master_pod_keyword = f"decode-{instance_master_index}"
-                instance_master_ip = _get_pod_ip_by_keyword(
-                    configmap_data, master_pod_keyword
-                )
-                if not instance_master_ip:
-                    raise RuntimeError(
-                        f"Failed to find instance master {master_pod_keyword} in ConfigMap"
-                    )
-                dist_init_addr = f"{instance_master_ip}:5000"
-                logger.info(
-                    f"Multi-node decode with nnodes={nnodes}: "
-                    f"pod_index={pod_index}, node_rank={node_rank}, "
-                    f"instance_master={master_pod_keyword}, dist_init_addr={dist_init_addr}"
-                )
-                decode_args.extend(
-                    [
-                        "--node-rank",
-                        str(node_rank),
-                        "--dist-init-addr",
-                        dist_init_addr,
-                    ]
-                )
-            else:
-                logger.info(
-                    "No node-rank specified - each decode node is an independent instance."
-                )
-                decode_args.extend(["--node-rank", "0"])
-        else:
-            logger.info("Node-rank specified - each decode node is an instance.")
-
-        service_args.extend(decode_args)
-
-    host_ip = get_host_ip()
-    logger.info(f"Starting {role} node on {host_ip} with args: {service_args}")
-
-    other_args = list()
-    if "--trust-remote-code" not in service_args:
-        other_args.extend(["--trust-remote-code"])
-    if "--attention-backend" not in service_args:
-        other_args.extend(["--attention-backend", "ascend"])
-    if "--device" not in service_args:
-        other_args.extend(["--device", "npu"])
-    if "--disaggregation-transfer-backend" not in service_args:
-        other_args.extend(["--disaggregation-transfer-backend", "ascend"])
-    # if "--model-type" not in service_args:
-    #     other_args.extend(["--model-type", "llm"])
-
-    other_args.extend(service_args)
+    Returns:
+        str: CANN version info string.
+    """
+    cann_info_file = "/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/ascend_toolkit_install.info"
+    cann_ver_num = None
 
     try:
-        process = popen_launch_server(
-            model_config["model_path"],
-            f"http://{host_ip}:{PREFILL_DECODE_PORT}",
-            timeout=LOCAL_TIMEOUT,
-            other_args=other_args,
-        )
-    except Exception as e:
-        raise RuntimeError(f"Failed to start {role} node on {host_ip}: {e}")
+        with open(cann_info_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("version="):
+                    cann_ver_num = line.strip().split("=")[-1]
+                    break
 
-    return process
-
-
-# Launch router node
-def launch_router(model_config):
-    logger.info(f"launch_router start ......")
-    discover_worker_nodes()
-
-    # Monitor to generate prefill/decode URL
-    prefill_url = []
-    decode_url = []
-    bootstrap_ports = []
-    node_ip_list = []
-    is_multi_node_prefill_instance = "--node-rank" not in model_config["prefill_args"]
-    is_multi_node_decode_instance = "--node-rank" not in model_config["decode_args"]
-
-    prefill_nnodes = (
-        _get_nnodes_from_args(model_config["prefill_args"])
-        if is_multi_node_prefill_instance
-        else None
-    )
-    decode_nnodes = (
-        _get_nnodes_from_args(model_config["decode_args"])
-        if is_multi_node_decode_instance
-        else None
-    )
-
-    is_ready = False
-    bootstrap_init_port = BOOTSTRAP_INIT_PORT
-    start_time = time.time()
-    while not is_ready and time.time() - start_time < ROUTER_CONFIGMAP_TIMEOUT:
-        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
-        if not configmap or not configmap.data:
-            logger.info(f"ConfigMap data is not available yet, waiting for 15s...")
-            time.sleep(15)
-            continue
-        logger.info(f"Retrieved ConfigMap data: {configmap.data}")
-
-        prefill_url.clear()
-        decode_url.clear()
-        bootstrap_ports.clear()
-        node_ip_list.clear()
-
-        for pod_name, pod_ip in configmap.data.items():
-            # Skip unexpected entries that don't end with a numeric index
-            last_part = pod_name.rsplit("-", 1)[-1]
-            if not last_part.isdigit():
-                logger.info(
-                    "Skipping ConfigMap entry with non-numeric suffix: %s", pod_name
-                )
-                continue
-            pod_index = int(last_part)
-
-            if "prefill" in pod_name:
-                if is_multi_node_prefill_instance:
-                    if prefill_nnodes is not None and prefill_nnodes > 1:
-                        if pod_index % prefill_nnodes == 0:
-                            prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                            bootstrap_ports.append(
-                                str(bootstrap_init_port + pod_index // prefill_nnodes)
-                            )
-                            node_ip_list.append(pod_ip)
-                    elif prefill_nnodes is not None and prefill_nnodes == 1:
-                        prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                        bootstrap_ports.append(str(bootstrap_init_port + pod_index))
-                        node_ip_list.append(pod_ip)
-                    else:
-                        if pod_index == 0:
-                            prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                            bootstrap_ports.append(str(bootstrap_init_port))
-                            node_ip_list.append(pod_ip)
-                else:
-                    prefill_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                    bootstrap_ports.append(str(bootstrap_init_port + pod_index))
-                    node_ip_list.append(pod_ip)
-
-            if "decode" in pod_name:
-                if is_multi_node_decode_instance:
-                    if decode_nnodes is not None and decode_nnodes > 1:
-                        if pod_index % decode_nnodes == 0:
-                            decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                            node_ip_list.append(pod_ip)
-                    elif decode_nnodes is not None and decode_nnodes == 1:
-                        decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                        node_ip_list.append(pod_ip)
-                    else:
-                        if pod_index == 0:
-                            decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                            node_ip_list.append(pod_ip)
-                else:
-                    decode_url.append(f"{pod_ip}:{PREFILL_DECODE_PORT}")
-                    node_ip_list.append(pod_ip)
-
-        if prefill_url and decode_url:
-            is_ready = True
+        if cann_ver_num:
+            cann_version_info = f"CANN: {cann_ver_num}"
+            logger.info(cann_version_info)
+            return cann_version_info
         else:
-            logger.info("Incomplete node information in ConfigMap, waiting for 15s...")
-            time.sleep(15)
+            logger.info("CANN version not found")
+            return f"CANN: {cann_ver_num}"
 
-    if not is_ready:
-        raise RuntimeError(
-            f"Timeout: Failed to get complete node information from ConfigMap"
-        )
-    logger.info(
-        f"ConfigMap monitoring complete: prefill_url={prefill_url}, decode_url={decode_url}, "
-        f"bootstrap_ports={bootstrap_ports}, node_ip_list={node_ip_list}"
-    )
-
-    # Check all node port ready
-    if not wait_for_all_ports_ready(
-        ips=node_ip_list, port=PREFILL_DECODE_PORT, timeout=LOCAL_TIMEOUT
-    ):
-        raise RuntimeError("Failed to wait for all nodes to be ready")
-
-    # Set environment variables
-    set_environment_variables(model_config.get("router_envs"))
-
-    router_args = model_config["router_args"]
-    # Router server params
-    router_command = [
-        "python3",
-        "-u",
-        "-m",
-        "sglang_router.launch_router",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        str(SERVICE_PORT),
-        "--pd-disaggregation",
-        "--policy",
-        "cache_aware",
-        *[str(x) for x in router_args],
-    ]
-
-    for index, url in enumerate(prefill_url):
-        router_command.extend(
-            ["--prefill", f"http://{url}", f"{bootstrap_ports[index]}"]
-        )
-
-    for url in decode_url:
-        router_command.extend(["--decode", f"http://{url}"])
-
-    logger.info(f"Starting router with command: {' '.join(router_command)}")
-    try:
-        router_process = subprocess.Popen(router_command)
-        logger.info(f"Router process started with PID: {router_process.pid}")
+    except FileNotFoundError:
+        logger.error(f"CANN info file not found: {cann_info_file}")
+        return f"CANN: {cann_ver_num}"
     except Exception as e:
-        raise RuntimeError(f"Failed to start router process: {e}")
+        logger.error(f"Error reading CANN info: {e}")
+        return f"CANN: {cann_ver_num}"
 
 
-def wait_server_ready(url, timeout=LOCAL_TIMEOUT):
-    """Wait for the server to be ready.
+def write_pkg_info_to_file(result_file):
+    """Write package information to result file.
 
     Args:
-        url (str): Server URL to check.
-        timeout (int): Timeout in seconds.
-
-    Raises:
-        RuntimeError: If server fails to start within timeout.
+        result_file (str): Path to the result file.
     """
-    logger.info(f"Waiting for the server to start at {url}...")
-    start_time = time.perf_counter()
-    check_interval = 10
+    import transformers
 
-    while True:
-        try:
-            response = requests.get(url, timeout=30)
-            if response.status_code == 200:
-                logger.info(f"Server {url} is ready!")
-                return
+    try:
+        pip_output = subprocess.run(
+            ["pip", "list"], capture_output=True, text=True, check=False
+        )
+        packages = pip_output.stdout
+
+        # Filter relevant packages using list comprehension
+        filtered_packages = [
+            line
+            for line in packages.split("\n")
+            if any(keyword in line for keyword in PACKAGE_FILTER_KEYWORDS)
+        ]
+
+        # Write to result file
+        os.makedirs(os.path.dirname(os.path.abspath(result_file)), exist_ok=True)
+        with open(result_file, "w", encoding="utf-8") as f:
+            for pkg in filtered_packages:
+                f.write(pkg + "\n")
+                logger.info(pkg)
+            f.write(get_cann_version() + "\n")
+            transformers_version_info = (
+                "transformers: " + transformers.__version__ + "\n"
+            )
+            f.write(transformers_version_info)
+            logger.info(transformers_version_info)
+
+    except Exception as e:
+        logger.error(f"Error getting packages: {e}")
+
+
+def run_bench_serving(
+    host,
+    port,
+    model_path=None,
+    backend="sglang",
+    dataset_name=None,
+    dataset_path=None,
+    request_rate=None,
+    max_concurrency=None,
+    num_prompts=None,
+    input_len=None,
+    output_len=None,
+    random_range_ratio=1,
+    image_resolution=None,
+    image_count=None,
+    warmup_requests=None,
+    seed=None,
+    output_file=None,
+    repeat_rate=None,
+    temperature=None,
+    top_p=None,
+    env=None,
+):
+    metrics_path = os.getenv("METRICS_DATA_FILE")
+    result_file = (
+        "./bench_log.txt"
+        if not metrics_path
+        else f"{metrics_path}/bench_serving_metrics.txt"
+    )
+    logger.info(f"The metrics result file: {result_file}")
+
+    write_pkg_info_to_file(result_file)
+
+    if dataset_name == "generated-shared-prefix":
+        cmd_args = [
+            PYTHON_FOR_TEST_TOOL,
+            "-m",
+            "sglang.bench_serving",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--model",
+            model_path,
+            "--backend",
+            backend,
+            "--dataset-name",
+            dataset_name,
+            "--gsp-num-groups",
+            "1",
+            "--gsp-prompts-per-group",
+            str(num_prompts),
+            "--gsp-system-prompt-len",
+            (
+                str(int((repeat_rate if repeat_rate is not None else 0.9) * input_len))
+                if input_len
+                else "0"
+            ),
+            "--gsp-question-len",
+            (
+                str(
+                    int(
+                        (1 - (repeat_rate if repeat_rate is not None else 0.9))
+                        * input_len
+                    )
+                )
+                if input_len
+                else "0"
+            ),
+            "--gsp-output-len",
+            str(output_len) if output_len else "0",
+        ]
+        if max_concurrency:
+            cmd_args.extend(["--max-concurrency", str(max_concurrency)])
+        if num_prompts:
+            cmd_args.extend(["--num-prompts", str(num_prompts)])
+        if request_rate:
+            cmd_args.extend(["--request-rate", str(request_rate)])
+        if temperature is not None:
+            cmd_args.extend(["--temperature", str(temperature)])
+        if top_p is not None:
+            cmd_args.extend(["--top-p", str(top_p)])
+    else:
+        cmd_args = [
+            PYTHON_FOR_TEST_TOOL,
+            "-m",
+            "sglang.bench_serving",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--model",
+            model_path,
+            "--backend",
+            backend,
+        ]
+
+        if dataset_name:
+            cmd_args.extend(["--dataset-name", str(dataset_name)])
+        if dataset_path:
+            cmd_args.extend(["--dataset-path", str(dataset_path)])
+        if request_rate:
+            cmd_args.extend(["--request-rate", str(request_rate)])
+        if max_concurrency:
+            cmd_args.extend(["--max-concurrency", str(max_concurrency)])
+        if num_prompts:
+            cmd_args.extend(["--num-prompts", str(num_prompts)])
+        if input_len:
+            cmd_args.extend(["--random-input-len", str(input_len)])
+        if output_len:
+            cmd_args.extend(["--random-output-len", str(output_len)])
+        if random_range_ratio:
+            cmd_args.extend(["--random-range-ratio", str(random_range_ratio)])
+        if image_resolution:
+            cmd_args.extend(["--image-resolution", str(image_resolution)])
+        if image_count:
+            cmd_args.extend(["--image-count", str(image_count)])
+        if warmup_requests:
+            cmd_args.extend(["--warmup-requests", str(warmup_requests)])
+        if seed:
+            cmd_args.extend(["--seed", str(seed)])
+        if output_file:
+            cmd_args.extend(["--output-file", str(output_file)])
+        if temperature is not None:
+            cmd_args.extend(["--temperature", str(temperature)])
+        if top_p is not None:
+            cmd_args.extend(["--top-p", str(top_p)])
+    logger.info(f"Command: {' '.join(cmd_args)}")
+
+    # Run benchmark command and capture output
+    metrics = {"mean_ttft": None, "mean_tpot": None, "total_tps": None}
+
+    process = subprocess.Popen(
+        cmd_args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env=env,
+    )
+    try:
+        # Read output line by line
+        with open(result_file, "a", encoding="utf-8") as f:
+            for line in process.stdout:
+                if line.strip():
+                    print(line, end="")
+                f.write(line)
+                stripped_line = line.strip()
+
+                # Extract metrics
+                if "Mean TTFT" in stripped_line:
+                    parts = stripped_line.split()
+                    if len(parts) >= 4:
+                        metrics["mean_ttft"] = parts[3]
+                elif "Mean TPOT" in stripped_line:
+                    parts = stripped_line.split()
+                    if len(parts) >= 4:
+                        metrics["mean_tpot"] = parts[3]
+                elif "Output token throughput" in stripped_line:
+                    parts = stripped_line.split()
+                    if len(parts) >= 5:
+                        metrics["total_tps"] = parts[4]
+                elif "Mean E2E Latency" in stripped_line:
+                    parts = stripped_line.split()
+                    if len(parts) >= 5:
+                        metrics["mean_e2e_latency"] = parts[4]
+        process.wait()
+        if process.returncode != 0:
+            logger.error(
+                f"Benchmark command failed with return code: {process.returncode}"
+            )
+    except Exception as e:
+        logger.error(f"Error running benchmark: {e}")
+    finally:
+        if process.stdout is not None and not process.stdout.closed:
+            process.stdout.close()
+
+    return metrics
+
+
+def run_aisbench(
+    host,
+    port,
+    model_path,
+    dataset_type,
+    dataset_path,
+    input_len,
+    output_len,
+    max_concurrency,
+    num_prompts,
+    image_resolution=None,
+    random_range_ratio=1,
+    request_rate=None,
+    repeat_rate=None,
+    dp=None,
+    generation_kwargs=None,
+):
+
+    if dataset_type == "sharegpt":
+        dataset_file = f"/tmp/datasets/test.jsonl"
+        if not os.path.exists(dataset_file):
+            logger.info(
+                f"Generating random dataset from ShareGPT: {dataset_file}, "
+                f"model_path={model_path}, batch_size={num_prompts}, input_len={input_len}"
+            )
+            generate_random_dataset(
+                model_path=model_path,
+                source_dataset_path=SHAREGPT_DATASET_TEST_FILE,
+                batch_size=num_prompts,
+                input_len=input_len,
+                output_file=dataset_file,
+                output_len=output_len,
+                range_ratio=random_range_ratio,
+            )
+        dataset_path = dataset_file
+        logger.info(f"Dataset generated: {dataset_path}")
+
+    elif dataset_type == AISBENCHMARK_DATASET_GSM8K and not dataset_path:
+        dataset_file = f"/tmp/datasets/test.jsonl"
+        if not os.path.exists(dataset_file):
+            logger.info(
+                f"Generating gsm8k dataset: {dataset_file}, "
+                f"model_path={model_path}, batch_size={num_prompts}, input_len={input_len}"
+            )
+            generate_gsm8k_dataset(
+                model_path=model_path,
+                source_dataset_path=GSM8K_DATASET_TEST_FILE,
+                batch_size=num_prompts,
+                input_len=input_len,
+                output_file=dataset_file,
+            )
+        dataset_path = dataset_file
+        logger.info(f"Dataset generated: {dataset_path}")
+
+    elif dataset_type == AISBENCHMARK_DATASET_MM_CUSTOM_GEN and not dataset_path:
+        dataset_file = f"/tmp/datasets/mm.jsonl"
+        if not os.path.exists(dataset_file):
+            image_dir = f"/tmp/datasets/images"
+            data = generate_mm_dataset(
+                train_path=GSM8K_DATASET_TRAIN_FILE,
+                test_path=GSM8K_DATASET_TEST_FILE,
+                tokenizer_path=model_path,
+                target_tokens=input_len,
+                num_prompts=num_prompts,
+                image_dir=image_dir,
+                size=image_resolution,
+                trust_remote_code=True,
+            )
+            save_jsonl(data, dataset_file)
+        dataset_path = dataset_file
+        logger.info(f"Dataset generated: {dataset_file}")
+
+    else:
+        logger.info(f"Use exist dataset: {dataset_path}")
+
+    metrics_path = os.getenv("METRICS_DATA_FILE")
+    result_path = "./aisbench_result" if not metrics_path else metrics_path
+    logger.info(f"The metrics result file: {result_path}")
+
+    cmd = f"/bin/bash /root/sglang/python/sglang/test/ascend/e2e/run_aisbench.sh "
+    cmd += f"--mode perf "
+    cmd += f"--ip {host} "
+    cmd += f"--port {str(port)} "
+    cmd += f"--model {os.path.basename(model_path)} "
+    cmd += f"--model-path {model_path} "
+    cmd += f"--dataset-type {dataset_type} "
+    cmd += f"--dataset-path {dataset_path} "
+    cmd += f"--input-len {str(input_len)} "
+    cmd += f"--output-len {str(output_len)} "
+    cmd += f"--batch-size {str(max_concurrency)} "
+    cmd += f"--num-prompts {str(num_prompts)} "
+    cmd += f"--output-path {result_path}"
+
+    if request_rate is not None:
+        cmd += f" --request_rate {request_rate}"
+    if repeat_rate is not None:
+        cmd += f" --repeat_rate {repeat_rate}"
+    if dp is not None:
+        cmd += f" --dp {dp}"
+    if generation_kwargs:
+        cmd += f" --generation-kwargs '{generation_kwargs}'"
+
+    logger.info(f"Command: {cmd}")
+
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        shell=True,
+    )
+
+    output_lines = []
+    try:
+        for line in iter(process.stdout.readline, ""):
+            if line.strip():
+                print(line, end="")
+            output_lines.append(line.strip())
+
+        process.wait()
+
+        if process.returncode != 0:
+            logger.error(f"Command failed with return code: {process.returncode}")
+            raise subprocess.CalledProcessError(process.returncode, cmd)
+
+        logger.info("Command executed successfully")
+
+        metrics = {}
+        full_output = "\n".join(output_lines)
+
+        simplified_output = re.sub(r"[^\w\s.]", " ", full_output)
+
+        tpot_match = re.search(r"TPOT\s+total\s+([\d.]+)\s+ms", simplified_output)
+        if tpot_match:
+            metrics["mean_tpot"] = tpot_match.group(1)
+            logger.info(f"Extracted mean_tpot: {metrics['mean_tpot']} ms")
+        else:
+            logger.warning("Could not extract mean_tpot from output")
+            logger.error(
+                f"Simplified output snippet around TPOT: {simplified_output[simplified_output.find('TPOT')-20:simplified_output.find('TPOT')+50] if 'TPOT' in simplified_output else 'TPOT not found'}"
+            )
+
+        tps_matches = re.findall(
+            r"Output\s+Token\s+Throughput\s+total\s+([\d.]+)\s+token\s*/?\s*s",
+            simplified_output,
+        )
+        if len(tps_matches) < 2:
+            tps_matches += re.findall(
+                r"OutputTokenThroughput\s+total\s+([\d.]+)\s+token\s*/?\s*s",
+                simplified_output,
+            )
+
+        logger.info(
+            f"Found {len(tps_matches)} matches for Output Token Throughput: {tps_matches}"
+        )
+        if tps_matches:
+            # The first match is from the Common Metric section, which is the total throughput
+            metrics["total_tps"] = tps_matches[0]
+            if len(tps_matches) >= 2:
+                logger.info(
+                    f"Extracted total_tps: {metrics['total_tps']} token/s (from Common Metric section)"
+                )
             else:
                 logger.info(
-                    f"Server {url} returned status code: {response.status_code}"
+                    f"Extracted total_tps: {metrics['total_tps']} token/s (only one match found)"
                 )
-        except Exception:
-            # logger.error(f"Server {url} request error: {e}, retrying...")
-            pass
-
-        elapsed_time = time.perf_counter() - start_time
-        if elapsed_time > timeout:
-            raise RuntimeError(
-                f"Server {url} failed to start in {timeout}s (elapsed: {elapsed_time:.2f}s)"
+        else:
+            logger.warning("Could not extract total_tps from output")
+            logger.warning(
+                f"Simplified output snippet around Output Token Throughput: {simplified_output[simplified_output.find('Output')-20:simplified_output.find('Output')+100] if 'Output' in simplified_output else 'Output not found'}"
             )
-        time.sleep(check_interval)
+
+        ttft_match = re.search(r"TTFT\s+total\s+([\d.]+)\s+ms", simplified_output)
+        if ttft_match:
+            metrics["mean_ttft"] = ttft_match.group(1)
+            logger.info(f"Extracted mean_ttft: {metrics['mean_ttft']} ms")
+        else:
+            logger.warning("Could not extract mean_ttft from output")
+            logger.warning(
+                f"Simplified output snippet around TTFT: {simplified_output[simplified_output.find('TTFT')-20:simplified_output.find('TTFT')+50] if 'TTFT' in simplified_output else 'TTFT not found'}"
+            )
+
+        e2el_match = re.search(r"E2EL\s+total\s+([\d.]+)\s+ms", simplified_output)
+        if e2el_match:
+            metrics["mean_e2e_latency"] = e2el_match.group(1)
+            logger.info(f"Extracted mean_e2e_latency: {metrics['mean_e2e_latency']} ms")
+        else:
+            logger.warning("Could not extract mean_e2e_latency from output")
+            logger.warning(
+                f"Simplified output snippet around E2EL: {simplified_output[simplified_output.find('E2EL')-20:simplified_output.find('E2EL')+50] if 'E2EL' in simplified_output else 'E2EL not found'}"
+            )
+
+        concurrency_match = re.search(
+            r"Concurrency\s+total\s+([\d.]+)", simplified_output
+        )
+        if concurrency_match:
+            metrics["concurrency"] = concurrency_match.group(1)
+            logger.info(f"Extracted concurrency: {metrics['concurrency']}")
+        else:
+            logger.warning("Could not extract concurrency from output")
+            logger.warning(
+                f"Simplified output snippet around Concurrency: {simplified_output[simplified_output.find('Concurrency')-20:simplified_output.find('Concurrency')+50] if 'Concurrency' in simplified_output else 'Concurrency not found'}"
+            )
+
+        max_concurrency_match = re.search(
+            r"Max\s+Concurrency\s+total\s+([\d.]+)", simplified_output
+        )
+        if max_concurrency_match:
+            metrics["max_concurrency"] = max_concurrency_match.group(1)
+            logger.info(f"Extracted max_concurrency: {metrics['max_concurrency']}")
+        else:
+            logger.warning("Could not extract max_concurrency from output")
+            logger.warning(
+                f"Simplified output snippet around Max Concurrency: {simplified_output[simplified_output.find('Max Concurrency')-20:simplified_output.find('Max Concurrency')+50] if 'Max Concurrency' in simplified_output else 'Max Concurrency not found'}"
+            )
+
+        req_throughput_match = re.search(
+            r"Request\s+Throughput\s+total\s+([\d.]+)\s+req\s*/?\s*s",
+            simplified_output,
+        )
+        if req_throughput_match:
+            metrics["request_throughput"] = req_throughput_match.group(1)
+            logger.info(
+                f"Extracted request_throughput: {metrics['request_throughput']} req/s"
+            )
+        else:
+            logger.warning("Could not extract request_throughput from output")
+            logger.warning(
+                f"Simplified output snippet around Request Throughput: {simplified_output[simplified_output.find('Request')-20:simplified_output.find('Request')+50] if 'Request' in simplified_output else 'Request not found'}"
+            )
+
+        total_requests_match = re.search(
+            r"Total\s+Requests\s+total\s+(\d+)", simplified_output
+        )
+        if total_requests_match:
+            metrics["total_requests"] = total_requests_match.group(1)
+            logger.info(f"Extracted total_requests: {metrics['total_requests']}")
+        else:
+            logger.warning("Could not extract total_requests from output")
+            logger.warning(
+                f"Simplified output snippet around Total Requests: {simplified_output[simplified_output.find('Total Requests')-20:simplified_output.find('Total Requests')+50] if 'Total Requests' in simplified_output else 'Total Requests not found'}"
+            )
+
+        failed_requests_match = re.search(
+            r"Failed\s+Requests\s+total\s+(\d+)", simplified_output
+        )
+        if failed_requests_match:
+            metrics["failed_requests"] = failed_requests_match.group(1)
+            logger.info(f"Extracted failed_requests: {metrics['failed_requests']}")
+        else:
+            logger.warning("Could not extract failed_requests from output")
+            logger.warning(
+                f"Simplified output snippet around Failed Requests: {simplified_output[simplified_output.find('Failed Requests')-20:simplified_output.find('Failed Requests')+50] if 'Failed Requests' in simplified_output else 'Failed Requests not found'}"
+            )
+
+        logger.info(f"All extracted metrics: {metrics}")
+
+        return metrics
+
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received, terminating process...")
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+            logger.info("Process terminated")
+        except subprocess.TimeoutExpired:
+            logger.warning("Process did not terminate gracefully, killing it...")
+            process.kill()
+            logger.info("Process killed")
+        raise
+    except Exception as e:
+        logger.error(f"Error executing command: {e}")
+        process.terminate()
+        process.wait(timeout=5)
+        raise
 
 
-class TestNpuMultiNodePdMixTestCaseBase(CustomTestCase):
-    model_config = None
+def assert_metrics(self, metrics):
+    """Assert benchmark metrics against expected values.
+
+    Args:
+        metrics (dict): Benchmark metrics dictionary.
+    """
+    if not metrics:
+        raise Exception("No metrics obtained from benchmark")
+
+    tc_name = self.__class__.__name__
+    if self.tpot and metrics.get("mean_tpot"):
+        dump_metric(
+            "tpot",
+            float(metrics["mean_tpot"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "tpot_baseline",
+            float(self.tpot),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.output_token_throughput and metrics.get("total_tps"):
+        dump_metric(
+            "throughput",
+            float(metrics["total_tps"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "throughput_baseline",
+            float(self.output_token_throughput),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.ttft and metrics.get("mean_ttft"):
+        dump_metric(
+            "ttft",
+            float(metrics["mean_ttft"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "ttft_baseline",
+            float(self.ttft),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+    if self.mean_e2e_latency and metrics.get("mean_e2e_latency"):
+        dump_metric(
+            "e2e_latency",
+            float(metrics["mean_e2e_latency"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "e2e_latency_baseline",
+            float(self.mean_e2e_latency),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+
+    if self.tpot:
+        if self.tpot < TPOT_THRESHOLD:
+            self.assertLessEqual(
+                float(metrics["mean_tpot"]),
+                self.tpot + TPOT_TOLERANCE_LOW,
+            )
+        else:
+            self.assertLessEqual(
+                float(metrics["mean_tpot"]),
+                self.tpot * TPOT_TOLERANCE_HIGH,
+            )
+    if self.output_token_throughput:
+        self.assertGreaterEqual(
+            float(metrics["total_tps"]),
+            self.output_token_throughput * OUTPUT_TOKEN_THROUGHPUT_TOLERANCE,
+        )
+    if self.ttft:
+        self.assertLessEqual(
+            float(metrics["mean_ttft"]),
+            self.ttft * TTFT_TOLERANCE,
+        )
+    if self.mean_e2e_latency:
+        self.assertLessEqual(
+            float(metrics["mean_e2e_latency"]),
+            self.mean_e2e_latency * E2E_TOLERANCE,
+        )
+
+
+class TestNpuPerformanceTestCaseBase(CustomTestCase):
+    model = None
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    backend = "sglang"
+    dataset_name = "random"
+    dataset_path = SHAREGPT_DATASET_TEST_FILE
+    dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
+    other_args = None
+    timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
+    envs = None
+    max_attempts = 2
+    request_rate = None
+    repeat_rate = None
+    max_concurrency = None
+    num_prompts = None
+    input_len = None
+    output_len = None
+    random_range_ratio = 1
+    image_resolution = None
+    image_count = None
+    warmup_requests = None
+    seed = None
+    temperature = None
+    top_p = None
+    ttft = None
+    tpot = None
+    mean_e2e_latency = None
+    output_token_throughput = None
+
+    dp = None
+    generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
+
+    @classmethod
+    def _get_tc_name(cls):
+        """Derive the test case name from the test file (filename without
+        extension). Mirrors the workflow's ``tc_name=${test_case##*/}`` logic
+        so each case in a suite writes to its own output path."""
+        try:
+            tc_file = inspect.getfile(cls)
+        except (TypeError, OSError):
+            tc_file = getattr(sys.modules.get(cls.__module__), "__file__", "")
+        return os.path.splitext(os.path.basename(tc_file))[0]
+
+    @classmethod
+    def _setup_per_case_output(cls):
+        """Set up per-case output directories and env vars.
+
+        When the workflow sets METRICS_DATA_FILE to a suite-level directory
+        (e.g. .../output/{branch_label}-{create_date}-{run_id}-{run_attempt}/
+        {workflow_name}/{test_type}/{suite}), each case in the suite
+        writes to its own subdirectory under it, so results stay in the
+        structured layout and are keyed by the case id. Falls back to the
+        legacy per-case layout when the env var is not set.
+        """
+        cls.tc_name = cls._get_tc_name()
+        suite_output = os.environ.get("METRICS_DATA_FILE")
+        if suite_output:
+            # Append the case id under the suite output prefix.
+            cls.metrics_data_file = os.path.join(suite_output, cls.tc_name)
+            # Mirror the output prefix to the plog location (drop the test_type/suite tail).
+            suite_plog = suite_output.replace("/output/", "/logs/plog/", 1)
+            cls.plog_base = os.path.dirname(os.path.dirname(suite_plog))
+        else:
+            current_date = datetime.now().strftime("%Y%m%d")
+            test_type = getattr(cls, "test_type", "perf")
+            base_output = f"/root/.cache/tests/output/{test_type}/{current_date}"
+            cls.metrics_data_file = os.path.join(base_output, cls.tc_name)
+            cls.plog_base = f"/root/.cache/tests/logs/plog"
+        os.makedirs(cls.metrics_data_file, exist_ok=True)
+        # Override env vars so evalscope/dump_metric write to per-case paths.
+        os.environ["METRICS_DATA_FILE"] = cls.metrics_data_file
+        os.environ["SGLANG_TEST_METRICS_OUTPUT"] = os.path.join(
+            cls.metrics_data_file, "metrics"
+        )
+        logger.info(
+            "Per-case output: tc_name=%s metrics_data_file=%s",
+            cls.tc_name,
+            cls.metrics_data_file,
+        )
+
+    @classmethod
+    def _save_metrics_json(cls):
+        """Write per-case ``metrics.json`` from ``dump_metric`` JSONL files.
+
+        Replaces the workflow's stdout-parsing + ``dump_metrics.py`` logic so
+        each case in a suite persists its own metrics snapshot.
+        """
+        if not getattr(cls, "metrics_data_file", None):
+            return
+        metrics = {}
+        baselines = {}
+        pattern = os.path.join(cls.metrics_data_file, "metrics.*.jsonl")
+        for jsonl_path in glob.glob(pattern):
+            try:
+                with open(jsonl_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        record = json.loads(line)
+                        name = record.get("metric_name")
+                        value = record.get("value")
+                        if name is None:
+                            continue
+                        if name.endswith("_baseline"):
+                            baselines[name[: -len("_baseline")]] = value
+                        else:
+                            metrics[name] = value
+            except Exception as e:
+                logger.warning("Failed to read %s: %s", jsonl_path, e)
+        out_path = os.path.join(cls.metrics_data_file, "metrics.json")
+        payload = {
+            "test_case": cls.tc_name,
+            "test_type": getattr(cls, "test_type", "perf"),
+            "metrics": metrics,
+            "baselines": baselines,
+        }
+        try:
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False)
+            logger.info("Saved per-case metrics to %s", out_path)
+        except Exception as e:
+            logger.warning("Failed to write metrics.json: %s", e)
+        # Remove the intermediate JSONL records, keeping only the final metrics.json.
+        for jsonl_path in glob.glob(pattern):
+            try:
+                os.remove(jsonl_path)
+            except Exception as e:
+                logger.warning("Failed to remove %s: %s", jsonl_path, e)
+
+    @classmethod
+    def _backup_plog(cls):
+        """Backup Ascend plog files to a per-case path.
+
+        Replaces the workflow's ``Backup plog`` step so each case in a suite
+        gets its own plog snapshot instead of all cases sharing the suite name.
+        """
+        plog_path = "/root/ascend/log/debug/plog"
+        if not os.path.isdir(plog_path):
+            return
+        tc_name = getattr(cls, "tc_name", None)
+        if not tc_name:
+            return
+        hostname = os.getenv("HOSTNAME", "unknown")
+        plog_base = getattr(cls, "plog_base", "/root/.cache/tests/logs/plog")
+        target = os.path.join(plog_base, tc_name, hostname)
+        os.makedirs(target, exist_ok=True)
+        for name in os.listdir(plog_path):
+            src = os.path.join(plog_path, name)
+            if os.path.isfile(src):
+                try:
+                    shutil.copy2(src, os.path.join(target, name))
+                except Exception as e:
+                    logger.warning("Failed to copy plog %s: %s", name, e)
+        logger.info("Backed up plog to %s", target)
 
     @classmethod
     def setUpClass(cls):
-        cls.process = None
+        cls._setup_per_case_output()
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        env = os.environ.copy()
+        for key, value in env.items():
+            logger.info(f"ENV_VAR_SYS {key}:{value}")
+        if cls.envs:
+            for key, value in cls.envs.items():
+                logger.info(f"ENV_VAR_CASE {key}:{value}")
+                env[key] = value
+
+        other_args = list(cls.other_args)
+
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=cls.timeout,
+            other_args=other_args,
+            env=env,
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, "process") and cls.process:
+            try:
+                kill_process_tree(cls.process.pid)
+            except Exception as e:
+                logger.error(f"Error during tearDown: {e}")
+        cls._save_metrics_json()
+        cls._backup_plog()
+
+    @retry()
+    def run_throughput(self):
+        parsed_url = urlparse(self.base_url)
+        host = parsed_url.hostname
+        port = parsed_url.port
+        if self.benchmark_tool == AISBENCHMARK:
+            metrics = run_aisbench(
+                host=host,
+                port=port,
+                model_path=self.model,
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
+                input_len=self.input_len,
+                output_len=self.output_len,
+                max_concurrency=self.max_concurrency,
+                num_prompts=self.num_prompts,
+                image_resolution=self.image_resolution,
+                random_range_ratio=self.random_range_ratio,
+                request_rate=self.request_rate,
+                repeat_rate=self.repeat_rate,
+                dp=self.dp,
+                generation_kwargs=self.generation_kwargs,
+            )
+            assert_metrics(self, metrics)
+
+        else:
+            bench_params = {
+                "host": host,
+                "port": port,
+                "model_path": self.model,
+                "backend": self.backend,
+                "dataset_name": self.dataset_name,
+                "dataset_path": self.dataset_path,
+                "request_rate": self.request_rate,
+                "repeat_rate": self.repeat_rate,
+                "max_concurrency": self.max_concurrency,
+                "num_prompts": self.num_prompts,
+                "input_len": self.input_len,
+                "output_len": self.output_len,
+                "random_range_ratio": self.random_range_ratio,
+                "image_resolution": self.image_resolution,
+                "image_count": self.image_count,
+                "warmup_requests": self.warmup_requests,
+                "seed": self.seed,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+            }
+            logger.info(f"Starting benchmark with parameters: {bench_params}")
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
+            assert_metrics(self, metrics)
+
+
+class TestNpuPerfMultiNodePdMixTestCaseBase(CustomTestCase):
+    model_config = None
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    backend = "sglang"
+    dataset_name = "random"
+    dataset_path = SHAREGPT_DATASET_TEST_FILE
+    dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
+    max_attempts = 2
+    request_rate = None
+    repeat_rate = None
+    max_concurrency = None
+    num_prompts = None
+    input_len = None
+    output_len = None
+    random_range_ratio = 1
+    image_resolution = None
+    image_count = None
+    warmup_requests = None
+    seed = None
+    temperature = None
+    top_p = None
+    ttft = None
+    tpot = None
+    mean_e2e_latency = None
+    output_token_throughput = None
+
+    dp = None
+    generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
+
+    @classmethod
+    def setUpClass(cls):
         cls.local_ip = "127.0.0.1"
         cls.host = os.getenv("POD_IP")
         cls.port = SERVICE_PORT
@@ -885,99 +1177,129 @@ class TestNpuMultiNodePdMixTestCaseBase(CustomTestCase):
         cls.hostname = os.getenv("HOSTNAME")
         cls.role = "master" if cls.hostname.endswith("sglang-node-0") else "worker"
         logger.info(f"Init {cls.host} {cls.role=}!")
-        cls.sglang_thread = None
-        cls.stop_event = threading.Event()
+
+        cls.start_pd_mix_master_node()
+        cls.start_pd_mix_worker_node()
 
     @classmethod
     def tearDownClass(cls):
-        if cls.process:
-            try:
-                kill_process_tree(cls.process.pid)
-            except Exception as e:
-                logger.error(f"Error during tearDown: {e}")
+        pass
 
     @classmethod
     @check_role(allowed_roles=["master"])
-    def launch_pd_mix_master_node(cls):
-        logger.info(f"Starting master node in thread...")
-        cls.sglang_thread = threading.Thread(
+    def start_pd_mix_master_node(cls):
+        sglang_thread = threading.Thread(
             target=launch_pd_mix_node, args=(cls.model_config,)
         )
-        cls.sglang_thread.daemon = True
-        cls.sglang_thread.start()
+        sglang_thread.start()
 
-        health_check_url = f"{cls.base_url}/health"
-        logger.info(f"Waiting for router to be ready at {health_check_url}")
-        wait_server_ready(health_check_url)
+        wait_server_ready(f"{cls.base_url}/health")
 
         logger.info(
-            f"Waiting {SERVER_INITIALIZATION_DELAY} seconds for the server to fully initialize..."
+            f"Wait {SERVER_INITIALIZATION_DELAY}s, starting run benchmark ......"
         )
         time.sleep(SERVER_INITIALIZATION_DELAY)
 
     @classmethod
     @check_role(allowed_roles=["worker"])
-    def launch_pd_mix_worker_node(cls):
-        logger.info(f"Starting master node in thread...")
-        cls.sglang_thread = threading.Thread(
+    def start_pd_mix_worker_node(cls):
+        sglang_thread = threading.Thread(
             target=launch_pd_mix_node, args=(cls.model_config,)
         )
-        cls.sglang_thread.daemon = True
-        cls.sglang_thread.start()
-        keep_alive_time = 1800
+        sglang_thread.start()
+
         logger.info(
-            f"{cls.role} node started, keeping test alive for {keep_alive_time} seconds"
+            f"{cls.role} node started, keeping test alive for {MAX_SERVER_KEEP_ALIVE_TIME} seconds"
         )
-        time.sleep(keep_alive_time)
+        time.sleep(MAX_SERVER_KEEP_ALIVE_TIME)
 
-    @classmethod
+    @retry()
     @check_role(allowed_roles=["master", "worker"])
-    def stop_sglang_thread(cls):
-        if cls.sglang_thread:
-            logger.info(f"Stopping sglang thread {cls.sglang_thread}")
-            if cls.sglang_thread.is_alive():
-                logger.info("Notifying stop event...")
-                cls.stop_event.set()
-                cls.sglang_thread.join(timeout=5)
-                if cls.sglang_thread.is_alive():
-                    logger.info(
-                        "Warning: subprocess is not terminated normally, it may has been already force stopped."
-                    )
-                else:
-                    logger.info("Subprocess has been Stopped.")
+    def run_throughput(self):
+        if self.benchmark_tool == AISBENCHMARK:
+            metrics = run_aisbench(
+                host=self.host,
+                port=str(self.port),
+                model_path=self.model_config.get("model_path"),
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
+                input_len=self.input_len,
+                output_len=self.output_len,
+                max_concurrency=self.max_concurrency,
+                num_prompts=self.num_prompts,
+                image_resolution=self.image_resolution,
+                random_range_ratio=self.random_range_ratio,
+                request_rate=self.request_rate,
+                repeat_rate=self.repeat_rate,
+                dp=self.dp,
+                generation_kwargs=self.generation_kwargs,
+            )
+            assert_metrics(self, metrics)
+
         else:
-            logger.info("No running sglang thread.")
+            bench_params = {
+                "host": self.host,
+                "port": str(self.port),
+                "model_path": self.model_config.get("model_path"),
+                "backend": self.backend,
+                "dataset_name": self.dataset_name,
+                "dataset_path": self.dataset_path,
+                "request_rate": self.request_rate,
+                "repeat_rate": self.repeat_rate,
+                "max_concurrency": self.max_concurrency,
+                "num_prompts": self.num_prompts,
+                "input_len": self.input_len,
+                "output_len": self.output_len,
+                "random_range_ratio": self.random_range_ratio,
+                "image_resolution": self.image_resolution,
+                "image_count": self.image_count,
+                "warmup_requests": self.warmup_requests,
+                "seed": self.seed,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+            }
+            logger.info(f"Starting benchmark with parameters: {bench_params}")
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
+            assert_metrics(self, metrics)
 
-    @check_role(allowed_roles=["master"])
-    def run_gsm8k_test(
-        self,
-        expect_accuracy,
-        num_shots=8,
-        data_path=None,
-        num_questions=200,
-        max_new_tokens=512,
-        parallel=128,
-    ):
-        args = SimpleNamespace(
-            num_shots=num_shots,
-            data_path=data_path,
-            num_questions=num_questions,
-            max_new_tokens=max_new_tokens,
-            parallel=parallel,
-            host=f"http://{self.host}",
-            port=self.port,
-        )
-        logger.info("Starting gsm8k test...")
-        metrics = run_eval_gsm8k(args)
-        self.assertGreaterEqual(
-            metrics["accuracy"],
-            expect_accuracy,
-            f'Accuracy is {str(metrics["accuracy"])}, is lower than {expect_accuracy}',
-        )
 
-
-class TestNpuMultiNodePdSepTestCaseBase(CustomTestCase):
+class TestNpuPerfMultiNodePdSepTestCaseBase(CustomTestCase):
     model_config = None
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    backend = "sglang"
+    dataset_name = "random"
+    dataset_path = SHAREGPT_DATASET_TEST_FILE
+    dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
+    max_attempts = 2
+    request_rate = None
+    repeat_rate = None
+    max_concurrency = None
+    num_prompts = None
+    input_len = None
+    output_len = None
+    random_range_ratio = 1
+    image_resolution = None
+    image_count = None
+    warmup_requests = None
+    seed = None
+    temperature = None
+    top_p = None
+    ttft = None
+    tpot = None
+    mean_e2e_latency = None
+    output_token_throughput = None
+
+    dp = None
+    generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
 
     @classmethod
     def setUpClass(cls):
@@ -993,26 +1315,35 @@ class TestNpuMultiNodePdSepTestCaseBase(CustomTestCase):
             else "prefill" if "prefill" in cls.hostname else "decode"
         )
         logger.info(f"Init {cls.host} {cls.role=}!")
-        cls.sglang_thread = None
-        cls.stop_event = threading.Event()
+
+        cls.start_pd_server()
+        cls.start_router_server()
 
     @classmethod
     def tearDownClass(cls):
+        logger.info("Start exec tearDownClass")
         if cls.process:
             try:
                 kill_process_tree(cls.process.pid)
+                for _ in range(60):
+                    if cls.process.poll() is not None:
+                        logger.info("Process fully exited")
+                        break
+                    time.sleep(1)
+                else:
+                    logger.warning("Process did NOT exit in time")
             except Exception as e:
                 logger.error(f"Error during tearDown: {e}")
+        logger.info("tearDownClass finished")
 
     @classmethod
     @check_role(allowed_roles=["router"])
     def start_router_server(cls):
+        wait_for_prefill_decode_exit(key=ACTIVE_TEST_CLASS, value=cls.__name__)
         logger.info(f"Starting router in thread...")
-        cls.sglang_thread = threading.Thread(
-            target=launch_router, args=(cls.model_config,)
-        )
-        cls.sglang_thread.daemon = True
-        cls.sglang_thread.start()
+        sglang_thread = threading.Thread(target=launch_router, args=(cls.model_config,))
+        sglang_thread.daemon = True
+        sglang_thread.start()
 
         health_check_url = f"{cls.base_url}/health"
         logger.info(f"Waiting for router to be ready at {health_check_url}")
@@ -1026,59 +1357,82 @@ class TestNpuMultiNodePdSepTestCaseBase(CustomTestCase):
     @classmethod
     @check_role(allowed_roles=["prefill", "decode"])
     def start_pd_server(cls):
-        logger.info(f"Starting pd separation node in thread...")
-        cls.sglang_thread = threading.Thread(
-            target=launch_pd_separation_node, args=(cls.model_config,)
-        )
-        cls.sglang_thread.daemon = True
-        cls.sglang_thread.start()
-        keep_alive_time = 1800
-        logger.info(
-            f"{cls.role} node started, keeping test alive for {keep_alive_time} seconds"
-        )
-        time.sleep(keep_alive_time)
+        logger.info(f"Starting pd separation node...")
+        cls.process = launch_pd_separation_node(cls.model_config)
+        logger.info(f"Pd separation node started with PID: {cls.process.pid}")
 
-    @classmethod
-    @check_role(allowed_roles=["prefill", "decode", "router"])
-    def stop_sglang_thread(cls):
-        if cls.sglang_thread:
-            logger.info(f"Stopping sglang thread {cls.sglang_thread}")
-            if cls.sglang_thread.is_alive():
-                logger.info("Notifying stop event...")
-                cls.stop_event.set()
-                cls.sglang_thread.join(timeout=5)
-                if cls.sglang_thread.is_alive():
-                    logger.info(
-                        "Warning: subprocess is not terminated normally, it may has been already force stopped."
-                    )
-                else:
-                    logger.info("Subprocess has been Stopped.")
-        else:
-            logger.info("No running sglang thread.")
+        # Loop to check if the process is still running
+        while True:
+            configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+            if configmap and configmap.data:
+                executing_class = configmap.data.get(ACTIVE_TEST_CLASS)
+                if executing_class and executing_class != cls.__name__:
+                    logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+                    logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
+                    return
+            if cls.process.poll() is None:
+                # Process is still running
+                time.sleep(30)
+            else:
+                # Process has exited
+                exit_code = cls.process.poll()
+                raise Exception(
+                    f"Sglang process exited on node {cls.host} {cls.hostname} with exit code: {exit_code}"
+                )
 
+    @retry()
     @check_role(allowed_roles=["router"])
-    def run_gsm8k_test(
-        self,
-        expect_accuracy,
-        num_shots=8,
-        data_path=None,
-        num_questions=200,
-        max_new_tokens=512,
-        parallel=128,
-    ):
-        args = SimpleNamespace(
-            num_shots=num_shots,
-            data_path=data_path,
-            num_questions=num_questions,
-            max_new_tokens=max_new_tokens,
-            parallel=parallel,
-            host=f"http://{self.host}",
-            port=self.port,
-        )
-        logger.info("Starting gsm8k test...")
-        metrics = run_eval_gsm8k(args)
-        self.assertGreaterEqual(
-            metrics["accuracy"],
-            expect_accuracy,
-            f'Accuracy is {str(metrics["accuracy"])}, is lower than {expect_accuracy}',
-        )
+    def run_throughput(self):
+        if self.benchmark_tool == AISBENCHMARK:
+            metrics = run_aisbench(
+                host=self.host,
+                port=str(self.port),
+                model_path=self.model_config.get("model_path"),
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
+                input_len=self.input_len,
+                output_len=self.output_len,
+                max_concurrency=self.max_concurrency,
+                num_prompts=self.num_prompts,
+                image_resolution=self.image_resolution,
+                random_range_ratio=self.random_range_ratio,
+                request_rate=self.request_rate,
+                repeat_rate=self.repeat_rate,
+                dp=self.dp,
+                generation_kwargs=self.generation_kwargs,
+            )
+            assert_metrics(self, metrics)
+
+        else:
+            bench_params = {
+                "host": self.host,
+                "port": str(self.port),
+                "model_path": self.model_config.get("model_path"),
+                "backend": self.backend,
+                "dataset_name": self.dataset_name,
+                "dataset_path": self.dataset_path,
+                "request_rate": self.request_rate,
+                "repeat_rate": self.repeat_rate,
+                "max_concurrency": self.max_concurrency,
+                "num_prompts": self.num_prompts,
+                "input_len": self.input_len,
+                "output_len": self.output_len,
+                "random_range_ratio": self.random_range_ratio,
+                "image_resolution": self.image_resolution,
+                "image_count": self.image_count,
+                "warmup_requests": self.warmup_requests,
+                "seed": self.seed,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+            }
+            logger.info(f"Starting benchmark with parameters: {bench_params}")
+            if (
+                self.dataset_name == "generated-shared-prefix"
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
+            assert_metrics(self, metrics)
