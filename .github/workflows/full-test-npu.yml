@@ -412,7 +412,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-2-npu-a3-heyao
-      runner_config: linux-aarch64-a3-2
+      runner_config: linux-aarch64-a3-4
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       job_timeout_minutes: '300'
