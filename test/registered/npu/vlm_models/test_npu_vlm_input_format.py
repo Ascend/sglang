@@ -11,17 +11,13 @@ import torch
 import transformers.activations as _hf_activations
 from PIL import Image
 from transformers import (
-    # AutoModel,
     AutoProcessor,
-    # Gemma3ForConditionalGeneration,
     Qwen2_5_VLForConditionalGeneration,
 )
 
 from sglang.test.ascend.test_ascend_utils import (
-    # GEMMA_3_4B_IT_WEIGHTS_PATH,
     IMAGE_MAN_IRONING_PATH,
     IMAGE_SGL_LOGO_PATH,
-    # KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
     QWEN2_5_VL_3B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -177,7 +173,7 @@ class VLMInputTestBase:
             image_data=self.main_image,
             sampling_params=dict(temperature=0.0, max_new_tokens=512),
         )
-        print(f"[debug] test_accepts_image output is \n{output}")
+        # print(f"[debug] test_accepts_image output is \n{output}")
         self.verify_response(output)
 
     async def test_accepts_precomputed_embeddings(self):
@@ -194,7 +190,7 @@ class VLMInputTestBase:
             ],
             sampling_params=dict(temperature=0.0, max_new_tokens=512),
         )
-        print(f"[debug] test_accepts_precomputed_embeddings output is \n{output}")
+        # print(f"[debug] test_accepts_precomputed_embeddings output is \n{output}")
         self.verify_response(output)
 
     async def test_accepts_processor_output(self):
@@ -205,7 +201,7 @@ class VLMInputTestBase:
             image_data=[self._processor_output_image_data(processor_output)],
             sampling_params=dict(temperature=0.0, max_new_tokens=512),
         )
-        print(f"[debug] test_accepts_processor_output output is \n{output}")
+        # print(f"[debug] test_accepts_processor_output output is \n{output}")
         self.verify_response(output)
 
     def _precomputed_image_data(self, processor_output, precomputed_embeddings):
