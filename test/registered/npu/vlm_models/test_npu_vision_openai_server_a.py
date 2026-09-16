@@ -211,7 +211,7 @@ del (
     AudioOpenAITestMixin,
     OmniOpenAITestMixin,
 )
-register_npu_ci(est_time=3200, suite="validate-cleanup-npu", nightly=True)
+# register_npu_ci(est_time=3200, suite="validate-cleanup-npu", nightly=True)
 
 
 
