@@ -57,6 +57,8 @@ env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
   SGLANG_USE_MODELSCOPE: true
   SGLANG_IS_IN_CI: true
+  # Device type of the runner (a2/a3/a5); test utils halve --tp-size on a5.
+  SGLANG_TEST_NPU_DEVICE_TYPE: ${{ inputs.npu_device_type }}
   HF_ENDPOINT: https://hf-mirror.com
   TORCH_EXTENSIONS_DIR: /tmp/torch_extensions
   PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"

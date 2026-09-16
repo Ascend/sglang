@@ -665,6 +665,40 @@ def _wait_for_server_health(
     return False, "Server failed to start within the timeout period"
 
 
+def _halve_tp_size_for_npu_device(other_args: list) -> list:
+    """Halve --tp-size / --tensor-parallel-size (min 1) on the NPU a5 device type.
+
+    a5 cards are ~2x an a3 card, so testcases written for N a3 cards run on
+    N/2 a5 cards. NPU a5 CI jobs set SGLANG_TEST_NPU_DEVICE_TYPE=a5; on every
+    other device (and for local runs) the env var is unset and args pass
+    through unchanged. Handles both "--tp-size N" and "--tp-size=N" forms;
+    non-integer values are left as-is.
+    """
+
+    def halve(value):
+        try:
+            return max(1, int(value) // 2)
+        except (TypeError, ValueError):
+            return value
+
+    tp_flags = ("--tp-size", "--tensor-parallel-size")
+    adjusted = []
+    i = 0
+    while i < len(other_args):
+        arg = other_args[i]
+        if arg in tp_flags and i + 1 < len(other_args):
+            adjusted.extend([arg, halve(other_args[i + 1])])
+            i += 2
+            continue
+        flag, _, value = str(arg).partition("=")
+        if flag in tp_flags and value != "":
+            adjusted.append(f"{flag}={halve(value)}")
+        else:
+            adjusted.append(arg)
+        i += 1
+    return adjusted
+
+
 def popen_launch_server(
     model: str,
     base_url: str,
@@ -695,6 +729,8 @@ def popen_launch_server(
         Started subprocess.Popen object
     """
     other_args = other_args or []
+    if envs.SGLANG_TEST_NPU_DEVICE_TYPE.get() == "a5":
+        other_args = _halve_tp_size_for_npu_device(other_args)
 
     # Auto-detect device if needed
     if device == "auto":
