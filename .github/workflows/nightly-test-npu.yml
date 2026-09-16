@@ -224,7 +224,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-1-npu-a5
-      runner_config: linux-amd64-a5-2-
+      runner_config: linux-amd64-a5-2
       image: ${{ needs.set-image-config.outputs.image_a5 }}
       npu_device_type: 'a5'
       run_timeout_minutes: '60'
@@ -240,7 +240,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-2-npu-a5
-      runner_config: linux-amd64-a5-2-
+      runner_config: linux-amd64-a5-2
       image: ${{ needs.set-image-config.outputs.image_a5 }}
       npu_device_type: 'a5'
       run_timeout_minutes: '120'
@@ -257,7 +257,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-4-npu-a5
-      runner_config: linux-amd64-a5-4-
+      runner_config: linux-amd64-a5-4
       image: ${{ needs.set-image-config.outputs.image_a5 }}
       npu_device_type: 'a5'
       run_timeout_minutes: '60'
@@ -273,7 +273,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-8-npu-a5
-      runner_config: linux-amd64-a5-8-
+      runner_config: linux-amd64-a5-8
       image: ${{ needs.set-image-config.outputs.image_a5 }}
       npu_device_type: 'a5'
       run_timeout_minutes: '120'
