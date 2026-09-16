@@ -245,13 +245,13 @@ class TestAsrMaxTranscription(CustomTestCase):
 
     def create_active_session(self, idx, result_list, lock):
         res = {"idx": idx, "ok": False, "msg": ""}
+        ws = None
         try:
             ws = websocket.create_connection(WS_URL, timeout=3)
 
             # Receive the first message
             first_raw = ws.recv()
             first_msg = json.loads(first_raw)
-            ws.close()
 
             if first_msg.get("type") == "error":
                 err = first_msg.get("error", {})
@@ -270,6 +270,12 @@ class TestAsrMaxTranscription(CustomTestCase):
                 res["msg"] = "Active session successfully created."
         except Exception as e:
             res["msg"] = f"Connection error: {str(e)}"
+        finally:
+            if ws is not None:
+                try:
+                    ws.close()
+                except Exception:
+                    pass
 
         # Thread-safe writing of results
         with lock:
