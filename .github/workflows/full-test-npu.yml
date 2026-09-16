@@ -138,7 +138,7 @@ jobs:
 
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    needs: [ set-image-config, discover-multi-node ]
+    needs: [ set-image-config, discover-multi-node, full-poc-multi-node-tests]
     if: ${{ !cancelled() && needs.discover-multi-node.outputs.matrix_mix != '[]' }}
     strategy:
       fail-fast: false
