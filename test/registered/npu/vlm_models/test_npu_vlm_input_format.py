@@ -11,17 +11,17 @@ import torch
 import transformers.activations as _hf_activations
 from PIL import Image
 from transformers import (
-    AutoModel,
+    # AutoModel,
     AutoProcessor,
-    Gemma3ForConditionalGeneration,
+    # Gemma3ForConditionalGeneration,
     Qwen2_5_VLForConditionalGeneration,
 )
 
 from sglang.test.ascend.test_ascend_utils import (
-    GEMMA_3_4B_IT_WEIGHTS_PATH,
+    # GEMMA_3_4B_IT_WEIGHTS_PATH,
     IMAGE_MAN_IRONING_PATH,
     IMAGE_SGL_LOGO_PATH,
-    KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
+    # KIMI_VL_A3B_INSTRUCT_WEIGHTS_PATH,
     QWEN2_5_VL_3B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
