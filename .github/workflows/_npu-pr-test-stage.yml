@@ -219,9 +219,12 @@ jobs:
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
             pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
             pip install jsonlines "evaluate>=0.4.0" numexpr dotenv
-            pip install websocket
-            pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp
+            pip install websocket-client
+            pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-grpc opentelemetry-exporter-otlp-proto-http
             pip install watchfiles granian whisper_normalizer msgpack
+            pip install fastokens
+            pip install mindstudio-probe --pre
+            pip install "uvicorn[standard]"
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
             sglang_source_path=$(pwd)
@@ -231,8 +234,11 @@ jobs:
 
             git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
             cd ./lmms-eval
-            nohup pip install . > lmmslog.txt 2>&1 &
-              hf download MMMU/MMMU --repo-type dataset
+            sed -i "/decord; platform_system/d" pyproject.toml
+            python3 -m pip install . > lmmslog.txt 2>&1 || { cat lmmslog.txt; exit 1; }
+            python3 -c "import lmms_eval" || { echo "lmms_eval import check failed"; cat lmmslog.txt; exit 1; }
+            cd ../
+            hf download MMMU/MMMU --repo-type dataset
             fi
 
           # install sglang_router
