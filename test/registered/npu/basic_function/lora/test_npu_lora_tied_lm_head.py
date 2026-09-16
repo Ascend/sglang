@@ -35,12 +35,12 @@ from transformers import AutoModelForCausalLM
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import QWEN3_5_4B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.runners import SRTRunner
+from sglang.test.runners import HFRunner, SRTRunner
 from sglang.test.test_utils import DEFAULT_PORT_FOR_SRT_TEST_RUNNER, CustomTestCase
 
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
-register_npu_ci(est_time=180, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 # Use a small model with tie_word_embeddings=True
 BASE_MODEL = QWEN3_5_4B_WEIGHTS_PATH
