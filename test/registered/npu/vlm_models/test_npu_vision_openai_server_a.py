@@ -5,6 +5,7 @@ python3 -m unittest test_vision_openai_server.TestOpenAIVisionServer.test_multi_
 """
 
 import os
+import shutil
 import subprocess
 import unittest
 
@@ -76,6 +77,11 @@ class TestQwen2VLContextLengthServer(CustomTestCase):
         cls.model = QWEN2_VL_2B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.api_key = "sk-123456"
+        # A leaked child of a previous case can inherit the listening
+        # socket fd (fork) and survive kill_process_tree; preemptively
+        # clear the test port before launching.
+        if shutil.which("pkill"):
+            subprocess.run(["pkill", "-9", "-f", "port 11000"], check=False)
         try:
             cls.process = popen_launch_server(
                 cls.model,
@@ -104,6 +110,11 @@ class TestQwen2VLContextLengthServer(CustomTestCase):
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
+        # Backstop: fork children inherit the listening socket fd and can
+        # escape the process-tree kill; clear anything still bound to the
+        # test port so the next case is not poisoned.
+        if shutil.which("pkill"):
+            subprocess.run(["pkill", "-9", "-f", "port 11000"], check=False)
 
     def test_single_image_chat_completion(self):
         client = openai.Client(api_key=self.api_key, base_url=self.base_url)
