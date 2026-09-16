@@ -40,7 +40,7 @@ from sglang.test.test_utils import DEFAULT_PORT_FOR_SRT_TEST_RUNNER, CustomTestC
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 #register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
-register_npu_ci(est_time=120, suite="full-2-npu-a3-heyao", nightly=True)
+register_npu_ci(est_time=120, suite="validate-cleanup", nightly=True)
 
 # Use a small model with tie_word_embeddings=True
 BASE_MODEL = QWEN3_5_4B_WEIGHTS_PATH

@@ -7,7 +7,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=400, suite="full-4-npu-a3-heyao", nightly=True)
+register_npu_ci(est_time=400, suite="validate-cleanup", nightly=True)
 
 QWEN3_NEXT_80B_A3B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
