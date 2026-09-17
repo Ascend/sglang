@@ -76,6 +76,15 @@ def _make_layer_mapper(
     return mapper
 
 
+def _stage_local_layer_mapping(
+    layer_mapping: dict[int, int], start_layer: int
+) -> dict[int, int]:
+    return {
+        global_layer - start_layer: pool_layer
+        for global_layer, pool_layer in layer_mapping.items()
+    }
+
+
 def _with_mtp_layer_mapping(
     layer_mapping: dict[int, int],
     *,
@@ -876,12 +885,21 @@ def build_hybrid_mamba_stack(
             target_device_layer_num=kv_pool.layer_num,
             draft_layer_num=len(mtp_draft_device_pools),
         )
+    # MambaPoolHost only supports page_first_direct; the global layout may be
+    # page_first_kv_split (e.g. MLA + KDA hybrid on NPU). The Mamba/KDA state
+    # pool has no separate K/V buffers, so kv_split does not apply; override
+    # to page_first_direct.
+    mamba_layout = (
+        "page_first_direct"
+        if get_memory().hicache_mem_layout == "page_first_kv_split"
+        else get_memory().hicache_mem_layout
+    )
     mamba_host_pool = MambaPoolHost(
         mamba_pool,
         get_memory().hicache_ratio,
         mamba_host_size,
         allocator_type=_get_allocator_type(),
-        layout=get_memory().hicache_mem_layout,
+        layout=mamba_layout,
     )
     entries = [
         build_pool_entry(
@@ -1127,6 +1145,12 @@ def _build_mha_mla_host_pool(
     pool_label: str,
 ):
     from sglang.srt.mem_cache.memory_pool import MHATokenToKVPool
+
+    # The global layout is page_first_kv_split only when the target model
+    # uses MLA; that layout is MLA-specific, so MHA draft pools must use
+    # the non-MLA layout (NPU default: page_first_direct).
+    if isinstance(pool, MHATokenToKVPool) and layout == "page_first_kv_split":
+        layout = "page_first_direct"
 
     kwargs = dict(
         host_to_device_ratio=host_to_device_ratio,
@@ -1478,8 +1502,12 @@ class _MambaStrategy(StackStrategy):
         model_name=None,
         enable_storage_metrics=False,
     ):
-        full_layer_mapping = dict(kvcache.full_attention_layer_id_mapping)
-        mamba_layer_mapping = dict(params.req_to_token_pool.mamba_map)
+        full_layer_mapping = _stage_local_layer_mapping(
+            kvcache.full_attention_layer_id_mapping, kvcache.start_layer
+        )
+        mamba_layer_mapping = _stage_local_layer_mapping(
+            params.req_to_token_pool.mamba_map, kvcache.start_layer
+        )
         host_pool_group, cache_controller = build_hybrid_mamba_stack(
             params=params,
             kv_pool=kvcache.full_kv_pool,
@@ -1511,9 +1539,15 @@ class _MambaStrategy(StackStrategy):
 
 def _swa_layer_mappings(kvcache) -> tuple[dict[int, int], dict[int, int]]:
     full = {
-        gid: lid for gid, (lid, is_swa) in kvcache.layers_mapping.items() if not is_swa
+        gid - kvcache.start_layer: lid
+        for gid, (lid, is_swa) in kvcache.layers_mapping.items()
+        if not is_swa
     }
-    swa = {gid: lid for gid, (lid, is_swa) in kvcache.layers_mapping.items() if is_swa}
+    swa = {
+        gid - kvcache.start_layer: lid
+        for gid, (lid, is_swa) in kvcache.layers_mapping.items()
+        if is_swa
+    }
     return full, swa
 
 
@@ -1600,7 +1634,9 @@ class _MambaSwaStrategy(StackStrategy):
         enable_storage_metrics=False,
     ):
         full_layer_mapping, swa_layer_mapping = _swa_layer_mappings(kvcache)
-        mamba_layer_mapping = dict(params.req_to_token_pool.mamba_map)
+        mamba_layer_mapping = _stage_local_layer_mapping(
+            params.req_to_token_pool.mamba_map, kvcache.start_layer
+        )
         host_pool_group, cache_controller = build_hybrid_mamba_swa_stack(
             params=params,
             full_kv_pool=kvcache.full_kv_pool,
