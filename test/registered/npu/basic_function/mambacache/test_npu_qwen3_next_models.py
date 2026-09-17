@@ -31,7 +31,7 @@ class TestQwen3Next(
         "4",
         "--chunked-prefill-size",
         "1024",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--mamba-track-interval",
         "16",
