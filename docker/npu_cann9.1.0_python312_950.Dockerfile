@@ -33,6 +33,7 @@ ARG EVALSCOPE_VERSION=""
 # 1.2.1 is not published on PyPI (PyPI stops at 1.2.0), so the wheels are pulled from the
 # sglang-npu OBS bucket. These links are presigned and expire on 2027-09-12; when they expire,
 # regenerate them from the bucket and pass the new values with --build-arg, no Dockerfile edit needed.
+ARG MF_VERSION="1.2.1"
 ARG MF_WHEEL_URL_AARCH64="https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732522&Signature=/vRnADjM4r7v392pAygfpiowOMo%3D"
 ARG MF_WHEEL_URL_X86_64="https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732540&Signature=8TKnsDBAihKWkEGcV5/SLkCXVeM%3D"
 ARG MC_WHEEL_URL_AARCH64="https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732457&Signature=xyC5pL2ztyoeIBgsmZ/cB0CFDBU%3D"
@@ -82,17 +83,21 @@ ENV LC_ALL=en_US.UTF-8
 
 ### Install MemFabric and MemCache
 # Download both wheels from the OBS bucket first, verify their sha256, then install locally.
+# The saved file name has to stay a valid wheel name (distribution-version-python-abi-platform),
+# otherwise pip rejects it with "Invalid wheel filename" before it even reads the archive.
 # The two wheels must be installed in this order: memcache_hybrid depends on memfabric_hybrid,
 # and `mfcli` (provided by memfabric_hybrid) has to exist before `mfcli kernel install` runs.
 RUN set -eux; \
     case "$TARGETARCH" in \
       arm64) \
+        WHEEL_TAG="cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64"; \
         MF_URL="$MF_WHEEL_URL_AARCH64"; \
         MF_SHA256="27b9c0f18db6260e632f00a2302176bbbd781858d12f3a51d8af6169ac5337c1"; \
         MC_URL="$MC_WHEEL_URL_AARCH64"; \
         MC_SHA256="c578dfa102e1266755c910e701ed557d50d152376799ae84968d07fbb5fa359e"; \
         ;; \
       amd64) \
+        WHEEL_TAG="cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64"; \
         MF_URL="$MF_WHEEL_URL_X86_64"; \
         MF_SHA256="b754ee9a511f2a495963eec816001ba34924330441f3d6409e7e5d195c0515a0"; \
         MC_URL="$MC_WHEEL_URL_X86_64"; \
@@ -103,14 +108,16 @@ RUN set -eux; \
         exit 1; \
         ;; \
     esac; \
-    curl -fL --retry 3 --retry-delay 2 -o /tmp/memfabric_hybrid.whl "$MF_URL"; \
-    curl -fL --retry 3 --retry-delay 2 -o /tmp/memcache_hybrid.whl "$MC_URL"; \
-    echo "$MF_SHA256  /tmp/memfabric_hybrid.whl" | sha256sum -c -; \
-    echo "$MC_SHA256  /tmp/memcache_hybrid.whl" | sha256sum -c -; \
-    ${PIP_INSTALL} /tmp/memfabric_hybrid.whl --force-reinstall; \
+    MF_WHEEL="/tmp/memfabric_hybrid-${MF_VERSION}-${WHEEL_TAG}.whl"; \
+    MC_WHEEL="/tmp/memcache_hybrid-${MF_VERSION}-${WHEEL_TAG}.whl"; \
+    curl -fL --retry 3 --retry-delay 2 -o "$MF_WHEEL" "$MF_URL"; \
+    curl -fL --retry 3 --retry-delay 2 -o "$MC_WHEEL" "$MC_URL"; \
+    echo "$MF_SHA256  $MF_WHEEL" | sha256sum -c -; \
+    echo "$MC_SHA256  $MC_WHEEL" | sha256sum -c -; \
+    ${PIP_INSTALL} "$MF_WHEEL" --force-reinstall; \
     mfcli kernel install; \
-    ${PIP_INSTALL} /tmp/memcache_hybrid.whl --force-reinstall --no-deps; \
-    rm -f /tmp/memfabric_hybrid.whl /tmp/memcache_hybrid.whl
+    ${PIP_INSTALL} "$MC_WHEEL" --force-reinstall --no-deps; \
+    rm -f "$MF_WHEEL" "$MC_WHEEL"
 
 ### Install memfabric-zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
