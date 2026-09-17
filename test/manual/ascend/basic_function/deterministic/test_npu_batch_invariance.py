@@ -46,7 +46,7 @@ class TestNpuBatchInvarianceNoTp(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        os.environ["ASCEND_USE_FIA"] = "1"
+        os.environ["ASCEND_USE_FA"] = "1"
         parsed = urlparse(cls.BASE_URL)
         cls.host, cls.port = parsed.hostname, parsed.port
         cls.process = popen_launch_server(
@@ -174,7 +174,7 @@ class TestNpuBatchInvarianceTp(TestNpuBatchInvarianceNoTp):
 
     @classmethod
     def setUpClass(cls):
-        os.environ["ASCEND_USE_FIA"] = "1"
+        os.environ["ASCEND_USE_FA"] = "1"
         os.environ["HCCL_DETERMINISTIC"] = "strict"
         parsed = urlparse(cls.BASE_URL)
         cls.host, cls.port = parsed.hostname, parsed.port
