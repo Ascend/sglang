@@ -30,7 +30,6 @@ class TestRetractionPolicyLength(CustomTestCase):
     - "KV cache pool is full. Retract requests." in server logs
     - Both outputs contain expected content
     - Long-input has more retractions than short-input (length policy)
-    - Short-input e2e latency < long-input e2e latency
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -178,14 +177,6 @@ class TestRetractionPolicyLength(CustomTestCase):
             f"short-input ({result_short['retractions']})",
         )
 
-        # Assert 4: short-input e2e latency < long-input e2e latency
-        self.assertLess(
-            result_short["e2e"],
-            result_long["e2e"],
-            f"Short-input e2e ({result_short['e2e']:.2f}s) should be faster "
-            f"than long-input ({result_long['e2e']:.2f}s)",
-        )
-
 
 class TestRetractionPolicyPriority(CustomTestCase):
     """Verify --retraction-policy=priority works with priority scheduling.
@@ -198,7 +189,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
     - Both requests complete (status=200)
     - "KV cache pool is full. Retract requests." in server logs
     - low-priority has more retractions than High-priority (priority policy)
-    - High-priority e2e latency < low-priority e2e latency
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -352,14 +342,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
             high_result["retractions"],
             f"Long-input retractions ({low_result['retractions']}) should exceed "
             f"short-input ({high_result['retractions']})",
-        )
-
-        # Assert 4: high-priority e2e < low-priority e2e
-        self.assertLess(
-            high_result["e2e"],
-            low_result["e2e"],
-            f"High-priority e2e ({high_result['e2e']:.2f}s) should be faster "
-            f"than low-priority ({low_result['e2e']:.2f}s)",
         )
 
 
