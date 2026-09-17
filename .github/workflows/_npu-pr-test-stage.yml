@@ -193,7 +193,7 @@ jobs:
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
           RUSTUP_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local:8082"
         run: |
-          set -euo pipefail
+          set -eu
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
 
@@ -215,9 +215,27 @@ jobs:
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
             pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
             pip install jsonlines "evaluate>=0.4.0" numexpr dotenv
+            pip install websocket-client
+            pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-grpc opentelemetry-exporter-otlp-proto-http
+            pip install watchfiles granian whisper_normalizer msgpack
+            pip install fastokens
+            pip install mindstudio-probe --pre
+            pip install "uvicorn[standard]"
+            # Install sgl-eval
+            # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+            sglang_source_path=$(pwd)
+            echo "Source code path: ${sglang_source_path}"
+            . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+            pip install "$SGL_EVAL_SPEC"
 
+            git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+            cd ./lmms-eval
+            sed -i "/decord; platform_system/d" pyproject.toml
+            python3 -m pip install . > lmmslog.txt 2>&1 || { cat lmmslog.txt; exit 1; }
+            python3 -c "import lmms_eval" || { echo "lmms_eval import check failed"; cat lmmslog.txt; exit 1; }
+            cd ../
             hf download MMMU/MMMU --repo-type dataset
-          fi
+            fi
 
           # install sglang_router
           apt-get install -y libssl-dev

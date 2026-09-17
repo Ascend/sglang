@@ -407,7 +407,7 @@ class TestMultimodalGraphCompilation(CustomTestCase):
         """Verify multimodal inference with graph compilation enabled."""
         process_graph, url_graph = launch_server(
             self._model,
-            extra_args=["--cuda-graph-max-bs", "1"],
+            extra_args=["--cuda-graph-max-bs-decode", "1"],
         )
         try:
             result = chat_single_image(
