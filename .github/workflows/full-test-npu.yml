@@ -87,7 +87,7 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a2-4
+      runner: linux-aarch64-a2b3-4
       test_type: 'perf'
       test_suite: full-4-npu-a2
       is_nightly_pipeline_job: true
