@@ -29,7 +29,8 @@ class TestRetractionPolicyLength(CustomTestCase):
     Assertions:
     - "KV cache pool is full. Retract requests." in server logs
     - Both outputs contain expected content
-    - Short-input e2e latency < long-input e2e latency (from resp.json)
+    - Long-input has more retractions than short-input (length policy)
+    - Short-input e2e latency < long-input e2e latency
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -113,6 +114,8 @@ class TestRetractionPolicyLength(CustomTestCase):
             result_short["status"] = resp.status_code
             result_short["text"] = resp.json().get("text", "")
             result_short["e2e"] = resp.json()["meta_info"]["e2e_latency"]
+            result_short["retractions"] = resp.json().get("num_retractions", 0)
+            print(resp.json)
 
         def _send_long():
             resp = requests.post(
@@ -133,6 +136,8 @@ class TestRetractionPolicyLength(CustomTestCase):
             result_long["status"] = resp.status_code
             result_long["text"] = resp.json().get("text", "")
             result_long["e2e"] = resp.json()["meta_info"]["e2e_latency"]
+            result_long["retractions"] = resp.json().get("num_retractions", 0)
+            print(resp.json)
 
         t_short = threading.Thread(target=_send_short, daemon=True)
         t_long = threading.Thread(target=_send_long, daemon=True)
@@ -167,7 +172,15 @@ class TestRetractionPolicyLength(CustomTestCase):
             f"Long output missing 'Paris'. Got: {result_long.get('text', '')[:200]}",
         )
 
-        # Assert 3: short-input e2e latency < long-input e2e latency
+        # Assert 3: length policy retracted long-input request
+        self.assertGreater(
+            result_long["retractions"],
+            result_short["retractions"],
+            f"Long-input retractions ({result_long['retractions']}) should exceed "
+            f"short-input ({result_short['retractions']})",
+        )
+
+        # Assert 4: short-input e2e latency < long-input e2e latency
         self.assertLess(
             result_short["e2e"],
             result_long["e2e"],
