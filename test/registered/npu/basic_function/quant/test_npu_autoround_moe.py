@@ -17,7 +17,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="base-b-test-1-npu-a3")
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
 
 logger = logging.getLogger(__name__)
 
