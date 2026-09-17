@@ -73,7 +73,7 @@ class TestQwen3NextMTPTopk(GSM8KMixin, PrefixCacheBranchingMixin, DefaultServerB
         "8",
         "--chunked-prefill-size",
         "2048",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--mamba-track-interval",
         "128",
