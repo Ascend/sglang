@@ -14,6 +14,7 @@ register_npu_ci(
     disabled="Dependency operator blue zone not available",
 )
 
+# When using the Cann9.1.0 version image, it is necessary to modify the environment variables
 ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -25,7 +26,6 @@ ENVS = {
         f"{os.environ.get('LD_LIBRARY_PATH', '')}"
     ),
 }
-# When using the Cann9.1.0 version image, it is necessary to modify the environment variables
 
 OTHER_ARGS = [
     "--attention-backend",
