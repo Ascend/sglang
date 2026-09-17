@@ -17,6 +17,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 
 class TestInputEmbeds(CustomTestCase):
@@ -34,7 +35,7 @@ class TestInputEmbeds(CustomTestCase):
         cls.ref_model = AutoModelForCausalLM.from_pretrained(cls.model)
         other_args = [
             "--disable-radix",
-            "--cuda-graph-max-bs",
+            "--cuda-graph-max-bs-decode",
             4,
             "--attention-backend",
             "ascend",

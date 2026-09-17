@@ -9,6 +9,11 @@ register_npu_ci(
     suite="full-8-npu-a3",
     nightly=True,
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-4-npu-a5",
+    nightly=True,
+)
 
 
 class TestGLM4Models(TestVLMModels):
@@ -22,7 +27,7 @@ class TestGLM4Models(TestVLMModels):
     mmmu_accuracy = 0.2
     other_args = [
         "--trust-remote-code",
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         "32",
         "--enable-multimodal",
         "--mem-fraction-static",

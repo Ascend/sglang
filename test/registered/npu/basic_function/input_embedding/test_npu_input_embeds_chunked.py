@@ -31,6 +31,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=100, suite="full-1-npu-a5", nightly=True)
 
 CHUNKED_PREFILL_SIZE = 256
 
@@ -93,7 +94,7 @@ class TestInputEmbedsChunkedAndRetract(CustomTestCase):
                     "--disable-radix-cache",
                     "--chunked-prefill-size",
                     str(CHUNKED_PREFILL_SIZE),
-                    "--cuda-graph-max-bs",
+                    "--cuda-graph-max-bs-decode",
                     "4",
                     "--attention-backend",
                     "ascend",

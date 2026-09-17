@@ -13,6 +13,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 
 class TestDisableCudaGraph(CustomTestCase):
@@ -43,7 +44,7 @@ class TestDisableCudaGraph(CustomTestCase):
                 "ascend",
                 "--disable-prefill-cuda-graph",
                 "--disable-decode-cuda-graph",
-                "--disable-piecewise-cuda-graph",
+                "--cuda-graph-backend-prefill=disabled",
                 "--enable-dp-attention-local-control-broadcast",
                 "--gc-threshold",
                 "50",

@@ -12,6 +12,7 @@ from sgl_kernel_npu.speculative import build_tree_efficient_native
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 logger = logging.getLogger(__name__)
 # Configure logging basic settings (ensure log messages are formatted properly)

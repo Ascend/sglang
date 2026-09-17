@@ -27,6 +27,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=90, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=90, suite="full-1-npu-a5", nightly=True)
 
 
 class TestMultimodalOverlapSchedule(CustomTestCase):
@@ -42,7 +43,7 @@ class TestMultimodalOverlapSchedule(CustomTestCase):
     _COMMON_ARGS = [
         "--mem-fraction-static",
         "0.6",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         "1",
         "--disable-radix-cache",
         "--tp-size",

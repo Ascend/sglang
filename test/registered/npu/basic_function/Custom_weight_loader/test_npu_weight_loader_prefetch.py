@@ -17,6 +17,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=300, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=300, suite="full-2-npu-a5", nightly=True)
 
 # Common ascend launch args — --attention-backend ascend is a fixture
 _COMMON_ARGS = [
@@ -62,6 +63,8 @@ class TestWeightLoaderPrefetchTp4(CustomTestCase):
                 "--weight-loader-prefetch-checkpoints",
                 "--weight-loader-prefetch-num-threads",
                 "3",  # Custom thread count, matches 2.log pattern
+                "--log-level",
+                "debug",
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
         )

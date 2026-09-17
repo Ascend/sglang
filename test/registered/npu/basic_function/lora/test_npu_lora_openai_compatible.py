@@ -30,6 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger("TestLoRAOpenAICompatible")
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 
 def get_real_lora_adapter() -> str:
@@ -52,6 +53,8 @@ def setup_class(cls, enable_lora=True):
         "--max-running-requests",
         "10",
         "--disable-radix-cache",  # Disable cache for cleaner tests
+        "--mem-fraction-static",
+        0.9,
     ]
 
     if enable_lora:

@@ -19,6 +19,12 @@ register_npu_ci(
     nightly=True,
     disabled="the compile is conflict with graph",
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a5",
+    nightly=True,
+    disabled="the compile is conflict with graph",
+)
 
 
 class TestEnableTorchCompileDebugMode(CustomTestCase):
@@ -38,12 +44,12 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--disable-radix-cache",
-        "--enforce-piecewise-cuda-graph",
+        "--cuda-graph-backend-prefill=tc_piecewise",
     ]
     enable_args = [
         "--enable-torch-compile-debug-mode",
-        "--enforce-piecewise-cuda-graph",
-        "--piecewise-cuda-graph-max-tokens",
+        "--cuda-graph-backend-prefill=tc_piecewise",
+        "--cuda-graph-max-bs-prefill",
         "64",
     ]
 

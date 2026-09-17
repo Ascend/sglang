@@ -56,6 +56,11 @@ register_npu_ci(
     suite="full-4-npu-a3",
     nightly=True,
 )
+register_npu_ci(
+    est_time=500,
+    suite="full-2-npu-a5",
+    nightly=True,
+)
 
 logging.basicConfig(
     level=logging.INFO,

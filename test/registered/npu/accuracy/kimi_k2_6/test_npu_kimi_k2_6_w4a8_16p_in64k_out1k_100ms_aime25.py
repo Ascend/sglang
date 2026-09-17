@@ -16,6 +16,12 @@ register_npu_ci(
     nightly=True,
     disabled="accuracy testcase",
 )
+register_npu_ci(
+    est_time=1800,
+    suite="full-4-npu-a5",
+    nightly=True,
+    disabled="accuracy testcase",
+)
 
 ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -63,7 +69,7 @@ OTHER_ARGS = [
     "deepep",
     "--deepep-mode",
     "auto",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     "--disable-radix-cache",
     "--speculative-algorithm",

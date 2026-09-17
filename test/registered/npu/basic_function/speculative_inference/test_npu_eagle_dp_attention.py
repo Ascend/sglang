@@ -21,6 +21,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 
 NPU_ENV = {
@@ -71,7 +72,7 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
             "1",
             "--attention-backend",
             "ascend",
-            "--cuda-graph-max-bs",
+            "--cuda-graph-max-bs-decode",
             "64",
             "--mem-fraction-static",
             "0.7",

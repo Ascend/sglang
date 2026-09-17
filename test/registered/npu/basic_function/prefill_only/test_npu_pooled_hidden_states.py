@@ -30,6 +30,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 _SEQCLS_MODEL = QWEN3_0_6B_WEIGHTS_PATH
 _CAUSAL_LM_MODEL = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH

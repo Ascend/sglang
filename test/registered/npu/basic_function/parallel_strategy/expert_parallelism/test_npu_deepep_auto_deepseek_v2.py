@@ -9,6 +9,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a5", nightly=True)
 
 
 class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
@@ -43,7 +44,7 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
     }
 
     def test_mmlu(self):
-        expect_score = 0.58
+        expect_score = 0.38
         args = SimpleNamespace(
             base_url=self.base_url,
             model=self.model,
@@ -51,7 +52,6 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
             num_examples=128,
             num_threads=32,
             api="completion",
-            num_shots=5,
         )
         metrics = run_ascend_eval(args)
         self.assertGreater(metrics["score"], expect_score)

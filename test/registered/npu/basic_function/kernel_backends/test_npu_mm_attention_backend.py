@@ -6,6 +6,7 @@ from sglang.test.ascend.vlm_utils import TestVLMModels
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-2-npu-a5", nightly=True)
 
 
 class TestAscendMMAttentionBackend(TestVLMModels):
@@ -20,7 +21,7 @@ class TestAscendMMAttentionBackend(TestVLMModels):
     mmmu_accuracy = 0.2
     other_args = [
         "--trust-remote-code",
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         "32",
         "--enable-multimodal",
         "--mem-fraction-static",

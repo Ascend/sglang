@@ -16,6 +16,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=600, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-8-npu-a5", nightly=True)
 
 
 class TestDeepepLowlatencyDeepseekR1(CustomTestCase):
@@ -47,7 +48,7 @@ class TestDeepepLowlatencyDeepseekR1(CustomTestCase):
                 "modelslim",
                 "--watchdog-timeout",
                 "9000",
-                "--cuda-graph-bs",
+                "--cuda-graph-bs-decode",
                 "8",
                 "16",
                 "24",

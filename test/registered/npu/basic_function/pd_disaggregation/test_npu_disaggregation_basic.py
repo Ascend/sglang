@@ -33,6 +33,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a5", nightly=True)
 
 
 class DisaggregationTestBase(PDDisaggregationServerBase):
@@ -334,7 +335,7 @@ class TestDisaggregationMooncakeSpec(
         "1",
         "--speculative-num-draft-tokens",
         "16",
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         "8",
         "--dtype=float16",
     ]

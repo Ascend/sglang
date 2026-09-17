@@ -41,6 +41,7 @@ from sglang.test.server_fixtures.default_fixture import (
 from sglang.test.test_utils import popen_launch_server
 
 register_npu_ci(est_time=600, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-4-npu-a5", nightly=True)
 
 QWEN3_NEXT_MODEL = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_FOR_TEST.model_path
 
@@ -73,7 +74,7 @@ class TestQwen3NextMTPTopk(GSM8KMixin, PrefixCacheBranchingMixin, DefaultServerB
         "8",
         "--chunked-prefill-size",
         "2048",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--mamba-track-interval",
         "128",
@@ -111,7 +112,7 @@ class TestQwen3NextMTPV2(GSM8KMixin, DefaultServerBase):
         "4",
         "--chunked-prefill-size",
         "2048",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--mamba-track-interval",
         "128",

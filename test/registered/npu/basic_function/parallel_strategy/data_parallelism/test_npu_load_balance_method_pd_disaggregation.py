@@ -25,6 +25,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=3600, suite="base-b-test-16-npu-a3")
 register_npu_ci(est_time=3600, suite="nightly-16-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="nightly-8-npu-a5", nightly=True)
 
 load_balance_method_options = [
     "auto",

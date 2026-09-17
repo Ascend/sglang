@@ -47,6 +47,7 @@ if torch.cuda.is_available():
     torch.backends.cudnn.allow_tf32 = False
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 
 class TestOriginalLogprob(unittest.TestCase):

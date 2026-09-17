@@ -6,6 +6,7 @@ from sglang.test.kits.kl_divergence_kit import KLDivergenceMixin
 from sglang.test.server_fixtures.default_fixture import DefaultServerBase
 
 register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a5", nightly=True)
 
 
 class TestSWARadixCacheKL(KLDivergenceMixin, DefaultServerBase):
@@ -27,7 +28,7 @@ class TestSWARadixCacheKL(KLDivergenceMixin, DefaultServerBase):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--disable-piecewise-cuda-graph",
+        "--cuda-graph-backend-prefill=disabled",
     ]
 
 

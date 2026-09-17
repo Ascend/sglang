@@ -26,6 +26,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=1600, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=1600, suite="full-1-npu-a5", nightly=True)
 register_npu_ci(est_time=400, suite="stage-b-test-1-npu-a2", nightly=False)
 
 WHISPER_ASR_MODEL = OPENAI_WHISPER_LARGE_V3_WEIGHTS_PATH

@@ -11,6 +11,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=200, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=200, suite="full-1-npu-a5", nightly=True)
 
 # Read the content of the expert distribution file
 with open(HOT_MAP_STRING, "r") as f:
@@ -38,7 +39,7 @@ class TestInitExpertLocationString(GSM8KAscendMixin, CustomTestCase):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         32,
         "--tp-size",
         2,

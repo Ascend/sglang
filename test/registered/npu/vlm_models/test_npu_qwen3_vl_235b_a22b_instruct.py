@@ -7,6 +7,7 @@ from sglang.test.ascend.vlm_utils import TestVLMModels
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a5", nightly=True)
 
 
 class TestQwen3VL235BA22B(TestVLMModels):

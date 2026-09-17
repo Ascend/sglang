@@ -22,6 +22,11 @@ register_npu_ci(
     suite="full-1-npu-a3",
     nightly=True,
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a5",
+    nightly=True,
+)
 
 PROMPT_TEXT = """Please output the layout information from the PDF image, including each layout element's bbox, its category, and the corresponding text content within the bbox.
 
@@ -86,7 +91,7 @@ class TestDotsOcr(CustomTestCase):
             "--max-running-requests",
             "80",
             "--disable-radix-cache",
-            "--cuda-graph-bs",
+            "--cuda-graph-bs-decode",
             1,
             4,
             8,

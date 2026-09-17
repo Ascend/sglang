@@ -30,6 +30,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=200, suite="full-1-npu-a5", nightly=True)
 
 # Total KV pool size used both as context length and max total tokens.
 # Flood prompts are sized so that ~2x capacity of unique tokens is pushed

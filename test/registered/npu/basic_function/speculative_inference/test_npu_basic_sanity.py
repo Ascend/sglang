@@ -15,6 +15,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=200, suite="full-1-npu-a5", nightly=True)
 
 
 class TestBasicSanity(
@@ -34,7 +35,7 @@ class TestBasicSanity(
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
-                "--cuda-graph-max-bs",
+                "--cuda-graph-max-bs-decode",
                 "4",
                 "--mem-fraction-static",
                 "0.7",

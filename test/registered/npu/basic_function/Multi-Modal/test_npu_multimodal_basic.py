@@ -31,6 +31,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=200, suite="full-1-npu-a5", nightly=True)
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +408,7 @@ class TestMultimodalGraphCompilation(CustomTestCase):
         """Verify multimodal inference with graph compilation enabled."""
         process_graph, url_graph = launch_server(
             self._model,
-            extra_args=["--cuda-graph-max-bs", "1"],
+            extra_args=["--cuda-graph-max-bs-decode", "1"],
         )
         try:
             result = chat_single_image(

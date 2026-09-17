@@ -11,6 +11,7 @@ from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a5", nightly=True)
 
 
 class TestDeepEpAutoDeepseekR1(GSM8KAscendMixin, CustomTestCase):
@@ -34,7 +35,7 @@ class TestDeepEpAutoDeepseekR1(GSM8KAscendMixin, CustomTestCase):
         "modelslim",
         "--watchdog-timeout",
         "9000",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         "4",
         "8",
         "20",

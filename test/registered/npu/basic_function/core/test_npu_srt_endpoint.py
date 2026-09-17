@@ -26,6 +26,7 @@ from sglang.test.test_utils import (
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 
 class TestSRTEndpoint(CustomTestCase):
@@ -41,7 +42,7 @@ class TestSRTEndpoint(CustomTestCase):
                 "--enable-custom-logit-processor",
                 "--mem-fraction-static",
                 "0.7",
-                "--cuda-graph-max-bs",
+                "--cuda-graph-max-bs-decode",
                 "8",
                 "--attention-backend",
                 "ascend",

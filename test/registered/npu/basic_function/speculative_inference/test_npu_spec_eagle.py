@@ -26,6 +26,7 @@ from sglang.test.server_fixtures.spec_eagle_fixture import Eagle3Base
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 _KITS = (
     SpecCorrectnessKit,

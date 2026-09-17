@@ -15,6 +15,7 @@ from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="nightly-2-npu-a5", nightly=True)
 
 
 class TestAscendW4A4(GSM8KAscendMixin, CustomTestCase):
@@ -30,7 +31,7 @@ class TestAscendW4A4(GSM8KAscendMixin, CustomTestCase):
         "4",
         "--mem-fraction-static",
         "0.8",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         "64",
         "--disable-radix-cache",
     ]

@@ -10,6 +10,11 @@ register_npu_ci(
     suite="full-1-npu-a3",
     nightly=True,
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a5",
+    nightly=True,
+)
 
 
 class TestPiecewise(GSM8KAscendMixin, CustomTestCase):
@@ -27,19 +32,19 @@ class TestPiecewise(GSM8KAscendMixin, CustomTestCase):
         "--trust-remote-code",
         "--torch-compile-max-bs",
         "2",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         "16",
         "--mem-fraction-static",
         0.8,
-        "--piecewise-cuda-graph-max-tokens",
+        "--cuda-graph-max-bs-prefill",
         "128",
-        "--piecewise-cuda-graph-tokens",
+        "--cuda-graph-bs-prefill",
         "64",
         "128",
-        "--enforce-piecewise-cuda-graph",
+        "--cuda-graph-backend-prefill=tc_piecewise",
         "--tp",
         "1",
-        "--piecewise-cuda-graph-compiler",
+        "--cuda-graph-tc-compiler",
         "eager",
         "--disable-radix-cache",
         "--attention-backend",

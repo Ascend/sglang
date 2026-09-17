@@ -41,6 +41,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=200, suite="full-1-npu-a5", nightly=True)
 
 
 # ---------------------------------------------------------------------------
@@ -77,11 +78,11 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         "ascend_attn",
         "--mem-fraction-static",
         "0.75",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         1,
         2,
         4,
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--tp-size",
         1,

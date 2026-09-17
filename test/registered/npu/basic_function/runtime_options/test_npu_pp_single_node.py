@@ -25,6 +25,7 @@ from sglang.test.test_utils import (
 # Disable the fast input-logprobs path; use the reference log-softmax path.
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "false"
 register_npu_ci(est_time=10800, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=10800, suite="full-8-npu-a5", nightly=True)
 
 
 class TestPPAccuracy(unittest.TestCase):

@@ -298,6 +298,9 @@ class Envs:
     # None = unset, letting get_dump_dir() resolve the base (RUNNER_TEMP in CI,
     # else /tmp); see debug_utils/cuda_coredump.py.
     SGLANG_CUDA_COREDUMP_DIR = EnvStr(None)
+    # NPU CI device type ("a2"/"a3"/"a5"), set by the NPU CI workflow stages.
+    # Test utils use it to adapt launch args (e.g. halve --tp-size on a5).
+    SGLANG_TEST_NPU_DEVICE_TYPE = EnvStr(None)
     SGLANG_TEST_MAX_RETRY = EnvInt(None)
     # Expand jit_kernel test grids to their full parameter ranges (nightly).
     SGLANG_JIT_KERNEL_RUN_FULL_TESTS = EnvBool(False)

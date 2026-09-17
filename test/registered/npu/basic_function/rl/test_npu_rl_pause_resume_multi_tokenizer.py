@@ -27,6 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 register_npu_ci(est_time=90, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=90, suite="full-1-npu-a5", nightly=True)
 
 
 class TestNpuMultiTokenizerPauseResume(CustomTestCase):
@@ -57,7 +58,7 @@ class TestNpuMultiTokenizerPauseResume(CustomTestCase):
                 2,
                 "--tokenizer-worker-num",
                 2,
-                "--cuda-graph-bs",
+                "--cuda-graph-bs-decode",
                 4,
                 16,
             ],

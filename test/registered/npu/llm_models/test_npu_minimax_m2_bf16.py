@@ -10,6 +10,11 @@ register_npu_ci(
     suite="full-8-npu-a3",
     nightly=True,
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-4-npu-a5",
+    nightly=True,
+)
 
 
 class TestMiniMaxM2(GSM8KAscendMixin, CustomTestCase):

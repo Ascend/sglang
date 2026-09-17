@@ -15,6 +15,7 @@ from sglang.test.server_fixtures.disaggregation_fixture import (
 from sglang.test.test_utils import popen_launch_pd_server
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a5", nightly=True)
 
 _RETRY_MARKER = "optimistic prefill yielded"
 

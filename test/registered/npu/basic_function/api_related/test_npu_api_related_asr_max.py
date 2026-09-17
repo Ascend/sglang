@@ -25,6 +25,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a5", nightly=True)
 
 parsed = urlparse(DEFAULT_URL_FOR_TEST)
 host = parsed.hostname

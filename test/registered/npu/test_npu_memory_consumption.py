@@ -22,6 +22,11 @@ register_npu_ci(
     suite="full-2-npu-a3",
     nightly=True,
 )
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a5",
+    nightly=True,
+)
 
 if "ASCEND_RT_VISIBLE_DEVICES" not in os.environ:
     os.environ["ASCEND_RT_VISIBLE_DEVICES"] = "0,1"
@@ -56,7 +61,7 @@ class TestMemoryConsumptionAscend(CustomTestCase):
                 "2",
                 "--mem-fraction-static",
                 "0.8",
-                "--cuda-graph-bs",
+                "--cuda-graph-bs-decode",
                 "1",
                 "--max-total-tokens",
                 "1024",

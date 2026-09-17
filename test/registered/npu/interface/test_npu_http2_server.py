@@ -17,6 +17,7 @@ from sglang.test.test_utils import (
 _HAS_GRANIAN = True
 
 register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=100, suite="full-1-npu-a5", nightly=True)
 
 
 class TestHTTP2Server(CustomTestCase):

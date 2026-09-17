@@ -14,6 +14,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=500, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=500, suite="full-2-npu-a5", nightly=True)
 
 
 class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
@@ -59,7 +60,7 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
                 "2",
                 "--cuda-graph-max-bs-decode",
                 "32",
-                "--enable-prefill-context-parallel",
+                "--enable-prefill-cp",
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
             env={
