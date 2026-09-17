@@ -72,9 +72,11 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN ${PIP_INSTALL} memfabric-hybrid==1.2.0
+RUN pip install memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl --force-reinstall
 
-RUN ${PIP_INSTALL} memcache-hybrid==1.2.0
+RUN mfcli kernel install
+
+RUN pip install memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl --force-reinstall
 
 ### Install memfabric-zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
