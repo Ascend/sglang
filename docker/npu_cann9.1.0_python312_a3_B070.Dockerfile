@@ -115,7 +115,6 @@ RUN . /etc/environment_new && \
 RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
-    SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SGLANG=$(python3 ../scripts/release/get_version_tag.py --tag-only | sed -E 's/^v//; s/-npu\.(rc|post)([0-9]+)$/\1\2/') \
     ${PIP_INSTALL} -v -e .[all_npu]
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
