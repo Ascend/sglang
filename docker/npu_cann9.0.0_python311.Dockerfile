@@ -72,7 +72,9 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric
-RUN ${PIP_INSTALL} memfabric-hybrid==1.1.4
+RUN ${PIP_INSTALL} memfabric-hybrid==1.1.5
+
+RUN ${PIP_INSTALL} memfabric-memcache==1.1.5
 
 ### Install zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.1.2

@@ -30,7 +30,6 @@ ARG MODELSCOPE_VERSION=""
 ARG EVALSCOPE_VERSION=""
 
 
-
 # Later RUN steps source /etc/environment_new, so make sure it exists
 RUN touch /etc/environment_new
 
@@ -74,6 +73,8 @@ ENV LC_ALL=en_US.UTF-8
 
 ### Install MemFabric
 RUN ${PIP_INSTALL} memfabric-hybrid==1.2.0
+
+RUN ${PIP_INSTALL} memcache-hybrid==1.2.0
 
 ### Install memfabric-zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
@@ -145,3 +146,4 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && cd "$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" && ln -sf deep_ep/deep_ep_cpp*.so
 
 CMD ["/bin/bash"]
+
