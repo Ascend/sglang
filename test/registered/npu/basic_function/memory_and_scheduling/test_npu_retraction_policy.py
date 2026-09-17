@@ -29,7 +29,8 @@ class TestRetractionPolicyLength(CustomTestCase):
     Assertions:
     - "KV cache pool is full. Retract requests." in server logs
     - Both outputs contain expected content
-    - Short-input e2e latency < long-input e2e latency (from resp.json)
+    - Long-input has more retractions than short-input (length policy)
+    - Short-input e2e latency < long-input e2e latency
 
     [Test Category] Parameter
     [Test Target] --retraction-policy
@@ -113,6 +114,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             result_short["status"] = resp.status_code
             result_short["text"] = resp.json().get("text", "")
             result_short["e2e"] = resp.json()["meta_info"]["e2e_latency"]
+            result_short["retractions"] = resp.json()["meta_info"]["num_retractions"]
 
         def _send_long():
             resp = requests.post(
@@ -133,6 +135,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             result_long["status"] = resp.status_code
             result_long["text"] = resp.json().get("text", "")
             result_long["e2e"] = resp.json()["meta_info"]["e2e_latency"]
+            result_long["retractions"] = resp.json()["meta_info"]["num_retractions"]
 
         t_short = threading.Thread(target=_send_short, daemon=True)
         t_long = threading.Thread(target=_send_long, daemon=True)
@@ -167,7 +170,15 @@ class TestRetractionPolicyLength(CustomTestCase):
             f"Long output missing 'Paris'. Got: {result_long.get('text', '')[:200]}",
         )
 
-        # Assert 3: short-input e2e latency < long-input e2e latency
+        # Assert 3: length policy retracted long-input request
+        self.assertGreater(
+            result_long["retractions"],
+            result_short["retractions"],
+            f"Long-input retractions ({result_long['retractions']}) should exceed "
+            f"short-input ({result_short['retractions']})",
+        )
+
+        # Assert 4: short-input e2e latency < long-input e2e latency
         self.assertLess(
             result_short["e2e"],
             result_long["e2e"],
@@ -186,6 +197,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
     Assertions:
     - Both requests complete (status=200)
     - "KV cache pool is full. Retract requests." in server logs
+    - low-priority has more retractions than High-priority (priority policy)
     - High-priority e2e latency < low-priority e2e latency
 
     [Test Category] Parameter
@@ -275,6 +287,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             low_result["status"] = resp.status_code
             low_result["text"] = resp.json().get("text", "")
             low_result["e2e"] = resp.json()["meta_info"]["e2e_latency"]
+            low_result["retractions"] = resp.json()["meta_info"]["num_retractions"]
 
         def _send_high():
             resp = requests.post(
@@ -296,6 +309,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             high_result["status"] = resp.status_code
             high_result["text"] = resp.json().get("text", "")
             high_result["e2e"] = resp.json()["meta_info"]["e2e_latency"]
+            high_result["retractions"] = resp.json()["meta_info"]["num_retractions"]
 
         t_low = threading.Thread(target=_send_low, daemon=True)
         t_low.start()
@@ -332,7 +346,15 @@ class TestRetractionPolicyPriority(CustomTestCase):
             f"High output unexpected: {high_result['text'][:200]}",
         )
 
-        # Assert 3: high-priority e2e < low-priority e2e
+        # Assert 3: the priority policy revoked requests with low priority
+        self.assertGreater(
+            low_result["retractions"],
+            high_result["retractions"],
+            f"Long-input retractions ({low_result['retractions']}) should exceed "
+            f"short-input ({high_result['retractions']})",
+        )
+
+        # Assert 4: high-priority e2e < low-priority e2e
         self.assertLess(
             high_result["e2e"],
             low_result["e2e"],
