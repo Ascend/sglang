@@ -18,7 +18,6 @@ import time
 import unittest
 
 import requests
-
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
@@ -31,6 +30,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
+LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH = "/mnt/paas/weights/Llama-3.2-1B-Instruct"
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
 
@@ -39,18 +39,30 @@ register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 # ------------------------------------------------------------------
 
 CHUNKS = [
-    "Let me tell you something about France.",
-    "The capital of France is",
-    "The population of the city is",
-    "A brief history about that city is",
+    "Let me tell you something about France. The countryside keeps a long list of wonders:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village of",
+    "The capital of France is Paris. Visitors often add more places to their plan:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey to",
+    "The population of the city is large. Historians keep adding notes about the people:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey",
+    "A brief history about that city is worth telling. The chronicle lists many events:, Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey",
 ]
+
+WIZARD_PROMPT = (
+    "Tell me a very long story about a wizard. His tale begins with a list of strange things:, "
+    "Paris, Seine, Normandy, Provence, Bordeaux, Alsace, Brittany, Loire, Marseille, Avignon, "
+    "Versailles, Lyon, Riviera, Montmartre, vineyard, chateau, cathedral, museum, market, orchard, "
+    "harbor, valley, summer, winter, silver, golden, quiet, old, grand, small, magic, forest, river, "
+    "stone, bridge, candle, lantern, garden, meadow, wizard, story, village, journey, mountain, "
+    "thunder, kingdom, tower"
+)
 
 SAMPLING_PARAMS = {
     "temperature": 0,
     "max_new_tokens": 12,
+    "min_new_tokens": 12,
     "no_stop_trim": True,
     "skip_special_tokens": False,
 }
+
+KV_PAGE_SIZE = 128
 
 LONG_SAMPLING_PARAMS = {
     "temperature": 0,
@@ -183,6 +195,8 @@ class TestNpuEnableStreamingSession(CustomTestCase):
             self.assertEqual(health.status_code, 200)
 
             tokenizer = self._get_tokenizer()
+            # CHUNKS are pre-sized so turn totals (prompt + 12 completion)
+            # are exact page multiples: turn N inherits KV_PAGE_SIZE * (N-1).
             chunk_ids = self._encode_chunks(tokenizer)
             # prompt_tokens will grow each turn because the session
             # concatenates all previous chunks (they are KV-cached,
@@ -294,7 +308,8 @@ class TestNpuEnableStreamingSession(CustomTestCase):
 
             try:
                 # Turn 1: normal generate to create session slot
-                ids_1 = tokenizer.encode("Tell me a very long story about a wizard.")
+                # (WIZARD_PROMPT fills one KV page so Turn 2/3 inherit on NPU)
+                ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
                         "input_ids": ids_1,
@@ -361,6 +376,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
+                                "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
                             },
@@ -473,6 +489,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                             "sampling_params": {
                                 "temperature": 0,
                                 "max_new_tokens": 8,
+                                "min_new_tokens": 8,
                                 "no_stop_trim": True,
                                 "skip_special_tokens": False,
                             },
@@ -493,8 +510,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                 self.assertEqual(
                     data_2["meta_info"]["prompt_tokens"],
                     len(ids_2),
-                    "prompt_tokens must equal turn 2 input only "
-                    "(no inherited context)",
+                    "prompt_tokens must equal turn 2 input only (no inherited context)",
                 )
                 self.assertEqual(
                     data_2["meta_info"]["completion_tokens"],
@@ -552,7 +568,8 @@ class TestNpuEnableStreamingSession(CustomTestCase):
 
             try:
                 # Turn 1: normal generate to create slot
-                ids_1 = tokenizer.encode("Tell me a very long story about a wizard.")
+                # (WIZARD_PROMPT fills one KV page so Turn 3 inherits on NPU)
+                ids_1 = tokenizer.encode(WIZARD_PROMPT)
                 resp_1 = self._generate(
                     {
                         "input_ids": ids_1,
@@ -602,6 +619,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                         "sampling_params": {
                             "temperature": 0,
                             "max_new_tokens": 8,
+                            "min_new_tokens": 8,
                             "no_stop_trim": True,
                             "skip_special_tokens": False,
                         },
