@@ -48,7 +48,7 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
     67072,
     "--max-prefill-token",
     67000,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-prefill",
     2,
     4,
     8,
