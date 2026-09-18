@@ -20,12 +20,12 @@ ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
+    # When using the Cann9.1.0 version image, it is necessary to modify the environment variables
     "LD_LIBRARY_PATH": (
         "/usr/local/Ascend/cann-9.0.0/opp/vendors/batch_invariant/op_api/lib/:"
         f"{os.environ.get('LD_LIBRARY_PATH', '')}"
     ),
 }
-# When using the Cann9.1.0 version image, it is necessary to modify the environment variables
 
 OTHER_ARGS = [
     "--attention-backend",
