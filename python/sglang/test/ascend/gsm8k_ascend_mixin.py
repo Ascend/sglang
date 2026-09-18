@@ -99,6 +99,7 @@ class GSM8KAscendMixin(ABC):
             model_metrics["accuracy"] = metrics["score"]
             model_metrics["output_throughput"] = metrics["output_throughput"]
             model_metrics["latency"] = metrics["latency"]
+            print(f"Eval accuracy of GSM8K: {metrics=}")
             self.assertGreaterEqual(
                 metrics["score"],
                 accuracy_threshold,
