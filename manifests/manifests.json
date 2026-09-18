@@ -4,7 +4,7 @@
       "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-nightly",
       "dockerfile": "docker/npu_cann9.1.0_python312_a3.Dockerfile",
-      "generated_at": "2026-09-17T16:24:44.531866+00:00",
+      "generated_at": "2026-09-18T15:35:34.778363+00:00",
       "build_args": {
         "CANN_VERSION": "9.1.0",
         "DEVICE_TYPE": "a3",
@@ -19,7 +19,7 @@
         "TORCH_NPU_INDEX_URL": "https://ascend.devcloud.huaweicloud.com/pypi/simple/",
         "SGLANG_TAG": "main",
         "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
-        "SGLANG_KERNEL_NPU_TAG": "2026.9.0.post4",
+        "SGLANG_KERNEL_NPU_TAG": "2026.9.0.post5",
         "PIP_INSTALL": "python3 -m pip install --no-cache-dir",
         "MODELSCOPE_VERSION": "",
         "EVALSCOPE_VERSION": ""
@@ -45,9 +45,9 @@
         "dir": "/sgl-workspace/sglang",
         "remote": "https://github.com/sgl-project/sglang",
         "branch": "main",
-        "commit": "7ccbf5fd04f7ee23095fc38e49e749d58dc18282",
-        "describe": "gateway-v0.3.1-9668-g7ccbf5fd04",
-        "commit_date": "2026-09-17T20:50:33+08:00"
+        "commit": "9784d5f979c9eaa5a6d9b31e596a7a73cb76dab8",
+        "describe": "gateway-v0.3.1-9714-g9784d5f979",
+        "commit_date": "2026-09-18T18:03:40+08:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",
