@@ -44,7 +44,8 @@ jobs:
             #"test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models.py"
             #"test/registered/npu/basic_function/pd_disaggregation/test_npu_disaggregation_hybrid_attention.py"
             #"test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models_mtp.py"
-            "test/registered/npu/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py"
+            "test/registered/npu/basic_function/parameter/test_npu_batch_matmul_transpose.py"
+            #"test/registered/npu/performance/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms.py"
           )
 
           for test_case in "${test_cases[@]}"; do
