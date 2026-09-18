@@ -37,7 +37,7 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
         "--disable-cuda-graph",
         "--mamba-full-memory-ratio",
         "0.9",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "auto",
         "--mamba-track-interval",
         "256",
@@ -63,7 +63,7 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "no_buffer",
         "--mamba-track-interval",
         "512",
@@ -97,7 +97,7 @@ class TestMambaCacheRadix(CustomTestCase):
         "bfloat16",
         "--mamba-full-memory-ratio",
         "0.3",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",  # To reuse Radix Cache, this parameter must be set to extra_buffer
     ]
 
