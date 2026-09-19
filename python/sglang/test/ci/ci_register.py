@@ -24,9 +24,23 @@ __all__ = [
 # `register_cpu_ci(5, "base-a-test-cpu")` style positional calls. New fields
 # (`stage`, `runner_config`) are kwarg-only.
 _PARAM_ORDER = ("est_time", "suite", "nightly", "disabled")
-_KWARG_ONLY = ("stage", "runner_config")
+_KWARG_ONLY = ("stage", "runner_config", "npu_multi_node")
 _ALL_PARAMS = _PARAM_ORDER + _KWARG_ONLY
 _UNSET = object()
+
+# Keys allowed in the `npu_multi_node` dict literal. Describes how a test case
+# must be scheduled on the NPU multi-node e2e workflow (k8s Pod allocation):
+#   deployment: "separation" (pd-disaggregated, needs prefill/decode/router
+#               sizes) or "mix" (single cluster, needs node_size)
+#   test_type:  metrics category, e.g. "perf" / "accuracy"
+_NPU_MULTI_NODE_KEYS = {
+    "deployment",
+    "prefill_size",
+    "decode_size",
+    "router_size",
+    "node_size",
+    "test_type",
+}
 
 
 class HWBackend(Enum):
@@ -51,6 +65,10 @@ class CIRegistry:
     suite: Optional[str] = None
     nightly: bool = False
     disabled: Optional[str] = None
+    # NPU multi-node e2e scheduling info (deployment / prefill_size /
+    # decode_size / router_size / node_size / test_type). Consumed by the
+    # multi-node matrix discovery script; None for everything else.
+    npu_multi_node: Optional[dict] = None
 
     @property
     def effective_suite(self) -> Optional[str]:
@@ -67,6 +85,7 @@ def register_cpu_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for CPU CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -80,6 +99,7 @@ def register_cuda_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for CUDA CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -93,6 +113,7 @@ def register_amd_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for AMD CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -106,6 +127,7 @@ def register_musa_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for MUSA CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -119,6 +141,7 @@ def register_npu_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for NPU CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -132,6 +155,7 @@ def register_xpu_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for XPU CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -145,6 +169,7 @@ def register_musa_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for MUSA CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -158,6 +183,7 @@ def register_mlx_ci(
     *,
     stage: Optional[str] = None,
     runner_config: Optional[str] = None,
+    npu_multi_node: Optional[dict] = None,
 ):
     """Marker for MLX CI registration (parsed via AST; runtime no-op)."""
     return None
@@ -184,6 +210,21 @@ class RegistryVisitor(ast.NodeVisitor):
     def _constant_value(self, node: ast.AST) -> object:
         if isinstance(node, ast.Constant):
             return node.value
+        # Dict literal for kwarg-only structured fields (e.g. npu_multi_node).
+        # Keys must be string constants; values must be str/int/bool constants.
+        if isinstance(node, ast.Dict):
+            if any(k is None for k in node.keys):
+                return _UNSET
+            result = {}
+            for k, v in zip(node.keys, node.values):
+                if not (isinstance(k, ast.Constant) and isinstance(k.value, str)):
+                    return _UNSET
+                if not isinstance(v, ast.Constant) or not isinstance(
+                    v.value, (str, int, bool)
+                ):
+                    return _UNSET
+                result[k.value] = v.value
+            return result
         return _UNSET
 
     def _parse_call_args(self, func_call: ast.Call) -> dict:
@@ -277,6 +318,42 @@ class RegistryVisitor(ast.NodeVisitor):
                 f"{self.filename}: disabled must be a string in {func_call.func.id}()"
             )
 
+        npu_multi_node = (
+            args["npu_multi_node"]
+            if args["npu_multi_node"] is not _UNSET
+            else None
+        )
+        if npu_multi_node is not None:
+            if not isinstance(npu_multi_node, dict):
+                raise ValueError(
+                    f"{self.filename}: npu_multi_node must be a dict literal of "
+                    f"constants in {func_call.func.id}()"
+                )
+            unknown_keys = set(npu_multi_node) - _NPU_MULTI_NODE_KEYS
+            if unknown_keys:
+                raise ValueError(
+                    f"{self.filename}: unknown npu_multi_node keys "
+                    f"{sorted(unknown_keys)} in {func_call.func.id}(); allowed: "
+                    f"{sorted(_NPU_MULTI_NODE_KEYS)}"
+                )
+            deployment = npu_multi_node.get("deployment")
+            if deployment not in ("separation", "mix"):
+                raise ValueError(
+                    f"{self.filename}: npu_multi_node['deployment'] must be "
+                    f"'separation' or 'mix' in {func_call.func.id}()"
+                )
+            required = (
+                ("prefill_size", "decode_size", "router_size")
+                if deployment == "separation"
+                else ("node_size",)
+            )
+            for key in required:
+                if not isinstance(npu_multi_node.get(key), int):
+                    raise ValueError(
+                        f"{self.filename}: npu_multi_node['{key}'] must be an "
+                        f"int in {func_call.func.id}()"
+                    )
+
         return {
             "est_time": float(est_time),
             "stage": stage,
@@ -284,6 +361,7 @@ class RegistryVisitor(ast.NodeVisitor):
             "suite": suite,
             "nightly": nightly,
             "disabled": disabled,
+            "npu_multi_node": npu_multi_node,
         }
 
     def _collect_ci_registry(self, func_call: ast.Call):
