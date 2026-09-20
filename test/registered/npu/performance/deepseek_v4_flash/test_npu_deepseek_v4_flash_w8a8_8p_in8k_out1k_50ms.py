@@ -8,8 +8,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=1200, suite="base-c-test-perf-16-npu-a3")
-register_npu_ci(est_time=1200, suite="nightly-perf-16-npu-a3", nightly=True)
+register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
@@ -20,12 +19,17 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
     # deepep
-    "DEEPEP_HCCL_BUFFSIZE": "1000",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
+    "DEEPEP_HCCL_BUFFSIZE": "2500",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "96",
+    "DEEPEP_HYBRID_DEPLOYMENT": "1",
+    "SGLANG_RAGGED_VERIFY_MODE": "static",
+    "SGLANG_DSPARK_FAST_KERNEL": "0",
+    # war barrier
+    "SGLANG_ENABLE_WAR_BARRIER": "1",
+    "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
     # skip gpu branch
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
@@ -37,9 +41,9 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # DSPARK
-    "SGLANG_RAGGED_VERIFY_MODE": "static",
-    "SGLANG_DSPARK_FAST_KERNEL": "0",
+    # mtp
+    "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -51,19 +55,20 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--trust-remote-code",
     "--device",
     "npu",
+    "--prefill-max-requests",
+    192,
+    "--max-prefill-tokens",
+    80000,
     "--attention-backend",
     "dsv4",
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.6,
-    "--prefill-max-requests",
-    2,
-    "--disable-radix-cache",
+    0.68,
     "--chunked-prefill-size",
-    -1,
+    131072,
     "--max-running-requests",
-    160,
+    192,
     "--dp-size",
     16,
     "--enable-dp-attention",
@@ -76,10 +81,13 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--enable-dp-lm-head",
     "--kv-cache-dtype",
     "bfloat16",
+    "--load-balance-method",
+    "round_robin",
     "--cuda-graph-bs-decode",
     1,
     2,
     4,
+    6,
     8,
     10,
     # DSPARK configuration.
@@ -92,9 +100,10 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     "--speculative-draft-attention-backend",
     "ascend",
     "--speculative-num-draft-tokens",
-    6,
+    7,
     "--speculative-dspark-block-size",
-    5,
+    6,
+    "--disable-radix-cache",
 ]
 
 
