@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -13,8 +14,18 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
 
+_DLLM_ALGO_CONFIG = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "llada2_lowconf.yaml"
+)
+
 
 class TestLLaDA2Mini(GSM8KAscendMixin, CustomTestCase):
+    """Testcase: LLaDA2-mini GSM8K with LowConfidence dLLM algorithm config.
+
+    [Test Category] Parameter
+    [Test Target] --dllm-algorithm; --dllm-algorithm-config; --no-dllm-fdfo
+    """
+
     model = LLaDA2_0_MINI_WEIGHTS_PATH
 
     other_args = [
@@ -26,7 +37,9 @@ class TestLLaDA2Mini(GSM8KAscendMixin, CustomTestCase):
         "--attention-backend",
         "ascend",
         "--dllm-algorithm",
-        "LowConfidence",  # TODO: Add dLLM configurations
+        "LowConfidence",
+        "--dllm-algorithm-config",
+        _DLLM_ALGO_CONFIG,
         "--no-dllm-fdfo",  # FDFO (PR #27551) halves single-batch speed on NPU; use sync mode
     ]
     accuracy = 0.88

@@ -1,0 +1,2 @@
+threshold: 0.95
+block_size: 32
