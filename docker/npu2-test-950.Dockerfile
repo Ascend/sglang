@@ -105,6 +105,7 @@ RUN --mount=type=secret,id=gitcode_token \
     git remote set-url origin https://gitcode.com/pengxingchen0810/glmx && \
     cd python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     sed -i '/memfabric-hybrid==/d; /memfabric-zbal==/d' pyproject.toml && \
+    sed -i 's/"transformers==[^"]*"/"transformers==5.16.1"/' pyproject.toml
     ${PIP_INSTALL} -v -e .[all_npu]
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
