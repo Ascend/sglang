@@ -2,6 +2,68 @@
   "manifests": [
     {
       "schema_version": 1,
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-950-nightly",
+      "dockerfile": "docker/npu_cann9.1.0_python312_950.Dockerfile",
+      "generated_at": "2026-09-20T16:16:31.268561+00:00",
+      "build_args": {
+        "CANN_VERSION": "9.1.0",
+        "DEVICE_TYPE": "950",
+        "OS": "ubuntu22.04",
+        "PYTHON_VERSION": "py3.12",
+        "arch": "",
+        "PIP_INDEX_URL": "https://pypi.org/simple/",
+        "PYTORCH_VERSION": "2.10.0",
+        "TORCHVISION_VERSION": "0.25.0",
+        "TORCHAUDIO_VERSION": "2.10.0",
+        "TORCH_NPU_VERSION": "2.10.0.post6",
+        "TORCH_NPU_INDEX_URL": "https://ascend.devcloud.huaweicloud.com/pypi/simple/",
+        "SGLANG_TAG": "main",
+        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
+        "SGLANG_KERNEL_NPU_TAG": "2026.9.0.post5",
+        "PIP_INSTALL": "python3 -m pip install --no-cache-dir",
+        "MODELSCOPE_VERSION": "",
+        "EVALSCOPE_VERSION": "",
+        "MF_VERSION": "1.2.1",
+        "MF_WHEEL_URL_AARCH64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732522&Signature=/vRnADjM4r7v392pAygfpiowOMo%3D",
+        "MF_WHEEL_URL_X86_64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732540&Signature=8TKnsDBAihKWkEGcV5/SLkCXVeM%3D",
+        "MC_WHEEL_URL_AARCH64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732457&Signature=xyC5pL2ztyoeIBgsmZ/cB0CFDBU%3D",
+        "MC_WHEEL_URL_X86_64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732498&Signature=0pxMuRqZjSyFaAfTtRBEbKHYmmY%3D"
+      },
+      "git_clones": [
+        {
+          "remote": "https://github.com/sgl-project/sglang",
+          "branch": "main",
+          "dir": "/sgl-workspace/sglang"
+        }
+      ],
+      "declared_pip_pins": [
+        "memfabric-zbal==1.2.21004.post1",
+        "torch==2.10.0",
+        "torchvision==0.25.0",
+        "torchaudio==2.10.0",
+        "torch-npu==2.10.0.post6",
+        "wheel==0.45.1"
+      ],
+      "sglang": {
+        "dir": "/sgl-workspace/sglang",
+        "remote": "https://github.com/sgl-project/sglang",
+        "branch": "main",
+        "commit": "6880a4795533640f41ebb3db9e4ae0af5a371a1f",
+        "describe": "gateway-v0.3.1-9814-g6880a47955",
+        "commit_date": "2026-09-20T20:39:26+08:00"
+      },
+      "os": {
+        "distro": "Ubuntu 22.04.5 LTS",
+        "kernel": "6.8.0-1064-azure",
+        "arch": "aarch64"
+      },
+      "cann": {
+        "toolkit": "latest set_env.sh",
+        "version_files": ""
+      }
+    },
+    {
+      "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-nightly",
       "dockerfile": "docker/npu_cann9.1.0_python312_a3.Dockerfile",
       "generated_at": "2026-09-20T16:13:16.981401+00:00",
@@ -48,68 +110,6 @@
         "commit": "6880a4795533640f41ebb3db9e4ae0af5a371a1f",
         "describe": "gateway-v0.3.1-9814-g6880a47955",
         "commit_date": "2026-09-20T20:39:26+08:00"
-      },
-      "os": {
-        "distro": "Ubuntu 22.04.5 LTS",
-        "kernel": "6.8.0-1064-azure",
-        "arch": "aarch64"
-      },
-      "cann": {
-        "toolkit": "latest set_env.sh",
-        "version_files": ""
-      }
-    },
-    {
-      "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-950-nightly",
-      "dockerfile": "docker/npu_cann9.1.0_python312_950.Dockerfile",
-      "generated_at": "2026-09-19T16:45:15.497733+00:00",
-      "build_args": {
-        "CANN_VERSION": "9.1.0",
-        "DEVICE_TYPE": "950",
-        "OS": "ubuntu22.04",
-        "PYTHON_VERSION": "py3.12",
-        "arch": "",
-        "PIP_INDEX_URL": "https://pypi.org/simple/",
-        "PYTORCH_VERSION": "2.10.0",
-        "TORCHVISION_VERSION": "0.25.0",
-        "TORCHAUDIO_VERSION": "2.10.0",
-        "TORCH_NPU_VERSION": "2.10.0.post6",
-        "TORCH_NPU_INDEX_URL": "https://ascend.devcloud.huaweicloud.com/pypi/simple/",
-        "SGLANG_TAG": "main",
-        "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
-        "SGLANG_KERNEL_NPU_TAG": "2026.9.0.post5",
-        "PIP_INSTALL": "python3 -m pip install --no-cache-dir",
-        "MODELSCOPE_VERSION": "",
-        "EVALSCOPE_VERSION": "",
-        "MF_VERSION": "1.2.1",
-        "MF_WHEEL_URL_AARCH64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732522&Signature=/vRnADjM4r7v392pAygfpiowOMo%3D",
-        "MF_WHEEL_URL_X86_64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732540&Signature=8TKnsDBAihKWkEGcV5/SLkCXVeM%3D",
-        "MC_WHEEL_URL_AARCH64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732457&Signature=xyC5pL2ztyoeIBgsmZ/cB0CFDBU%3D",
-        "MC_WHEEL_URL_X86_64": "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732498&Signature=0pxMuRqZjSyFaAfTtRBEbKHYmmY%3D"
-      },
-      "git_clones": [
-        {
-          "remote": "https://github.com/sgl-project/sglang",
-          "branch": "main",
-          "dir": "/sgl-workspace/sglang"
-        }
-      ],
-      "declared_pip_pins": [
-        "memfabric-zbal==1.2.21004.post1",
-        "torch==2.10.0",
-        "torchvision==0.25.0",
-        "torchaudio==2.10.0",
-        "torch-npu==2.10.0.post6",
-        "wheel==0.45.1"
-      ],
-      "sglang": {
-        "dir": "/sgl-workspace/sglang",
-        "remote": "https://github.com/sgl-project/sglang",
-        "branch": "main",
-        "commit": "993d1fccbaafe3e79d91567d2fc1d665cc94fa50",
-        "describe": "gateway-v0.3.1-9774-g993d1fccba",
-        "commit_date": "2026-09-19T08:58:10-07:00"
       },
       "os": {
         "distro": "Ubuntu 22.04.5 LTS",
