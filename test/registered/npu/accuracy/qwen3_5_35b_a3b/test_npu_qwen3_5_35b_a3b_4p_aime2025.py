@@ -83,7 +83,17 @@ class TestNPUQwen3_5_35BA3B_4P_AIME2025(TestNpuAccuracyTestCaseBase):
     accuracy = 0.9
     datasets = ["aime25"]
     few_shot_num = 0
-    generation_config = {"max_tokens": 65536}
+    generation_config = {
+        "max_tokens": 200000,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20,
+        "min_p": 0.0,
+        "presence_penalty": 1.5,
+        "repetition_penalty": 1.0,
+        "timeout": 60000,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": True}},
+    }
     eval_batch_size = 128
     seed = 1
 

@@ -83,7 +83,16 @@ class TestNPUQwen3_5_35BA3B_4P_MMMU(TestNpuAccuracyTestCaseBase):
     accuracy = 0.5
     datasets = ["mmmu"]
     few_shot_num = 0
-    generation_config = {"max_tokens": 65536}
+    generation_config = {
+        "temperature": 1.0,
+        "max_tokens": 200000,
+        "top_p": 0.95,
+        "top_k": 20,
+        "min_p": 0.0,
+        "presence_penalty": 1.5,
+        "repetition_penalty": 1.0,
+        "timeout": 60000,
+    }
     eval_batch_size = 256
     seed = 1
 
