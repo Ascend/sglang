@@ -624,12 +624,19 @@ def generate_metrics_json(metrics_data_file, test_case, status):
         json.dump(output, f, indent=2)
     logger.info(f"Metrics JSON written to {output_path}")
 
-    # /tmp/metrics.json is consumed by the workflow's upload-artifact step; in a
-    # batch run each case overwrites it, so the final content reflects the last
-    # case. The per-case metrics.json files above are the source of truth.
-    with open("/tmp/metrics.json", "w") as f:
+    # The workflow's upload-artifact step archives /tmp/metrics/**/metrics.json
+    # via a literal path: the custom-container runner does not propagate
+    # $GITHUB_ENV across steps, so an env-derived artifact path resolved to
+    # "/**/metrics.json" and scanned the whole filesystem until EPERM. Each
+    # case writes under its own tc_name so batch runs don't overwrite each
+    # other. The per-case metrics.json files in output_dir remain the source
+    # of truth.
+    tmp_metrics_dir = os.path.join("/tmp/metrics", tc_name)
+    os.makedirs(tmp_metrics_dir, exist_ok=True)
+    tmp_metrics_path = os.path.join(tmp_metrics_dir, "metrics.json")
+    with open(tmp_metrics_path, "w") as f:
         json.dump(output, f, indent=2)
-    logger.info("Metrics JSON written to /tmp/metrics.json")
+    logger.info(f"Metrics JSON written to {tmp_metrics_path}")
 
 
 def run_npu_e2e_test_case(
