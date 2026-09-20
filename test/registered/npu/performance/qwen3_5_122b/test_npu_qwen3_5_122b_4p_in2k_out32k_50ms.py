@@ -76,13 +76,14 @@ class TestNPUQwen3_5_122B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     model = QWEN3_5_122B_MODEL_PATH
     other_args = QWEN3_5_122B_4P_OTHER_ARGS
     envs = QWEN3_5_122B_4P_ENVS
-    dataset_name = "random"
+    dataset_name = "random-ids"
     max_concurrency = 224
     num_prompts = 224
     input_len = 2048
     output_len = 32768
     random_range_ratio = 1
     seed = 1234
+    request_rate = float("inf")
     tpot = 50
     output_token_throughput = 2170
 

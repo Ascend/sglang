@@ -83,6 +83,7 @@ class TestNPUQwen3_5_35BA3B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     output_len = 32768
     random_range_ratio = 1
     seed = 1234
+    request_rate = float("inf")
     tpot = 50
     output_token_throughput = 4459
 
