@@ -247,12 +247,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: metrics-${{ inputs.test_config_name }}
-          # Literal path on purpose: $GITHUB_ENV set in the Run test step does
-          # not propagate to this step's expression context on the
-          # custom-container self-hosted runner, which once made this path
-          # resolve to "/**/metrics.json" and scan the whole filesystem.
-          # run_npu_e2e_test.py mirrors each case's metrics to
-          # /tmp/metrics/{tc_name}/metrics.json for archiving.
           path: /tmp/metrics/**/metrics.json
           if-no-files-found: ignore
           retention-days: 7

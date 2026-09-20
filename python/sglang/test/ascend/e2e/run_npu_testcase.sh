@@ -114,9 +114,6 @@ else
     mkdir -p "${ascend_test_util_path}"
     mv "${ascend_test_util_path}" "${ascend_test_util_path}_bak"
     cp -r ${sglang_source_path}/python/sglang/test/ascend "${ascend_test_util_path}"
-    # Also overlay the CI registration helpers: test files import
-    # sglang.test.ci.ci_register from the image, whose older copy may reject
-    # recently added kwargs (e.g. npu_multi_node) with TypeError at registration.
     ci_util_path=${sglang_pkg_path}/sglang/test/ci
     mkdir -p "${ci_util_path}"
     cp -r ${sglang_source_path}/python/sglang/test/ci/. "${ci_util_path}/"

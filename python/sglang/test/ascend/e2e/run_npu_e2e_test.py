@@ -366,9 +366,6 @@ def monitor_pod_logs(
     patterns = [re.compile(line_pattern) for line_pattern in pattern_lines]
     pattern_ok = re.compile(r"^OK$")
 
-    # Fatal signatures printed when the in-pod run has already failed (e.g. an
-    # import crash). In that case the unittest completion pattern above will
-    # never appear, so fail fast instead of idling until the monitor timeout.
     fatal_line_patterns = [
         re.compile(r"Traceback \(most recent call last\):"),
         re.compile(r"^===== .* FAILED \(exit \d+\) =====$"),
@@ -624,13 +621,6 @@ def generate_metrics_json(metrics_data_file, test_case, status):
         json.dump(output, f, indent=2)
     logger.info(f"Metrics JSON written to {output_path}")
 
-    # The workflow's upload-artifact step archives /tmp/metrics/**/metrics.json
-    # via a literal path: the custom-container runner does not propagate
-    # $GITHUB_ENV across steps, so an env-derived artifact path resolved to
-    # "/**/metrics.json" and scanned the whole filesystem until EPERM. Each
-    # case writes under its own tc_name so batch runs don't overwrite each
-    # other. The per-case metrics.json files in output_dir remain the source
-    # of truth.
     tmp_metrics_dir = os.path.join("/tmp/metrics", tc_name)
     os.makedirs(tmp_metrics_dir, exist_ok=True)
     tmp_metrics_path = os.path.join(tmp_metrics_dir, "metrics.json")
