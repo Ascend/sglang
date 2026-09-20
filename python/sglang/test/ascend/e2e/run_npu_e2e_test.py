@@ -366,6 +366,15 @@ def monitor_pod_logs(
     patterns = [re.compile(line_pattern) for line_pattern in pattern_lines]
     pattern_ok = re.compile(r"^OK$")
 
+    # Fatal signatures printed when the in-pod run has already failed (e.g. an
+    # import crash). In that case the unittest completion pattern above will
+    # never appear, so fail fast instead of idling until the monitor timeout.
+    fatal_line_patterns = [
+        re.compile(r"Traceback \(most recent call last\):"),
+        re.compile(r"^===== .* FAILED \(exit \d+\) =====$"),
+        re.compile(r"^Some case\(s\) failed in batch\.$"),
+    ]
+
     process = None
     try:
         # Start kubectl logs process
@@ -383,6 +392,7 @@ def monitor_pod_logs(
         completed_cases = 0
         success_cases = 0
         failed_cases = 0
+        fatal_error_line = None
 
         # Use two threads: one for reading logs, one for checking pod status
         import threading
@@ -394,12 +404,22 @@ def monitor_pod_logs(
         def read_logs():
             """Thread function to read logs continuously"""
             nonlocal is_success, match_state, completed_cases, success_cases, failed_cases
+            nonlocal fatal_error_line
 
             while process.poll() is None and not match_event.is_set():
                 line = process.stdout.readline()
                 if line:
                     line = line.rstrip("\n")
                     print(line)
+                    # Fail fast when the in-pod run already failed: the unittest
+                    # completion pattern will never show up in this case.
+                    if any(fp.search(line) for fp in fatal_line_patterns):
+                        fatal_error_line = line
+                        logger.error(
+                            f"Fatal error detected in pod logs, stop monitoring: {line}"
+                        )
+                        pod_error_event.set()
+                        return
                     # Check if current line matches expected pattern
                     if match_state < len(patterns) and patterns[match_state].match(
                         line
@@ -501,6 +521,9 @@ def monitor_pod_logs(
                     f"Timeout exceeded, the thread is {timeout} seconds long."
                 )
             time.sleep(0.1)
+
+        if fatal_error_line is not None:
+            raise Exception(f"Fatal error detected in pod logs: {fatal_error_line}")
 
         # Check if pattern was successfully matched
         if not match_event.is_set():
