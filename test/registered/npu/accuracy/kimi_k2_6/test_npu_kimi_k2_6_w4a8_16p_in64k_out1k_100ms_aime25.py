@@ -12,9 +12,13 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=1800,
-    suite="full-8-npu-a3",
+    suite="nightly-pd-mix-2-node",
     nightly=True,
-    disabled="accuracy testcase",
+    npu_multi_node={
+        "deployment": "mix",
+        "node_size": 2,
+        "test_type": "accuracy",
+    },
 )
 
 ENVS = {
