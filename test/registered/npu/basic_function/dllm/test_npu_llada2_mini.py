@@ -32,6 +32,7 @@ _LLADA2_BASE_ARGS = [
     "1",
     "--attention-backend",
     "ascend",
+    "--disable-cuda-graph",
     "--dllm-algorithm",
     "LowConfidence",
     "--dllm-algorithm-config",
@@ -39,7 +40,7 @@ _LLADA2_BASE_ARGS = [
 ]
 
 
-class _LLaDA2MiniBase(CustomTestCase):
+class _LLaDA2MiniServer:
     extra_args = []
     accuracy = 0.88
     speed_threshold = 130
@@ -90,7 +91,7 @@ class _LLaDA2MiniBase(CustomTestCase):
             self.assertGreater(speed, self.speed_threshold)
 
 
-class TestLLaDA2Mini(_LLaDA2MiniBase):
+class TestLLaDA2Mini(_LLaDA2MiniServer, CustomTestCase):
     """Testcase: LLaDA2-mini GSM8K with LowConfidence in synchronous dLLM mode.
 
     [Test Category] Parameter
@@ -102,7 +103,7 @@ class TestLLaDA2Mini(_LLaDA2MiniBase):
     ]
 
 
-class TestLLaDA2MiniFdfo(_LLaDA2MiniBase):
+class TestLLaDA2MiniFdfo(_LLaDA2MiniServer, CustomTestCase):
     """Testcase: LLaDA2-mini GSM8K with LowConfidence and FDFO scheduling.
 
     [Test Category] Parameter
