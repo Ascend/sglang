@@ -15,9 +15,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-800t-16
+    runs-on: linux-aarch64-a3-800t-8
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.0.0-a3
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B070
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,9 +40,9 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models.py"
-            "test/registered/npu/basic_function/pd_disaggregation/test_npu_disaggregation_hybrid_attention.py"
-            "test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models_mtp.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py"
+            #"test/registered/npu/basic_function/pd_disaggregation/test_npu_disaggregation_hybrid_attention.py"
+            #"test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models_mtp.py"
           )
 
           for test_case in "${test_cases[@]}"; do
