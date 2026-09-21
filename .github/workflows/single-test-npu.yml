@@ -5,6 +5,7 @@ on:
   pull_request:
     branches:
       - testcases
+      - testcases-260813
     paths:
       - ".github/workflows/single-test-npu.yml"
 
