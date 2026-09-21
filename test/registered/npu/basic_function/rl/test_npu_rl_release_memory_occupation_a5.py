@@ -38,9 +38,12 @@ def _npu_smi_mem_mb_a5() -> float:
     visible = os.environ.get("ASCEND_RT_VISIBLE_DEVICES") or os.environ.get(
         "ASCEND_VISIBLE_DEVICES"
     )
+    # Docker often mounts davinci0 without setting these; A5 TP=1 defaults to card 0.
     if not visible:
-        raise RuntimeError(
-            "Neither ASCEND_RT_VISIBLE_DEVICES nor ASCEND_VISIBLE_DEVICES is set"
+        visible = "0"
+        logger.info(
+            "ASCEND_RT_VISIBLE_DEVICES/ASCEND_VISIBLE_DEVICES unset; "
+            "defaulting npu-smi query to NPU 0"
         )
     npu_ids = [int(x.strip()) for x in visible.split(",") if x.strip()]
     if not npu_ids:
@@ -139,6 +142,7 @@ class TestReleaseMemoryOccupationNPUA5(CustomTestCase):
             enable_weights_cpu_backup=True,
             mem_fraction_static=0.6,
             tp_size=1,
+            disable_cuda_graph=True,
         )
         try:
             baseline = engine.generate(prompt, sampling_params)["text"]
