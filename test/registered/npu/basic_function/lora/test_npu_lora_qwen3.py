@@ -1,0 +1,53 @@
+# Copyright 2023-2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+import multiprocessing as mp
+import unittest
+
+from sglang.test.ascend.lora_utils import (
+    LORA_MODELS_QWEN3,
+    run_lora_batch_splitting_equivalence_test,
+    run_lora_multiple_batch_on_model_cases,
+)
+from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.test_utils import CustomTestCase
+
+register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
+
+
+class TestLoRAQwen3(CustomTestCase):
+    """Testcase: LoRA multi-batch and batch-splitting correctness test for Qwen3.
+    Validates LoRA inference with mixed adapter batches and internal batch splitting
+    against HF reference outputs.
+
+    [Test Category] Functionality
+    [Test Target] LoRA multi-batch and batch-splitting on Qwen3
+    """
+
+    def test_ci_lora_models(self):
+        """Test LoRA inference with mixed adapter batches, validated via ROUGE-L against HF reference."""
+        run_lora_multiple_batch_on_model_cases(LORA_MODELS_QWEN3)
+
+    def test_ci_lora_models_batch_splitting(self):
+        """Test internal batch splitting when distinct adapter count exceeds max_loras_per_batch."""
+        run_lora_batch_splitting_equivalence_test(LORA_MODELS_QWEN3)
+
+
+if __name__ == "__main__":
+    try:
+        mp.set_start_method("spawn")
+    except RuntimeError:
+        pass
+
+    unittest.main(warnings="ignore")

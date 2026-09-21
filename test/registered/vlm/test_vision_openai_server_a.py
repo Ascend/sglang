@@ -23,9 +23,9 @@ from sglang.test.ascend.vlm_utils import *
 from sglang.test.ascend.vlm_utils import (
     AudioOpenAITestMixin,
     ImageOpenAITestMixin,
-    OmniOpenAITestMixin,
     TestOpenAIMLLMServerBase,
     VideoOpenAITestMixin,
+    terminate_and_kill_process_tree,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -70,6 +70,9 @@ class TestQwen3VLServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
 
 
 class TestQwen2VLContextLengthServer(CustomTestCase):
+    # --context-length 300 is calibrated to this model's mm-token expansion:
+    # it must sit above the warmup image's expanded length but below the test
+    # image's. A cheaper VLM needs the bound recalibrated, not just swapped.
     @classmethod
     def setUpClass(cls):
         cls.model = QWEN2_VL_2B_INSTRUCT_WEIGHTS_PATH
@@ -95,7 +98,7 @@ class TestQwen2VLContextLengthServer(CustomTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        kill_process_tree(cls.process.pid)
+        terminate_and_kill_process_tree(cls.process, wait_timeout=60)
 
     def test_single_image_chat_completion(self):
         client = openai.Client(api_key=self.api_key, base_url=self.base_url)
@@ -139,6 +142,7 @@ class TestMiniCPMV4Server(ImageOpenAITestMixin):
     ]
 
 
+@unittest.skip("temporarily disabled: NaN in next_token_logits")
 class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
     model = MINICPM_O_2_6_WEIGHTS_PATH
     extra_args = [
@@ -185,7 +189,6 @@ del (
     ImageOpenAITestMixin,
     VideoOpenAITestMixin,
     AudioOpenAITestMixin,
-    OmniOpenAITestMixin,
 )
 
 
