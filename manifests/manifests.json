@@ -4,7 +4,7 @@
       "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B071",
       "dockerfile": "docker/npu_cann9.1.0_python312_a3_B070.Dockerfile",
-      "generated_at": "2026-09-21T09:20:34.994852+00:00",
+      "generated_at": "2026-09-21T09:38:07.528286+00:00",
       "build_args": {
         "CANN_VERSION": "9.1.0",
         "DEVICE_TYPE": "a3",
@@ -19,7 +19,7 @@
         "TORCH_NPU_INDEX_URL": "https://ascend.devcloud.huaweicloud.com/pypi/simple/",
         "SGLANG_TAG": "release/2026930",
         "ASCEND_CANN_PATH": "/usr/local/Ascend/ascend-toolkit",
-        "SGLANG_KERNEL_NPU_TAG": "2026.9.0.post4",
+        "SGLANG_KERNEL_NPU_TAG": "2026.9.0.post5",
         "PIP_INSTALL": "python3 -m pip install --no-cache-dir",
         "MODELSCOPE_VERSION": "",
         "EVALSCOPE_VERSION": ""
