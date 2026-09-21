@@ -36,20 +36,22 @@ QWEN3_5_122B_4P_OTHER_ARGS = [
     8,
     "--dtype",
     "bfloat16",
+    "--mamba-ssm-dtype",
+    "bfloat16",
     "--chunked-prefill-size",
     32768,
     "--disable-radix-cache",
     "--trust-remote-code",
     "--mem-fraction-static",
-    0.87,
+    0.875,
     "--max-running-requests",
-    112,
+    120,
     "--cuda-graph-bs-decode",
     1,
-    4,
     8,
+    13,
     14,
-    16,
+    15,
     "--dp",
     8,
     "--enable-dp-attention",
@@ -59,9 +61,9 @@ QWEN3_5_122B_4P_OTHER_ARGS = [
     "--ep-size",
     8,
     "--stream-interval",
-    64,
+    128,
     "--schedule-conservativeness",
-    0.4,
+    0.37,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -77,8 +79,8 @@ class TestNPUQwen3_5_122B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     other_args = QWEN3_5_122B_4P_OTHER_ARGS
     envs = QWEN3_5_122B_4P_ENVS
     dataset_name = "random-ids"
-    max_concurrency = 224
-    num_prompts = 224
+    max_concurrency = 240
+    num_prompts = 240
     input_len = 2048
     output_len = 32768
     random_range_ratio = 1

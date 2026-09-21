@@ -77,8 +77,8 @@ class TestNPUQwen3_5_35BA3B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     other_args = QWEN3_5_35B_A3B_2K_32K_OTHER_ARGS
     envs = QWEN3_5_35B_A3B_2K_32K_ENVS
     dataset_name = "random-ids"
-    max_concurrency = 256
-    num_prompts = 256
+    max_concurrency = 248
+    num_prompts = 248
     input_len = 2048
     output_len = 32768
     random_range_ratio = 1

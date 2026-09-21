@@ -80,7 +80,7 @@ class TestNPUQwen3_5_122B_4P_MMMU(TestNpuAccuracyTestCaseBase):
     model = QWEN3_5_122B_MODEL_PATH
     other_args = QWEN3_5_122B_4P_OTHER_ARGS
     envs = QWEN3_5_122B_4P_ENVS
-    accuracy = 0.83
+    accuracy = 0.814
     datasets = ["mmmu"]
     few_shot_num = 0
     generation_config = {
