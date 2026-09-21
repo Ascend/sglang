@@ -5,7 +5,6 @@ on:
   pull_request:
     branches:
       - testcases
-      - testcases-260813
     paths:
       - ".github/workflows/single-test-npu.yml"
 
@@ -16,9 +15,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-800t-8
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B070
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,7 +40,9 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/vlm_models/test_npu_vision_openai_server_a.py"
+            #"test/registered/npu/basic_function/pd_disaggregation/test_npu_disaggregation_hybrid_attention.py"
+            #"test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models_mtp.py"
           )
 
           for test_case in "${test_cases[@]}"; do
@@ -50,7 +51,8 @@ jobs:
               exit 1
             fi
           done
-
+          
+          pip install websocket-client websockets uvicorn==0.49.0
           # copy required file from our daily cache
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
