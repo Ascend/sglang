@@ -31,7 +31,7 @@ class TestKimiK3SharedStream(CustomTestCase):
                 current[0] = "main"
 
         hidden = Mock(shape=(2, 4))
-        shared_input = Mock()
+        shared_input = Mock(shape=(2, 4))
         shared_input.record_stream.side_effect = lambda _: record("record_input")
         alt = Mock()
         alt.wait_stream.side_effect = lambda _: record("wait_input")
@@ -65,7 +65,7 @@ class TestKimiK3SharedStream(CustomTestCase):
             tp_size=1,
         )
         with (
-            kimi_k3.get_parallel().override(attn_tp_group=Mock()),
+            kimi_k3.get_parallel().override(attn_tp_group=Mock(world_size=1)),
             patch.object(kimi_k3, "_is_npu", True),
             patch.object(kimi_k3, "get_local_dp_buffer", return_value=shared_input),
             patch.object(

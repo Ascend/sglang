@@ -1232,6 +1232,130 @@ class AscendAttnBackend(AttentionBackend):
         )
         return attn_out.view(-1, layer.tp_q_head_num * layer.v_head_dim)
 
+    def do_cp_mla_attn_fia(
+        self,
+        q: torch.Tensor,
+        q_rope: Optional[torch.Tensor],
+        layer: RadixAttention,
+        forward_batch: ForwardBatch,
+    ) -> torch.Tensor:
+        """Run rank-local zigzag queries against the gathered latent KV pool."""
+        cp_meta = forward_batch.attn_cp_metadata
+        q = q.reshape(-1, layer.tp_q_head_num, self.kv_lora_rank)
+        q_prev, q_next, padding_rows = _split_cp_query_halves(q, cp_meta)
+
+        if q_rope is not None:
+            q_rope = q_rope.reshape(
+                -1, layer.tp_q_head_num, self.qk_rope_head_dim
+            )
+            q_rope_prev, q_rope_next, rope_padding = _split_cp_query_halves(
+                q_rope, cp_meta
+            )
+            if rope_padding != padding_rows:
+                raise ValueError("MLA CP Q and Q-RoPE padding do not match.")
+        else:
+            q_rope_prev = q_rope_next = None
+
+        # FIA's latent-512 + RoPE tiling only accepts power-of-two query head
+        # counts. Heads are independent, so zero padding is exact; discard the
+        # extra output heads immediately after each FIA call.
+        fia_q_head_num = self.q_head_num_padding or layer.tp_q_head_num
+        if fia_q_head_num < layer.tp_q_head_num:
+            raise ValueError(
+                "MLA FIA query-head padding is smaller than the layer head count: "
+                f"padding={fia_q_head_num}, heads={layer.tp_q_head_num}."
+            )
+
+        def pad_heads(x: Optional[torch.Tensor], head_dim: int):
+            if x is None or fia_q_head_num == layer.tp_q_head_num:
+                return x
+            return torch.cat(
+                [
+                    x,
+                    x.new_zeros(
+                        x.shape[0], fia_q_head_num - layer.tp_q_head_num, head_dim
+                    ),
+                ],
+                dim=1,
+            ).contiguous()
+
+        q_prev = pad_heads(q_prev.contiguous(), self.kv_lora_rank)
+        q_next = pad_heads(q_next.contiguous(), self.kv_lora_rank)
+        q_rope_prev = pad_heads(q_rope_prev, self.qk_rope_head_dim)
+        q_rope_next = pad_heads(q_rope_next, self.qk_rope_head_dim)
+
+        kv_cache = self.token_to_kv_pool.get_key_buffer(layer.layer_id)
+        rope_cache = self.token_to_kv_pool.get_value_buffer(layer.layer_id)
+        if is_fia_nz():
+            kv_cache = _reshape_kv_for_fia_nz(
+                kv_cache, layer.tp_k_head_num, self.kv_lora_rank, self.page_size
+            )
+            rope_cache = _reshape_kv_for_fia_nz(
+                rope_cache,
+                layer.tp_k_head_num,
+                self.qk_rope_head_dim,
+                self.page_size,
+            )
+        else:
+            kv_cache = kv_cache.view(
+                -1, self.page_size, layer.tp_k_head_num * self.kv_lora_rank
+            )
+            rope_cache = rope_cache.view(
+                -1,
+                self.page_size,
+                layer.tp_k_head_num * self.qk_rope_head_dim,
+            )
+
+        def run_half(
+            q_half: torch.Tensor,
+            q_rope_half: Optional[torch.Tensor],
+            q_lens: List[int],
+            kv_lens: List[int],
+        ) -> torch.Tensor:
+            rope_kwargs = (
+                {"query_rope": q_rope_half, "key_rope": rope_cache}
+                if q_rope_half is not None
+                else {}
+            )
+            output, _ = torch.ops.npu.npu_fused_infer_attention_score(
+                q_half,
+                kv_cache,
+                kv_cache,
+                block_table=self.forward_metadata.block_tables,
+                block_size=self.page_size,
+                num_heads=fia_q_head_num,
+                num_key_value_heads=layer.tp_k_head_num,
+                input_layout="TND",
+                atten_mask=self.fia_mask,
+                sparse_mode=3,
+                next_tokens=0,
+                scale=layer.scaling,
+                actual_seq_lengths=np.cumsum(q_lens).tolist(),
+                actual_seq_lengths_kv=kv_lens,
+                **rope_kwargs,
+            )
+            return output[:, : layer.tp_q_head_num, :]
+
+        output = torch.cat(
+            [
+                run_half(
+                    q_prev,
+                    q_rope_prev,
+                    cp_meta.actual_seq_q_prev_list,
+                    cp_meta.kv_len_prev_list,
+                ),
+                run_half(
+                    q_next,
+                    q_rope_next,
+                    cp_meta.actual_seq_q_next_list,
+                    cp_meta.kv_len_next_list,
+                ),
+            ],
+            dim=0,
+        )
+        output = _restore_cp_query_padding(output, padding_rows)
+        return output.reshape(-1, layer.tp_q_head_num * self.kv_lora_rank)
+
     def _get_mla_cp_ring_exchange_buffer(
         self, packed_kv: torch.Tensor, slot: int
     ) -> torch.Tensor:
@@ -2686,17 +2810,24 @@ class AscendAttnBackend(AttentionBackend):
                         -1, layer.tp_q_head_num * layer.v_head_dim
                     )
         elif is_cp_mode:
-            if not use_npu_mla_cp_ring(forward_batch):
-                raise NotImplementedError(
-                    "Ascend MLA prefill CP is implemented for Kimi-K3 ring only."
-                )
-            if save_kv_cache:
-                raise ValueError("Kimi-K3 MLA CP ring owns its KV cache writes.")
-            if not hasattr(forward_batch, "mla_cp_local_k") or not hasattr(
-                forward_batch, "mla_cp_local_k_rope"
-            ):
-                raise ValueError("Kimi-K3 MLA CP ring local KV is missing.")
-            return self.do_cp_mla_attn_ring(q, k, v, layer, forward_batch)
+            if use_npu_mla_cp_ring(forward_batch):
+                if save_kv_cache:
+                    raise ValueError("Kimi-K3 MLA CP ring owns its KV cache writes.")
+                if not hasattr(forward_batch, "mla_cp_local_k") or not hasattr(
+                    forward_batch, "mla_cp_local_k_rope"
+                ):
+                    raise ValueError("Kimi-K3 MLA CP ring local KV is missing.")
+                return self.do_cp_mla_attn_ring(q, k, v, layer, forward_batch)
+
+            # Unsupported Ring shapes keep PCP enabled by using the established
+            # all-gather + paged-FIA path. The MLA prepare stage has already
+            # rebuilt k/k_rope into natural global token order.
+            if k is None or k_rope is None:
+                raise ValueError("MLA prefill CP requires latent K and K-RoPE")
+            self.token_to_kv_pool.set_kv_buffer(
+                layer, forward_batch.out_cache_loc, k, k_rope
+            )
+            return self.do_cp_mla_attn_fia(q, q_rope, layer, forward_batch)
         elif sum(forward_batch.extend_prefix_lens_cpu) > 0:
             # This branch adds support for prefix cache for GLM-4.7-Flash.
             # When using the MLA architecture, if qk head dim equals v head dim and the head count is not a power of 2,

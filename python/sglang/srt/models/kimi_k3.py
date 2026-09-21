@@ -999,11 +999,9 @@ class KimiK3MoE(nn.Module):
             return self._latent_norm(latent)
         return self._latent_norm(tensor_model_parallel_all_reduce(latent))
 
-    def _forward_shared_experts(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        """Run TP-sharded shared experts while DeepEP tokens stay scattered."""
-        if not self._shared_experts_attn_tp_comm:
-            return self.shared_experts(hidden_states)
-
+    def _gather_shared_expert_input(
+        self, hidden_states: torch.Tensor
+    ) -> torch.Tensor:
         group = get_parallel().attn_tp_group
         # SP-MoE presents one contiguous token shard per attention-TP rank;
         # the DP local buffer is the full reassembled per-replica batch. CP-v2
@@ -1020,9 +1018,19 @@ class KimiK3MoE(nn.Module):
             gathered_hidden_states = hidden_states.new_empty(
                 (required_rows, *hidden_states.shape[1:])
             )
-        else:
+        elif gathered_hidden_states.shape[0] > required_rows:
             gathered_hidden_states = gathered_hidden_states[:required_rows]
         attn_tp_all_gather_into_tensor(gathered_hidden_states, hidden_states)
+        return gathered_hidden_states
+
+    def _forward_shared_experts(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        """Run TP-sharded shared experts while DeepEP tokens stay scattered."""
+        if not self._shared_experts_attn_tp_comm:
+            return self.shared_experts(hidden_states)
+
+        gathered_hidden_states = KimiK3MoE._gather_shared_expert_input(
+            self, hidden_states
+        )
 
         gathered_shared_output = self.shared_experts(gathered_hidden_states)
         shared_output = torch.empty_like(hidden_states)
@@ -1058,9 +1066,9 @@ class KimiK3MoE(nn.Module):
                 # stream only executes the shared-expert MLP.
                 shared_input = hidden_states
                 if self._shared_experts_attn_tp_comm:
-                    group = get_parallel().attn_tp_group
-                    shared_input = get_local_dp_buffer(group)
-                    attn_tp_all_gather_into_tensor(shared_input, hidden_states)
+                    shared_input = KimiK3MoE._gather_shared_expert_input(
+                        self, hidden_states
+                    )
                 shared_input.record_stream(self.alt_stream)
                 self.alt_stream.wait_stream(current_stream)
                 with torch.cuda.stream(self.alt_stream):
@@ -1484,7 +1492,7 @@ class KimiK3DeltaAttention(nn.Module):
         # experts; attention linears resolve to UnquantizedLinearMethod, so a
         # non-None quant_config is fine for the merged projection.
         self.do_fuse_qkvbfg = (
-            self.quant_config is None and self.attn_tp_size == self.tp_size
+            quant_config is None and self.attn_tp_size == self.tp_size
         )
 
         if self.use_full_rank_gate:

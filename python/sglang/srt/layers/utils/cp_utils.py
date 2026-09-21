@@ -431,12 +431,16 @@ def cp_all_gather_reorganized_into_tensor(input_tensor, cp_size, forward_batch, 
             input_tensor_full, forward_batch.attn_cp_metadata.max_rank_len, dim=0
         )
     )
+    metadata = forward_batch.attn_cp_metadata
+    per_rank_token = (
+        metadata.per_rank_logical_token
+        if getattr(metadata, "per_rank_logical_token", None) is not None
+        else metadata.per_rank_actual_token
+    )
     outputs = torch.cat(
         [
             outputs_list_max[index][:per_rank_len]
-            for index, per_rank_len in enumerate(
-                forward_batch.attn_cp_metadata.per_rank_actual_token
-            )
+            for index, per_rank_len in enumerate(per_rank_token)
         ],
         dim=0,
     )
@@ -477,12 +481,16 @@ def cp_all_gather_reorganized_into_tensor_kv_cache(
             input_tensor_full, forward_batch.attn_cp_metadata.max_rank_len, dim=0
         )
     )
+    metadata = forward_batch.attn_cp_metadata
+    per_rank_token = (
+        metadata.per_rank_logical_token
+        if getattr(metadata, "per_rank_logical_token", None) is not None
+        else metadata.per_rank_actual_token
+    )
     outputs = torch.cat(
         [
             outputs_list_max[index][:per_rank_len]
-            for index, per_rank_len in enumerate(
-                forward_batch.attn_cp_metadata.per_rank_actual_token
-            )
+            for index, per_rank_len in enumerate(per_rank_token)
         ],
         dim=0,
     )
@@ -588,7 +596,6 @@ def cp_all_gather_rerange_output(input_tensor, cp_size, forward_batch, stream):
         )
         return output_tensor
 
-    # TODO: Do we need to remove the padding here?
     bs_seq_len, hidden_size = input_tensor.shape
     output_tensor = cp_all_gather_reorganized_into_tensor(
         input_tensor,
