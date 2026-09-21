@@ -12,6 +12,8 @@ from sglang.test.otel_collector import LightweightOtlpCollector
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=120, suite="validate-batch-npu", nightly=True)
+
 
 # Pre-computed expected span names for each trace level
 EXPECTED_SPANS_LEVEL_1 = [

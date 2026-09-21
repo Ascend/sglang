@@ -8,6 +8,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-batch-npu", nightly=True)
+
 
 
 class TestDeepEpDeepseekV32(GSM8KAscendMixin, TestMMLU, CustomTestCase):

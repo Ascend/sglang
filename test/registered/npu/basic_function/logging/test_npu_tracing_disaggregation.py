@@ -16,6 +16,8 @@ from sglang.test.test_utils import (
 
 # CI registration - PD disaggregation requires 2 NPUs
 register_npu_ci(est_time=120, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=120, suite="validate-batch-npu", nightly=True)
+
 
 
 class TestNPUTracingDisaggregation(TestDisaggregationBase):
