@@ -15,7 +15,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_cuda_ci(est_time=100, stage="base-b", runner_config="1-gpu-large")
+register_cuda_ci(est_time=197, stage="base-b", runner_config="1-gpu-large")
 # Backend-specific: Ascend uses a local model mirror and its native
 # attention backend, while sharing the protocol assertions below.
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
