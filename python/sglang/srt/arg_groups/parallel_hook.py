@@ -125,6 +125,53 @@ def handle_context_parallelism(server_args: Any):
     )
 
 
+def handle_context_parallel_kernel_compatibility(server_args: Any) -> None:
+    """Fail closed to ordinary TP when a model-specific PCP kernel is absent."""
+    cfg = resolving_view(server_args)
+    if not (
+        cfg.device.startswith("npu") and cfg.enable_prefill_cp and cfg.attn_cp_size > 1
+    ):
+        return
+    if parse_connector_type(cfg.model_path) == ConnectorType.INSTANCE:
+        return
+
+    model_config = model_config_of(server_args)
+    hf_config = model_config.hf_config
+    architectures = getattr(hf_config, "architectures", None) or []
+    if not (
+        getattr(hf_config, "model_type", None) == "kimi_k3"
+        or any(
+            architecture in ("KimiK3ForConditionalGeneration", "KimiLinearForCausalLM")
+            for architecture in architectures
+        )
+    ):
+        return
+
+    from sglang.srt.hardware_backend.npu.kda_kernel_capabilities import (
+        check_kda_fla_cp_kernel_compatibility,
+    )
+
+    compatible, reason = check_kda_fla_cp_kernel_compatibility()
+    if compatible:
+        return
+
+    declare_resolution(
+        server_args,
+        "handle_context_parallel_kernel_compatibility",
+        attn_cp_size=1,
+        cp_strategy=None,
+        enable_dsa_prefill_context_parallel=False,
+        enable_prefill_context_parallel=False,
+        enable_prefill_cp=False,
+    )
+    logger.warning(
+        "Kimi-K3 NPU prefill context parallelism is disabled because the "
+        "installed sgl-kernel-npu is incompatible: %s. Falling back to "
+        "ordinary TP/DP with attn_cp_size=1.",
+        reason,
+    )
+
+
 def handle_dcp_validation(server_args: Any):
     cfg = resolving_view(server_args)
     if cfg.dcp_size < 1:

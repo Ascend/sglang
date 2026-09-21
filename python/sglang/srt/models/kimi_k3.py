@@ -77,6 +77,7 @@ from sglang.srt.layers.quantization.fp8_utils import block_quant_dequant
 from sglang.srt.layers.quantization.modelslim.modelslim import ModelSlimConfig
 from sglang.srt.layers.radix_linear_attention import RadixLinearAttention
 from sglang.srt.layers.utils import PPMissingLayer, get_layer_id
+from sglang.srt.layers.utils.cp_utils import is_mla_prefill_cp_enabled
 from sglang.srt.layers.vocab_parallel_embedding import (
     ParallelLMHead,
     VocabParallelEmbedding,
@@ -998,16 +999,36 @@ class KimiK3MoE(nn.Module):
             return self._latent_norm(latent)
         return self._latent_norm(tensor_model_parallel_all_reduce(latent))
 
+    def _gather_shared_expert_input(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        group = get_parallel().attn_tp_group
+        # SP-MoE presents one contiguous token shard per attention-TP rank;
+        # the DP local buffer is the full reassembled per-replica batch. CP-v2
+        # shards the DP-local batch after that buffer length was published, so
+        # the pooled buffer can be larger than this CP rank's attention-TP
+        # gather. HCCL requires the output to contain exactly world_size input
+        # tensors; use only the active rows rather than the full DP capacity.
+        required_rows = hidden_states.shape[0] * group.world_size
+        gathered_hidden_states = get_local_dp_buffer(group)
+        if (
+            gathered_hidden_states.shape[0] < required_rows
+            or gathered_hidden_states.shape[1:] != hidden_states.shape[1:]
+        ):
+            gathered_hidden_states = hidden_states.new_empty(
+                (required_rows, *hidden_states.shape[1:])
+            )
+        elif gathered_hidden_states.shape[0] > required_rows:
+            gathered_hidden_states = gathered_hidden_states[:required_rows]
+        attn_tp_all_gather_into_tensor(gathered_hidden_states, hidden_states)
+        return gathered_hidden_states
+
     def _forward_shared_experts(self, hidden_states: torch.Tensor) -> torch.Tensor:
         """Run TP-sharded shared experts while DeepEP tokens stay scattered."""
         if not self._shared_experts_attn_tp_comm:
             return self.shared_experts(hidden_states)
 
-        group = get_parallel().attn_tp_group
-        # SP-MoE presents one contiguous token shard per attention-TP rank;
-        # the DP local buffer is the full reassembled per-replica batch.
-        gathered_hidden_states = get_local_dp_buffer(group)
-        attn_tp_all_gather_into_tensor(gathered_hidden_states, hidden_states)
+        gathered_hidden_states = KimiK3MoE._gather_shared_expert_input(
+            self, hidden_states
+        )
 
         gathered_shared_output = self.shared_experts(gathered_hidden_states)
         shared_output = torch.empty_like(hidden_states)
@@ -1043,9 +1064,9 @@ class KimiK3MoE(nn.Module):
                 # stream only executes the shared-expert MLP.
                 shared_input = hidden_states
                 if self._shared_experts_attn_tp_comm:
-                    group = get_parallel().attn_tp_group
-                    shared_input = get_local_dp_buffer(group)
-                    attn_tp_all_gather_into_tensor(shared_input, hidden_states)
+                    shared_input = KimiK3MoE._gather_shared_expert_input(
+                        self, hidden_states
+                    )
                 shared_input.record_stream(self.alt_stream)
                 self.alt_stream.wait_stream(current_stream)
                 with torch.cuda.stream(self.alt_stream):
@@ -1468,9 +1489,7 @@ class KimiK3DeltaAttention(nn.Module):
         # For the full-rank gate (K3) the checkpoint quantizes only the MoE
         # experts; attention linears resolve to UnquantizedLinearMethod, so a
         # non-None quant_config is fine for the merged projection.
-        self.do_fuse_qkvbfg = (
-            self.quant_config is None and self.attn_tp_size == self.tp_size
-        )
+        self.do_fuse_qkvbfg = quant_config is None and self.attn_tp_size == self.tp_size
 
         if self.use_full_rank_gate:
             # Fuse only the alignment-friendly wide projections [q, k, v, g]
@@ -1947,6 +1966,7 @@ class KimiK3MLAAttention(DeepseekV2AttentionMLA):
         # The fused Ascend split+RMSNorm path is not numerically equivalent for
         # Kimi-K3. Other MLA models retain the existing fused fast path.
         self._disable_npu_fused_split_qk_norm = True
+        self._use_npu_mla_cp_ring = True
         super().__init__(
             layer_id=layer_idx,
             hidden_size=config.hidden_size,
@@ -1959,6 +1979,7 @@ class KimiK3MLAAttention(DeepseekV2AttentionMLA):
             v_head_dim=config.v_head_dim,
             q_lora_rank=config.q_lora_rank,
             kv_lora_rank=config.kv_lora_rank,
+            mla_enable_prefill_cp=is_mla_prefill_cp_enabled(),
             skip_rope=True,
             reduce_results=not self.all_reduce_fusion,
             alt_stream=alt_stream,
@@ -2405,7 +2426,20 @@ class KimiK3DecoderLayer(nn.Module):
         # output back; padded rows are discarded downstream.
         num_padded = hidden_states.shape[0]
         num_real = num_padded
-        if self._trim_padded_attn and forward_batch.forward_mode.is_extend():
+        cp_metadata = forward_batch.attn_cp_metadata
+        if cp_metadata is not None:
+            # CP-v2 pads every rank to a common physical row count for its
+            # collectives. KDA/MLA attention metadata, including causal-conv
+            # query_start_loc, covers only this rank's logical zigzag rows.
+            # Never feed the rank-local alignment tail into attention or its
+            # KV/state updates.
+            per_rank_tokens = (
+                cp_metadata.per_rank_logical_token or cp_metadata.per_rank_actual_token
+            )
+            num_real = min(
+                int(per_rank_tokens[get_parallel().attn_cp_rank]), num_padded
+            )
+        elif self._trim_padded_attn and forward_batch.forward_mode.is_extend():
             extend_lens = forward_batch.extend_seq_lens_cpu
             if extend_lens is not None:
                 num_real = min(int(sum(extend_lens)), num_padded)
@@ -2723,7 +2757,14 @@ class KimiK3LinearModel(nn.Module):
         forward_batch: ForwardBatch,
         inputs_embeds: torch.Tensor | None = None,
         pp_proxy_tensors: Optional[PPProxyTensors] = None,
+        input_embeds: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        if input_embeds is not None:
+            if inputs_embeds is not None:
+                raise ValueError(
+                    "Only one of input_embeds and inputs_embeds may be provided."
+                )
+            inputs_embeds = input_embeds
         if get_pp_group().is_first_rank:
             if inputs_embeds is not None:
                 hidden_states = inputs_embeds
@@ -3370,6 +3411,22 @@ class KimiK3ForConditionalGeneration(nn.Module):
     @property
     def model(self):
         return self.language_model
+
+    @property
+    def logits_processor(self):
+        return self.language_model.logits_processor
+
+    @property
+    def capture_aux_hidden_states(self):
+        return self.language_model.capture_aux_hidden_states
+
+    @property
+    def pp_group(self):
+        return self.language_model.pp_group
+
+    def get_context_parallel_model(self):
+        """Return the text backbone used between CP shard and gather."""
+        return self.language_model.model
 
     def __setattr__(self, name, value):
         if name == "model":

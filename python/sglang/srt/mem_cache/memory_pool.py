@@ -138,6 +138,14 @@ def get_tensor_size_bytes(t: Union[torch.Tensor, List[torch.Tensor]]):
     return np.prod(t.shape) * t.dtype.itemsize
 
 
+def _use_npu_kda_pcp_state_layout(cache_params: BaseLinearStateParams) -> bool:
+    """Use the contiguous [H, K, V] state layout only for active NPU PCP."""
+    if not (_is_npu and cache_params.is_kda):
+        return False
+    parallel = get_parallel()
+    return bool(parallel.enable_prefill_context_parallel and parallel.attn_cp_size > 1)
+
+
 def _set_kv_buffer_impl(
     k: torch.Tensor,
     v: torch.Tensor,
@@ -530,6 +538,7 @@ class MambaPool:
 
         self.size = size
         self.device = device
+        self.kda_state_key_value_layout = _use_npu_kda_pcp_state_layout(cache_params)
         self.debug_memory_pool = envs.SGLANG_DEBUG_MEMORY_POOL.get()
         self.enable_linear_replayssm = enable_linear_replayssm
         self.linear_replayssm_cache_len = linear_replayssm_cache_len
@@ -718,14 +727,29 @@ class MambaPool:
                         device=device,
                     )
 
+            if self.kda_state_key_value_layout:
+                # FLA PCP composes recurrent states in [H, K, V]. Reinterpret
+                # the allocation as a contiguous row-major [K, V] matrix only
+                # for a service whose effective topology enables PCP. PCP-off
+                # keeps the established Ascend [H, V, K] cache contract.
+                temporal_state_shape = (
+                    *temporal_state_shape[:-2],
+                    temporal_state_shape[-1],
+                    temporal_state_shape[-2],
+                )
+                temporal_state = temporal_state.view(
+                    *temporal_state.shape[:-3],
+                    *temporal_state_shape,
+                )
+
             if speculative_num_draft_tokens is not None:
-                if _is_npu:
-                    temporal_state = temporal_state.transpose(-1, -2)
+                if _is_npu and not self.kda_state_key_value_layout:
                     temporal_state_shape = (
                         *temporal_state_shape[:-2],
                         temporal_state_shape[-1],
                         temporal_state_shape[-2],
                     )
+                    temporal_state = temporal_state.transpose(-1, -2)
                 # Cache intermediate SSM states per draft token during target verify
                 # Shape: [num_layers, size + 1, speculative_num_draft_tokens, HV, K, V]
                 #
@@ -3772,7 +3796,18 @@ class HybridLinearKVPool(KVCache):
     def get_kv_layer_ids(self):
         """Global layer ids aligned with the full-attention KV buffers."""
         layer_ids = list(self.full_attention_layer_id_mapping)
-        return layer_ids if self.use_mla else layer_ids * 2
+        if not layer_ids:
+            return []
+        num_entries = len(self.full_kv_pool.get_contiguous_buf_infos()[0])
+        if num_entries % len(layer_ids) != 0:
+            raise RuntimeError(
+                "Hybrid KV buffer count must be divisible by its full-attention "
+                f"layer count, got buffers={num_entries}, layers={len(layer_ids)}."
+            )
+        # Most MLA pools have one entry per layer and MHA pools have K/V
+        # entries. NPU MLA keeps latent K and K-RoPE as two separate groups,
+        # so derive the multiplicity from the concrete backing pool.
+        return layer_ids * (num_entries // len(layer_ids))
 
     def get_state_buf_infos(self):
         mamba_data_ptrs, mamba_data_lens, mamba_item_lens = (
