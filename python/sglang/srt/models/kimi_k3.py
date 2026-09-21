@@ -999,9 +999,7 @@ class KimiK3MoE(nn.Module):
             return self._latent_norm(latent)
         return self._latent_norm(tensor_model_parallel_all_reduce(latent))
 
-    def _gather_shared_expert_input(
-        self, hidden_states: torch.Tensor
-    ) -> torch.Tensor:
+    def _gather_shared_expert_input(self, hidden_states: torch.Tensor) -> torch.Tensor:
         group = get_parallel().attn_tp_group
         # SP-MoE presents one contiguous token shard per attention-TP rank;
         # the DP local buffer is the full reassembled per-replica batch. CP-v2
@@ -1491,9 +1489,7 @@ class KimiK3DeltaAttention(nn.Module):
         # For the full-rank gate (K3) the checkpoint quantizes only the MoE
         # experts; attention linears resolve to UnquantizedLinearMethod, so a
         # non-None quant_config is fine for the merged projection.
-        self.do_fuse_qkvbfg = (
-            quant_config is None and self.attn_tp_size == self.tp_size
-        )
+        self.do_fuse_qkvbfg = quant_config is None and self.attn_tp_size == self.tp_size
 
         if self.use_full_rank_gate:
             # Fuse only the alignment-friendly wide projections [q, k, v, g]

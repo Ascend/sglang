@@ -1245,9 +1245,7 @@ class AscendAttnBackend(AttentionBackend):
         q_prev, q_next, padding_rows = _split_cp_query_halves(q, cp_meta)
 
         if q_rope is not None:
-            q_rope = q_rope.reshape(
-                -1, layer.tp_q_head_num, self.qk_rope_head_dim
-            )
+            q_rope = q_rope.reshape(-1, layer.tp_q_head_num, self.qk_rope_head_dim)
             q_rope_prev, q_rope_next, rope_padding = _split_cp_query_halves(
                 q_rope, cp_meta
             )
