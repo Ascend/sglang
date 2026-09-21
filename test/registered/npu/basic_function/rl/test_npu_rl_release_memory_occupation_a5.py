@@ -29,7 +29,7 @@ logger.addHandler(_handler)
 logger.propagate = False
 
 # 1B weights ~2 GB plus the mem_fraction_static=0.6 KV pool on a 96 GB die.
-_MIN_DELTA_SMI_RELEASE_ALL_MB = 10000
+_MIN_DELTA_SMI_RELEASE_ALL_MB = 5000
 _A5_HBM_CAPACITY_MB = 96 * 1024
 
 
