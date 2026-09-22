@@ -83,9 +83,6 @@ jobs:
           outputs: ${{ github.repository == 'Ascend/sglang' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
-          # 复用 GitHub Actions 缓存，二次构建可跳过大部分层
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             SGLANG_KERNEL_NPU_TAG=2026.9.0.post5
             CANN_VERSION=9.1.0
