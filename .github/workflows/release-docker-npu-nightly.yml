@@ -74,8 +74,8 @@ jobs:
           outputs: ${{ github.repository == 'Ascend/sglang' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
-          cache-from: type=gha,scope=${{ matrix.device_type }}-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.device_type }}-${{ matrix.platform }}
+          cache-from: type=registry,ref=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cache-${{ matrix.device_type }}-${{ matrix.platform }}
+          cache-to: type=registry,ref=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cache-${{ matrix.device_type }}-${{ matrix.platform }},mode=max
           build-args: |
             SGLANG_KERNEL_NPU_TAG=2026.9.0.post5
             CANN_VERSION=9.1.0
