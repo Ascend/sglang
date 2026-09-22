@@ -73,8 +73,8 @@ jobs:
           outputs: ${{ github.repository == 'Ascend/sglang' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
-          cache-from: type=registry,ref=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cache-${{ matrix.device_type }}-${{ matrix.platform }}
-          cache-to: type=registry,ref=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cache-${{ matrix.device_type }}-${{ matrix.platform }},mode=max
+          # 不使用构建缓存：每轮全量构建，保证 sglang / modelscope 等上游内容一定是最新的。
+          # 代价是构建阶段从「秒级」回到约 8~9 分钟（base 镜像约 100s + apt 约 120s + 各 pip 安装）。
           build-args: |
             SGLANG_KERNEL_NPU_TAG=2026.9.0.post5
             CANN_VERSION=9.1.0
