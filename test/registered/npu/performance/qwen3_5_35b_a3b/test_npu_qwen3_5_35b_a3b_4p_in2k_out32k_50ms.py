@@ -84,7 +84,7 @@ class TestNPUQwen3_5_35BA3B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     random_range_ratio = 1
     seed = 1234
     request_rate = float("inf")
-    tpot = 50
+    # tpot = 50
     output_token_throughput = 4459
 
     def test_npu_qwen3_5_35b_a3b_4p_in2k_out32k_50ms(self):

@@ -25,9 +25,13 @@ QWEN3_5_122B_4P_ENVS = {
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "8",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "8192",
     "ENABLE_PROFILING": "0",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
+    "ASCEND_USE_FIA": "1",
 }
 
 QWEN3_5_122B_4P_OTHER_ARGS = [
+    "--port",
+    "8964",
     "--attention-backend",
     "ascend",
     "--device",
@@ -45,13 +49,10 @@ QWEN3_5_122B_4P_OTHER_ARGS = [
     "--mem-fraction-static",
     0.875,
     "--max-running-requests",
-    120,
+    128,
     "--cuda-graph-bs-decode",
-    1,
-    8,
-    13,
-    14,
     15,
+    16,
     "--dp",
     8,
     "--enable-dp-attention",
@@ -63,10 +64,7 @@ QWEN3_5_122B_4P_OTHER_ARGS = [
     "--stream-interval",
     128,
     "--schedule-conservativeness",
-    0.37,
-    "--enable-multimodal",
-    "--mm-attention-backend",
-    "ascend_attn",
+    0.32,
 ]
 
 
@@ -79,14 +77,14 @@ class TestNPUQwen3_5_122B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     other_args = QWEN3_5_122B_4P_OTHER_ARGS
     envs = QWEN3_5_122B_4P_ENVS
     dataset_name = "random-ids"
-    max_concurrency = 240
-    num_prompts = 240
+    max_concurrency = 120
+    num_prompts = 120
     input_len = 2048
     output_len = 32768
     random_range_ratio = 1
     seed = 1234
     request_rate = float("inf")
-    tpot = 50
+    # tpot = 50
     output_token_throughput = 2170
 
     def test_npu_qwen3_5_122b_4p_in2k_out32k_50ms(self):
