@@ -33,6 +33,7 @@ register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True)
 
 
 class TestLlavaServer(ImageOpenAITestMixin):
+    os.environ.setdefault("REQUEST_TIMEOUT", "40")
     model = LLAVA_ONEVISION_QWEN2_7B_OV_WEIGHTS_PATH
     extra_args = [
         "--attention-backend",
