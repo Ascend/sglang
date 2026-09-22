@@ -5,30 +5,34 @@ on:
     inputs:
       tag_suffix:
         description: 'tag后缀，如 B021, release20260810'
-        required: false
+        required: true
         type: string
-        default: 'nightly'
+      sglang_tag:
+        description: '构建用的 sglang 源码分支/标签（默认 main = 上游 sgl-project/sglang）'
+        required: false
+        default: main
+        type: string
+
+env:
+  # ---- 统一版本口径：tag、基础镜像、kernel 包都由这里驱动，避免多处硬编码不一致 ----
+  CANN_VERSION: "9.1.0"
+  OS: "ubuntu22.04"
+  PYTHON_VERSION: "py3.12"
+  SGLANG_KERNEL_NPU_TAG: "2026.9.0.post5"
+  IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
+  DOCKERFILE: docker/npu.Dockerfile
 
 jobs:
   build:
-    name: build ${{ matrix.platform }}-${{ matrix.device_type }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
+        # 同一个 Dockerfile 覆盖两种设备，差异只通过 DEVICE_TYPE 传入
         include:
           - device_type: a3
-            platform: amd64
-            runner: ubuntu-latest
-          - device_type: a3
-            platform: arm64
-            runner: ubuntu-22.04-arm
           - device_type: 950
-            platform: amd64
-            runner: ubuntu-latest
-          - device_type: 950
-            platform: arm64
-            runner: ubuntu-22.04-arm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,19 +43,22 @@ jobs:
           tool-cache: true
           docker-images: false
 
-      - name: Setup Docker buildx
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}-${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "FULL_TAG=cann${CANN_VERSION}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}" >> "$GITHUB_ENV"
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
-          tags: type=raw,value=${{ env.FULL_TAG }}
+          images: ${{ env.IMAGE }}
+          tags: ${{ env.FULL_TAG }}
 
       - name: Log into SWR
         uses: docker/login-action@v3
@@ -65,74 +72,21 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: docker
-          # 合并后的单份 Dockerfile，a3 / 950 由 DEVICE_TYPE 分支决定
-          file: docker/npu.Dockerfile
-          platforms: linux/${{ matrix.platform }}
+          file: ${{ env.DOCKERFILE }}
+          platforms: linux/arm64,linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           outputs: ${{ github.repository == 'Ascend/sglang' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
-          # 不使用构建缓存：每轮全量构建，保证 sglang / modelscope 等上游内容一定是最新的。
-          # 代价是构建阶段从「秒级」回到约 8~9 分钟（base 镜像约 100s + apt 约 120s + 各 pip 安装）。
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=2026.9.0.post5
-            CANN_VERSION=9.1.0
+            SGLANG_KERNEL_NPU_TAG=${{ env.SGLANG_KERNEL_NPU_TAG }}
+            SGLANG_TAG=${{ github.event.inputs.sglang_tag || 'main' }}
+            CANN_VERSION=${{ env.CANN_VERSION }}
             DEVICE_TYPE=${{ matrix.device_type }}
-
-  merge:
-    name: merge multi-arch manifest
-    needs: build
-    if: ${{ github.repository == 'Ascend/sglang' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        device_type: ["a3", "950"]
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log into SWR
-        uses: docker/login-action@v3
-        with:
-          registry: swr.cn-southwest-2.myhuaweicloud.com
-          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
-          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
-
-      - name: Create multi-arch manifest
-        env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
-        run: |
-          docker buildx imagetools create \
-            -t "${IMAGE}" \
-            "${IMAGE}-amd64" \
-            "${IMAGE}-arm64"
-          # 如果 SWR 或下游拉取端不兼容 OCI index，改用 Docker schema2 manifest list：
-          #   docker manifest create "${IMAGE}" "${IMAGE}-amd64" "${IMAGE}-arm64"
-          #   docker manifest push "${IMAGE}"
-
-  manifest:
-    needs: merge
-    if: ${{ github.repository == 'Ascend/sglang' }}
-    uses: ./.github/workflows/generate-image-manifest.yml
-    secrets: inherit
-    concurrency:
-      # Unique per workflow + matrix leg + tag (shared reusable manifest
-      # workflow; see release-docker-dev.yml).
-      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
-      cancel-in-progress: false
-    strategy:
-      matrix:
-        include:
-          - device_type: a3
-          - device_type: 950
-    with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
-      # 与 build job 用同一份合并后的 Dockerfile
-      dockerfile: docker/npu.Dockerfile
-      build_args: |
-        SGLANG_KERNEL_NPU_TAG=2026.9.0.post5
-        CANN_VERSION=9.1.0
-        DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
-      deploy_pages: 'true'
+            OS=${{ env.OS }}
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          # 这个 Dockerfile 没有用 --mount=type=secret，GITCODE_TOKEN 目前不会被消费；
+          # 如果以后改成从私有仓库 clone 源码，再在这里传 token 并在 Dockerfile 里 mount。
+          secrets: |
+            gitcode_token=${{ secrets.GITCODE_TOKEN }}
