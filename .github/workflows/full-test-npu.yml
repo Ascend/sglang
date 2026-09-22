@@ -254,6 +254,11 @@ jobs:
     name: full-perf-4-qwen3next-validate
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        attempt: [1, 2, 3]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-perf-4-qwen3next-validate
