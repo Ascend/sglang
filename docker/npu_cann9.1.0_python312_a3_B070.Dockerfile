@@ -27,11 +27,20 @@ ARG DEVICE_TYPE
 ARG MODELSCOPE_VERSION=""
 ARG EVALSCOPE_VERSION=""
 
+# MemFabric / MemCache 1.2.1 wheels.
+# 1.2.1 is not published on PyPI (PyPI stops at 1.2.0), so the wheels are pulled from the
+# sglang-npu OBS bucket. These links are presigned and expire on 2027-09-12; when they expire,
+# regenerate them from the bucket and pass the new values with --build-arg, no Dockerfile edit needed.
+ARG MF_VERSION="1.2.1"
+ARG MF_WHEEL_URL_AARCH64="https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732522&Signature=/vRnADjM4r7v392pAygfpiowOMo%3D"
+ARG MF_WHEEL_URL_X86_64="https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732540&Signature=8TKnsDBAihKWkEGcV5/SLkCXVeM%3D"
+ARG MC_WHEEL_URL_AARCH64="https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732457&Signature=xyC5pL2ztyoeIBgsmZ/cB0CFDBU%3D"
+ARG MC_WHEEL_URL_X86_64="https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/memfabric/1.2.1/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1820732498&Signature=0pxMuRqZjSyFaAfTtRBEbKHYmmY%3D"
 
 
 # Later RUN steps source /etc/environment_new, so make sure it exists
 RUN touch /etc/environment_new
- 
+
 WORKDIR /workspace
 
 # Define environments
@@ -183,3 +192,4 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && cd "$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" && ln -sf deep_ep/deep_ep_cpp*.so
 
 CMD ["/bin/bash"]
+
