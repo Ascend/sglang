@@ -65,7 +65,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B071" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B070" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -80,20 +80,6 @@ jobs:
       job_filter: ${{ needs.set-image-config.outputs.job_filter }}
       image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
     secrets: inherit
-
-#   full-4-npu-a2:
-#     name: full-4-npu-a2
-#     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-#     needs: [set-image-config]
-#     uses: ./.github/workflows/_npu-single-node-test-stage.yml
-#     with:
-#       runner: linux-aarch64-a2b3-4
-#       test_type: 'perf'
-#       test_suite: full-4-npu-a2
-#       is_nightly_pipeline_job: true
-#       skip_pr_test_health_check: 'true'
-#       image: ${{ needs.set-image-config.outputs.image_a2 }}
-#       device_type_for_deps: '910b'
 
   full-1-npu-a3:
     name: full-1-npu-a3
@@ -459,5 +445,3 @@ jobs:
             exit 1
           fi
           echo "All nightly test jobs passed"
-
-# rerun trigger 4
