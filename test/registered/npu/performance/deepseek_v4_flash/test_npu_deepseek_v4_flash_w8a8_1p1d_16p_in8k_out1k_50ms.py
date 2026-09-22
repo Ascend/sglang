@@ -24,7 +24,13 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
+    # deepep
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
+    "DEEPEP_HCCL_BUFFSIZE": "2048",
+    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "35",
+    # war barrier
+    "SGLANG_ENABLE_WAR_BARRIER": "1",
+    "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
     # skip gpu branch
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
@@ -36,18 +42,11 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # # ZBAL
-    # "HCCL_BUFFSIZE": "8",
-    # "SGLANG_ZBAL_LOCAL_MEM_SIZE": "62084",
-    # "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    # "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    # "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
-    # "ZBAL_ENABLE_GRAPH": "1",
     # PD disagg
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "60",
-    # DSPARK
-    "SGLANG_RAGGED_VERIFY_MODE": "static",
-    "SGLANG_DSPARK_FAST_KERNEL": "0",
+    # MTP
+    "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
 # Decode node environment variables for DSV4-Flash PD-Sep deployment.
@@ -77,9 +76,10 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # DSPARK
-    "SGLANG_RAGGED_VERIFY_MODE": "static",
-    "SGLANG_DSPARK_FAST_KERNEL": "0",
+    # MTP
+    "SGLANG_ENABLE_SPEC_V2": "1",
+    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_NPU_USE_MULTI_STREAM": "1",
 }
 
 # Prefill node launch arguments for DSV4-Flash PD-Sep.
@@ -102,13 +102,13 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ARGS = [
     "--disaggregation-bootstrap-port",
     8998,
     "--mem-fraction-static",
-    0.62,
+    0.68,
     "--prefill-max-requests",
     6,
     "--max-prefill-tokens",
-    70000,
+    80000,
     "--chunked-prefill-size",
-    -1,
+    131072,
     "--max-running-requests",
     112,
     "--dp-size",
@@ -152,7 +152,7 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ARGS = [
     1,
     "--disable-radix-cache",
     "--chunked-prefill-size",
-    32768,
+    -1,
     "--disaggregation-mode",
     "decode",
     "--disaggregation-transfer-backend",
@@ -181,20 +181,15 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ARGS = [
     36,
     40,
     48,
-    56,
-    # DSPARK configuration.
+    # MTP (EAGLE) configuration.
     "--speculative-algorithm",
-    "DSPARK",
-    "--speculative-draft-model-path",
-    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
-    "--speculative-draft-model-quantization",
-    "modelslim",
-    "--speculative-draft-attention-backend",
-    "ascend",
+    "EAGLE",
+    "--speculative-num-steps",
+    2,
+    "--speculative-eagle-topk",
+    1,
     "--speculative-num-draft-tokens",
-    6,
-    "--speculative-dspark-block-size",
-    5,
+    3,
 ]
 
 # Model config for DSV4-Flash W8A8 1P+1D PD-Sep deployment.
@@ -220,10 +215,10 @@ class TestNPUDeepSeekV4FlashW8A81P1D16PIn8kOut1k50ms(
     dataset_name = "random"
     input_len = 8000
     output_len = 1000
-    num_prompts = 1600
+    num_prompts = 2400
     max_concurrency = 800
     random_range_ratio = 1
-    warmup_requests = 0
+    warmup_requests = 16
     request_rate = float("inf")
     seed = 1
     tpot = 50
