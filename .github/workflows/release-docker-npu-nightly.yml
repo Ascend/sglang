@@ -20,13 +20,13 @@ jobs:
         include:
           - device_type: a3
             platform: amd64
-            runner: ubuntu-latest
+            runner: linux-amd64-cpu-8
           - device_type: a3
             platform: arm64
             runner: ubuntu-22.04-arm
           - device_type: 950
             platform: amd64
-            runner: ubuntu-latest
+            runner: linux-amd64-cpu-8
           - device_type: 950
             platform: arm64
             runner: ubuntu-22.04-arm
