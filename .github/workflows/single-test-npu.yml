@@ -1,5 +1,6 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# test round 1: 1) test_npu_cuda_graph_bs.py - 校验 CUDA Graph decode/prefill 各阶段 bs 参数
+#               2) test_npu_msprobe_dump_config.py - 校验 --msprobe-dump-config 使能 msProbe 并在 eager 模式下 dump
 
 on:
   pull_request:
@@ -18,7 +19,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B070
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,6 +27,35 @@ jobs:
       - name: Check npu info
         run: |
           npu-smi info
+
+      - name: Install dependencies
+        timeout-minutes: 30
+        shell: bash
+        run: |
+          # msprobe (PyPI 包名 mindstudio-probe) 是 --msprobe-dump-config 的运行依赖,
+          # 由 test_npu_msprobe_dump_config.py 使用; 其余依赖 (aiohttp/orjson/requests 等)
+          # 镜像内已自带。
+          if python -c "import msprobe" 2>/dev/null; then
+            echo "msprobe: available, skip install"
+          else
+            # 共享 pip 源列表: 依次尝试, 任一成功即完成安装
+            PIP_INDEXES=(
+              "https://pypi.org/simple/"
+              "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
+              "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
+            )
+            PIP_TRUSTED_HOST=cache-service.nginx-pypi-cache.svc.cluster.local
+            ok=0
+            for index in "${PIP_INDEXES[@]}"; do
+              echo "mindstudio-probe: try via ${index}"
+              if pip install mindstudio-probe --pre --retries 3 --timeout 60 \
+                  -i "${index}" --trusted-host "${PIP_TRUSTED_HOST}"; then
+                ok=1; break
+              fi
+            done
+            [ "${ok}" = "1" ] || { echo "ERROR: failed to install mindstudio-probe"; exit 1; }
+          fi
+          python -c "import msprobe; print('msprobe import ok:', msprobe.__file__)"
 
       - name: Run test
         timeout-minutes: 120
@@ -41,7 +71,8 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/basic_function/optimization_debug_options/test_npu_cuda_graph_bs.py"
+            "test/registered/npu/basic_function/msprobe/test_npu_msprobe_dump_config.py"
           )
 
           for test_case in "${test_cases[@]}"; do
