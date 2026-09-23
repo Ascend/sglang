@@ -418,6 +418,7 @@ jobs:
 #          - name: _qwen3_5_35b_a3b_4p_in2k_out32k_50ms
 #            runner: linux-aarch64-a3-8
 #            test_case: test/registered/npu/performance/qwen3_5_35b_a3b/test_npu_qwen3_5_35b_a3b_4p_in2k_out32k_50ms.py
+#
           - name: qwen3_5_122b_4p_in2k_out32k_50ms
             runner: linux-aarch64-a3-8
             test_case: test/registered/npu/performance/qwen3_5_122b/test_npu_qwen3_5_122b_4p_in2k_out32k_50ms.py
