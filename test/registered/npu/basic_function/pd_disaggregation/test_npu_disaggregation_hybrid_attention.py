@@ -16,6 +16,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-batch-npu", nightly=True)
 
 
 class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
@@ -63,7 +64,6 @@ class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
             other_args=prefill_args,
             env={
                 "ASCEND_USE_FIA": "1",
-                "GDN_USE_MEGA_GDN": "1",
             },
         )
 
@@ -84,7 +84,6 @@ class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
             other_args=decode_args,
             env={
                 "ASCEND_USE_FIA": "1",
-                "GDN_USE_MEGA_GDN": "1",
             },
         )
 

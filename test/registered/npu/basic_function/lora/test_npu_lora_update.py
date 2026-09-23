@@ -858,6 +858,8 @@ ALL_TESTS = (
     + MAX_LOADED_LORAS_TESTS
     + EVICTION_TESTS
 )
+register_npu_ci(est_time=4350, suite="validate-batch-npu", nightly=True)
+
 
 
 class LoRAUpdateTestSessionMode(Enum):
