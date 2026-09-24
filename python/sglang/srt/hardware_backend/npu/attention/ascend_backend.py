@@ -2454,11 +2454,13 @@ class AscendAttnBackend(AttentionBackend):
             if not self.graph_mode:
                 num_token_padding = query.shape[0]
                 query = query[: forward_batch.global_num_token_non_padded_cpu]
-                # Trim DP padding rows so actualSeqLengthsKv matches the
-                # operator's batchSize (TND layout); only target_verify has a
-                # uniform per-request width.
+                # Trim KV rows to the TND request count. Compact verification
+                # has explicit Q boundaries rather than a fixed request width.
                 if forward_batch.forward_mode.is_target_verify():
-                    real_bs = query.shape[0] // self.speculative_num_draft_tokens
+                    if self.forward_metadata.compact_seq_lengths_q is not None:
+                        real_bs = len(self.forward_metadata.compact_seq_lengths_q)
+                    else:
+                        real_bs = query.shape[0] // self.speculative_num_draft_tokens
 
             if self.forward_metadata.seq_lens_cpu_int is None:
                 # Graph mode: bind the Python list, which graph.update can

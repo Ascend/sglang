@@ -34,6 +34,7 @@ from sglang.srt.speculative.dspark_components.dspark_sps import (
     build_uninitialized_sps_table,
 )
 from sglang.srt.speculative.ragged_verify import RaggedVerifyLayout, RaggedVerifyMode
+from sglang.srt.speculative.spec_info import SpeculativeAlgorithm
 from sglang.srt.utils import is_npu
 from sglang.test.ci.ci_register import register_cpu_ci
 from sglang.test.test_utils import CustomTestCase
@@ -181,8 +182,8 @@ class TestNpuCompactMetadata(CustomTestCase):
                 self.assertEqual(batch.seq_lens_cpu.tolist(), expanded_cpu.tolist())
 
     def test_noncompact_metadata_preserves_target_branch_host_lengths(self):
-        # Without a ragged layout, preserve this branch's existing DSpark vs
-        # other-speculative host-length contract and page-boundary behavior.
+        # Keep the merged release's DFlash-family host-length behavior for
+        # batches without a ragged layout, including page-boundary sizing.
         method = _backend_method()
         backend = SimpleNamespace(
             supports_ragged_verify_graph=False,
@@ -195,12 +196,16 @@ class TestNpuCompactMetadata(CustomTestCase):
             use_sliding_window_kv_pool=False,
             device="cpu",
         )
-        for is_dspark in (True, False):
-            with self.subTest(is_dspark=is_dspark):
+        for algorithm, expected, pages in (
+            (SpeculativeAlgorithm.DSPARK, [128, 256], 3),
+            (SpeculativeAlgorithm.DFLASH, [128, 256], 2),
+            (SpeculativeAlgorithm.EAGLE, [136, 264], 3),
+        ):
+            with self.subTest(algorithm=algorithm):
                 batch = SimpleNamespace(
                     forward_mode=ForwardMode.TARGET_VERIFY,
                     spec_info=SimpleNamespace(draft_token_num=8),
-                    spec_algorithm=SimpleNamespace(is_dspark=lambda: is_dspark),
+                    spec_algorithm=algorithm,
                     seq_lens=torch.tensor([120, 248]),
                     seq_lens_cpu=torch.tensor([128, 256]),
                     req_pool_indices=torch.tensor([2, 0]),
@@ -208,9 +213,8 @@ class TestNpuCompactMetadata(CustomTestCase):
                 )
                 method(backend, batch)
                 metadata = backend.forward_metadata
-                expected = [128, 256] if is_dspark else [136, 264]
                 self.assertEqual(metadata.seq_lens_cpu_int.tolist(), expected)
-                self.assertEqual(metadata.block_tables.shape, (2, 3))
+                self.assertEqual(metadata.block_tables.shape, (2, pages))
                 self.assertEqual(metadata.actual_seq_lengths_q.tolist(), [8, 16])
                 self.assertEqual(batch.seq_lens_cpu.tolist(), [128, 256])
 
@@ -233,7 +237,11 @@ class TestNpuCompactExecution(CustomTestCase):
             device="cpu",
         )
         runner = SimpleNamespace(
-            req_to_token_pool=backend.req_to_token_pool, attn_backend=backend
+            req_to_token_pool=backend.req_to_token_pool,
+            attn_backend=backend,
+            model_config=SimpleNamespace(
+                hf_text_config=SimpleNamespace(model_type="glm_moe_dsa")
+            ),
         )
         seen_lengths = []
 
@@ -276,7 +284,9 @@ class TestNpuCompactExecution(CustomTestCase):
 
         injector = Mock()
         executor = dspark_verify.TargetVerifyExecutor(
-            target_worker=SimpleNamespace(forward_batch_generation=target_forward),
+            target_worker=SimpleNamespace(
+                forward_batch_generation=target_forward, model_runner=runner
+            ),
             gamma=3,
             verify_num_draft_tokens=4,
             model_runner=runner,
@@ -457,6 +467,7 @@ class TestNpuCompactExecution(CustomTestCase):
         backend = SimpleNamespace(
             use_mla=False,
             page_size=16,
+            speculative_num_draft_tokens=4,
             graph_mode=False,
             supports_ragged_verify_graph=False,
             is_hybrid_swa=False,

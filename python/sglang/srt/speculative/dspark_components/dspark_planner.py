@@ -303,7 +303,7 @@ class DSparkVerifyPlanner:
         if _is_npu:
             # Ring event readiness can differ across ranks. Never let that
             # choose different token tiers / HCCL collective shapes.
-            draft_input.verify_token_budget = get_tp_group().broadcast_object(
+            draft_input.verify_token_budget = get_parallel().tp_group.broadcast_object(
                 draft_input.verify_token_budget, src=0
             )
         batch.spec_verify_tier_num_tokens = local_verify_tier_num_tokens(
@@ -372,7 +372,7 @@ class DSparkVerifyPlanner:
             resolved=resolved, req_pool_indices_cpu=req_pool_indices_cpu
         )
         if _is_npu:
-            budget = get_tp_group().broadcast_object(budget, src=0)
+            budget = get_parallel().tp_group.broadcast_object(budget, src=0)
         return budget
 
     def resolve_verify_token_budget(
@@ -390,8 +390,8 @@ class DSparkVerifyPlanner:
         if not get_schedule().disable_overlap_schedule:
             return draft_input.verify_token_budget
 
-        # No collective: the budget derives only from the broadcast draft tokens
-        # (via confidence), replicated req_generation, and the static sps table.
+        # NPU synchronizes the budget across TP ranks in compute_budget_sync.
+        # Other devices derive it locally from replicated confidence and state.
         draft_input.verify_token_budget = self.compute_budget_sync(
             confidence=confidence,
             prefix_lens=prefix_lens,

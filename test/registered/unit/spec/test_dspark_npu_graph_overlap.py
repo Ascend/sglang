@@ -170,12 +170,23 @@ def test_npu_runner_uses_token_key_and_stages_preplanned_layout():
     runner.backend.replay.assert_called_once_with((8, "variant"), fb)
 
 
-def test_tp_broadcast_budget_precedes_tier_choice():
+@pytest.mark.parametrize(
+    "is_npu,local_budget,root_budget,expected_budget,expected_tier",
+    [
+        (True, 1, 6, 6, 8),
+        (True, None, 6, 6, 8),
+        (True, 1, None, None, -1),
+        (False, 1, 6, 1, 3),
+    ],
+)
+def test_tp_broadcast_budget_precedes_tier_choice(
+    is_npu, local_budget, root_budget, expected_budget, expected_tier
+):
     planner = dspark_planner.DSparkVerifyPlanner.__new__(
         dspark_planner.DSparkVerifyPlanner
     )
     planner._budget_planner = Mock()
-    planner._budget_from_resolved = Mock(return_value=1)
+    planner._budget_from_resolved = Mock(return_value=local_budget)
     planner._maybe_gather_dp_verify_tier = Mock()
     planner.verify_num_draft_tokens = 8
     planner._schedule_cfg = DSparkScheduleConfig(gamma=7)
@@ -186,14 +197,61 @@ def test_tp_broadcast_budget_precedes_tier_choice():
         is_extend_in_batch=False,
         req_pool_indices_cpu=torch.tensor([2, 5]),
     )
-    group = SimpleNamespace(broadcast_object=Mock(return_value=6))
+    group = SimpleNamespace(broadcast_object=Mock(return_value=root_budget))
     with (
-        patch.object(dspark_planner, "_is_npu", True),
-        patch.object(dspark_planner, "get_tp_group", return_value=group),
+        patch.object(dspark_planner, "_is_npu", is_npu),
+        patch.object(
+            dspark_planner, "get_parallel", return_value=SimpleNamespace(tp_group=group)
+        ) as parallel,
     ):
         planner.prepare_verify_budget(batch, Mock())
-    assert batch.spec_info.verify_token_budget == 6
-    assert batch.spec_verify_tier_num_tokens == 8
+    assert batch.spec_info.verify_token_budget == expected_budget
+    assert batch.spec_verify_tier_num_tokens == expected_tier
+    if is_npu:
+        group.broadcast_object.assert_called_once_with(local_budget, src=0)
+    else:
+        parallel.assert_not_called()
+        group.broadcast_object.assert_not_called()
+
+
+@pytest.mark.parametrize("is_npu", [True, False])
+def test_sync_budget_uses_runtime_tp_group(is_npu):
+    planner = dspark_planner.DSparkVerifyPlanner.__new__(
+        dspark_planner.DSparkVerifyPlanner
+    )
+    planner._budget_planner = Mock()
+    planner._budget_from_resolved = Mock(return_value=1)
+    planner.model_runner = SimpleNamespace(
+        req_to_token_pool=SimpleNamespace(req_generation=torch.tensor([10, 20, 30]))
+    )
+    group = SimpleNamespace(broadcast_object=Mock(return_value=6))
+    draft_input = SimpleNamespace()
+    with (
+        patch.object(dspark_planner, "_is_npu", is_npu),
+        patch.object(
+            dspark_planner, "get_parallel", return_value=SimpleNamespace(tp_group=group)
+        ) as parallel,
+        patch.object(
+            dspark_planner,
+            "get_schedule",
+            return_value=SimpleNamespace(disable_overlap_schedule=True),
+        ),
+    ):
+        budget = planner.resolve_verify_token_budget(
+            draft_input=draft_input,
+            confidence=torch.ones(2, 7),
+            prefix_lens=torch.tensor([11, 22]),
+            req_pool_indices=torch.tensor([2, 0]),
+        )
+    assert budget == (6 if is_npu else 1)
+    assert draft_input.verify_token_budget == budget
+    resolved = planner._budget_from_resolved.call_args.kwargs["resolved"]
+    assert resolved.generation.tolist() == [30, 10]
+    if is_npu:
+        group.broadcast_object.assert_called_once_with(1, src=0)
+    else:
+        parallel.assert_not_called()
+        group.broadcast_object.assert_not_called()
 
 
 def test_gpu_forced_budget_behavior_unchanged():
