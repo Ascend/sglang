@@ -146,7 +146,7 @@ RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-works
     sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
-RUN git clone git@github.com:randgun/vllm-ascend.git -b ops/sfa_v2 && \
+RUN git clone https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
     mkdir -p /usr/local/Ascend/extra-ops && \
     cd vllm-ascend/crsc && \
     mkdir -p build && \
