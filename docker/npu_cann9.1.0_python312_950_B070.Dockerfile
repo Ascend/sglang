@@ -146,6 +146,43 @@ RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-works
     sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
+# Build vllm-ascend custom ops (ops/sfa_v2 branch):
+#   1) csrc 是 CANN ops 工程，交给仓库自带的 build.sh 统一配置/编译/打包，产出 ops 包并安装到 extra-ops
+#   2) 仓库根目录是 vllm_ascend_C (pybind) 工程，产出 vllm_ascend_C*.so 一并拷到 extra-ops
+#   注意：csrc/build 目录只能由一个 CMake 生成器配置。build.sh 在检测到 ninja 时会自动用 Ninja，
+#   所以这里不能先手写一次 cmake（默认 Unix Makefiles），否则会报 "generator : Ninja / Does not match
+#   the generator used previously: Unix Makefiles"。如需保留预编译，请给 build.sh 加 --no-ninja。
+RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
+    mkdir -p /usr/local/Ascend/extra-ops && \
+    . /etc/environment_new && \
+    source /usr/local/Ascend/cann-${CANN_VERSION}/set_env.sh && \
+    cd vllm-ascend/csrc && \
+    mkdir -p build && \
+    bash build.sh \
+      --pkg \
+      --ops="kv_quant_sparse_attn_sharedkv_v2;kv_quant_sparse_attn_sharedkv_v2_metadata" \
+      --soc="ascend950" && \
+    OPS_PKG=$(ls ./build/*ops-transformer*.run | head -n 1) && \
+    echo "== install ops package: ${OPS_PKG}" && \
+    ${OPS_PKG} --install-path=/usr/local/Ascend/extra-ops && \
+    cd .. && \
+    mkdir -p build && \
+    cd build && \
+    cmake .. \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DSOC_VERSION=ascend950 \
+      -DPYTHON_EXECUTABLE=$(which python3) \
+      -DPYTHON_INCLUDE_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))") \
+      -DTORCH_NPU_PATH=$(python3 -c "import torch_npu; print(torch_npu.__path__[0])") \
+      -DCMAKE_PREFIX_PATH=$(python3 -c "import pybind11; print(pybind11.get_cmake_dir())") \
+      -DFETCHCONTENT_BASE_DIR=$(pwd)/../.deps && \
+    make -j$(nproc) && \
+    cp vllm_ascend_C.cpython-312-*.so \
+      /usr/local/Ascend/extra-ops/ && \
+    cd ../.. && \
+    rm -rf vllm-ascend
+
+
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
     source /usr/local/Ascend/cann-${CANN_VERSION}/set_env.sh && \
