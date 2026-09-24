@@ -18,10 +18,20 @@ if TYPE_CHECKING:
 
 class ScheduleVerifyLensTopk:
     @classmethod
-    def execute(cls, *args, **kwargs) -> torch.Tensor:
-        if inputs_on_cuda(*args, **kwargs):
-            return cls.triton(*args, **kwargs)
-        return cls.torch(*args, **kwargs)
+    def execute(
+        cls,
+        *,
+        confidence: torch.Tensor,
+        budget: int,
+        cfg: DSparkScheduleConfig,
+    ) -> torch.Tensor:
+        # transfer_to_npu aliases Tensor.is_cuda to Tensor.is_npu. Check the
+        # actual device first so NPU inputs reach the dedicated implementation.
+        if confidence.device.type == "npu":
+            return cls.torch(confidence=confidence, budget=budget, cfg=cfg)
+        if inputs_on_cuda(confidence):
+            return cls.triton(confidence=confidence, budget=budget, cfg=cfg)
+        return cls.torch(confidence=confidence, budget=budget, cfg=cfg)
 
     @classmethod
     def torch(
@@ -31,6 +41,12 @@ class ScheduleVerifyLensTopk:
         budget: int,
         cfg: DSparkScheduleConfig,
     ) -> torch.Tensor:
+        if confidence.device.type == "npu":
+            from sglang.srt.hardware_backend.npu.attention.dspark_compact import (
+                schedule_verify_lens_npu,
+            )
+
+            return schedule_verify_lens_npu(confidence, budget=budget, cfg=cfg)
         return schedule_verify_lens_topk(confidence=confidence, budget=budget, cfg=cfg)
 
     @classmethod

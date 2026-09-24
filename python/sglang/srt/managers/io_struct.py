@@ -2101,8 +2101,16 @@ class GetInternalStateReqOutput(BaseReq, kw_only=True):
 
 
 class SetInternalStateReq(BaseReq, kw_only=True):
-    # Only numeric scheduler knobs are accepted (see Scheduler.set_internal_state).
-    server_args: Dict[str, Union[int, float]]
+    # DSpark uses null to clear a forced budget; other knobs remain numeric.
+    server_args: Dict[str, Optional[Union[int, float]]]
+
+    def __post_init__(self):
+        for name, value in self.server_args.items():
+            if value is None and name != "dspark_force_budget_frac":
+                raise ValueError(
+                    "null is only supported for dspark_force_budget_frac, "
+                    f"got {name!r}."
+                )
 
 
 class SetInternalStateReqOutput(BaseReq, kw_only=True):

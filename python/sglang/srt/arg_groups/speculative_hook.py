@@ -696,6 +696,12 @@ def _handle_dspark(server_args: ServerArgs) -> None:
     )
 
     ragged_mode = read_ragged_verify_mode()
+    if _is_npu:
+        from sglang.srt.hardware_backend.npu.attention.dspark_compact import (
+            validate_npu_dspark_compact,
+        )
+
+        validate_npu_dspark_compact(cfg, ragged_mode.value)
     if (
         cfg.speculative_dspark_align_verify_tokens_to_graph_tier
         and ragged_mode is not RaggedVerifyMode.COMPACT

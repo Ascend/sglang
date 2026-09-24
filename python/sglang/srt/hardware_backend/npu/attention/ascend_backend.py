@@ -10,10 +10,14 @@ from sgl_kernel_npu.attention.sinks_attention import (
     attention_sinks_triton,
 )
 
-from sglang.srt.configs.model_config import AttentionArch
+from sglang.srt.configs.model_config import AttentionArch, is_deepseek_dsa
 from sglang.srt.dllm.config import DllmConfig
 from sglang.srt.hardware_backend.npu.attention.ascend_torch_native_backend import (
     AscendTorchNativeAttnBackend,
+)
+from sglang.srt.hardware_backend.npu.attention.dspark_compact import (
+    NpuCompactGraphMetadata,
+    build_compact_verify_metadata,
 )
 from sglang.srt.hardware_backend.npu.attention.mla_preprocess import (
     is_fia_nz,
@@ -93,6 +97,8 @@ class ForwardMetadata:
     seq_lens_list_cumsum: Optional[List[int]] = None
     seq_lens: Optional[torch.Tensor] = None
     actual_seq_lengths_q: Optional[torch.Tensor] = None
+    # Host TND query ends, populated once per eager DSpark compact batch.
+    compact_seq_lengths_q: Optional[List[int]] = None
     actual_seq_lengths_q_pa: Optional[torch.Tensor] = None
     # CPU mirror of actual_seq_lengths_q_pa for the host metadata op
     # (torch.ops.npu.sparse_attn_sharedkv_metadata_host reads CPU int32 inputs).
@@ -313,6 +319,9 @@ class AscendAttnBackend(AttentionBackend):
             speculative_step_id + 1, device="npu"
         )
         self.page_size = model_runner.page_size
+        self.supports_ragged_verify_graph = is_deepseek_dsa(
+            model_runner.model_config.hf_config
+        )
         self.model_dtype = model_runner.model_config.dtype
         self.kv_cache_dtype = model_runner.kv_cache_dtype
         self.use_mla = model_runner.model_config.attention_arch == AttentionArch.MLA
@@ -449,6 +458,12 @@ class AscendAttnBackend(AttentionBackend):
         forward_batch: ForwardBatch,
         in_capture: bool = False,
     ):
+        layout = getattr(forward_batch.spec_info, "ragged_verify_layout", None)
+        if forward_batch.forward_mode.is_target_verify() and layout is not None:
+            if not self.supports_ragged_verify_graph:
+                raise ValueError("NPU compact graphs currently require DSA attention.")
+            self._init_compact_graph_metadata(forward_batch, layout)
+            return
         bs = forward_batch.batch_size
         if in_capture:
             self._init_cuda_graph_metadata(
@@ -471,11 +486,67 @@ class AscendAttnBackend(AttentionBackend):
             out_cache_loc=forward_batch.out_cache_loc,
         )
 
+    def _init_compact_graph_metadata(self, forward_batch, layout):
+        slots = forward_batch.batch_size
+        key = ("dspark", slots, layout.graph_num_tokens)
+        if key not in self.graph_metadata:
+            self.graph_metadata[key] = NpuCompactGraphMetadata(
+                num_slots=slots,
+                num_tokens=layout.graph_num_tokens,
+                table_width=(
+                    max(self.req_to_token.shape[1], layout.graph_num_tokens)
+                    + self.page_size
+                    - 1
+                )
+                // self.page_size,
+                device=self.device,
+            )
+        state = self.graph_metadata[key]
+        state.update(
+            prefix_lens=forward_batch.seq_lens,
+            req_pool_indices=forward_batch.req_pool_indices,
+            req_to_token=self.req_to_token,
+            verify_lens=layout.verify_lens,
+            page_size=self.page_size,
+        )
+        metadata = ForwardMetadata()
+        metadata.seq_lens = state.kv_lens
+        metadata.actual_seq_lengths_kv = state.kv_lens
+        metadata.actual_seq_lengths_q = state.query_ends
+        metadata.block_tables = state.block_tables
+        # No host mirror: indexer/sparse attention read device tensors directly.
+        self.forward_metadata = metadata
+        self.graph_mode = True
+
     def init_forward_metadata(self, forward_batch: ForwardBatch):
         """Init the metadata for a forward pass."""
+        layout = getattr(forward_batch.spec_info, "ragged_verify_layout", None)
+        if (
+            forward_batch.forward_mode.is_target_verify()
+            and layout is not None
+            and self.supports_ragged_verify_graph
+        ):
+            self._init_compact_graph_metadata(forward_batch, layout)
+            self.graph_mode = False
+            return
         self.forward_metadata = ForwardMetadata()
-        seq_lens_max = forward_batch.seq_lens.max()
+        compact = None
         if forward_batch.forward_mode.is_target_verify():
+            layout = getattr(forward_batch.spec_info, "ragged_verify_layout", None)
+            if layout is not None:
+                compact = build_compact_verify_metadata(
+                    prefix_lens=forward_batch.seq_lens,
+                    layout=layout,
+                    max_verify_len=int(forward_batch.spec_info.draft_token_num),
+                    num_tokens=(
+                        forward_batch.global_num_token_non_padded_cpu
+                        if forward_batch.global_num_token_non_padded_cpu is not None
+                        else forward_batch.input_ids.numel()
+                    ),
+                )
+        if compact is not None:
+            seq_lens_max = compact.max_kv_len
+        elif forward_batch.forward_mode.is_target_verify():
             spec_tokens_per_req = int(forward_batch.spec_info.draft_token_num)
             # Overlap scheduling can publish the CPU sequence length one step
             # ahead of the device tensor. FIA consumes seq_lens_cpu below, so
@@ -522,6 +593,11 @@ class AscendAttnBackend(AttentionBackend):
             ).int()
 
         self.forward_metadata.seq_lens_cpu_int = forward_batch.seq_lens_cpu.int()
+        if compact is not None:
+            self.forward_metadata.seq_lens = compact.kv_lens
+            self.forward_metadata.seq_lens_cpu_int = compact.kv_lens_cpu
+            self.forward_metadata.actual_seq_lengths_kv = compact.kv_lens
+            self.forward_metadata.compact_seq_lengths_q = compact.query_ends_cpu
         if (
             not forward_batch.forward_mode.is_draft_extend_v2()
             and not forward_batch.forward_mode.is_target_verify()
@@ -531,8 +607,12 @@ class AscendAttnBackend(AttentionBackend):
 
         if forward_batch.forward_mode.is_target_verify():
             spec_algorithm = forward_batch.spec_algorithm
-            if spec_algorithm is None or not spec_algorithm.is_dspark():
-                self.forward_metadata.seq_lens_cpu_int += spec_tokens_per_req
+            if compact is None and (
+                spec_algorithm is None or not spec_algorithm.is_dspark()
+            ):
+                self.forward_metadata.seq_lens_cpu_int += int(
+                    forward_batch.spec_info.draft_token_num
+                )
         elif (
             forward_batch.forward_mode.is_decode_or_idle()
             and forward_batch.spec_info is not None
@@ -545,7 +625,9 @@ class AscendAttnBackend(AttentionBackend):
         # Without this, eager decode under DP attention pads q to the global
         # max while kv stays local, causing a shape mismatch in
         # npu_lightning_indexer.
-        if (
+        if compact is not None:
+            self.forward_metadata.actual_seq_lengths_q = compact.query_ends
+        elif (
             forward_batch.forward_mode.is_target_verify()
             or forward_batch.forward_mode.is_draft_extend_v2()
         ):
@@ -2119,7 +2201,9 @@ class AscendAttnBackend(AttentionBackend):
                     self.forward_metadata.seq_lens_cpu_int.cpu().int().tolist()
                 )
 
-            if forward_batch.forward_mode.is_draft_extend_v2():
+            if self.forward_metadata.compact_seq_lengths_q is not None:
+                actual_seq_lengths = self.forward_metadata.compact_seq_lengths_q
+            elif forward_batch.forward_mode.is_draft_extend_v2():
                 extend_seq_lens_cpu = forward_batch.extend_seq_lens_cpu
                 if not self.graph_mode:
                     extend_seq_lens_cpu = extend_seq_lens_cpu[
@@ -2240,11 +2324,14 @@ class AscendAttnBackend(AttentionBackend):
                 actual_seq_lengths_kv = (
                     self.forward_metadata.seq_lens_cpu_int.cpu().int().tolist()
                 )
-            actual_seq_lengths = np.arange(
-                self.speculative_num_draft_tokens,
-                self.speculative_num_draft_tokens + q_nope.shape[0],
-                self.speculative_num_draft_tokens,
-            )
+            if self.forward_metadata.compact_seq_lengths_q is not None:
+                actual_seq_lengths = self.forward_metadata.compact_seq_lengths_q
+            else:
+                actual_seq_lengths = np.arange(
+                    self.speculative_num_draft_tokens,
+                    self.speculative_num_draft_tokens + q_nope.shape[0],
+                    self.speculative_num_draft_tokens,
+                )
 
             # When not in graph_mode, query is sliced to num_token_non_padded
             # which may drop finished requests. The FIA TND kernel requires

@@ -102,21 +102,30 @@ def build_ragged_verify_window(
         prefix_lens.to(torch.int64)[safe_req] + within,
         torch.zeros_like(within),
     )
-    real_cache_loc = assign_extend_cache_locs_func(
-        req_pool_indices=batch.req_pool_indices,
-        req_to_token=model_runner.req_to_token_pool.req_to_token,
-        start_offset=prefix_lens,
-        end_offset=prefix_lens + verify_lens.to(prefix_lens.dtype),
-        batch_size=bs,
-        draft_token_num=verify_num_draft_tokens,
-        device=device,
-    )
-    verify_cache_loc = torch.nn.functional.pad(
-        real_cache_loc, (0, padded_total - real_cache_loc.shape[0])
-    )
-    verify_cache_loc = torch.where(
-        valid, verify_cache_loc, torch.zeros_like(verify_cache_loc)
-    )
+    if _is_npu:
+        # Real rows share the ID/position mapping; graph padding writes slot 0.
+        verify_cache_loc = model_runner.req_to_token_pool.req_to_token[
+            batch.req_pool_indices[safe_req].long(), positions.long()
+        ].to(torch.int32)
+        verify_cache_loc = torch.where(
+            valid, verify_cache_loc, torch.zeros_like(verify_cache_loc)
+        )
+    else:
+        real_cache_loc = assign_extend_cache_locs_func(
+            req_pool_indices=batch.req_pool_indices,
+            req_to_token=model_runner.req_to_token_pool.req_to_token,
+            start_offset=prefix_lens,
+            end_offset=prefix_lens + verify_lens.to(prefix_lens.dtype),
+            batch_size=bs,
+            draft_token_num=verify_num_draft_tokens,
+            device=device,
+        )
+        verify_cache_loc = torch.nn.functional.pad(
+            real_cache_loc, (0, padded_total - real_cache_loc.shape[0])
+        )
+        verify_cache_loc = torch.where(
+            valid, verify_cache_loc, torch.zeros_like(verify_cache_loc)
+        )
 
     verify_ids = compact_verify_ids(
         draft_block_ids=draft_block_ids,
