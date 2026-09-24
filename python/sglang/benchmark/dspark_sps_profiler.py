@@ -31,11 +31,6 @@ def _load_module_by_path(name: str, path: Path):
 
 
 try:
-    from sglang.benchmark.one_batch_server import (
-        DEFAULT_TIMEOUT,
-        should_skip_due_to_max_running_requests,
-        should_skip_due_to_token_capacity,
-    )
     from sglang.benchmark.utils import get_tokenizer
     from sglang.srt.speculative.dspark_components.dspark_sps import (
         SpsAdditiveCostTable,
@@ -56,10 +51,40 @@ except ImportError as exc:
     SpsAdditiveCostTable = _table_module.SpsAdditiveCostTable
     load_sps_table_from_path = _table_module.load_sps_table_from_path
     profile_sps_table = _table_module.profile_sps_table
-    DEFAULT_TIMEOUT = 60
     get_tokenizer = None
-    should_skip_due_to_max_running_requests = None
-    should_skip_due_to_token_capacity = None
+
+# Keep this HTTP client independent of one_batch_server: importing that module
+# loads dataset registries and the server runtime, neither needed for SPS probes.
+DEFAULT_TIMEOUT = 600
+
+
+def should_skip_due_to_token_capacity(
+    batch_size, input_len, output_len, skip_token_capacity_threshold
+):
+    if batch_size * (input_len + output_len) > skip_token_capacity_threshold:
+        logger.warning(
+            "Skip SPS probe: %d * (%d + %d) exceeds token capacity %s.",
+            batch_size,
+            input_len,
+            output_len,
+            skip_token_capacity_threshold,
+        )
+        return True
+    return False
+
+
+def should_skip_due_to_max_running_requests(
+    batch_size, skip_max_running_requests_threshold
+):
+    if batch_size > skip_max_running_requests_threshold:
+        logger.warning(
+            "Skip SPS probe: %d requests exceeds max running requests %s.",
+            batch_size,
+            skip_max_running_requests_threshold,
+        )
+        return True
+    return False
+
 
 DEFAULT_OUT = "dspark_sps.json"
 DEFAULT_MAX_BATCH_SIZE = 256

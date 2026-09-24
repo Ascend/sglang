@@ -40,6 +40,7 @@ from sglang.srt.speculative.ragged_verify import (
     round_up_grid,
 )
 from sglang.srt.speculative.spec_tp_sync import SpecTpSync, SpecTpSyncSite
+from sglang.srt.utils import is_npu
 from sglang.srt.utils.common import require_mlp_tp_gather
 from sglang.srt.utils.invariants import (
     Bucket,
@@ -51,6 +52,7 @@ from sglang.srt.utils.invariants import (
 )
 
 logger = logging.getLogger(__name__)
+_is_npu = is_npu()
 
 # DSpark confidence is a per-token score that must stay in [0, 1].
 _CONFIDENCE = Invariant(
@@ -298,6 +300,12 @@ class DSparkVerifyPlanner:
         draft_input.verify_token_budget = self._budget_from_resolved(
             resolved=resolved, req_pool_indices_cpu=batch.req_pool_indices_cpu
         )
+        if _is_npu:
+            # Ring event readiness can differ across ranks. Never let that
+            # choose different token tiers / HCCL collective shapes.
+            draft_input.verify_token_budget = get_parallel().tp_group.broadcast_object(
+                draft_input.verify_token_budget, src=0
+            )
         batch.spec_verify_tier_num_tokens = local_verify_tier_num_tokens(
             bs=batch.batch_size(),
             verify_token_budget=draft_input.verify_token_budget,
@@ -333,6 +341,14 @@ class DSparkVerifyPlanner:
     def set_forced_budget_frac(self, frac) -> None:
         if self._budget_planner is not None:
             self._budget_planner.forced_budget_frac = frac
+            # SPS profiling starts without a fitted table. A forced budget must
+            # bypass the cached verify-all layout or every probe measures W.
+            if _is_npu:
+                self._is_verify_all = (
+                    self.is_compact_mode
+                    and frac is None
+                    and is_uninitialized_sps_table(self._budget_planner.sps_table)
+                )
 
     def compute_budget_sync(
         self,
@@ -352,9 +368,12 @@ class DSparkVerifyPlanner:
             confidence=confidence.to("cpu"),
             generation=generation,
         )
-        return self._budget_from_resolved(
+        budget = self._budget_from_resolved(
             resolved=resolved, req_pool_indices_cpu=req_pool_indices_cpu
         )
+        if _is_npu:
+            budget = get_parallel().tp_group.broadcast_object(budget, src=0)
+        return budget
 
     def resolve_verify_token_budget(
         self,
@@ -371,8 +390,8 @@ class DSparkVerifyPlanner:
         if not get_schedule().disable_overlap_schedule:
             return draft_input.verify_token_budget
 
-        # No collective: the budget derives only from the broadcast draft tokens
-        # (via confidence), replicated req_generation, and the static sps table.
+        # NPU synchronizes the budget across TP ranks in compute_budget_sync.
+        # Other devices derive it locally from replicated confidence and state.
         draft_input.verify_token_budget = self.compute_budget_sync(
             confidence=confidence,
             prefix_lens=prefix_lens,

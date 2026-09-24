@@ -415,7 +415,10 @@ class TargetVerifyExecutor:
         batch.out_cache_loc = ragged_window.verify_cache_loc
         seq_lens_cpu_backup = batch.seq_lens_cpu
         seq_lens_sum_backup = batch.seq_lens_sum
-        if seq_lens_cpu_backup is not None:
+        npu_device_metadata = (
+            _is_npu and self.model_runner.attn_backend.supports_ragged_verify_graph
+        )
+        if seq_lens_cpu_backup is not None and not npu_device_metadata:
             verify_lens_cpu = (
                 layout.verify_lens_cpu
                 if layout.verify_lens_cpu is not None
