@@ -4,6 +4,7 @@ import torch
 
 from sglang.srt.constants import GPU_MEMORY_TYPE_KV_CACHE
 from sglang.srt.environ import envs
+from sglang.srt.layers.dcp.layout import localize_dcp_indices
 from sglang.srt.mem_cache.memory_pool import (
     MHATokenToKOnlyPool,
     MHATokenToKVPool,
@@ -777,8 +778,13 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
     def _copy_indices_for_buffer(self, indices, uses_global_slots):
         if uses_global_slots or self.dcp_size <= 1:
             return indices
-        owned = indices % self.dcp_size == self.dcp_rank
-        return indices[owned] // self.dcp_size
+        local_indices = localize_dcp_indices(
+            indices,
+            self.dcp_size,
+            self.dcp_rank,
+            self.page_size,
+        )
+        return local_indices[local_indices >= 0]
 
     def get_kv_size_bytes(self):
         kv_size_bytes = 0
@@ -941,6 +947,21 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             [buffer.nbytes for buffer in transfer_views],
             [buffer[0].nbytes for buffer in transfer_views],
         )
+
+    def get_dcp_remote_decode_layout(self) -> list[bool]:
+        """Whether each PD entry uses allocator-global slots on decode."""
+        target_global = self.is_draft_worker
+        layout = [target_global] * self.layer_num
+        if not getattr(self, "dsa_kv_cache_store_fp8", False):
+            layout.extend([target_global] * self.layer_num)
+        if self.index_head_dim is not None:
+            layout.extend([True] * self.num_indexer_layers)
+            if self.index_k_scale_buffer is not None:
+                layout.extend([True] * self.num_indexer_layers)
+
+        if len(layout) != len(self.get_contiguous_buf_infos()[0]):
+            raise RuntimeError("NPU MLA DCP layout does not match its transfer buffers")
+        return layout
 
     def get_kv_layer_ids(self):
         return (
