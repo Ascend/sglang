@@ -148,7 +148,7 @@ ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 
 ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
-RUN git clone git@github.com:randgun/vllm-ascend.git -b ops/sfa_v2 && \
+RUN git clone https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
     mkdir -p /usr/local/Ascend/extra-ops && \
     cd vllm-ascend/crsc && \
     mkdir -p build && \
