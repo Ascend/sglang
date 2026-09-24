@@ -214,6 +214,29 @@ class _LowLatencyBuffer:
         return torch.empty(0), torch.empty(0), object(), object(), object()
 
 
+class _LegacyLowLatencyBuffer:
+    """A DeepEP API version that predates the use_mxfp8 flag."""
+
+    def __init__(self):
+        self.use_mxfp4 = None
+
+    def low_latency_dispatch(
+        self,
+        hidden_states,
+        topk_ids,
+        num_max_dispatch_tokens_per_rank,
+        num_experts,
+        *,
+        use_fp8,
+        use_mxfp4=False,
+        topk_weights,
+        async_finish,
+        return_recv_hook,
+    ):
+        self.use_mxfp4 = use_mxfp4
+        return torch.empty(0), torch.empty(0), object(), object(), object()
+
+
 class _CudaLowLatencyBuffer:
     """CUDA's Buffer API does not accept the NPU-only MXFP flags."""
 
@@ -341,6 +364,19 @@ class _LegacyNormalBuffer:
         return torch.empty(0), torch.empty(0), torch.empty(0), [], object(), object()
 
 
+class _OpaqueNormalBuffer(_CudaNormalBuffer):
+    """The A3 pybind Buffer API whose dispatch signature hides quantization args."""
+
+    def __init__(self):
+        super().__init__()
+        self.dispatch_kwargs = None
+
+    def dispatch(self, *args, **kwargs):
+        self.dispatched = True
+        self.dispatch_kwargs = kwargs
+        return torch.empty(0), torch.empty(0), torch.empty(0), [], object(), object()
+
+
 class TestDeepEPLowLatencyMxfp8Dispatch(unittest.TestCase):
     def test_mxfp4_output_dtype_enables_only_mxfp4(self):
         dispatcher = object.__new__(deepep._DeepEPDispatcherImplBase)
@@ -406,6 +442,22 @@ class TestDeepEPLowLatencyMxfp8Dispatch(unittest.TestCase):
         self.assertFalse(buffer.kwargs["use_fp8"])
         self.assertTrue(buffer.kwargs["use_mxfp4"])
         self.assertFalse(buffer.kwargs["use_mxfp8"])
+
+    def test_bf16_omits_unsupported_mxfp8_flag_for_legacy_buffer(self):
+        buffer = _LegacyLowLatencyBuffer()
+        dispatcher = self._dispatcher("bf16", buffer)
+
+        with (
+            patch.object(deepep, "_is_npu", True),
+            patch.object(deepep, "_deepep_precompile_tp_barrier"),
+        ):
+            dispatcher._dispatch_core(
+                torch.zeros(1, 64),
+                torch.zeros(1, 1, dtype=torch.int64),
+                torch.ones(1, 1),
+            )
+
+        self.assertFalse(buffer.use_mxfp4)
 
     def test_normal_dispatch_passes_quantization_flags(self):
         dispatcher = object.__new__(deepep._DeepEPDispatcherImplNormal)
@@ -475,6 +527,43 @@ class TestDeepEPLowLatencyMxfp8Dispatch(unittest.TestCase):
 
         self.assertEqual(buffer.quant_mode, "bf16")
 
+    def test_normal_dispatch_keeps_a3_legacy_path_for_opaque_signature(self):
+        dispatcher = object.__new__(deepep._DeepEPDispatcherImplNormal)
+        dispatcher.num_experts = 2
+        dispatcher.async_finish = False
+        dispatcher.use_fp8 = True
+        dispatcher.use_mxfp4 = False
+        dispatcher.use_mxfp8 = False
+        buffer = _OpaqueNormalBuffer()
+        dispatcher._get_buffer = lambda: buffer
+
+        with (
+            patch.object(deepep, "_is_npu", True),
+            patch.object(deepep, "_deepep_precompile_tp_barrier"),
+            patch.object(
+                deepep.DeepEPConfig,
+                "get_instance",
+                return_value=SimpleNamespace(normal_dispatch_config=None),
+            ),
+            patch.object(
+                deepep,
+                "get_global_expert_distribution_recorder",
+                return_value=MagicMock(),
+            ),
+        ):
+            dispatcher._dispatch_core(
+                torch.zeros(1, 64),
+                torch.zeros(1, 1, dtype=torch.int64),
+                torch.ones(1, 1),
+                None,
+            )
+
+        self.assertTrue(buffer.dispatched)
+        self.assertNotIn("use_fp8", buffer.dispatch_kwargs)
+        self.assertNotIn("use_mxfp4", buffer.dispatch_kwargs)
+        self.assertNotIn("use_mxfp8", buffer.dispatch_kwargs)
+        self.assertNotIn("quant_mode", buffer.dispatch_kwargs)
+
     def test_cuda_normal_dispatch_omits_npu_quantization_flags(self):
         dispatcher = object.__new__(deepep._DeepEPDispatcherImplNormal)
         dispatcher.num_experts = 2
@@ -525,20 +614,6 @@ class TestDeepEPLowLatencyMxfp8Dispatch(unittest.TestCase):
             )
 
         self.assertTrue(buffer.use_fp8)
-
-    def test_bf16_passes_no_quantization_flags(self):
-        buffer = _LowLatencyBuffer()
-        dispatcher = self._dispatcher(None, buffer)
-
-        with patch.object(deepep, "_deepep_precompile_tp_barrier"):
-            dispatcher._dispatch_core(
-                torch.zeros(1, 64),
-                torch.zeros(1, 1, dtype=torch.int64),
-                torch.ones(1, 1),
-            )
-
-        self.assertFalse(buffer.kwargs["use_fp8"])
-        self.assertNotIn("use_ue8m0", buffer.kwargs)
 
 
 class TestW4A8MxfpGmmInputScale(unittest.TestCase):

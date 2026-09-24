@@ -7,7 +7,6 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List, NamedTuple, Optional, Tuple, Union
 
-from sglang.srt.distributed.parallel_state import get_tp_group
 from sglang.srt.environ import envs
 from sglang.srt.eplb.expert_distribution import get_global_expert_distribution_recorder
 from sglang.srt.layers import deep_gemm_wrapper
@@ -29,6 +28,7 @@ from sglang.srt.layers.moe.utils import (
     get_deepep_output_dtype,
     is_tbo_enabled,
 )
+from sglang.srt.runtime_context import get_parallel
 from sglang.srt.utils import (
     get_bool_env_var,
     get_cuda_version,
@@ -100,7 +100,7 @@ def _deepep_precompile_tp_barrier() -> None:
     # To avoid this, we use torch.distributed's barrier during the compile stage.
     # We apply this barrier only in the compile stage to prevent extra all-reduce overhead at runtime.
     if envs.SGLANG_IN_DEEPGEMM_PRECOMPILE_STAGE.get():
-        get_tp_group().barrier()
+        get_parallel().tp_group.barrier()
 
 
 class DeepEPPDispatchHooks(DispatcherBaseHooks):
@@ -587,6 +587,11 @@ class _DeepEPDispatcherImplNormal(_DeepEPDispatcherImplBase):
                 quant_mode = "bf16"
             return {"quant_mode": quant_mode}
 
+        if not self.use_mxfp4 and not self.use_mxfp8:
+            # A3's legacy pybind Buffer does not expose its dispatch signature.
+            # It selects BF16/INT8 dispatch through the DeepEP runtime instead.
+            return {}
+
         raise RuntimeError(
             "Installed DeepEP normal dispatch does not support either "
             "use_fp8/use_mxfp4/use_mxfp8 or quant_mode."
@@ -807,10 +812,13 @@ class _DeepEPDispatcherImplLowLatency(_DeepEPDispatcherImplBase):
     ):
         input_global_scale = self.quant_config.get("input_global_scale", None)
 
-        # round_scale is FP8-DeepGEMM specific.
+        # round_scale / use_ue8m0 are FP8-DeepGEMM specific. Dropping use_ue8m0
+        # makes DeepEP return fp32 column-major scales the e8m0 cast cannot view.
         fp8_deepgemm_scale_opts = (
             dict(
                 round_scale=deep_gemm_wrapper.ENABLE_JIT_DEEPGEMM
+                and deep_gemm_wrapper.DEEPGEMM_BLACKWELL,
+                use_ue8m0=deep_gemm_wrapper.ENABLE_JIT_DEEPGEMM
                 and deep_gemm_wrapper.DEEPGEMM_BLACKWELL,
             )
             if self.use_fp8
@@ -819,14 +827,7 @@ class _DeepEPDispatcherImplLowLatency(_DeepEPDispatcherImplBase):
 
         buffer = self._get_buffer()
         _deepep_precompile_tp_barrier()
-        npu_mxfp_quantization_opts = (
-            {
-                "use_mxfp4": self.use_mxfp4,
-                "use_mxfp8": self.use_mxfp8,
-            }
-            if _is_npu
-            else {}
-        )
+        npu_mxfp_quantization_opts = self._get_npu_mxfp_quantization_kwargs(buffer)
         packed_recv_hidden, self.packed_recv_count, self.handle, event, hook = (
             buffer.low_latency_dispatch(
                 hidden_states,
@@ -852,6 +853,28 @@ class _DeepEPDispatcherImplLowLatency(_DeepEPDispatcherImplBase):
             )
         )
         return packed_recv_hidden, self.packed_recv_count, event, hook
+
+    def _get_npu_mxfp_quantization_kwargs(self, buffer: Buffer) -> dict:
+        if not _is_npu:
+            return {}
+
+        parameters = inspect.signature(buffer.low_latency_dispatch).parameters
+        if any(
+            parameter.kind is inspect.Parameter.VAR_KEYWORD
+            for parameter in parameters.values()
+        ):
+            return {
+                "use_mxfp4": self.use_mxfp4,
+                "use_mxfp8": self.use_mxfp8,
+            }
+        return {
+            name: value
+            for name, value in {
+                "use_mxfp4": self.use_mxfp4,
+                "use_mxfp8": self.use_mxfp8,
+            }.items()
+            if name in parameters
+        }
 
     def combine_a(
         self,
