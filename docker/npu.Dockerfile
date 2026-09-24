@@ -148,22 +148,33 @@ ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 
 ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
-RUN  git clone git@github.com:randgun/vllm-ascend.git -b ops/sfa_v2
-    cd vllm-ascend/crsc
-    mkdir -p build && cd build
+RUN git clone git@github.com:randgun/vllm-ascend.git -b ops/sfa_v2 && \
+    mkdir -p /usr/local/Ascend/extra-ops && \
+    cd vllm-ascend/crsc && \
+    mkdir -p build && \
+    cd build && \
     cmake .. \
       -DCMAKE_BUILD_TYPE=Release \
-      -DSOC_VERSION=$SOC_VERSION \
-      -DASCEND_HOME_PATH=$ASCEND_HOME_PATH \
+      -DSOC_VERSION=${SOC_VERSION} \
+      -DASCEND_HOME_PATH=${ASCEND_HOME_PATH} \
       -DPYTHON_EXECUTABLE=$(which python3) \
       -DPYTHON_INCLUDE_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))") \
       -DTORCH_NPU_PATH=$(python3 -c "import torch_npu; print(torch_npu.__path__[0])") \
       -DCMAKE_PREFIX_PATH=$(python3 -c "import pybind11; print(pybind11.get_cmake_dir())") \
-      -DFETCHCONTENT_BASE_DIR=$(pwd)/../.deps
-    make -j$(nproc)
+      -DFETCHCONTENT_BASE_DIR=$(pwd)/../.deps && \
+    make -j$(nproc) && \
+    cd .. && \
+    bash build.sh \
+      --pkg \
+      --ops="kv_quant_sparse_attn_sharedkv_v2;kv_quant_sparse_attn_sharedkv_v2_metadata" \
+      --soc="ascend950" && \
+    ./build/cann-ops-transformer*.run \
+      --install-path=/usr/local/Ascend/extra-ops && \
+    cp ../build/vllm_ascend_C.cpython-312-aarch64-linux-gnu.so \
+      /usr/local/Ascend/extra-ops/ && \
+    cd ../.. && \
+    rm -rf vllm-ascend
 
-    bash build.sh --pkg --ops="kv_quant_sparse_attn_sharedkv_v2;kv_quant_sparse_attn_sharedkv_v2_metadata" --soc="ascend950"
-    ./build/cann-ops-transformer*.run --install-path=$(pwd)/../vllm_ascend/_cann_ops_custom
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
