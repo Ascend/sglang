@@ -146,15 +146,6 @@ RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-works
     sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
-# Build vllm-ascend custom ops (ops/sfa_v2 branch):
-#   1) csrc 是 CANN ops 工程，交给仓库自带的 build.sh 统一配置/编译/打包，产出 ops 包并安装到 extra-ops
-#   2) 仓库根目录是 vllm_ascend_C (pybind) 工程，产出 vllm_ascend_C*.so 一并拷到 extra-ops
-#   注意：csrc/build 目录只能由一个 CMake 生成器配置。build.sh 在检测到 ninja 时会自动用 Ninja，
-#   所以这里不能先手写一次 cmake（默认 Unix Makefiles），否则会报 "generator : Ninja / Does not match
-#   the generator used previously: Unix Makefiles"。如需保留预编译，请给 build.sh 加 --no-ninja。
-#   根工程的 CMakeLists 只认 ${ASCEND_HOME_PATH}/{tools,compiler}/tikcpp/ascendc_kernel_cmake，
-#   本镜像的 CANN 目录布局可能没有该路径；这时打印 WARNING 跳过 .so 编译，不影响 ops 包安装。
-#   （若要改成硬失败，把下面的 WARNING 分支换成 exit 1。）
 RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
     mkdir -p /usr/local/Ascend/extra-ops && \
     . /etc/environment_new && \
@@ -181,7 +172,7 @@ RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b
         cd build && \
         cmake .. \
           -DCMAKE_BUILD_TYPE=Release \
-          -DSOC_VERSION=ascend950 \
+          -DSOC_VERSION=ascend950dt_9582 \
           -DASCEND_HOME_PATH="${ASCEND_HOME_PATH}" \
           -DPYTHON_EXECUTABLE=$(which python3) \
           -DPYTHON_INCLUDE_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))") \
