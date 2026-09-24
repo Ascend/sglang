@@ -152,6 +152,9 @@ RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-works
 #   注意：csrc/build 目录只能由一个 CMake 生成器配置。build.sh 在检测到 ninja 时会自动用 Ninja，
 #   所以这里不能先手写一次 cmake（默认 Unix Makefiles），否则会报 "generator : Ninja / Does not match
 #   the generator used previously: Unix Makefiles"。如需保留预编译，请给 build.sh 加 --no-ninja。
+#   根工程的 CMakeLists 只认 ${ASCEND_HOME_PATH}/{tools,compiler}/tikcpp/ascendc_kernel_cmake，
+#   本镜像的 CANN 目录布局可能没有该路径；这时打印 WARNING 跳过 .so 编译，不影响 ops 包安装。
+#   （若要改成硬失败，把下面的 WARNING 分支换成 exit 1。）
 RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
     mkdir -p /usr/local/Ascend/extra-ops && \
     . /etc/environment_new && \
@@ -166,19 +169,32 @@ RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b
     echo "== install ops package: ${OPS_PKG}" && \
     ${OPS_PKG} --install-path=/usr/local/Ascend/extra-ops && \
     cd .. && \
-    mkdir -p build && \
-    cd build && \
-    cmake .. \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DSOC_VERSION=ascend950 \
-      -DPYTHON_EXECUTABLE=$(which python3) \
-      -DPYTHON_INCLUDE_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))") \
-      -DTORCH_NPU_PATH=$(python3 -c "import torch_npu; print(torch_npu.__path__[0])") \
-      -DCMAKE_PREFIX_PATH=$(python3 -c "import pybind11; print(pybind11.get_cmake_dir())") \
-      -DFETCHCONTENT_BASE_DIR=$(pwd)/../.deps && \
-    make -j$(nproc) && \
-    cp vllm_ascend_C.cpython-312-*.so \
-      /usr/local/Ascend/extra-ops/ && \
+    ARCH_DIR="$(uname -m)-linux" && \
+    if [ -f "${ASCEND_HOME_PATH}/${ARCH_DIR}/tikcpp/ascendc_kernel_cmake/ascendc.cmake" ] && \
+       [ ! -e "${ASCEND_HOME_PATH}/tools/tikcpp/ascendc_kernel_cmake/ascendc.cmake" ]; then \
+        mkdir -p "${ASCEND_HOME_PATH}/tools" && \
+        ln -sfn "${ASCEND_HOME_PATH}/${ARCH_DIR}/tikcpp" "${ASCEND_HOME_PATH}/tools/tikcpp"; \
+    fi && \
+    if [ -f "${ASCEND_HOME_PATH}/tools/tikcpp/ascendc_kernel_cmake/ascendc.cmake" ] || \
+       [ -f "${ASCEND_HOME_PATH}/compiler/tikcpp/ascendc_kernel_cmake/ascendc.cmake" ]; then \
+        mkdir -p build && \
+        cd build && \
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DSOC_VERSION=ascend950 \
+          -DASCEND_HOME_PATH="${ASCEND_HOME_PATH}" \
+          -DPYTHON_EXECUTABLE=$(which python3) \
+          -DPYTHON_INCLUDE_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))") \
+          -DTORCH_NPU_PATH=$(python3 -c "import torch_npu; print(torch_npu.__path__[0])") \
+          -DCMAKE_PREFIX_PATH=$(python3 -c "import pybind11; print(pybind11.get_cmake_dir())") \
+          -DFETCHCONTENT_BASE_DIR=$(pwd)/../.deps && \
+        make -j$(nproc) && \
+        cp vllm_ascend_C.cpython-312-*.so \
+          /usr/local/Ascend/extra-ops/ && \
+        cd ..; \
+    else \
+        echo "WARNING: ${ASCEND_HOME_PATH} 下找不到 tikcpp/ascendc_kernel_cmake/ascendc.cmake，跳过 vllm_ascend_C 编译"; \
+    fi && \
     cd ../.. && \
     rm -rf vllm-ascend
 
