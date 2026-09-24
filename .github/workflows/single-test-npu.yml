@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# test round: DSV4-Flash unified radix cache evict->unevict (#37091 regression)
 
 on:
   pull_request:
@@ -15,10 +15,19 @@ concurrency:
 
 jobs:
   single-node-poc:
-    name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    name: single-node-poc (${{ matrix.image }})
+    runs-on: linux-aarch64-a3-16
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          # 2026-08-28 snapshot + CANN 9.1.0: has the aclnnHcPre (HcPre) op that
+          # DSV4 mHC pre-norm requires (cann9.0.0 lacks it), and does NOT contain
+          # #37091. The bundled sglang is overridden via PYTHONPATH to upstream
+          # main below, so #37091 runs on top of a runnable DSV4 CANN runtime.
+          - swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-20260828
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: ${{ matrix.image }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,7 +50,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_radix_cache_evict_unevict.py"
           )
 
           for test_case in "${test_cases[@]}"; do
@@ -65,16 +74,40 @@ jobs:
           export SGLANG_SET_CPU_AFFINITY=1
           echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
 
-          echo "Use sglang from image"
-          sglang_pkg_path=/sgl-workspace/sglang/python
+          # Checkout upstream community sglang main and run the test against it
+          # via PYTHONPATH, so sgl-project/sglang#37091 (the recover_after_unevict
+          # `result` param) is exercised on top of the image's CANN runtime,
+          # instead of the image's bundled sglang.
+          upstream_sglang_path=/root/upstream-sglang
+          if [ ! -d "${upstream_sglang_path}/.git" ]; then
+            git clone --depth 1 https://github.com/sgl-project/sglang.git ${upstream_sglang_path}
+          fi
+          echo "Using upstream sglang main from: ${upstream_sglang_path}"
+
+          # Overlay the Ascend-side test utils (test/ascend) from the PR checkout
+          # into the upstream source so ascend-specific helpers (e.g.
+          # DEEPSEEK_V4_FLASH_W8A8_MTP_MODEL_PATH) remain importable.
+          sglang_pkg_path=${upstream_sglang_path}/python
           ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-          mkdir -p ${ascend_test_util_path}
-          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+          if [ -d ${ascend_test_util_path} ]; then
+            mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
+          fi
+          mkdir -p $(dirname ${ascend_test_util_path})
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+
+          export PYTHONPATH=${sglang_pkg_path}:${PYTHONPATH}
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          # DSV4 mHC fused ops (aclnnHcPre etc.) ship in the custom_transformer /
+          # customize operator packages (see sgl-project/sglang#29794). Source them so
+          # torch.ops.custom.npu_hc_pre resolves; without this capture_decode_graph
+          # fails with 'aclnnHcPre not in libopapi.so'.
+          source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
+          source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
+          echo "--- opp vendors dir ---"
+          ls -la /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/ 2>&1 || true
 
           current_date=$(date +%Y%m%d)
           log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
