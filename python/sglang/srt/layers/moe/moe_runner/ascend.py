@@ -26,6 +26,33 @@ from sglang.srt.hardware_backend.npu.quantization.moe_methods import (
     NPUW4A8MXFP4MoEMethod,
     NPUW8A8Int8MoEMethod,
 )
+
+
+def _uses_fused_gmm1(kernel, config: MoeRunnerConfig) -> bool:
+    """Whether gmm1 runs matmul+swiglu+requant fused (no separate activation)."""
+    # The fused gmm1 kernel (npu_grouped_matmul_swiglu_quant_v2) applies plain
+    # SiLU with no clamp. Models whose activation is SiLU-with-clamp
+    # (swiglu_limit, e.g. DSV4) must keep the unfused path so the clamp is
+    # applied (NPUSwigluMxfp8Quant / NPUSwigluStepAndMul below).
+    has_clamp = config.swiglu_limit is not None and config.swiglu_limit > 0
+
+    if not isinstance(kernel, (NPUMXFP8MoEMethod, NPUW4A8MXFP4MoEMethod)):
+        return False
+    if has_clamp:
+        # MXFP8 has no unfused gmm1 path at all, so a swiglu_limit
+        # checkpoint cannot be served by it.
+        if isinstance(kernel, NPUMXFP8MoEMethod):
+            raise NotImplementedError(
+                "NPUMXFP8MoEMethod has no unfused gmm1 path, and the fused "
+                "gmm1 kernel applies SiLU without clamp — a swiglu_limit "
+                "checkpoint cannot be served by this method."
+            )
+        return False  # W4A8MXFP4: fall back to unfused to preserve the clamp
+    if isinstance(kernel, NPUMXFP8MoEMethod):
+        return True
+    return kernel.use_fused_gmm1
+
+
 from sglang.srt.layers.moe.moe_runner.base import (
     MoeQuantInfo,
     MoeRunnerConfig,
@@ -93,13 +120,15 @@ class AscendRunnerCore(MoeRunnerCore):
 
         kernel = config.layer.w2_kernel
 
-        if isinstance(kernel, NPUMXFP8MoEMethod):
-            # MXFP8 fuses gate/up + swiglu + requant into gmm1, so there is no
-            # separate activation step — run() skips it. Left None on purpose so
-            # that reaching for it fails loudly instead of silently applying an
-            # unfused swiglu to already-requantised activations. This holds for
-            # both dispatchers: ascend_tp gets its activation quant fused into
-            # routing, DeepEP dispatches bf16 and gmm1 quantises it itself.
+        if _uses_fused_gmm1(kernel, config):
+            # Fused methods (MXFP8; MXFP4 W4A8 via use_fused_gmm1) fold
+            # gate/up + swiglu + requant into gmm1, so there is no separate
+            # activation step — run() skips it. Left None on purpose so that
+            # reaching for it fails loudly instead of silently applying an
+            # unfused swiglu to already-requantised activations. This holds
+            # for both dispatchers: ascend_tp gets its activation quant fused
+            # into routing, DeepEP dispatches bf16 and gmm1 quantises it
+            # itself.
             self.activation = None
         elif (
             isinstance(kernel, NPUW4A8MXFP4MoEMethod)
@@ -190,10 +219,10 @@ class AscendRunnerCore(MoeRunnerCore):
 
         w13_kernel = self.config.layer.w13_kernel
 
-        if isinstance(w13_kernel, NPUMXFP8MoEMethod):
+        if _uses_fused_gmm1(w13_kernel, self.config):
             # --- w13 projection + activation, fused into one kernel ---
-            # MXFP8 gmm1 returns activations already requantised for gmm2, so
-            # there is no separate activation step to run.
+            # The fused gmm1 returns activations already requantised for gmm2,
+            # so there is no separate activation step to run.
             hidden_states, pertoken_scale = w13_kernel.apply_fused_gmm1_swiglu(
                 quant_info,
                 x,
