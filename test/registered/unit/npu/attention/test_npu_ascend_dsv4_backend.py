@@ -688,6 +688,72 @@ class TestArch35SparseAttentionDispatch(unittest.TestCase):
     )
 
     @patch(_ARCH35_PATCH_TARGET, return_value=True)
+    def test_arch35_dspark_uses_v2_metadata_and_attention(self, _):
+        with patch("torch.ops._C_ascend", MagicMock(), create=True) as dspark_ops:
+            metadata_op, attention_op = _sparse_attn_ops(is_dspark=True)
+
+        self.assertIs(
+            metadata_op, dspark_ops.npu_kv_quant_sparse_attn_sharedkv_v2_metadata
+        )
+        self.assertIs(attention_op, dspark_ops.npu_kv_quant_sparse_attn_sharedkv_v2)
+
+    def test_swa_dispatch_preserves_dspark_architecture_routing(self):
+        for is_arch35 in (False, True):
+            for is_draft in (False, True):
+                with (
+                    self.subTest(is_arch35=is_arch35, is_draft=is_draft),
+                    patch(self._ARCH35_PATCH_TARGET, return_value=is_arch35),
+                    patch("torch.ops.custom", MagicMock(), create=True) as custom_ops,
+                    patch("torch.ops.npu", MagicMock(), create=True) as npu_ops,
+                    patch(
+                        "torch.ops._C_ascend", MagicMock(), create=True
+                    ) as dspark_ops,
+                ):
+                    if is_arch35:
+                        op = (
+                            dspark_ops.npu_kv_quant_sparse_attn_sharedkv_v2
+                            if is_draft
+                            else custom_ops.npu_kv_quant_sparse_attn_sharedkv
+                        )
+                    else:
+                        op = (
+                            npu_ops.sparse_attn_sharedkv
+                            if is_draft
+                            else custom_ops.npu_sparse_attn_sharedkv
+                        )
+                    expected = torch.ones(1, 1, 4)
+                    op.return_value = (expected, None)
+                    metadata = SimpleNamespace(
+                        actual_seq_lengths_q_pa=torch.tensor([0, 1]),
+                        actual_seq_lengths_kv=torch.tensor([4]),
+                        swa_page_table=torch.tensor([[0]]),
+                        kernel_metadata={"c1a_metadata": object()},
+                    )
+                    backend = DeepseekV4AscendAttnBackend.__new__(
+                        DeepseekV4AscendAttnBackend
+                    )
+                    backend.forward_metadata = metadata
+                    backend.token_to_kv_pool = SimpleNamespace(
+                        get_swa_buffer=lambda _: torch.zeros(1, 1, 4)
+                    )
+                    backend._is_dspark_draft_worker = is_draft
+                    backend._dsv4_sliding_window_size = 128
+                    output = backend._forward_swa(
+                        torch.ones(1, 1, 4),
+                        SimpleNamespace(layer_id=0, scaling=0.5),
+                        SimpleNamespace(),
+                        None,
+                    )
+
+                    self.assertIs(output, expected)
+                    op.assert_called_once()
+                    self.assertEqual(
+                        "cu_seqlens_ori_kv" in op.call_args.kwargs,
+                        is_draft and not is_arch35,
+                    )
+                    self.assertEqual("kv_quant_mode" in op.call_args.kwargs, is_arch35)
+
+    @patch(_ARCH35_PATCH_TARGET, return_value=True)
     def test_arch35_uses_kv_quant_ops_and_layout_kwargs(self, _):
         with patch("torch.ops.custom", MagicMock(), create=True) as custom_ops:
             metadata_op, attention_op = _sparse_attn_ops()
@@ -712,7 +778,7 @@ class TestArch35SparseAttentionDispatch(unittest.TestCase):
             kwargs = _sparse_attn_kv_quant_kwargs()
 
         self.assertIs(metadata_op, custom_ops.npu_sparse_attn_sharedkv_metadata)
-        self.assertIs(attention_op, npu_ops.sparse_attn_sharedkv)
+        self.assertIs(attention_op, custom_ops.npu_sparse_attn_sharedkv)
         self.assertEqual(kwargs, {})
 
 
@@ -772,6 +838,7 @@ class TestSparseAttentionMetadata(unittest.TestCase):
         seqused_kv_cpu = seqused_kv.clone()
 
         with (
+            patch(self._ARCH35_PATCH_TARGET, return_value=False),
             patch("torch.ops.npu", MagicMock(), create=True) as npu_ops,
             patch(
                 "sglang.srt.hardware_backend.npu.attention.ascend_dsv4_backend._sparse_attn_ops",
@@ -808,6 +875,36 @@ class TestSparseAttentionMetadata(unittest.TestCase):
         torch.testing.assert_close(actual_seqused_kv, seqused_kv_cpu[:2])
         self.assertEqual(actual_seqused_kv.dtype, torch.int32)
         self.assertEqual(actual_seqused_kv.device.type, "cpu")
+
+    @patch(_ARCH35_PATCH_TARGET, return_value=True)
+    def test_dspark_arch35_metadata_uses_v2_device_sequence_lengths(self, _):
+        cu_seqlens_q = torch.tensor([0, 2, 3], dtype=torch.int32)
+        seqused_kv = torch.tensor([8, 12], dtype=torch.int32)
+        backend = DeepseekV4AscendAttnBackend.__new__(DeepseekV4AscendAttnBackend)
+        backend.forward_metadata = SimpleNamespace()
+        backend._is_dspark_draft_worker = True
+        backend._dsv4_sliding_window_size = 128
+        backend._dsv4_q_head_num = 64
+        backend._dsv4_kv_head_num = 1
+        backend._dsv4_head_dim = 512
+        backend._dsv4_has_c4 = False
+        backend._dsv4_has_c128 = False
+
+        with patch("torch.ops._C_ascend", MagicMock(), create=True) as dspark_ops:
+            metadata = backend._kernel_metadata_from_parts(
+                bs=2,
+                actual_seq_lengths_q_pa=cu_seqlens_q,
+                actual_seq_lengths_kv=seqused_kv,
+                block_tables=torch.zeros((2, 1), dtype=torch.int32),
+                max_seqlen_q=2,
+                is_nextn=False,
+            )
+
+        metadata_op = dspark_ops.npu_kv_quant_sparse_attn_sharedkv_v2_metadata
+        metadata_op.assert_called_once()
+        self.assertIs(metadata["c1a_metadata"], metadata_op.return_value)
+        self.assertIs(metadata_op.call_args.kwargs["cu_seqlens_q"], cu_seqlens_q)
+        self.assertIs(metadata_op.call_args.kwargs["seqused_kv"], seqused_kv)
 
 
 class TestGetKvIndices(unittest.TestCase):

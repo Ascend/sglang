@@ -4,6 +4,7 @@ import torch
 
 from sglang.srt.constants import GPU_MEMORY_TYPE_KV_CACHE
 from sglang.srt.environ import envs
+from sglang.srt.layers.dcp.layout import localize_dcp_indices
 from sglang.srt.mem_cache.memory_pool import (
     MHATokenToKOnlyPool,
     MHATokenToKVPool,
@@ -12,6 +13,7 @@ from sglang.srt.mem_cache.memory_pool import (
     get_tensor_size_bytes,
     unwrap_write_loc,
 )
+from sglang.srt.runtime_context import get_parallel
 from sglang.srt.utils import get_bool_env_var
 from sglang.srt.utils.common import is_npu
 
@@ -20,6 +22,34 @@ if TYPE_CHECKING:
 
 if is_npu():
     import torch_npu
+
+
+def _mla_fia_nz_scatter_indices(
+    loc: torch.Tensor, head_dim: int, page_size: int
+) -> torch.Tensor:
+    """Return physical rows for token-wise writes into an MLA NZ cache.
+
+    The storage allocation remains page-major ``[page, slot, 1, D]`` for
+    transfer and bookkeeping compatibility. FIA reads that storage as
+    ``[page, 1, D / 16, page_size, 16]``. A token-major scatter would therefore
+    write the wrong physical rows, so every logical token expands to its
+    ``D / 16`` NZ tiles.
+    """
+    if head_dim % 16:
+        raise ValueError(
+            "FIA NZ MLA cache requires a head dimension divisible by 16, "
+            f"got {head_dim}."
+        )
+    if page_size <= 0:
+        raise ValueError(f"page_size must be positive, got {page_size}.")
+
+    num_tiles = head_dim // 16
+    page = torch.div(loc, page_size, rounding_mode="floor")
+    slot = torch.remainder(loc, page_size)
+    tiles = torch.arange(num_tiles, dtype=loc.dtype, device=loc.device)
+    # Flatten [token, tile] in the same order as source.view(T, tiles, 16).
+    rows = ((page[:, None] * num_tiles + tiles) * page_size) + slot[:, None]
+    return rows.reshape(-1, 1)
 
 
 def _init_npu_conv_state(
@@ -76,6 +106,7 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
         **kwargs,
     ):
         self.use_fia = get_bool_env_var("ASCEND_USE_FIA", "False")
+        self.use_scatter_pa_kv_cache = envs.SGLANG_NPU_USE_SCATTER_PA_KV_CACHE.get()
         self.use_triton_prefix_kv_cache_store = (
             envs.SGLANG_NPU_USE_TRITON_PREFIX_KV_CACHE_STORE.get()
         )
@@ -105,7 +136,11 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
             # The padded slot 0 is used for writing dummy outputs from padded tokens.
             # Continuous memory improves the efficiency of Ascend`s transmission backend,
             # while other backends remain unchanged.
-            self.k_buffer = torch.zeros(
+            # FIA exposes the KV cache as per-layer Python views so graph
+            # capture does not retain the full multi-layer tensor. HiCache's
+            # NPU exchange operator still requires the original contiguous
+            # [layer, page, token, head, dim] allocation.
+            self._hicache_k_buffer = torch.zeros(
                 (
                     self.layer_num,
                     self.size // self.page_size + 1,
@@ -116,7 +151,7 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
                 dtype=self.store_dtype,
                 device=self.device,
             )
-            self.v_buffer = torch.zeros(
+            self._hicache_v_buffer = torch.zeros(
                 (
                     self.layer_num,
                     self.size // self.page_size + 1,
@@ -127,6 +162,14 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
                 dtype=self.store_dtype,
                 device=self.device,
             )
+            # Keep a reference to the contiguous tensor for HiCache
+            # D2H/H2D transfers (transfer_kv_dim_exchange expects a
+            # tensor, not the per-layer list used in FIA mode below).
+            self.k_buffer_tensor = self._hicache_k_buffer
+            self.v_buffer_tensor = self._hicache_v_buffer
+
+            self.k_buffer = self._hicache_k_buffer
+            self.v_buffer = self._hicache_v_buffer
 
             if self.use_fia:
                 # Use per-layer Python lists to avoid torch.compile capturing
@@ -134,13 +177,19 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
                 # Each layer view: [P*ps, 1, H, D], sharing the contiguous
                 # storage allocated above.
                 self.k_buffer = [
-                    self.k_buffer[i].view(-1, 1, self.head_num, self.head_dim)
+                    self._hicache_k_buffer[i].view(-1, 1, self.head_num, self.head_dim)
                     for i in range(self.layer_num)
                 ]
                 self.v_buffer = [
-                    self.v_buffer[i].view(-1, 1, self.head_num, self.v_head_dim)
+                    self._hicache_v_buffer[i].view(
+                        -1, 1, self.head_num, self.v_head_dim
+                    )
                     for i in range(self.layer_num)
                 ]
+
+    def get_hicache_transfer_buffers(self):
+        """Return contiguous all-layer KV tensors for NPU HiCache IO."""
+        return self._hicache_k_buffer, self._hicache_v_buffer
 
     def _init_kv_copy_and_warmup(self):
         # implementation relies on self.data_strides / self.data_ptrs, which the
@@ -229,22 +278,65 @@ class NPUMHATokenToKVPool(MHATokenToKVPool):
                     f"v_head_dim={self.v_head_dim}."
                 )
 
-            # aclnnScatterNdUpdate on the deployed CANN rejects the otherwise
-            # valid 4-D [slot, 1, head, dim] update during tiling. Flatten only
-            # the singleton FIA layout axis and scatter through an equivalent
-            # 3-D view; the underlying KV storage and attention layout stay
-            # unchanged.
-            loc_indices = loc.contiguous().view(-1, 1)
-            torch_npu.npu_scatter_nd_update_(
-                k_buffer_layer.view(-1, self.head_num, self.head_dim),
-                loc_indices,
-                cache_k.contiguous().view(num_rows, self.head_num, self.head_dim),
-            )
-            torch_npu.npu_scatter_nd_update_(
-                v_buffer_layer.view(-1, self.head_num, self.v_head_dim),
-                loc_indices,
-                cache_v.contiguous().view(num_rows, self.head_num, self.v_head_dim),
-            )
+            if self.use_scatter_pa_kv_cache:
+                # Single fused write for K and V: one kernel instead of the
+                # two aclnnScatterNdUpdate launches below. Bit-identical to
+                # the unfused path (same flat slot indexing, cross-page safe).
+                if not hasattr(torch_npu, "npu_scatter_pa_kv_cache"):
+                    raise RuntimeError(
+                        "The installed torch_npu does not provide "
+                        "npu_scatter_pa_kv_cache. Please upgrade torch_npu/CANN "
+                        "or unset SGLANG_NPU_USE_SCATTER_PA_KV_CACHE."
+                    )
+                if self.store_dtype not in (
+                    torch.float16,
+                    torch.bfloat16,
+                    torch.int8,
+                ):
+                    raise RuntimeError(
+                        "npu_scatter_pa_kv_cache only supports fp16, bf16, and "
+                        f"int8 KV cache, but got {self.store_dtype}."
+                    )
+                key = cache_k.reshape(-1, self.head_num, self.head_dim).contiguous()
+                value = cache_v.reshape(-1, self.head_num, self.v_head_dim).contiguous()
+                key_cache = k_buffer_layer.view(
+                    -1, self.page_size, self.head_num, self.head_dim
+                )
+                value_cache = v_buffer_layer.view(
+                    -1, self.page_size, self.head_num, self.v_head_dim
+                )
+                # int32/int64 slot mappings are both accepted by the op; avoid
+                # a per-layer dtype-cast kernel (prefill/spec paths hand over
+                # int64 locs).
+                slot_mapping = loc.reshape(-1)
+                if slot_mapping.dtype not in (torch.int32, torch.int64):
+                    slot_mapping = slot_mapping.to(torch.int32)
+
+                torch_npu.npu_scatter_pa_kv_cache(
+                    key,
+                    value,
+                    key_cache,
+                    value_cache,
+                    slot_mapping,
+                    cache_mode="Norm",
+                )
+            else:
+                # aclnnScatterNdUpdate on the deployed CANN rejects the otherwise
+                # valid 4-D [slot, 1, head, dim] update during tiling. Flatten only
+                # the singleton FIA layout axis and scatter through an equivalent
+                # 3-D view; the underlying KV storage and attention layout stay
+                # unchanged.
+                loc_indices = loc.contiguous().view(-1, 1)
+                torch_npu.npu_scatter_nd_update_(
+                    k_buffer_layer.view(-1, self.head_num, self.head_dim),
+                    loc_indices,
+                    cache_k.contiguous().view(num_rows, self.head_num, self.head_dim),
+                )
+                torch_npu.npu_scatter_nd_update_(
+                    v_buffer_layer.view(-1, self.head_num, self.v_head_dim),
+                    loc_indices,
+                    cache_v.contiguous().view(num_rows, self.head_num, self.v_head_dim),
+                )
         else:
             loc = loc.to(torch.int32)
             torch_npu._npu_reshape_and_cache(
@@ -436,6 +528,10 @@ class NPUMHATokenToKOnlyPool(MHATokenToKOnlyPool):
                 dtype=self.store_dtype,
                 device=self.device,
             )
+            # Keep a reference to the contiguous tensor for HiCache
+            # D2H/H2D transfers (transfer_kv_dim_exchange expects a
+            # tensor, not the per-layer list used in FIA mode below).
+            self.k_buffer_tensor = self.k_buffer
             if self.use_fia:
                 self.k_buffer = [
                     self.k_buffer[i].view(-1, 1, self.head_num, self.head_dim)
@@ -535,11 +631,18 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         device: str,
         enable_memory_saver: bool,
         index_head_dim: Optional[int] = None,
+        index_size: Optional[int] = None,
         start_layer: Optional[int] = None,
         end_layer: Optional[int] = None,
+        index_page_size: Optional[int] = None,
         indexer_layer_ids: Optional[Sequence[int]] = None,
         kv_cache_dim: Optional[int] = None,
+        is_draft_worker: bool = False,
     ):
+        # MLAPO historically owned NZ writes. Keep the allocation unchanged and
+        # write into the NZ-addressed view below so ordinary MLA (including
+        # Kimi-K3 MTP) can use FIA NZ without MLAPO.
+        self.use_fia_nz = get_bool_env_var("SGLANG_USE_FIA_NZ")
         super(MLATokenToKVPool, self).__init__(
             size=size,
             page_size=page_size,
@@ -559,7 +662,6 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         )
         if self.enable_sparsity_driven_kv_offload and self.index_head_dim is None:
             raise ValueError("Sparsity-driven KV offload requires an index KV cache.")
-
         if index_head_dim is None:
             self.indexer_layer_ids = ()
         elif indexer_layer_ids is None:
@@ -595,6 +697,19 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         self.kr_cache_dim = 0 if self.dsa_kv_cache_store_fp8 else qk_rope_head_dim
         self.index_k_scale_buffer = None
         self.indexer_hadamard_128 = None
+        self.index_page_size = page_size if index_page_size is None else index_page_size
+        self.index_size = size if index_size is None else index_size
+        parallel = get_parallel()
+        self.dcp_size = parallel.attn_dcp_size
+        self.dcp_rank = parallel.attn_dcp_rank
+        global_page_padding = self.dcp_size if self.dcp_size > 1 else 1
+        kv_page_padding = global_page_padding if is_draft_worker else 1
+        index_page_padding = global_page_padding if index_head_dim is not None else 1
+        if kv_page_padding < 1 or index_page_padding < 1:
+            raise ValueError("NPU MLA page padding must be positive")
+        self.kv_page_padding = kv_page_padding
+        self.index_page_padding = index_page_padding
+        self.is_draft_worker = is_draft_worker
 
         self.custom_mem_pool = None
 
@@ -607,7 +722,7 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
                 self.k_buffer = torch.zeros(
                     (
                         layer_num,
-                        self.size // self.page_size + 1,
+                        self.size // self.page_size + self.kv_page_padding,
                         self.page_size,
                         1,
                         self.kv_cache_dim,
@@ -618,7 +733,7 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
                 self.v_buffer = torch.zeros(
                     (
                         layer_num,
-                        self.size // self.page_size + 1,
+                        self.size // self.page_size + self.kv_page_padding,
                         self.page_size,
                         1,
                         self.kr_cache_dim,
@@ -635,8 +750,9 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
                 self.index_k_buffer = torch.zeros(
                     (
                         self.num_indexer_layers,
-                        self.size // self.page_size + 1,
-                        self.page_size,
+                        self.index_size // self.index_page_size
+                        + self.index_page_padding,
+                        self.index_page_size,
                         1,
                         self.index_head_dim,
                     ),
@@ -658,6 +774,17 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
                     )
 
         self._finalize_allocation_log(size)
+
+    def _copy_indices_for_buffer(self, indices, uses_global_slots):
+        if uses_global_slots or self.dcp_size <= 1:
+            return indices
+        local_indices = localize_dcp_indices(
+            indices,
+            self.dcp_size,
+            self.dcp_rank,
+            self.page_size,
+        )
+        return local_indices[local_indices >= 0]
 
     def get_kv_size_bytes(self):
         kv_size_bytes = 0
@@ -751,25 +878,90 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             scale.view(-1, 1),
         )
 
+    def _get_disagg_buffer_view(
+        self,
+        buffer: torch.Tensor,
+        *,
+        page_size: int,
+        uses_global_slots: bool,
+    ) -> torch.Tensor:
+        """Expose the byte stride used by PD without changing kernel views."""
+        if buffer.shape[1] != page_size:
+            raise RuntimeError(
+                "NPU MLA disaggregation buffer page shape is inconsistent: "
+                f"shape={tuple(buffer.shape)}, page_size={page_size}"
+            )
+        transfer_page_size = (
+            page_size * self.dcp_size
+            if uses_global_slots and self.dcp_size > 1
+            else page_size
+        )
+        num_slots = buffer.shape[0] * page_size
+        if num_slots % transfer_page_size:
+            raise RuntimeError(
+                "NPU MLA disaggregation buffer cannot be viewed as integral "
+                f"transfer pages: slots={num_slots}, "
+                f"transfer_page_size={transfer_page_size}"
+            )
+        return buffer.view(
+            num_slots // transfer_page_size,
+            transfer_page_size,
+            *buffer.shape[2:],
+        )
+
     # for disagg
     def get_contiguous_buf_infos(self):
         self._raise_if_native_kv_cache_disabled()
-        # MLA has only one kv_buffer, so only the information of this buffer needs to be returned.
-        kv_data_ptrs = [self.k_buffer[i].data_ptr() for i in range(self.layer_num)] + [
-            self.v_buffer[i].data_ptr() for i in range(self.layer_num)
-        ]
-        kv_data_lens = [self.k_buffer[i].nbytes for i in range(self.layer_num)] + [
-            self.v_buffer[i].nbytes for i in range(self.layer_num)
-        ]
-        kv_item_lens = [self.k_buffer[i][0].nbytes for i in range(self.layer_num)] + [
-            self.v_buffer[i][0].nbytes for i in range(self.layer_num)
-        ]
+        # DCP target attention K/V is rank-local. The target indexer and every
+        # draft buffer retain allocator-global slots, so their PD page stride
+        # spans dcp_size adjacent physical pages. A transfer-only view exposes
+        # that stride without changing the tensor shape seen by NPU kernels.
+        buffers = list(self.k_buffer)
+        page_sizes = [self.page_size] * len(buffers)
+        uses_global_slots = [self.is_draft_worker] * len(buffers)
+        if not getattr(self, "dsa_kv_cache_store_fp8", False):
+            buffers += list(self.v_buffer)
+            page_sizes += [self.page_size] * self.layer_num
+            uses_global_slots += [self.is_draft_worker] * self.layer_num
         if self.index_head_dim is not None:
-            ptrs, lens, item_lens = self.get_state_buf_infos()
-            kv_data_ptrs += ptrs
-            kv_data_lens += lens
-            kv_item_lens += item_lens
-        return kv_data_ptrs, kv_data_lens, kv_item_lens
+            buffers += list(self.index_k_buffer)
+            page_sizes += [self.index_page_size] * self.num_indexer_layers
+            uses_global_slots += [True] * self.num_indexer_layers
+            if self.index_k_scale_buffer is not None:
+                buffers += list(self.index_k_scale_buffer)
+                page_sizes += [self.index_page_size] * self.num_indexer_layers
+                uses_global_slots += [True] * self.num_indexer_layers
+
+        transfer_views = [
+            self._get_disagg_buffer_view(
+                buffer,
+                page_size=page_size,
+                uses_global_slots=global_slots,
+            )
+            for buffer, page_size, global_slots in zip(
+                buffers, page_sizes, uses_global_slots
+            )
+        ]
+        return (
+            [buffer.data_ptr() for buffer in transfer_views],
+            [buffer.nbytes for buffer in transfer_views],
+            [buffer[0].nbytes for buffer in transfer_views],
+        )
+
+    def get_dcp_remote_decode_layout(self) -> list[bool]:
+        """Whether each PD entry uses allocator-global slots on decode."""
+        target_global = self.is_draft_worker
+        layout = [target_global] * self.layer_num
+        if not getattr(self, "dsa_kv_cache_store_fp8", False):
+            layout.extend([target_global] * self.layer_num)
+        if self.index_head_dim is not None:
+            layout.extend([True] * self.num_indexer_layers)
+            if self.index_k_scale_buffer is not None:
+                layout.extend([True] * self.num_indexer_layers)
+
+        if len(layout) != len(self.get_contiguous_buf_infos()[0]):
+            raise RuntimeError("NPU MLA DCP layout does not match its transfer buffers")
+        return layout
 
     def get_kv_layer_ids(self):
         return (
@@ -829,6 +1021,12 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
                 packed.view(-1, 1, self.kv_cache_dim),
             )
             return
+
+        if cache_v is None:
+            cache_k, cache_v = cache_k.split(
+                [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1
+            )
+
         if cache_k.dtype != self.dtype:
             cache_k = cache_k.to(self.dtype)
             cache_v = cache_v.to(self.dtype)
@@ -837,10 +1035,9 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             cache_k = cache_k.view(self.store_dtype)
             cache_v = cache_v.view(self.store_dtype)
 
-        if cache_v is None:
-            cache_k, cache_v = cache_k.split(
-                [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1
-            )
+        if self.use_fia_nz:
+            self._set_fia_nz_kv_buffer(layer_id, loc, cache_k, cache_v)
+            return
 
         torch_npu.npu_scatter_nd_update_(
             self.k_buffer[layer_id - self.start_layer].view(-1, 1, self.kv_lora_rank),
@@ -854,6 +1051,28 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             loc.view(-1, 1),
             cache_v.view(-1, 1, self.qk_rope_head_dim),
         )
+
+    def _set_fia_nz_kv_buffer(
+        self,
+        layer_id: int,
+        loc: torch.Tensor,
+        cache_k: torch.Tensor,
+        cache_v: torch.Tensor,
+    ) -> None:
+        """Store MLA latent and RoPE KV tensors in FIA's NZ tile order."""
+
+        def scatter(cache: torch.Tensor, values: torch.Tensor, head_dim: int):
+            num_tiles = head_dim // 16
+            indices = _mla_fia_nz_scatter_indices(loc, head_dim, self.page_size)
+            # Destination rows are ordered [page, tile, slot]. Source rows use
+            # the matching [token, tile] order after this reshape.
+            dst = cache.view(-1, 1, num_tiles, self.page_size, 16).view(-1, 16)
+            src = values.contiguous().view(-1, num_tiles, 16).view(-1, 16)
+            torch_npu.npu_scatter_nd_update_(dst, indices, src)
+
+        offset = layer_id - self.start_layer
+        scatter(self.k_buffer[offset], cache_k, self.kv_lora_rank)
+        scatter(self.v_buffer[offset], cache_v, self.qk_rope_head_dim)
 
     def set_index_k_buffer(
         self,
@@ -875,17 +1094,25 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             index_k.view(-1, 1, self.index_head_dim),
         )
 
-    def _chunk_copy_npu_to_cpu(self, buf_of_layers, indices):
+    def _chunk_copy_npu_to_cpu(
+        self, buf_of_layers, indices, uses_global_slots_per_layer
+    ):
         chunk_size = self.cpu_offloading_chunk_size
         out = []
-        for tensors_per_layer in buf_of_layers:  # [k_buf, v_buf, ik_buf/None]
+        for tensors_per_layer, uses_global_slots in zip(
+            buf_of_layers, uses_global_slots_per_layer, strict=True
+        ):  # [k_buf, v_buf, ik_buf/None]
             layer_chunks = []
             for i in range(0, len(indices), chunk_size):
                 ci = indices[i : i + chunk_size]
                 layer_chunks.append(
                     [
-                        t[ci].to("cpu", non_blocking=True)
-                        for t in tensors_per_layer
+                        t[self._copy_indices_for_buffer(ci, uses_global)].to(
+                            "cpu", non_blocking=True
+                        )
+                        for t, uses_global in zip(
+                            tensors_per_layer, uses_global_slots, strict=True
+                        )
                         if t is not None
                     ]
                 )
@@ -917,8 +1144,18 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         buf_of_layers = [
             self._get_cpu_offload_layer_buffers(i) for i in range(self.layer_num)
         ]
+        uses_global_slots_per_layer = []
+        for buffers in buf_of_layers:
+            # MLA K/V is rank-local under DCP. The replicated
+            # indexer buffers retain allocator-global slot identities.
+            uses_global_slots_per_layer.append(
+                [self.is_draft_worker, self.is_draft_worker]
+                + [True] * (len(buffers) - 2)
+            )
 
-        kv_cache_cpu = self._chunk_copy_npu_to_cpu(buf_of_layers, indices)
+        kv_cache_cpu = self._chunk_copy_npu_to_cpu(
+            buf_of_layers, indices, uses_global_slots_per_layer
+        )
         torch.npu.synchronize()
         return kv_cache_cpu
 
@@ -932,7 +1169,20 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             for i in range(0, len(indices), chunk_size):
                 chunk_indices = indices[i : i + chunk_size]
                 chunk = kv_cache_cpu[local_layer_id][i // chunk_size]
-                for buffer, cpu in zip(buffers, chunk, strict=True):
-                    assert cpu.shape[0] == len(chunk_indices)
-                    buffer[chunk_indices] = cpu.to(buffer.device, non_blocking=True)
+                cpu_index = 0
+                for buffer, uses_global_slots in zip(
+                    buffers,
+                    [self.is_draft_worker, self.is_draft_worker]
+                    + [True] * (len(buffers) - 2),
+                    strict=True,
+                ):
+                    if buffer is None:
+                        continue
+                    cpu = chunk[cpu_index]
+                    cpu_index += 1
+                    target_indices = self._copy_indices_for_buffer(
+                        chunk_indices, uses_global_slots
+                    )
+                    assert cpu.shape[0] == len(target_indices)
+                    buffer[target_indices] = cpu.to(buffer.device, non_blocking=True)
         torch.npu.synchronize()

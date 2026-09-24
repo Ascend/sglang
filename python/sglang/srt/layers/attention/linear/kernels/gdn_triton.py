@@ -5,6 +5,8 @@ from sglang.srt.layers.attention.linear.kernels.kernel_backend import (
 )
 from sglang.srt.utils import is_cpu, is_npu, is_xpu
 
+_is_npu = is_npu()
+
 if not is_cpu():
     from sglang.kernels.ops.attention.fla.chunk import chunk_gated_delta_rule
     from sglang.kernels.ops.attention.fla.fused_recurrent import (
@@ -19,12 +21,14 @@ if not is_cpu():
 
 if is_npu():
     from sgl_kernel_npu.fla.chunk import chunk_gated_delta_rule_npu
-    from sgl_kernel_npu.fla.fused_sigmoid_gating_recurrent import (
-        fused_sigmoid_gating_delta_rule_update_npu,
+    from sgl_kernel_npu.fla.fused_sigmoid_gating_recurrent_decode_optimized import (
+        fused_sigmoid_gating_delta_rule_update_decode_npu,
+    )
+    from sgl_kernel_npu.fla.fused_sigmoid_gating_recurrent_decode_optimized import (
+        fused_sigmoid_gating_delta_rule_update_decode_npu as fused_sigmoid_gating_delta_rule_update,
     )
 
     chunk_gated_delta_rule = chunk_gated_delta_rule_npu
-    fused_sigmoid_gating_delta_rule_update = fused_sigmoid_gating_delta_rule_update_npu
 elif is_cpu():
     from sgl_kernel.mamba import chunk_gated_delta_rule_cpu
 
@@ -42,6 +46,7 @@ class TritonGDNKernel(LinearAttnKernelBase):
     """Triton-based kernel for GDN (Gated Delta Network) linear attention."""
 
     supports_packed_decode: bool = not is_cpu() and not is_npu()
+    supports_strided_target_verify_qkv: bool = True
 
     def packed_decode(
         self,
@@ -150,6 +155,24 @@ class TritonGDNKernel(LinearAttnKernelBase):
         query_start_loc: torch.Tensor,
         **kwargs,
     ) -> torch.Tensor:
+        if _is_npu:
+            # Decode-optimized NPU kernel: computes gating once per (token, value-head)
+            # and reuses it across the value-dimension tiles.
+            return fused_sigmoid_gating_delta_rule_update_decode_npu(
+                A_log=A_log,
+                a=a,
+                dt_bias=dt_bias,
+                softplus_beta=1.0,
+                softplus_threshold=20.0,
+                q=q,
+                k=k,
+                v=v,
+                b=b,
+                initial_state_source=ssm_states,
+                initial_state_indices=cache_indices,
+                use_qk_l2norm_in_kernel=True,
+                cu_seqlens=query_start_loc,
+            )
         return fused_sigmoid_gating_delta_rule_update(
             A_log=A_log,
             dt_bias=dt_bias,
