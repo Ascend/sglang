@@ -148,7 +148,7 @@ RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-works
 
 RUN git clone https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
     mkdir -p /usr/local/Ascend/extra-ops && \
-    cd vllm-ascend/crsc && \
+    cd vllm-ascend/csrc && \
     mkdir -p build && \
     cd build && \
     cmake .. \
