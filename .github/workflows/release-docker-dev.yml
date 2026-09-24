@@ -76,7 +76,7 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=2026.9.0.post5
+            SGLANG_KERNEL_NPU_TAG=2026.9.0.post6
             CANN_VERSION=9.1.0
             DEVICE_TYPE=${{ matrix.device_type }}
 
@@ -133,7 +133,7 @@ jobs:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       dockerfile: ${{ matrix.dockerfile }}
       build_args: |
-        SGLANG_KERNEL_NPU_TAG=2026.9.0.post5
+        SGLANG_KERNEL_NPU_TAG=2026.9.0.post6
         CANN_VERSION=9.1.0
         DEVICE_TYPE=${{ matrix.device_type }}
       artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
