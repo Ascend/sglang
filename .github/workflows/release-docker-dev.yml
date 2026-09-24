@@ -20,6 +20,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - device_type: A3
+            dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
+            platform: amd64
+            runner: ubuntu-latest
+          - device_type: A3
+            dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
+            platform: arm64
+            runner: ubuntu-22.04-arm
           - device_type: 950
             dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
             platform: amd64
