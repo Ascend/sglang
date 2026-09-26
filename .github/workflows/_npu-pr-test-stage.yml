@@ -24,6 +24,10 @@ on:
         description: 'timeout-minutes for the Run test step. Required so compute_partitions.py can read it from pr-test.yml without a duplicated default constant.'
         type: string
         required: true
+      job_timeout_minutes:
+        description: 'Job-level timeout-minutes (covers checkout + install + test). Must be >= run_timeout_minutes plus install time.'
+        type: string
+        default: '240'
       timeout_per_file:
         description: 'run_suite.py --timeout-per-file value (empty = unset).'
         type: string
@@ -63,7 +67,7 @@ jobs:
     runs-on: ${{ inputs.runner_config }}
     container:
       image: ${{ inputs.image }}
-    timeout-minutes: 240
+    timeout-minutes: ${{ fromJson(inputs.job_timeout_minutes) }}
     strategy:
       fail-fast: false
       matrix:
@@ -193,7 +197,7 @@ jobs:
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
           RUSTUP_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local:8082"
         run: |
-          set -euo pipefail
+          set -eu
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
 
@@ -211,12 +215,59 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r $(pwd)/python/sglang/test/ascend ${ascend_test_util_path}
+            # Overlay test kits from the PR checkout (image snapshots may predate kits/,
+            # which breaks `from sglang.test.kits.hellaswag_kit import ...`)
+            rm -rf ${sglang_pkg_path}/sglang/test/kits
+            cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
 
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
             pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
             pip install jsonlines "evaluate>=0.4.0" numexpr dotenv
+            pip install websocket-client
+            pip install watchfiles granian whisper_normalizer msgpack
+            pip install fastokens
+            pip install mindstudio-probe --pre
+            # latex2sympy2 (pulled in above) pins antlr==4.7.2; restore 4.9.3 for sgl-eval
+            pip install "antlr4-python3-runtime==4.9.3" --force-reinstall --no-deps
+            pip install "uvicorn[standard]"
+            # Install sgl-eval
+            # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+            sglang_source_path=$(pwd)
+            echo "Source code path: ${sglang_source_path}"
+            . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+            pip install "$SGL_EVAL_SPEC"
+
+            git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+            cd ./lmms-eval
+            sed -i "/decord; platform_system/d" pyproject.toml
+            # lmms-eval v0.3.3 pins old deps (antlr==4.7.2 / datasets==2.16.1 / numpy==1.26.4 ...)
+            # that break sgl-eval and modelscope workloads; install the package itself only.
+            python3 -m pip install . --no-deps > lmmslog.txt 2>&1 || { cat lmmslog.txt; exit 1; }
+            python3 -c "import lmms_eval" || { echo "lmms_eval import check failed"; cat lmmslog.txt; exit 1; }
+            cd ../
+
+            # Canary: antlr runtime must be one of the versions latex2sympy2-extended supports.
+            python3 -c "from importlib.metadata import version; v = version('antlr4-python3-runtime'); assert v in ('4.9.3', '4.11.0', '4.13.2'), 'antlr4-python3-runtime is ' + v" || { echo "ERROR: antlr4-python3-runtime not in supported set"; exit 1; }
+            # Canary: modelscope needs `from datasets import LargeList` to work.
+            python3 -c "from datasets import LargeList" 2>/dev/null || pip install --force-reinstall --no-deps "datasets==4.8.5"
+            python3 -c "from datasets import LargeList" || { echo "ERROR: datasets still broken after reinstall"; exit 1; }
+
+            # Preload hellaswag: rowanz/hellaswag was DMCA-taken-down on 2026-09-14, the URL in
+            # test_programs.py 404s since. download_and_cache_file skips download when file exists.
+            # HF parquet stores label as string; test code does endings[label] -> cast to int.
+            python3 -c "
+            import json
+            from datasets import load_dataset
+            ds = load_dataset('Rowan/hellaswag', split='validation')
+            with open('/tmp/hellaswag_val.jsonl', 'w') as f:
+                for row in ds:
+                    row['label'] = int(row['label'])
+                    f.write(json.dumps(row) + '\n')
+            print(f'preloaded {len(ds)} hellaswag examples to /tmp/hellaswag_val.jsonl')
+            " || echo "WARN: hellaswag preload failed; test_accuracy_floor will fail if /tmp file is absent"
 
             hf download MMMU/MMMU --repo-type dataset
+            pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc opentelemetry-exporter-otlp-proto-http
           fi
 
           # install sglang_router
@@ -227,10 +278,12 @@ jobs:
         timeout-minutes: ${{ fromJson(inputs.run_timeout_minutes) }}
         env:
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
+          NPU_PR_SMOKE: ${{ inputs.is_nightly_pipeline_job == true && 'false' || 'true' }}
         shell: bash
         run: |
           # Fail fast on any command error, undefined variable, or pipe failure.
           set -euo pipefail
+          ln -sf $(pwd) /root/sglang
 
           # Install missing python deps (skip if already importable).
           PYTHON_FOR_SGLANG="python"
