@@ -2,6 +2,7 @@ name: Full Test (NPU)
 
 on:
   pull_request:
+  
     branches:
       - testcases-260813
     paths:
