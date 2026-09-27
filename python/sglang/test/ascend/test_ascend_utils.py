@@ -484,7 +484,6 @@ AUDIO_DATASETS_LIBRISPEECH_ASR_PATH = os.path.join(
 )
 
 # Other
-DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/npu/basic_function/parameter/deepseek_coder.json"
 FR_SPEC_TOKEN_MAP_PATH = "/root/.cache/sglang/FR-Spec/freq_32768.pt"
 HOT_MAP_PT = "/root/.cache/sglang/hot_map/expert_distribution_recorder.pt"
 HOT_MAP_JSON = "/root/.cache/sglang/hot_map/expert_distribution_recorder.json"

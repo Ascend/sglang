@@ -42,7 +42,7 @@ NPU_ENV = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "ASCEND_USE_FIA": "0",
+    # "ASCEND_USE_FIA": "0",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
 }

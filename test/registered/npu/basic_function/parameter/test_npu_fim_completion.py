@@ -1,13 +1,11 @@
+import os
 import unittest
 
 import openai
 
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
-from sglang.test.ascend.test_ascend_utils import (
-    DEEPSEEK_CODER_1_3_B_BASE_PATH,
-    DEEPSEEK_CODER_JSON_PATH,
-)
+from sglang.test.ascend.test_ascend_utils import DEEPSEEK_CODER_1_3_B_BASE_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -26,6 +24,8 @@ register_npu_ci(
     suite="full-1-npu-a5",
     nightly=True,
 )
+
+DEEPSEEK_CODER_JSON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deepseek_coder.json")
 
 
 class TestFimCompletion(CustomTestCase):
