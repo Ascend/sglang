@@ -489,7 +489,6 @@ FR_SPEC_TOKEN_MAP_PATH = "/root/.cache/sglang/FR-Spec/freq_32768.pt"
 HOT_MAP_PT = "/root/.cache/sglang/hot_map/expert_distribution_recorder.pt"
 HOT_MAP_JSON = "/root/.cache/sglang/hot_map/expert_distribution_recorder.json"
 HOT_MAP_STRING = "/root/.cache/sglang/hot_map/qwen3_30b_a3b_random_no_redundant.json"
-CONFIG_YAML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
 
 
 class ModelTestConfig(NamedTuple):
