@@ -39,7 +39,7 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.7",
+        "0.8",
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
