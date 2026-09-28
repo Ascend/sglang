@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_tag: [ main-cann9.0.0-a3, main-cann9.1.0-a3 ]
+        image_tag: [ main-cann9.0.0-a3 ]
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ matrix.image_tag }}
     steps:
