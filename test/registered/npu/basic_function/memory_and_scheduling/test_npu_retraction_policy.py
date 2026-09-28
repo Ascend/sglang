@@ -19,47 +19,8 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
-class TestRetractionPolicyLength(CustomTestCase):
-    """Verify --retraction-policy=length (default) retracts the longer-input
-    request when KV cache is full and output lengths are equal.
-
-    Strategy:
-    - Two concurrent requests with equal max_new_tokens (512) and different
-      input lengths → KV fills → length policy retracts longer-input request
-      first (longer input → smaller key in (output, -input) tiebreaker).
-
-    Assertions:
-    - "KV cache pool is full. Retract requests." in server logs
-    - Both outputs contain expected content
-    - Long-input has more retractions than short-input (length policy)
-
-    [Test Category] Parameter
-    [Test Target] --retraction-policy
-    """
-
+class BaseRetractionTest(CustomTestCase):
     model = QWEN3_5_9B_WEIGHTS_PATH
-
-    _LONG_INPUT_PREFIX = (
-        "The history of artificial intelligence is a fascinating story. " * 20
-    )
-
-    _BASE_ARGS = [
-        "--attention-backend",
-        "ascend",
-        "--disable-cuda-graph",
-        "--disable-radix-cache",
-        "--mem-fraction-static",
-        "0.31",
-        "--max-total-tokens",
-        "1152",
-        "--trust-remote-code",
-        "--enable-metrics",
-        "--log-level",
-        "debug",
-    ]
-
-    _OUT_LOG = "./tmp_retraction_length_out.log"
-    _ERR_LOG = "./tmp_retraction_length_err.log"
 
     @classmethod
     def setUpClass(cls):
@@ -92,6 +53,47 @@ class TestRetractionPolicyLength(CustomTestCase):
             stderr = f.read()
         return stdout + stderr
 
+
+class TestRetractionPolicyLength(BaseRetractionTest):
+    """Verify --retraction-policy=length (default) retracts the longer-input
+    request when KV cache is full and output lengths are equal.
+
+    Strategy:
+    - Two concurrent requests with equal max_new_tokens (512) and different
+      input lengths → KV fills → length policy retracts longer-input request
+      first (longer input → smaller key in (output, -input) tiebreaker).
+
+    Assertions:
+    - "KV cache pool is full. Retract requests." in server logs
+    - Both outputs contain expected content
+    - Long-input has more retractions than short-input (length policy)
+
+    [Test Category] Parameter
+    [Test Target] --retraction-policy
+    """
+
+    _LONG_INPUT_PREFIX = (
+        "The history of artificial intelligence is a fascinating story. " * 20
+    )
+
+    _BASE_ARGS = [
+        "--attention-backend",
+        "ascend",
+        "--disable-cuda-graph",
+        "--disable-radix-cache",
+        "--mem-fraction-static",
+        "0.31",
+        "--max-total-tokens",
+        "1152",
+        "--trust-remote-code",
+        "--enable-metrics",
+        "--log-level",
+        "debug",
+    ]
+
+    _OUT_LOG = "./tmp_retraction_length_out.log"
+    _ERR_LOG = "./tmp_retraction_length_err.log"
+
     def test_length_policy_retraction(self):
         health_resp = requests.get(f"{DEFAULT_URL_FOR_TEST}/health_generate")
         self.assertEqual(health_resp.status_code, 200)
@@ -116,6 +118,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             result_short["text"] = resp.json().get("text", "")
             result_short["e2e"] = resp.json()["meta_info"]["e2e_latency"]
             result_short["retractions"] = resp.json()["meta_info"]["num_retractions"]
+            print(resp.json())
 
         def _send_long():
             resp = requests.post(
@@ -137,6 +140,7 @@ class TestRetractionPolicyLength(CustomTestCase):
             result_long["text"] = resp.json().get("text", "")
             result_long["e2e"] = resp.json()["meta_info"]["e2e_latency"]
             result_long["retractions"] = resp.json()["meta_info"]["num_retractions"]
+            print(resp.json())
 
         t_short = threading.Thread(target=_send_short, daemon=True)
         t_long = threading.Thread(target=_send_long, daemon=True)
@@ -180,7 +184,7 @@ class TestRetractionPolicyLength(CustomTestCase):
         )
 
 
-class TestRetractionPolicyPriority(CustomTestCase):
+class TestRetractionPolicyPriority(BaseRetractionTest):
     """Verify --retraction-policy=priority works with priority scheduling.
 
     Strategy:
@@ -195,8 +199,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
     [Test Category] Parameter
     [Test Target] --retraction-policy
     """
-
-    model = QWEN3_5_9B_WEIGHTS_PATH
 
     _BASE_ARGS = [
         "--attention-backend",
@@ -224,37 +226,6 @@ class TestRetractionPolicyPriority(CustomTestCase):
     _OUT_LOG = "./tmp_retraction_priority_out.log"
     _ERR_LOG = "./tmp_retraction_priority_err.log"
 
-    @classmethod
-    def setUpClass(cls):
-        cls._out_log_file = open(cls._OUT_LOG, "w", encoding="utf-8")
-        cls._err_log_file = open(cls._ERR_LOG, "w", encoding="utf-8")
-        cls.process = popen_launch_server(
-            cls.model,
-            DEFAULT_URL_FOR_TEST,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=cls._BASE_ARGS,
-            return_stdout_stderr=(cls._out_log_file, cls._err_log_file),
-            device="npu",
-            env={"SGLANG_CLIP_MAX_NEW_TOKENS_ESTIMATION": "128"},
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        kill_process_tree(cls.process.pid)
-        cls._out_log_file.close()
-        cls._err_log_file.close()
-
-    def _read_logs(self):
-        """Flush and read server logs without closing handles,
-        so background dump threads can continue writing."""
-        self._out_log_file.flush()
-        self._err_log_file.flush()
-        with open(self._OUT_LOG, "r", encoding="utf-8") as f:
-            stdout = f.read()
-        with open(self._ERR_LOG, "r", encoding="utf-8") as f:
-            stderr = f.read()
-        return stdout + stderr
-
     def test_priority_policy_retraction(self):
         low_result = {}
         high_result = {}
@@ -280,6 +251,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             low_result["text"] = resp.json().get("text", "")
             low_result["e2e"] = resp.json()["meta_info"]["e2e_latency"]
             low_result["retractions"] = resp.json()["meta_info"]["num_retractions"]
+            print(resp.json())
 
         def _send_high():
             resp = requests.post(
@@ -302,6 +274,7 @@ class TestRetractionPolicyPriority(CustomTestCase):
             high_result["text"] = resp.json().get("text", "")
             high_result["e2e"] = resp.json()["meta_info"]["e2e_latency"]
             high_result["retractions"] = resp.json()["meta_info"]["num_retractions"]
+            print(resp.json())
 
         t_low = threading.Thread(target=_send_low, daemon=True)
         t_low.start()
