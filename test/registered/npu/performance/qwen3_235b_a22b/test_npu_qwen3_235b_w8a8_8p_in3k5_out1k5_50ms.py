@@ -14,7 +14,7 @@ register_npu_ci(est_time=3600, suite="full-test-npu-perf-16", nightly=True)
 QWEN3_235B_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
-    "DEEPEP_HCCL_BUFFSIZE": "570",
+    "DEEPEP_HCCL_BUFFSIZE": "1000",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
