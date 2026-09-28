@@ -27,7 +27,7 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B070'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B072'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -65,7 +65,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B070" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B072" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -418,7 +418,6 @@ jobs:
 #          - name: _qwen3_5_35b_a3b_4p_in2k_out32k_50ms
 #            runner: linux-aarch64-a3-8
 #            test_case: test/registered/npu/performance/qwen3_5_35b_a3b/test_npu_qwen3_5_35b_a3b_4p_in2k_out32k_50ms.py
-#
           - name: qwen3_5_122b_4p_in2k_out32k_50ms
             runner: linux-aarch64-a3-8
             test_case: test/registered/npu/performance/qwen3_5_122b/test_npu_qwen3_5_122b_4p_in2k_out32k_50ms.py
