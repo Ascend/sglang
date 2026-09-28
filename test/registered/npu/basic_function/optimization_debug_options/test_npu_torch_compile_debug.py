@@ -86,7 +86,7 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
-            host="http://127.0.0.1",
+            host="127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
         avg_time1, all_times1 = self.benchmark_gsm8k(args, num_runs=5)
