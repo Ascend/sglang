@@ -17,8 +17,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
-os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
-
 class BaseRetractionTest(CustomTestCase):
     model = QWEN3_5_9B_WEIGHTS_PATH
 
