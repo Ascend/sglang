@@ -79,7 +79,7 @@ QWEN3_235B_OTHER_ARGS = [
     "--enable-dp-lm-head",
     "--mem-fraction-static",
     "0.8",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     "1",
     "2",
     "4",
