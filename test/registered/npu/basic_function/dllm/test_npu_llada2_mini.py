@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -14,9 +15,14 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=800, suite="base-b-test-4-npu-a3")
 register_npu_ci(est_time=800, suite="nightly-4-npu-a3", nightly=True)
 
-_DLLM_ALGO_CONFIG = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "llada2_lowconf.yaml"
-)
+def _write_dllm_config() -> str:
+    cfg = tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False)
+    try:
+        cfg.write("threshold: 0.95\nblock_size: 32\n")
+    finally:
+        cfg.close()
+    return cfg.name
+
 
 _LLADA2_BASE_ARGS = [
     "--trust-remote-code",
@@ -28,8 +34,6 @@ _LLADA2_BASE_ARGS = [
     "ascend",
     "--dllm-algorithm",
     "LowConfidence",
-    "--dllm-algorithm-config",
-    _DLLM_ALGO_CONFIG,
 ]
 
 
@@ -41,13 +45,35 @@ class TestLLaDA2Mini(GSM8KAscendMixin, CustomTestCase):
     """
 
     model = LLaDA2_0_MINI_WEIGHTS_PATH
-    other_args = _LLADA2_BASE_ARGS + [
+    fdfo_args = [
         "--no-dllm-fdfo",  # FDFO (PR #27551) halves single-batch speed on NPU; use sync mode
     ]
     accuracy = 0.88
     output_throughput = 70
     speed_threshold = 130
     speed_summary_name = "llada2-mini"
+
+    @classmethod
+    def setUpClass(cls):
+        cls._dllm_config_path = _write_dllm_config()
+        cls.other_args = _LLADA2_BASE_ARGS + [
+            "--dllm-algorithm-config",
+            cls._dllm_config_path,
+        ] + cls.fdfo_args
+        try:
+            super().setUpClass()
+        except Exception:
+            os.unlink(cls._dllm_config_path)
+            raise
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            super().tearDownClass()
+        finally:
+            path = getattr(cls, "_dllm_config_path", None)
+            if path and os.path.isfile(path):
+                os.unlink(path)
 
     def test_bs_1_speed(self):
         args = BenchArgs(port=int(self.base_url.split(":")[-1]), max_new_tokens=2048)
@@ -70,7 +96,7 @@ class TestLLaDA2MiniFdfo(TestLLaDA2Mini):
     [Test Target] --dllm-algorithm; --dllm-algorithm-config; --dllm-fdfo
     """
 
-    other_args = _LLADA2_BASE_ARGS + [
+    fdfo_args = [
         "--dllm-fdfo",
     ]
     speed_threshold = 50

@@ -54,13 +54,6 @@ _MIN_DELTA_SMI_KV_MB = 1000  # npu-smi kv_cache release (1B model, 60% static po
 _MIN_DELTA_SMI_W_MB = 500  # npu-smi weights release (~2 GB model)
 
 
-def _first_existing_dir(*candidates: str) -> str:
-    for path in candidates:
-        if os.path.isdir(path):
-            return path
-    return candidates[0]
-
-
 # NPU memory
 def _npu_smi_mem_mb() -> float:
     """Sum of HBM-Usage(MB) for chips in ASCEND_RT_VISIBLE_DEVICES.
@@ -162,7 +155,9 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             multiprocessing.set_start_method("spawn", force=True)
 
         cls._saved_npu_alloc_conf = os.environ.pop("PYTORCH_NPU_ALLOC_CONF", None)
+
         cls._engine_model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+        assert os.path.isdir(cls._engine_model), f"Model not found: {cls._engine_model}"
 
     @classmethod
     def tearDownClass(cls):
@@ -278,18 +273,16 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         """
         params = self._common_test_params()
         sampling_params = {"temperature": 0, "max_new_tokens": 32}
-        model_path = _first_existing_dir(
-            QWEN3_8B_WEIGHTS_PATH, "/mnt/paas/weights/Qwen3-8B"
-        )
-        draft_path = _first_existing_dir(
-            QWEN3_8B_EAGLE3_WEIGHTS_PATH, "/mnt/paas/weights/Qwen3-8B_eagle3"
-        )
-        self.assertTrue(os.path.isdir(model_path), f"Model not found: {model_path}")
         self.assertTrue(
-            os.path.isdir(draft_path), f"Draft model not found: {draft_path}"
+            os.path.isdir(QWEN3_8B_WEIGHTS_PATH),
+            f"Model not found: {QWEN3_8B_WEIGHTS_PATH}",
+        )
+        self.assertTrue(
+            os.path.isdir(QWEN3_8B_EAGLE3_WEIGHTS_PATH),
+            f"Draft model not found: {QWEN3_8B_EAGLE3_WEIGHTS_PATH}",
         )
         engine = self._setup_engine(
-            model=model_path,
+            model=QWEN3_8B_WEIGHTS_PATH,
             mem_fraction_static=0.7,
             enable_weights_cpu_backup=True,
             disable_cuda_graph=True,
@@ -297,16 +290,11 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 "dtype": "float16",
                 "attention_backend": "ascend",
                 "speculative_algorithm": "EAGLE3",
-                "speculative_draft_model_path": draft_path,
+                "speculative_draft_model_path": QWEN3_8B_EAGLE3_WEIGHTS_PATH,
                 "speculative_num_steps": 1,
                 "speculative_eagle_topk": 1,
                 "speculative_num_draft_tokens": 2,
                 "enable_draft_weights_cpu_backup": True,
-                **(
-                    {"base_gpu_id": int(os.environ["SGLANG_TEST_BASE_GPU_ID"])}
-                    if os.environ.get("SGLANG_TEST_BASE_GPU_ID")
-                    else {}
-                ),
             },
         )
         try:
