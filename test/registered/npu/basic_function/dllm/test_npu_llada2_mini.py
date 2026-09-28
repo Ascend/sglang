@@ -15,6 +15,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=800, suite="base-b-test-4-npu-a3")
 register_npu_ci(est_time=800, suite="nightly-4-npu-a3", nightly=True)
 
+
 def _write_dllm_config() -> str:
     cfg = tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False)
     try:
@@ -56,10 +57,14 @@ class TestLLaDA2Mini(GSM8KAscendMixin, CustomTestCase):
     @classmethod
     def setUpClass(cls):
         cls._dllm_config_path = _write_dllm_config()
-        cls.other_args = _LLADA2_BASE_ARGS + [
-            "--dllm-algorithm-config",
-            cls._dllm_config_path,
-        ] + cls.fdfo_args
+        cls.other_args = (
+            _LLADA2_BASE_ARGS
+            + [
+                "--dllm-algorithm-config",
+                cls._dllm_config_path,
+            ]
+            + cls.fdfo_args
+        )
         try:
             super().setUpClass()
         except Exception:

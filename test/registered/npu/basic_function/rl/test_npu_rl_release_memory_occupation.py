@@ -273,14 +273,6 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         """
         params = self._common_test_params()
         sampling_params = {"temperature": 0, "max_new_tokens": 32}
-        self.assertTrue(
-            os.path.isdir(QWEN3_8B_WEIGHTS_PATH),
-            f"Model not found: {QWEN3_8B_WEIGHTS_PATH}",
-        )
-        self.assertTrue(
-            os.path.isdir(QWEN3_8B_EAGLE3_WEIGHTS_PATH),
-            f"Draft model not found: {QWEN3_8B_EAGLE3_WEIGHTS_PATH}",
-        )
         engine = self._setup_engine(
             model=QWEN3_8B_WEIGHTS_PATH,
             mem_fraction_static=0.7,
