@@ -117,7 +117,6 @@ class TestQwen235B(TestNpuPerformanceTestCaseBase):
     random_range_ratio = 1
     seed = 1
     tpot = 50.1
-    temperature = 0.1
     output_token_throughput = 6189
 
     def test_qwen3_235b(self):
