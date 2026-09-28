@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# Qwen3-235B W8A8 on one A3 node (16 NPUs), with sgl-project/sglang#40814.
 
 on:
   pull_request:
@@ -14,10 +14,14 @@ concurrency:
 
 jobs:
   single-node-poc:
-    name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    name: qwen3-235b-w8a8-${{ matrix.image_tag }}-pr40814
+    runs-on: linux-aarch64-a3-16
+    strategy:
+      fail-fast: false
+      matrix:
+        image_tag: [main-cann9.0.0-a3, main-cann9.1.0-a3]
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ matrix.image_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,8 +30,67 @@ jobs:
         run: |
           npu-smi info
 
+      - name: Apply sgl-project/sglang PR 40814 to the image runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sglang_repo=/sgl-workspace/sglang
+          export PYTHONPATH="${sglang_repo}/python${PYTHONPATH:+:${PYTHONPATH}}"
+          echo "PYTHONPATH=${PYTHONPATH}" >> "$GITHUB_ENV"
+
+          # Change from e98ffc4cc699d7953f17e751ce669043a7e17bcb (PR #40814).
+          # Patch the image runtime, retaining its CANN/PyTorch/kernel dependencies.
+          patch_file="${RUNNER_TEMP}/sglang-pr40814.patch"
+          cat > "$patch_file" <<'PATCH'
+          diff --git a/python/sglang/srt/hardware_backend/npu/graph_runner/npu_cudagraph_backend.py b/python/sglang/srt/hardware_backend/npu/graph_runner/npu_cudagraph_backend.py
+          --- a/python/sglang/srt/hardware_backend/npu/graph_runner/npu_cudagraph_backend.py
+          +++ b/python/sglang/srt/hardware_backend/npu/graph_runner/npu_cudagraph_backend.py
+          @@ -178,6 +178,6 @@ def replay_with_input_update(
+                   update_future = self._update_executor.submit(
+                       graph.update, cpu_update_input=cpu_update_input
+                   )
+          -        update_future.result()
+                   graph.replay()
+          +        update_future.result()
+                   return self._outputs[shape_key]
+          PATCH
+
+          cd "$sglang_repo"
+          if git -c safe.directory="$sglang_repo" apply --check "$patch_file"; then
+            git -c safe.directory="$sglang_repo" apply "$patch_file"
+            echo "Applied sgl-project/sglang#40814 to the image runtime."
+          elif git -c safe.directory="$sglang_repo" apply --reverse --check "$patch_file"; then
+            echo "The image runtime already contains sgl-project/sglang#40814."
+          else
+            echo "::error::PR 40814 cannot be applied or verified in the image runtime."
+            exit 1
+          fi
+
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          import sglang
+
+          package = Path(sglang.__file__).resolve().parent
+          expected = Path("/sgl-workspace/sglang/python/sglang").resolve()
+          if package != expected:
+              raise RuntimeError(f"Unexpected SGLang runtime: {package}")
+          backend = package / "srt/hardware_backend/npu/graph_runner/npu_cudagraph_backend.py"
+          tree = ast.parse(backend.read_text())
+          cls = next(node for node in tree.body if isinstance(node, ast.ClassDef)
+                     and node.name == "NPUCudaGraphBackend")
+          method = next(node for node in cls.body if isinstance(node, ast.FunctionDef)
+                        and node.name == "replay_with_input_update")
+          calls = [ast.unparse(node.value) for node in method.body
+                   if isinstance(node, ast.Expr)]
+          if calls.index("graph.replay()") >= calls.index("update_future.result()"):
+              raise RuntimeError("PR 40814 replay ordering is missing")
+          print(f"Verified PR 40814 in the imported SGLang runtime: {backend}")
+          PY
+
       - name: Run test
-        timeout-minutes: 120
+        timeout-minutes: 300
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
@@ -38,9 +101,9 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 使用时替换为实际的测试用例路径
+          # Test case and test helpers come from this PR against testcases.
           test_cases=(
-            "test/registered/ascend/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/performance/qwen3_235b_a22b/test_npu_qwen3_235b_w8a8_8p_in3k5_out1k5_50ms.py"
           )
 
           for test_case in "${test_cases[@]}"; do
@@ -64,7 +127,7 @@ jobs:
           export SGLANG_SET_CPU_AFFINITY=1
           echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
 
-          echo "Use sglang from image"
+          echo "Use sglang from image ${{ matrix.image_tag }} with PR 40814"
           sglang_pkg_path=/sgl-workspace/sglang/python
           ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
           mkdir -p ${ascend_test_util_path}
@@ -84,7 +147,7 @@ jobs:
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
             echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
+            python -u "${sglang_source_path}/${test_case}" 2>&1 | tee /tmp/test_output.log
             echo "Finished test case ${test_case}"
           done
 
@@ -97,3 +160,15 @@ jobs:
             mkdir -p ${target_plog_path}
             cp ${plog_path}/* ${target_plog_path}
           fi
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen3-235b-w8a8-${{ matrix.image_tag }}-pr40814
+          path: |
+            /tmp/test_output.log
+            /tmp/stdout.txt
+            /tmp/stderr.txt
+            ${{ runner.temp }}/sglang-pr40814.patch
+          retention-days: 7
