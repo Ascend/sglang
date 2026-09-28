@@ -23,6 +23,8 @@ from sglang.test.test_utils import CustomTestCase
 register_npu_ci(est_time=120, suite="full-2-npu-a3", nightly=True)
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestMultimodalGDNMoE(CustomTestCase):
     """Verify GDN + MoE + visual encoder work together correctly.
 

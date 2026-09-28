@@ -38,6 +38,8 @@ _SERVER_ARGS = [
 ]
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestMultimodalMultistreamMoE(CustomTestCase):
     """Verify dual-stream MoE execution does not break image routing.
 

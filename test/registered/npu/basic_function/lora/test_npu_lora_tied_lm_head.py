@@ -116,6 +116,8 @@ def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
     torch.npu.empty_cache()
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestLoRATiedLMHead(CustomTestCase):
     """
     Test that LoRA works correctly on models with tied lm_head.

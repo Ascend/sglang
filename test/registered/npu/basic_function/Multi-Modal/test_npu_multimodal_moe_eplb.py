@@ -31,6 +31,8 @@ register_npu_ci(est_time=150, suite="full-2-npu-a3", nightly=True)
 # ============================================
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestMultimodalEPLB(CustomTestCase):
     """Verify EPLB does not disrupt image inference.
 

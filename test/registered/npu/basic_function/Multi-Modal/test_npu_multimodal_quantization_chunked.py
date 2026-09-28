@@ -53,6 +53,8 @@ _LONG_PREFIX = (
 # ============================================
 # Quantization (w8a8) + image -> accuracy acceptable
 # ============================================
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestMultimodalQuantization(CustomTestCase):
     """Verify w8a8 quantization does not degrade image understanding.
 

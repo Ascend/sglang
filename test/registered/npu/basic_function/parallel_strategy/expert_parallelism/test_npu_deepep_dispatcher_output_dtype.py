@@ -18,6 +18,8 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=200, suite="full-4-npu-a3", nightly=True)
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestDtypeAuto(CustomTestCase):
     """Testcase: Verify set --deepep-dispatcher-output-dtype the inference accuracy of the model on the
     GSM8K dataset is no less than 0.74.

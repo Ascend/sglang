@@ -18,6 +18,8 @@ register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
 QWEN3_NEXT_MODEL = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_FOR_TEST.model_path
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestQwen3Next(
     GSM8KMixin, KLDivergenceMixin, PrefixCacheBranchingMixin, DefaultServerBase
 ):
