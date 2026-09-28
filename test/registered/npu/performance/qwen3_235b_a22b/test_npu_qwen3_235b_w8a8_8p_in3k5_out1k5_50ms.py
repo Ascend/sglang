@@ -21,7 +21,7 @@ QWEN3_235B_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "30",
+    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "45",
     "SGLANG_PREFILL_DELAYER_MAX_PREFILL_BS_WINDOW_SIZE": "16",
     "SGLANG_NPU_PROFILING": "0",
     "SGLANG_NPU_PROFILING_BS": "27",
@@ -56,7 +56,7 @@ QWEN3_235B_OTHER_ARGS = [
     "--ep-dispatch-algorithm",
     "static",
     "--init-expert-location",
-    "/root/.cache/modelscope/hub/models/hot_map/235B_3_5k_decode.pt",
+    "/home/c30041815/hot_map/235B_3_5k_decode.pt",
     "--disable-radix-cache",
     "--moe-a2a-backend",
     "ascend_fuseep",
@@ -65,11 +65,11 @@ QWEN3_235B_OTHER_ARGS = [
     "--speculative-draft-model-path",
     QWEN3_235B_A22B_EAGLE_MODEL_PATH,
     "--speculative-num-steps",
-    "2",
+    "3",
     "--speculative-eagle-topk",
     "1",
     "--speculative-num-draft-tokens",
-    "3",
+    "4",
     "--speculative-draft-model-quantization",
     "unquant",
     "--tp",
@@ -87,7 +87,10 @@ QWEN3_235B_OTHER_ARGS = [
     "8",
     "16",
     "20",
+    "21",
+    "23",
     "24",
+    "25",
     "26",
     "27",
     "--reasoning-parser",
@@ -111,6 +114,7 @@ class TestQwen235B(TestNpuPerformanceTestCaseBase):
     random_range_ratio = 1
     seed = 1
     tpot = 50.1
+    temperature = 0.1
     output_token_throughput = 6189
 
     def test_qwen3_235b(self):
