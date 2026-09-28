@@ -25,6 +25,8 @@ from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
     LLAMA_3_2_1B_WEIGHTS_PATH,
     QWEN3_5_9B_WEIGHTS_PATH,
+    QWEN3_8B_EAGLE3_WEIGHTS_PATH,
+    QWEN3_8B_WEIGHTS_PATH,
     QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
     QWEN3_30B_A3B_WEIGHTS_PATH,
 )
@@ -50,6 +52,13 @@ logger.propagate = False
 _MIN_DELTA_SMI_RELEASE_ALL_MB = 10000  # npu-smi release all (weights + KV cache pool)
 _MIN_DELTA_SMI_KV_MB = 1000  # npu-smi kv_cache release (1B model, 60% static pool)
 _MIN_DELTA_SMI_W_MB = 500  # npu-smi weights release (~2 GB model)
+
+
+def _first_existing_dir(*candidates: str) -> str:
+    for path in candidates:
+        if os.path.isdir(path):
+            return path
+    return candidates[0]
 
 
 # NPU memory
@@ -153,9 +162,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             multiprocessing.set_start_method("spawn", force=True)
 
         cls._saved_npu_alloc_conf = os.environ.pop("PYTORCH_NPU_ALLOC_CONF", None)
-
         cls._engine_model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-        assert os.path.isdir(cls._engine_model), f"Model not found: {cls._engine_model}"
 
     @classmethod
     def tearDownClass(cls):
@@ -179,10 +186,11 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
         tp_size=1,
         enable_weights_cpu_backup=False,
         disable_cuda_graph=False,
+        extra_kwargs=None,
     ):
         import sglang as sgl
 
-        return sgl.Engine(
+        kwargs = dict(
             model_path=model or self._engine_model,
             random_seed=42,
             enable_memory_saver=True,
@@ -191,6 +199,9 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
             enable_weights_cpu_backup=enable_weights_cpu_backup,
             disable_cuda_graph=disable_cuda_graph,
         )
+        if extra_kwargs:
+            kwargs.update(extra_kwargs)
+        return sgl.Engine(**kwargs)
 
     def _make_hf_model(self, model_path):
         from transformers import AutoModelForCausalLM
@@ -259,15 +270,48 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 engine.shutdown()
 
     def test_npu_rl_release_and_resume_occupation_with_weights_cpu_backup(self):
-        """TP=1: CPU backup preserves output after release+resume (no update)."""
+        """TP=1 EAGLE3: CPU backup restores target and draft after release+resume.
+
+        [Test Category] Parameter
+        [Test Target] --enable-memory-saver; --enable-weights-cpu-backup;
+                       --enable-draft-weights-cpu-backup
+        """
         params = self._common_test_params()
+        sampling_params = {"temperature": 0, "max_new_tokens": 32}
+        model_path = _first_existing_dir(
+            QWEN3_8B_WEIGHTS_PATH, "/mnt/paas/weights/Qwen3-8B"
+        )
+        draft_path = _first_existing_dir(
+            QWEN3_8B_EAGLE3_WEIGHTS_PATH, "/mnt/paas/weights/Qwen3-8B_eagle3"
+        )
+        self.assertTrue(os.path.isdir(model_path), f"Model not found: {model_path}")
+        self.assertTrue(
+            os.path.isdir(draft_path), f"Draft model not found: {draft_path}"
+        )
         engine = self._setup_engine(
-            mem_fraction_static=0.6, enable_weights_cpu_backup=True
+            model=model_path,
+            mem_fraction_static=0.7,
+            enable_weights_cpu_backup=True,
+            disable_cuda_graph=True,
+            extra_kwargs={
+                "dtype": "float16",
+                "attention_backend": "ascend",
+                "speculative_algorithm": "EAGLE3",
+                "speculative_draft_model_path": draft_path,
+                "speculative_num_steps": 1,
+                "speculative_eagle_topk": 1,
+                "speculative_num_draft_tokens": 2,
+                "enable_draft_weights_cpu_backup": True,
+                **(
+                    {"base_gpu_id": int(os.environ["SGLANG_TEST_BASE_GPU_ID"])}
+                    if os.environ.get("SGLANG_TEST_BASE_GPU_ID")
+                    else {}
+                ),
+            },
         )
         try:
-            baseline = engine.generate(params["prompt"], params["sampling_params"])[
-                "text"
-            ]
+            baseline_out = engine.generate(params["prompt"], sampling_params)
+            baseline = baseline_out["text"]
             self.assertIsNotNone(baseline)
             self.assertGreater(len(baseline), 0)
             logger.info(f"[CB] baseline: {baseline}")
@@ -290,13 +334,25 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 "cb-resume",
             )
             logger.info(f"[CB] resume: {mem_release:.0f}→{mem_resume:.0f} MB")
-            result = engine.generate(params["prompt"], params["sampling_params"])[
-                "text"
-            ]
+            result_out = engine.generate(params["prompt"], sampling_params)
+            result = result_out["text"]
             self.assertEqual(
-                baseline, result, "CPU backup must preserve weights; output unchanged"
+                baseline,
+                result,
+                "CPU backup must preserve target and draft weights",
             )
             logger.info(f"[CB] after resume: {result}")
+
+            accept = result_out.get("meta_info", {}).get("spec_accept_length")
+            self.assertIsNotNone(
+                accept, f"spec metric missing; meta_info={result_out.get('meta_info')}"
+            )
+            self.assertGreater(
+                accept,
+                1.0,
+                f"draft not speculating after resume (spec_accept_length={accept})",
+            )
+            logger.info(f"[CB] spec_accept_length={accept}")
         finally:
             engine.shutdown()
 
