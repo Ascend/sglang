@@ -102,7 +102,7 @@ RUN set -eux; \
         ;; \
     esac; \
     ${PIP_INSTALL} "$MF_URL" --force-reinstall; \
-    mfcli kernel install --soc-version 950; \
+    mfcli kernel install --soc-version A5; \
     ${PIP_INSTALL} "$MC_URL" --force-reinstall --no-deps
 
 ### Install memfabric-zbal
