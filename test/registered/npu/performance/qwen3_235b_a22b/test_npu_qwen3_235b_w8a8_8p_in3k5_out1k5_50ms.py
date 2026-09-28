@@ -56,7 +56,7 @@ QWEN3_235B_OTHER_ARGS = [
     "--ep-dispatch-algorithm",
     "static",
     "--init-expert-location",
-    "/home/c30041815/hot_map/235B_3_5k_decode.pt",
+    "/root/.cache/modelscope/hub/models/hot_map/235B_3_5k_decode.pt",
     "--disable-radix-cache",
     "--moe-a2a-backend",
     "ascend_fuseep",
