@@ -105,7 +105,7 @@ class EngineWrapper:
             self._engine = SglangEngine(**engine_kwargs)
 
         dist.barrier(group=self._device_mesh_cpu.get_group())
-    
+
     def begin_weight_update(self):
         if self._tp_rank == 0:
             self._engine.begin_weight_update()
