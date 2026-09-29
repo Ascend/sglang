@@ -1,97 +1,106 @@
-name: Retag Docker Image
+name: Delete Quay Image Tag
+
 on:
   workflow_dispatch:
     inputs:
-      source_tag:
-        description: "Existing image tag (e.g., main-cann8.5.0-a3)"
+      tags:
+        description: "要删除的 tag，多个用逗号或换行分隔，如 cann9.1.0-a3-nightly"
         required: true
-      target_tag:
-        description: "New tag to apply (e.g., latest)"
-        required: true
-      source_platform:
-        description: "Source Platform (pull only, NO login)"
-        required: true
-        type: choice
-        options:
-          - swr
-          - quay
-          - dockerhub
-      target_platform:
-        description: "Target Platform (push only, NEED login)"
-        required: true
-        type: choice
-        options:
-          - swr
-          - quay
-          - dockerhub
+        type: string
+      include_arch_variants:
+        description: "同时删除对应的 -amd64 / -arm64 单架构 tag"
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: "只打印将要删除的 tag，不真正删除（改成 false 才真正执行）"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
-  retag:
+  delete-tag:
     if: github.repository == 'Ascend/sglang'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # ====================== 仅目标平台需要登录 ======================
-      - name: Login to SWR
-        if: inputs.target_platform == 'swr'
-        uses: docker/login-action@v2
-        with:
-          registry: swr.cn-southwest-2.myhuaweicloud.com
-          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
-          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
-
-      - name: Login to Quay.io
-        if: inputs.target_platform == 'quay'
-        uses: docker/login-action@v2
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_NAME }}
-          password: ${{ secrets.QUAY_PWD }}
-
-      - name: Login to DockerHub
-        if: inputs.target_platform == 'dockerhub'
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Install skopeo
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
-
-      - name: Copy and retag image across platforms
+      # Quay 删除 tag 走的是 REST API，没有对应的 docker CLI 命令，
+      # 所以这里不需要 docker login，直接用 token 调 /api/v1 即可。
+      - name: Delete tags on Quay
+        env:
+          QUAY_PWD: ${{ secrets.QUAY_PWD }}
+          TAGS: ${{ inputs.tags }}
+          WITH_ARCH: ${{ inputs.include_arch_variants }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          # 源镜像（仅拉取）
-          if [ "${{ inputs.source_platform }}" = "swr" ]; then
-            SOURCE_IMAGE="swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ inputs.source_tag }}"
-          elif [ "${{ inputs.source_platform }}" = "quay" ]; then
-            SOURCE_IMAGE="quay.io/ascend/sglang:${{ inputs.source_tag }}"
-          elif [ "${{ inputs.source_platform }}" = "dockerhub" ]; then
-            SOURCE_IMAGE="lmsysorg/sglang:${{ inputs.source_tag }}"
-          fi
+          set +e
+          set -uo pipefail
 
-          # 目标镜像（推送）
-          if [ "${{ inputs.target_platform }}" = "swr" ]; then
-            TARGET_IMAGE="swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ inputs.target_tag }}"
-          elif [ "${{ inputs.target_platform }}" = "quay" ]; then
-            TARGET_IMAGE="quay.io/ascend/sglang:${{ inputs.target_tag }}"
-          elif [ "${{ inputs.target_platform }}" = "dockerhub" ]; then
-            TARGET_IMAGE="lmsysorg/sglang:${{ inputs.target_tag }}"
-          fi
+          # quay.io/ascend/sglang
+          QUAY_REPO="ascend/sglang"
 
-          echo "======= Cross Platform Image Copy ======="
-          echo "Source (pull): ${{ inputs.source_platform }}"
-          echo "Target (push): ${{ inputs.target_platform }}"
-          echo "From: $SOURCE_IMAGE"
-          echo "To:   $TARGET_IMAGE"
+          # ---------- 把逗号 / 空格 / 换行分隔的 tag 拆成列表 ----------
+          mapfile -t raw_tags < <(
+            printf '%s\n' "$TAGS" \
+              | tr ',' '\n' \
+              | tr -s '[:space:]' '\n' \
+              | sed '/^$/d'
+          )
+
+          targets=()
+          for tg in "${raw_tags[@]}"; do
+            targets+=("$tg")
+            if [ "$WITH_ARCH" = "true" ]; then
+              targets+=("${tg}-amd64" "${tg}-arm64")
+            fi
+          done
+
+          echo "Repository: quay.io/${QUAY_REPO}"
+          echo "Dry run   : ${DRY_RUN}"
+          echo "Tags      : ${targets[*]}"
           echo "========================================="
 
-          # 跨平台复制镜像
-          # SWR 不支持 OCI 格式，--format v2s2 转成 Docker V2.2
-          # Quay / DockerHub 支持 OCI，原样复制
-          if [ "${{ inputs.target_platform }}" = "swr" ]; then
-            skopeo copy --multi-arch all --format v2s2 docker://$SOURCE_IMAGE docker://$TARGET_IMAGE
-          else
-            skopeo copy --multi-arch all docker://$SOURCE_IMAGE docker://$TARGET_IMAGE
+          delete_quay() {
+            # DELETE /api/v1/repository/{namespace}/{repo}/tag/{tag}
+            curl -sS -o /tmp/api-resp.txt -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer ${QUAY_PWD}" \
+              "https://quay.io/api/v1/repository/${QUAY_REPO}/tag/$1"
+          }
+
+          failed=0
+          summary=""
+          for tag in "${targets[@]}"; do
+            image="quay.io/${QUAY_REPO}:${tag}"
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[dry-run] would delete ${image}"
+              summary="${summary}| ${image} | dry-run |\n"
+              continue
+            fi
+
+            code="$(delete_quay "$tag")"
+            if [ "$code" = "204" ] || [ "$code" = "200" ]; then
+              echo "deleted   ${image}  (HTTP ${code})"
+              summary="${summary}| ${image} | deleted (${code}) |\n"
+            elif [ "$code" = "404" ]; then
+              echo "not found ${image}  (HTTP 404)"
+              summary="${summary}| ${image} | not found |\n"
+            else
+              echo "FAILED    ${image}  (HTTP ${code})"
+              echo "          response: $(head -c 300 /tmp/api-resp.txt)"
+              summary="${summary}| ${image} | failed (${code}) |\n"
+              failed=1
+            fi
+          done
+
+          {
+            echo "### Delete Quay image tag"
+            echo ""
+            echo "| Image | Result |"
+            echo "| --- | --- |"
+            printf "%b" "$summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$failed" = "1" ]; then
+            echo "::error::有 tag 删除失败，看上面的 response"
+            exit 1
           fi
