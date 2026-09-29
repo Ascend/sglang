@@ -21,6 +21,8 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestAttnTpGatherDense(CustomTestCase):
     """Verify --disable-attn-tp-gather does not break non-MOE (dense) models.
 

@@ -66,7 +66,7 @@ class TestAscendW8A8CompressedTensors(CustomTestCase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
-            host=f"http://{url.hostname}",
+            host=f"{url.hostname}",
             port=int(url.port),
         )
         metrics = run_eval(args)
