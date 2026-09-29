@@ -103,7 +103,7 @@ def _get_decode_logprob_signature(base_url, *, max_new_tokens=64, temperature=0.
     ret = resp.json()
     output_token_logprobs = ret["meta_info"].get("output_token_logprobs")
     assert (
-            output_token_logprobs is not None
+        output_token_logprobs is not None
     ), "missing output_token_logprobs in response"
     assert len(output_token_logprobs) > 0, "empty output_token_logprobs"
     return {
@@ -117,7 +117,7 @@ def _assert_logprob_signature_equal(a, b, *, atol=1e-4, msg=""):
     """Assert that logprob signatures from two decodes are identical."""
     assert a["text"] == b["text"], f"{msg}text mismatch: {a['text']!r} != {b['text']!r}"
     assert (
-            a["token_ids"] == b["token_ids"]
+        a["token_ids"] == b["token_ids"]
     ), f"{msg}token_ids mismatch: {a['token_ids']} != {b['token_ids']}"
     assert len(a["logprobs"]) == len(
         b["logprobs"]
