@@ -41,7 +41,32 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/basic_function/lora/test_npu_lora_backend.py"
+            "test/registered/npu/basic_function/memory_and_scheduling/test_npu_retraction_policy.py"
+            "test/registered/npu/basic_function/lora/test_npu_lora_overlap_loading.py"
+            "test/registered/npu/basic_function/rl/test_npu_weight_checker_e2e.py"
+            "test/registered/npu/basic_function/optimization_debug_options/test_npu_enable_mixed_chunk.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_gdn.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_multistream.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_reasoning_parser.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_quantization_chunked.py"
+            "test/registered/npu/basic_function/Custom_weight_loader/test_npu_update_weights_from_tensor.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_eplb.py"
+            "test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models.py"
+            "test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"
+            "test/registered/npu/llm_models/test_npu_qwen3_next_80b.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_enable_waterfill.py"
+            "test/registered/npu/basic_function/forward/test_npu_enable_quant_communications.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_dispatcher_output_dtype.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_qwen3_next.py"
+            "test/registered/npu/accuracy/qwen3_5_9b/test_npu_qwen3_5_9b_bf16_1p_gsm8k.py"
+            "test/registered/npu/accuracy/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms_gpqa.py"
+            "test/registered/npu/accuracy/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_50ms_gpqa.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_20ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_50ms.py"
           )
 
           for test_case in "${test_cases[@]}"; do

@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from types import SimpleNamespace

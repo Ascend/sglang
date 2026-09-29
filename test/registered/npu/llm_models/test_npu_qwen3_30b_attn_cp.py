@@ -60,6 +60,8 @@ class TestQwen330BAttnCP(GSM8KAscendMixin, CustomTestCase):
                 "--cuda-graph-max-bs-decode",
                 "32",
                 "--enable-prefill-cp",
+                "--cp-strategy",
+                "zigzag",
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
             env={

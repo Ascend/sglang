@@ -4,6 +4,7 @@ NPU multimodal + EPLB tests.
 Verify EPLB (Expert Parallel Load Balancing) does not disrupt image inference.
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree

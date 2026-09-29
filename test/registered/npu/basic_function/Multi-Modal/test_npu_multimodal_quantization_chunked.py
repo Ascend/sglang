@@ -5,6 +5,7 @@ NPU quantization (w8a8) multimodal tests.
   - Quantization + chunked prefill + image
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree

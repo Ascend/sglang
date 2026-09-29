@@ -4,6 +4,7 @@ NPU multimodal + multistream MoE tests.
 Verify dual-stream MoE execution does not break image routing on NPU.
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree

@@ -5,6 +5,7 @@ Verifies that GDN linear attention + MoE + visual encoder work together
 correctly on Qwen3.5-35B-A3B.
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree

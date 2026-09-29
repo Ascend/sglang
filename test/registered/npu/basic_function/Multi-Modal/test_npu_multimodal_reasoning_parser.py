@@ -5,6 +5,7 @@ Verify the reasoning parser with image input, testing both
 ``separate_reasoning=True`` and ``separate_reasoning=False`` modes.
 """
 
+import os
 import unittest
 
 import openai
