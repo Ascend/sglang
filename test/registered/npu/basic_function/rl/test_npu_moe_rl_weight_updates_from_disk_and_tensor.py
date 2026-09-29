@@ -66,7 +66,7 @@ def _npu_server_args(tp_size=1, **extra):
         str(tp_size),
     ]
     args.extend(
-        f"--{k.replace('_', '-')}={v}" if v is not True else f"--{k.replace('_', '-')}"
+        f"--{k.replace('_','-')}={v}" if v is not True else f"--{k.replace('_','-')}"
         for k, v in extra.items()
     )
     return args
@@ -238,7 +238,7 @@ class _BaseNPUMoEWeightUpdateTest(CustomTestCase):
             baseline,
             updated,
             msg="Same-model update should not change output (idempotent). "
-                "NPU format may have been lost after update.",
+            "NPU format may have been lost after update.",
         )
         return baseline
 
@@ -832,15 +832,15 @@ class TestNPUMoEWeightUpdateFromTensorTP2(_BaseNPUMoEWeightUpdateTest):
             device = f"npu:{tp_rank}"
             # ColumnParallel: gate/up each take 1/tp_size along dim=1 (inter)
             gate_shard = gate_weight[
-                :, tp_rank * inter_per_tp: (tp_rank + 1) * inter_per_tp, :
+                :, tp_rank * inter_per_tp : (tp_rank + 1) * inter_per_tp, :
             ]  # [E, inter/2, hidden]
             up_shard = up_weight[
-                :, tp_rank * inter_per_tp: (tp_rank + 1) * inter_per_tp, :
+                :, tp_rank * inter_per_tp : (tp_rank + 1) * inter_per_tp, :
             ]  # [E, inter/2, hidden]
             w13_shard = torch.cat([gate_shard, up_shard], dim=1)  # [E, inter, hidden]
             # RowParallel: w2 dim=2 (inter) take 1/tp_size
             w2_shard = w2_full[
-                :, :, tp_rank * inter_per_tp: (tp_rank + 1) * inter_per_tp
+                :, :, tp_rank * inter_per_tp : (tp_rank + 1) * inter_per_tp
             ]  # [E, hidden, inter/2]
 
             rank_tensors = [
