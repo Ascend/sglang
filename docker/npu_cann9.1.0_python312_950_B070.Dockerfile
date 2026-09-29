@@ -22,7 +22,7 @@ ARG TORCH_NPU_VERSION="2.10.0.post6"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG SGLANG_TAG=release/2026930
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post6
+ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post7
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 # modelscope / evalscope versions (leave empty to install the latest release)
@@ -33,11 +33,11 @@ ARG EVALSCOPE_VERSION=""
 # 1.2.1 is not published on PyPI (PyPI stops at 1.2.0), so the wheels are pulled from the
 # sglang-npu OBS bucket. These links are presigned and expire on 2027-09-12; when they expire,
 # regenerate them from the bucket and pass the new values with --build-arg, no Dockerfile edit needed.
-ARG MF_VERSION="1.2.1"
-ARG MF_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/v1.2.1/20260923.4/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MF_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/v1.2.1/20260923.4/memfabric_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-ARG MC_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/v1.2.1/20260923.4/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MC_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/v1.2.1/20260923.4/memcache_hybrid-1.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+ARG MF_VERSION="1.3.0"
+ARG MF_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/master/20260928.5/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
+ARG MF_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/master/20260928.5/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+ARG MC_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/master/20260928.5/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
+ARG MC_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/master/20260928.5/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 
 # Later RUN steps source /etc/environment_new, so make sure it exists
 RUN touch /etc/environment_new
