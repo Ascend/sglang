@@ -67,6 +67,8 @@ jobs:
             "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms.py"
             "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_20ms.py"
             "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_50ms.py"
+            # Other cases - commented out:
+            # "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
           )
 
           for test_case in "${test_cases[@]}"; do
