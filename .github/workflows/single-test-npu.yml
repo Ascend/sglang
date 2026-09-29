@@ -18,7 +18,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B072
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,7 +41,33 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/basic_function/lora/test_npu_lora_backend.py"
+            "test/registered/npu/basic_function/memory_and_scheduling/test_npu_retraction_policy.py"
+            "test/registered/npu/basic_function/lora/test_npu_lora_overlap_loading.py"
+            "test/registered/npu/basic_function/rl/test_npu_weight_checker_e2e.py"
+            "test/registered/npu/basic_function/optimization_debug_options/test_npu_enable_mixed_chunk.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_gdn.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_multistream.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_reasoning_parser.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_quantization_chunked.py"
+            "test/registered/npu/basic_function/Custom_weight_loader/test_npu_update_weights_from_tensor.py"
+            "test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_moe_eplb.py"
+            "test/registered/npu/basic_function/mambacache/test_npu_qwen3_next_models.py"
+            "test/registered/npu/llm_models/test_npu_qwen3_30b_attn_cp.py"
+            "test/registered/npu/llm_models/test_npu_qwen3_next_80b.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_enable_waterfill.py"
+            "test/registered/npu/basic_function/forward/test_npu_enable_quant_communications.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_dispatcher_output_dtype.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_qwen3_next.py"
+            "test/registered/npu/accuracy/qwen3_5_9b/test_npu_qwen3_5_9b_bf16_1p_gsm8k.py"
+            "test/registered/npu/accuracy/minimax_m2_5/test_npu_minimax_m2_5_w8a8_4p_in64k_out1k_prefix90_50ms_gpqa.py"
+            "test/registered/npu/accuracy/minimax_m2_5/test_npu_minimax_m2_5_w8a8_8p_in3k5_out1k5_50ms_gpqa.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_50ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in3k5_out1k5_20ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in128k_out1k_20ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_20ms.py"
+            "test/registered/npu/performance/qwen3_5_397b/test_npu_qwen3_5_397b_w4a8_8p_in16k_out1k_50ms.py"
+            #"test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
           )
 
           for test_case in "${test_cases[@]}"; do
@@ -82,12 +108,27 @@ jobs:
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"
 
+          # Run all cases; a single failure does not stop the rest.
+          # Collect failures and fail the job at the end.
+          failed_cases=()
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
             echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
-            echo "Finished test case ${test_case}"
+            if python -u ${sglang_source_path}/${test_case}; then
+              echo "Finished test case ${test_case}"
+            else
+              echo "FAILED test case ${test_case}, continue with the next one"
+              failed_cases+=("${test_case}")
+            fi
           done
+
+          echo "===== Test summary ====="
+          echo "Total: ${#test_cases[@]}, Failed: ${#failed_cases[@]}"
+          if [ ${#failed_cases[@]} -gt 0 ]; then
+            echo "Failed test cases:"
+            printf '  %s\n' "${failed_cases[@]}"
+            exit 1
+          fi
 
           plog_path="/root/ascend/log/debug/plog"
           if [ -d "$plog_path" ];then

@@ -86,7 +86,7 @@ class TestDotsOcr(CustomTestCase):
             "--max-running-requests",
             "80",
             "--disable-radix-cache",
-            "--cuda-graph-bs",
+            "--cuda-graph-bs-decode",
             1,
             4,
             8,

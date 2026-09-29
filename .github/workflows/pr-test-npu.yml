@@ -4,6 +4,11 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    paths-ignore:
+      - "test/registered/npu/**"
+      - "test/registered/unit/npu/**"
+      - "python/sglang/test/**"
+      - ".github/workflows/**"
   workflow_dispatch:
   workflow_call:
     inputs:

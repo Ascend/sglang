@@ -151,7 +151,7 @@ class TestQwen3VLReranker2B(CustomTestCase):
     def _hf_scores(self, model_path, processor, prompts, yes_id, no_id, torch_dtype):
         """Reference scores computed with HuggingFace (last-token yes/no logits)."""
         model = AutoModelForImageTextToText.from_pretrained(
-            model_path, torch_dtype=torch_dtype
+            model_path, torch_dtype=torch.float32
         ).to(get_device())
         model.eval()
         scores = []
@@ -281,7 +281,7 @@ class TestQwen3VLReranker2BMultimodal(CustomTestCase):
         Prompts use the same qwen3_vl_reranker.jinja template as the SRT server.
         """
         model = AutoModelForImageTextToText.from_pretrained(
-            model_path, torch_dtype=torch_dtype
+            model_path, torch_dtype=torch.float32
         ).to(get_device())
         model.eval()
         scores = []
