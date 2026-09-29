@@ -1137,6 +1137,13 @@ class HybridCacheController(BaseHiCacheController):
                 else kv_completed_pages
             )
             self._sync_trailing_keys(transfers_nonkv, sidecar_hashes, sidecar_hit_pages)
+            # Independent coarse pools use the final covered group's hash.
+            for transfer in transfers_nonkv:
+                coverage = transfer.logical_pages_per_object
+                if coverage > 1:
+                    transfer.keys = sidecar_hashes[
+                        coverage - 1 : sidecar_hit_pages : coverage
+                    ]
             self._resolve_sidecar_nonkv_derived_pool_transfers(operation)
             extra_info = HiCacheStorageExtraInfo(prefix_keys=operation.prefix_keys)
             results = self.storage_backend.batch_get_v2(
