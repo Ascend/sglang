@@ -27,6 +27,7 @@ QWEN3_5_122B_4P_ENVS = {
     "ENABLE_PROFILING": "0",
     "SGLANG_NPU_USE_MULTI_STREAM": "0",
     "ASCEND_USE_FIA": "1",
+    "ASCEND_RT_VISIBLE_DEVICES": "8,9,10,11,12,13,14,15",
 }
 
 QWEN3_5_122B_4P_OTHER_ARGS = [
@@ -47,11 +48,10 @@ QWEN3_5_122B_4P_OTHER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--mem-fraction-static",
-    0.875,
+    0.878,
     "--max-running-requests",
     128,
     "--cuda-graph-bs-decode",
-    15,
     16,
     "--dp",
     8,
@@ -64,7 +64,7 @@ QWEN3_5_122B_4P_OTHER_ARGS = [
     "--stream-interval",
     128,
     "--schedule-conservativeness",
-    0.32,
+    0.21,
 ]
 
 
@@ -77,10 +77,10 @@ class TestNPUQwen3_5_122B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     other_args = QWEN3_5_122B_4P_OTHER_ARGS
     envs = QWEN3_5_122B_4P_ENVS
     dataset_name = "random-ids"
-    max_concurrency = 120
-    num_prompts = 120
+    max_concurrency = 128
+    num_prompts = 128
     input_len = 2048
-    output_len = 32768
+    output_len = 32000
     random_range_ratio = 1
     seed = 1234
     request_rate = float("inf")
