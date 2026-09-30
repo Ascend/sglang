@@ -13,12 +13,11 @@ ARG DEVICE_TYPE
 ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
-# torch_npu 2.10.0.post6 requires torch==2.10.0, so PYTORCH_VERSION stays at 2.10.0
 ARG PYTORCH_VERSION="2.10.0"
 ARG TORCHVISION_VERSION="0.25.0"
 
 ARG TORCHAUDIO_VERSION="2.10.0"
-ARG TORCH_NPU_VERSION="2.10.0.post6"
+ARG TORCH_NPU_VERSION="2.12.0.post2"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG SGLANG_TAG=release/2026930
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit

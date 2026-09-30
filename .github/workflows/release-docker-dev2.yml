@@ -9,6 +9,9 @@ on:
         type: string
         default: 'nightly'
 
+env:
+  IMAGE: quay.io/ascend/sglang
+
 jobs:
   # 按架构拆分到原生 runner，去掉 QEMU 模拟：
   # - amd64 在 x64 runner (ubuntu-latest) 上原生构建
@@ -51,8 +54,6 @@ jobs:
 
       # tag 末尾追加平台后缀，避免两个架构的镜像互相覆盖；
       # 最终不带平台后缀的 tag 由 merge job 合并生成。
-      # 定时触发没有 tag_suffix 输入，回退为固定后缀 nightly，
-      # 因此每天的定时构建会覆盖上一次的 nightly 镜像。
       - name: Generate full image tag
         run: |
           echo "FULL_TAG=cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}-${{ matrix.platform }}" >> $GITHUB_ENV
@@ -61,16 +62,16 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
+          images: ${{ env.IMAGE }}
           tags: ${{ env.FULL_TAG }}
 
-      - name: Log into SWR
+      - name: Log into Quay.io
         uses: docker/login-action@v3
         if: ${{ github.repository == 'Ascend/sglang' }}
         with:
-          registry: swr.cn-southwest-2.myhuaweicloud.com
-          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
-          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+          registry: quay.io
+          username: ${{ secrets.QUAY_NAME }}
+          password: ${{ secrets.QUAY_PWD }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -101,24 +102,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log into SWR
+      - name: Log into Quay.io
         uses: docker/login-action@v3
         with:
-          registry: swr.cn-southwest-2.myhuaweicloud.com
-          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
-          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+          registry: quay.io
+          username: ${{ secrets.QUAY_NAME }}
+          password: ${{ secrets.QUAY_PWD }}
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+          MERGED_IMAGE: quay.io/ascend/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
         run: |
           docker buildx imagetools create \
-            -t "${IMAGE}" \
-            "${IMAGE}-amd64" \
-            "${IMAGE}-arm64"
-          # 如果 SWR 或下游拉取端不兼容 OCI index，改用 Docker schema2 manifest list：
-          #   docker manifest create "${IMAGE}" "${IMAGE}-amd64" "${IMAGE}-arm64"
-          #   docker manifest push "${IMAGE}"
+            -t "${MERGED_IMAGE}" \
+            "${MERGED_IMAGE}-amd64" \
+            "${MERGED_IMAGE}-arm64"
+          # 如果下游拉取端不兼容 OCI index，改用 Docker schema2 manifest list：
+          #   docker manifest create "${MERGED_IMAGE}" "${MERGED_IMAGE}-amd64" "${MERGED_IMAGE}-arm64"
+          #   docker manifest push "${MERGED_IMAGE}"
 
   manifest:
     needs: merge
@@ -138,7 +139,7 @@ jobs:
           - device_type: 950
             dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
+      image: quay.io/ascend/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix }}
       dockerfile: ${{ matrix.dockerfile }}
       build_args: |
         SGLANG_KERNEL_NPU_TAG=2026.9.0.post.8
