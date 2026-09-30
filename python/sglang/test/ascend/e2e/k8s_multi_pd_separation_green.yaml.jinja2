@@ -58,6 +58,8 @@ spec:
           value: "{{ run_label }}"
         - name: SGLANG_IS_IN_CI
           value: "{{ sglang_is_in_ci }}"
+        - name: COVERAGE_FILE
+          value: "{{ coverage_file }}"
         command: ["/bin/bash", "-c"]
         args:
           - |
