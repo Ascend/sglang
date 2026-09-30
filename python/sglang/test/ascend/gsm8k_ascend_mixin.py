@@ -30,6 +30,9 @@ class GSM8KAscendMixin(ABC):
     gsm8k_num_shots = 5
     num_questions = 200
     gsm8k_parallel = 128
+    # Max generation length; override in subclass for reasoning models
+    # that need longer thinking traces.
+    max_tokens = 512
 
     env = {
         **os.environ,
@@ -86,7 +89,7 @@ class GSM8KAscendMixin(ABC):
 
         try:
             args = SimpleNamespace(
-                max_tokens=512,
+                max_tokens=self.max_tokens,
                 base_url=self.base_url,
                 model=self.model,
                 eval_name="gsm8k",

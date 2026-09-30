@@ -18,6 +18,9 @@ class TestQWQ32BW8A8(GSM8KAscendMixin, CustomTestCase):
 
     model = QWQ_32B_W8A8_WEIGHTS_PATH
     accuracy = 0.59
+    # QWQ is a reasoning model; override the mixin default (512) to allow
+    # longer thinking traces before the final answer.
+    max_tokens = 2048
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
