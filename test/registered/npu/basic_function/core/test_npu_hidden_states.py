@@ -9,10 +9,16 @@ from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 class TestHiddenState(CustomTestCase):
+    """Testcase: Return per-token hidden states with --return-hidden-states-mode full.
+
+    [Test Category] Parameter
+    [Test Target] --return-hidden-states-mode full
+    """
+
     @classmethod
     def setUpClass(cls):
         cls.model_path = QWEN3_0_6B_WEIGHTS_PATH
@@ -26,7 +32,7 @@ class TestHiddenState(CustomTestCase):
             model_path=cls.model_path,
             random_seed=42,
             skip_tokenizer_init=True,
-            enable_return_hidden_states=True,
+            return_hidden_states_mode="full",
             mem_fraction_static=0.7,
             attention_backend="ascend",
         )
@@ -133,6 +139,65 @@ class TestHiddenState(CustomTestCase):
             self.assertEqual(
                 len(output_completion_last_round["meta_info"]["hidden_states"]), 8
             )
+
+
+class TestHiddenStateLast(CustomTestCase):
+    """Testcase: Server-capped last hidden states with --return-hidden-states-mode last.
+
+    [Test Category] Parameter
+    [Test Target] --return-hidden-states-mode last
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model_path = QWEN3_0_6B_WEIGHTS_PATH
+        cls.tokenizer = AutoTokenizer.from_pretrained(cls.model_path)
+        cls.prompts = ["Today is", "Today is a sunny day and I like"]
+        cls.input_ids = cls.tokenizer(cls.prompts).input_ids
+        cls.sampling_params = {"temperature": 0, "max_new_tokens": 8}
+        cls.engine = sgl.Engine(
+            model_path=cls.model_path,
+            random_seed=42,
+            skip_tokenizer_init=True,
+            return_hidden_states_mode="last",
+            mem_fraction_static=0.7,
+            attention_backend="ascend",
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.shutdown()
+
+    def setUp(self):
+        self.engine.flush_cache()
+
+    def test_return_last_hidden_state(self):
+        outputs = self.engine.generate(
+            input_ids=self.input_ids,
+            sampling_params=self.sampling_params,
+            return_hidden_states="last",
+        )
+        for output in outputs:
+            last_hidden_state = torch.tensor(output["meta_info"]["hidden_states"])
+            self.assertEqual(last_hidden_state.dim(), 1)
+            self.assertGreater(last_hidden_state.shape[0], 0)
+
+    def test_full_request_rejected(self):
+        with self.assertRaisesRegex(ValueError, "server maximum `last`"):
+            self.engine.generate(
+                input_ids=self.input_ids,
+                sampling_params=self.sampling_params,
+                return_hidden_states=True,
+            )
+
+    def test_disabled_request_omits_hidden_states(self):
+        outputs = self.engine.generate(
+            input_ids=self.input_ids,
+            sampling_params=self.sampling_params,
+            return_hidden_states=False,
+        )
+        for output in outputs:
+            self.assertNotIn("hidden_states", output["meta_info"])
 
 
 if __name__ == "__main__":
