@@ -1,14 +1,6 @@
 name: Release Docker Images Nightly (NPU)
 on:
-  pull_request:
-    branches:
-      - 'main'
-    paths:
-      - '.github/workflows/release-docker-npu-nightly.yml'
-      - 'docker/cann9.0.Dockerfile'
   workflow_dispatch:
-  schedule:
-    - cron: "0 14 * * *" # Execute at 10:00 p.m. Beijing Time every day
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.sha }}
@@ -73,7 +65,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: docker
-          file: docker/npu.Dockerfile
+          file: docker/cann9.0.Dockerfile
           platforms: linux/arm64,linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
