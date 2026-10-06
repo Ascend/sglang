@@ -48,7 +48,7 @@ QWEN3_6_27B_3K5_1K5_OTHER_ARGS = [
     74,
     "--mem-fraction-static",
     0.7,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     8,
     16,
@@ -91,7 +91,7 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_gpqa(TestNpuAccuracyTestCaseBase):
     eval_batch_size = 8
     generation_config = {
         "max_tokens": 81920,
-        "temperature": 1.0,
+        "temperature": 0,
         "extra_body": {
             "chat_template_kwargs": {"enable_thinking": True},
         },
