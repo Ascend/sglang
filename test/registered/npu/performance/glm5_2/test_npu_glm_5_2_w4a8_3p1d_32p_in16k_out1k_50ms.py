@@ -137,7 +137,7 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     "deepep",
     "--deepep-mode",
     "low_latency",
-    "--cuda-graph-max-bs",
+    "--cuda-graph-max-bs-decode",
     8,
     "--disaggregation-transfer-backend",
     "ascend",
