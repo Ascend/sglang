@@ -36,6 +36,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=600, suite="full-2-npu-a3", nightly=True)
 
 os.environ.setdefault("SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK", "0")
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 _LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
