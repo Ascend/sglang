@@ -443,7 +443,7 @@ def _inference_process(
         return names, dtypes, shapes
 
     def _do_update(label):
-        """Call /update_weights_from_distributed (wrapped in a weight-update session).  """
+        """Call /update_weights_from_distributed (wrapped in a weight-update session)."""
         resp = requests.post(f"{base_url}/begin_weight_update", json={}, timeout=60)
         assert resp.json()[
             "success"
