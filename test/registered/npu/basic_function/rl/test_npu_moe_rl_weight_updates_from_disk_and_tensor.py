@@ -206,9 +206,7 @@ class _BaseNPUMoEWeightUpdateTest(CustomTestCase):
         if not begin.get("success"):
             raise RuntimeError(f"begin_weight_update failed: {begin}")
         try:
-            resp = self._post(
-                "/update_weights_from_tensor", payload, timeout=timeout
-            )
+            resp = self._post("/update_weights_from_tensor", payload, timeout=timeout)
             if not resp.get("success"):
                 raise RuntimeError(f"update_weights_from_tensor failed: {resp}")
             return resp
