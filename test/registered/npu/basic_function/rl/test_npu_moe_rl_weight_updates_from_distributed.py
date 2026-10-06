@@ -51,12 +51,11 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# register_npu_ci(
-#     est_time=500,
-#     suite="full-4-npu-a3",
-#     nightly=True,
-# )
-register_npu_ci(est_time=500, suite="validate-cleanup-npu", nightly=True)
+register_npu_ci(
+    est_time=500,
+    suite="full-4-npu-a3",
+    nightly=True,
+)
 
 logging.basicConfig(
     level=logging.INFO,

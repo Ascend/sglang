@@ -54,8 +54,7 @@ from sglang.test.test_utils import CustomTestCase, find_available_port
 # runners don't choke on an already-set start method.
 multiprocessing.set_start_method("spawn", force=True)
 
-# register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
-register_npu_ci(est_time=600, suite="validate-cleanup-npu", nightly=True)
+register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
 
 TEST_SUITE = dict(
     model_path=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,

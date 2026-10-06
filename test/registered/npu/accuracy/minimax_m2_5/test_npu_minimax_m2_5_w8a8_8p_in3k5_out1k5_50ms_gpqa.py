@@ -54,7 +54,7 @@ MINIMAX_M2_5_HIGH_THROUGHPUT_OTHER_ARGS = [
     196608,
     "--max-prefill-token",
     8192,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
