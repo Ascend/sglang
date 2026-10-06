@@ -51,11 +51,12 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(
-    est_time=500,
-    suite="full-4-npu-a3",
-    nightly=True,
-)
+# register_npu_ci(
+#     est_time=500,
+#     suite="full-4-npu-a3",
+#     nightly=True,
+# )
+register_npu_ci(est_time=500, suite="validate-cleanup-npu", nightly=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -443,7 +444,11 @@ def _inference_process(
         return names, dtypes, shapes
 
     def _do_update(label):
-        """Call /update_weights_from_distributed."""
+        """Call /update_weights_from_distributed (wrapped in a weight-update session). """
+        resp = requests.post(f"{base_url}/begin_weight_update", json={}, timeout=60)
+        assert resp.json()[
+            "success"
+        ],f"begin_weight_update [{label}] failed: {resp.json()}"
         t0 = time.perf_counter()
         payload = {
             "names": names,
@@ -463,6 +468,10 @@ def _inference_process(
         assert resp.json()[
             "success"
         ], f"update_weights_from_distributed [{label}] failed: {resp.json()}"
+        resp = requests.post(f"{base_url}/end_weight_update", json={}, timeout=60)
+        assert resp.json()[
+            "success"
+        ],f"end_weight_update [{label}] failed: {resp.json()}"
         logger.info(
             "[inference] update_weights_from_distributed [%s]: OK (%.1fs)",
             label,

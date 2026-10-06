@@ -54,7 +54,8 @@ from sglang.test.test_utils import CustomTestCase, find_available_port
 # runners don't choke on an already-set start method.
 multiprocessing.set_start_method("spawn", force=True)
 
-register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
+# register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="validate-cleanup-npu", nightly=True)
 
 TEST_SUITE = dict(
     model_path=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
@@ -104,6 +105,16 @@ class EngineWrapper:
             os.environ["SGLANG_BLOCK_NONZERO_RANK_CHILDREN"] = "0"
             self._engine = SglangEngine(**engine_kwargs)
 
+        dist.barrier(group=self._device_mesh_cpu.get_group())
+
+    def begin_weight_update(self):
+        if self._tp_rank == 0:
+            self._engine.begin_weight_update()
+        dist.barrier(group=self._device_mesh_cpu.get_group())
+
+    def end_weight_update(self):
+        if self._tp_rank == 0:
+            self._engine.end_weight_update()
         dist.barrier(group=self._device_mesh_cpu.get_group())
 
     def update_weights_from_tensor(
@@ -276,9 +287,11 @@ def _run_sglang_subprocess(
 
         # 4 - resume sglang weights and update from hf model
         engine.resume_memory_occupation(tags=["weights"])
+        engine.begin_weight_update()
         engine.update_weights_from_tensor(
             named_tensors=list(hf_model.named_parameters()) if hf_model else []
         )
+        engine.end_weight_update()
 
         # 5 - release hf model (TP master only)
         if is_tp_master:
