@@ -7,6 +7,8 @@ name: Single Test (NPU)
 #               该轮仅跑 test_gsm8k 聚焦验证
 # test round 3: mmlu 修复验证 - 应用 8月12日提单的修复 (删除 num_shots + 基线 0.58->0.38),
 #               本轮跑完整用例 (test_gsm8k 全量 + test_mmlu 0-shot)
+#               (首次尝试 run 37785710869 因 runner 拉取 B081 镜像瞬时 ImagePullBackOff 失败,
+#                属基础设施抖动, 非测试问题, 本轮为重试)
 
 on:
   pull_request:
