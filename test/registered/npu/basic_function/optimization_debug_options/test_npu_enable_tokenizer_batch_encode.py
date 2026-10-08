@@ -53,8 +53,10 @@ class TestTokenizerBatchEncode(CustomTestCase):
             terminate_and_kill_process_tree(cls.process)
 
     def _launch_server(self, enable_tokenizer_batch_encode):
+        # NOTE: a3-2 runner 池保底 2 个可见设备 (910D 双 die), dp 不能超过 2,
+        # 否则 DP>=2 的 scheduler 会报 Invalid device ID
         other_args = [
-            "--attention-backend", "ascend", "--dp", "8",
+            "--attention-backend", "ascend", "--dp", "2",
             "--disable-radix-cache", "--disable-cuda-graph",
             "--max-prefill-tokens", "131072", "--chunked-prefill-size", "131072",
             "--mem-fraction-static", "0.9",

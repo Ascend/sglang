@@ -1,6 +1,8 @@
 name: Single Test (NPU)
 # test round 1: test_npu_enable_tokenizer_batch_encode.py - 验证 --enable-tokenizer-batch-encode 批量分词相对逐条分词的时延收益,
 #               并以 gsm8k 端到端精度兜底 (修复后用例重验证, 对应提单: 断言 153.5 < 160 失败)
+# test round 2: gsm8k server 由 --dp 8 改为 --dp 2 (a3-2 runner 保底 2 可见设备, 首轮 run 37758249176
+#               微基准已通过: 批量 19.17ms vs 逐条 103.62ms, 提升 81.5%)
 
 on:
   pull_request:
