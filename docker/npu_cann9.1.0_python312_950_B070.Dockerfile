@@ -33,10 +33,10 @@ ARG EVALSCOPE_VERSION=""
 # sglang-npu OBS bucket. These links are presigned and expire on 2027-09-12; when they expire,
 # regenerate them from the bucket and pass the new values with --build-arg, no Dockerfile edit needed.
 ARG MF_VERSION="1.3.0"
-ARG MF_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/master/20260928.5/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MF_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/master/20260928.5/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-ARG MC_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/master/20260928.5/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MC_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/master/20260928.5/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+ARG MF_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/master/20261007.2/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
+ARG MF_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/master/20261007.2/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+ARG MC_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/master/20261007.5/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
+ARG MC_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/master/20261007.5/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 
 # Later RUN steps source /etc/environment_new, so make sure it exists
 RUN touch /etc/environment_new
