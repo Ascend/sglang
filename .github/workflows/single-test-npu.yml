@@ -2,6 +2,11 @@ name: Single Test (NPU)
 # test round 1: test_npu_deepep_auto_deepseek_v2.py / test_npu_deepep_low_latency_deepseek_v2.py -
 #               验证 num_questions=None 全量 gsm8k 精度评估 (1314 题) 是否稳定高于 0.34 阈值,
 #               对应提单: B071/B072 上 200 题采样精度 0.33/0.31 < 0.34 门禁翻转
+# test round 2: 首轮 run 37776934235 暴露两个验证适配问题:
+#               1) GITHUB_EVENT_NAME 在 step env 中不可覆盖 (GITHUB_ 保留前缀), test_gsm8k
+#                  仍走 PR smoke 短路 (3 秒返回); 改为 bash 内 export
+#               2) test_mmlu 首次真实执行即 0.0 分 (历史上被 gsm8k failfast 掩盖),
+#                  属用例既有缺陷, 单独跟踪; 本轮只跑 test_gsm8k 聚焦验证
 
 on:
   pull_request:
@@ -35,11 +40,13 @@ jobs:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
           SGLANG_IS_IN_CI: true
-          # Override the runner-injected pull_request so GSM8KAscendMixin.test_gsm8k
-          # takes the full-accuracy path instead of the PR smoke shortcut.
-          GITHUB_EVENT_NAME: workflow_dispatch
         shell: bash
         run: |
+          # GITHUB_* vars cannot be overridden via step env (reserved prefix), so
+          # export in-shell: GSM8KAscendMixin.test_gsm8k short-circuits to a
+          # one-request smoke check when GITHUB_EVENT_NAME == "pull_request".
+          export GITHUB_EVENT_NAME=workflow_dispatch
+
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
@@ -91,7 +98,11 @@ jobs:
           for test_case in "${test_cases[@]}"; do
             tc_name=$(basename ${test_case} .py)
             echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
+            # Run only test_gsm8k: test_mmlu scores 0.0 on first-ever execution
+            # (previously masked by gsm8k failfast) -- a pre-existing case defect
+            # (CompletionSampler + stop=["Question",...] truncates few-shot
+            # continuation before the "Answer: $LETTER" line), tracked separately.
+            python -u ${sglang_source_path}/${test_case} TestDeepEpDeepseek.test_gsm8k
             echo "Finished test case ${test_case}"
           done
 
