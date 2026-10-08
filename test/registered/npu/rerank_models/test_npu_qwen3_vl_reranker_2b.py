@@ -20,11 +20,12 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.runners import TEST_RERANK_QUERY_DOCS, SRTRunner
 from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(
-    est_time=400,
-    suite="full-1-npu-a3",
-    nightly=True,
-)
+# register_npu_ci(
+#     est_time=400,
+#     suite="full-1-npu-a3",
+#     nightly=True,
+# )
+register_npu_ci(est_time=400, suite="validate-cleanup-npu", nightly=True)
 
 MODELS = [
     (QWEN3_VL_RERANKER_2B_WEIGHTS_PATH, 1, 1e-2),

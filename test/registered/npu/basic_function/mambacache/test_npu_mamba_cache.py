@@ -14,7 +14,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
+# register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
 register_npu_ci(est_time=1100, suite="validate-cleanup-npu", nightly=True)
 
 
@@ -38,7 +38,7 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
         "--disable-cuda-graph",
         "--mamba-full-memory-ratio",
         "0.9",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "auto",
         "--mamba-track-interval",
         "256",
@@ -64,7 +64,7 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "no_buffer",
         "--mamba-track-interval",
         "512",
@@ -98,7 +98,7 @@ class TestMambaCacheRadix(CustomTestCase):
         "bfloat16",
         "--mamba-full-memory-ratio",
         "0.3",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",  # To reuse Radix Cache, this parameter must be set to extra_buffer
     ]
 

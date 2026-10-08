@@ -23,8 +23,9 @@ from sglang.test.test_utils import (
     popen_launch_pd_server,
 )
 
-register_npu_ci(est_time=3600, suite="base-b-test-16-npu-a3")
-register_npu_ci(est_time=3600, suite="nightly-16-npu-a3", nightly=True)
+# register_npu_ci(est_time=3600, suite="base-b-test-16-npu-a3")
+# register_npu_ci(est_time=3600, suite="nightly-16-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="validate-cleanup-npu", nightly=True)
 
 load_balance_method_options = [
     "auto",
@@ -144,7 +145,7 @@ class BaseTestNPULoadBalanceMethodDPDisaggregation(TestDisaggregationBase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
-            host=f"http://{self.url.hostname}",
+            host=f"{self.url.hostname}",
             port=int(self.url.port),
         )
 
