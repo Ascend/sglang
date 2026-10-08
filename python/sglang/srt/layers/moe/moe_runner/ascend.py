@@ -219,7 +219,10 @@ class AscendRunnerCore(MoeRunnerCore):
 
         w13_kernel = self.config.layer.w13_kernel
 
-        if _uses_fused_gmm1(w13_kernel, self.config) and self.config.activation != "situ":
+        if (
+            _uses_fused_gmm1(w13_kernel, self.config)
+            and self.config.activation != "situ"
+        ):
             # --- w13 projection + activation, fused into one kernel ---
             # The fused gmm1 returns activations already requantised for gmm2,
             # so there is no separate activation step to run.

@@ -84,12 +84,15 @@ class TestZigzagBuildMetadata(CustomTestCase):
         from sglang.srt.layers.cp.zigzag import ZigzagCPStrategy
 
         strategy = ZigzagCPStrategy(cp_size=cp_size)
-        with patch(
-            "sglang.srt.layers.cp.base.get_parallel",
-            return_value=_FakeParallel(cp_rank, cp_size),
-        ), patch(
-            "sglang.srt.layers.cp.zigzag.get_device",
-            return_value=SimpleNamespace(device="cpu"),
+        with (
+            patch(
+                "sglang.srt.layers.cp.base.get_parallel",
+                return_value=_FakeParallel(cp_rank, cp_size),
+            ),
+            patch(
+                "sglang.srt.layers.cp.zigzag.get_device",
+                return_value=SimpleNamespace(device="cpu"),
+            ),
         ):
             meta = strategy.build_metadata(
                 num_tokens=sum(seqs), seqs_len=list(seqs), extend_seqs_len=list(seqs)
@@ -198,6 +201,7 @@ class TestInterleaveStrategy(CustomTestCase):
         self.assertEqual(self._local_q_indices(10, cp_rank=1), [1, 5, 9])
         self.assertEqual(self._local_q_indices(10, cp_rank=2), [2, 6])
 
+
 class TestCPPaddingHelpers(CustomTestCase):
     @staticmethod
     def _meta(counts):
@@ -212,10 +216,13 @@ class TestCPPaddingHelpers(CustomTestCase):
         from sglang.srt.layers.cp.padding import pad_logical_token_to_physical
 
         meta = self._meta([1009, 1010, 1009, 1010])
-        with patch(
-            "sglang.srt.layers.cp.padding.get_parallel",
-            return_value=_FakeParallel(0, 4),
-        ), patch("sglang.srt.layers.cp.base.is_zigzag", return_value=True):
+        with (
+            patch(
+                "sglang.srt.layers.cp.padding.get_parallel",
+                return_value=_FakeParallel(0, 4),
+            ),
+            patch("sglang.srt.layers.cp.base.is_zigzag", return_value=True),
+        ):
             pad_logical_token_to_physical(meta)
 
         self.assertEqual(meta.per_rank_logical_token, [1009, 1010, 1009, 1010])
@@ -227,10 +234,13 @@ class TestCPPaddingHelpers(CustomTestCase):
         from sglang.srt.layers.cp.padding import pad_logical_token_to_physical
 
         meta = self._meta([1010] * 4)
-        with patch(
-            "sglang.srt.layers.cp.padding.get_parallel",
-            return_value=_FakeParallel(0, 4),
-        ), patch("sglang.srt.layers.cp.base.is_zigzag", return_value=False):
+        with (
+            patch(
+                "sglang.srt.layers.cp.padding.get_parallel",
+                return_value=_FakeParallel(0, 4),
+            ),
+            patch("sglang.srt.layers.cp.base.is_zigzag", return_value=False),
+        ):
             pad_logical_token_to_physical(meta)
 
         self.assertEqual(meta.per_rank_actual_token, [1012] * 4)
@@ -238,9 +248,7 @@ class TestCPPaddingHelpers(CustomTestCase):
     def test_pad_local_rows(self):
         from sglang.srt.layers.cp.padding import pad_local_rows
 
-        meta = SimpleNamespace(
-            per_rank_logical_token=[10], per_rank_actual_token=[16]
-        )
+        meta = SimpleNamespace(per_rank_logical_token=[10], per_rank_actual_token=[16])
         x = torch.arange(10)
         out = pad_local_rows(x, meta, dim=0)
         self.assertEqual(out.shape, (16,))
@@ -250,9 +258,7 @@ class TestCPPaddingHelpers(CustomTestCase):
     def test_pad_local_rows_noop_when_already_aligned(self):
         from sglang.srt.layers.cp.padding import pad_local_rows
 
-        meta = SimpleNamespace(
-            per_rank_logical_token=[10], per_rank_actual_token=[10]
-        )
+        meta = SimpleNamespace(per_rank_logical_token=[10], per_rank_actual_token=[10])
         x = torch.arange(10)
         self.assertIs(pad_local_rows(x, meta, dim=0), x)
 
