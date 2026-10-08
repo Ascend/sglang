@@ -9,6 +9,7 @@ name: Single Test (NPU)
 #               本轮跑完整用例 (test_gsm8k 全量 + test_mmlu 0-shot)
 #               (首次尝试 run 37785710869 因 runner 拉取 B081 镜像瞬时 ImagePullBackOff 失败,
 #                属基础设施抖动, 非测试问题, 本轮为重试)
+#               B081 持续拉取失败 4 次 (13:37~14:48), 改用 B082 镜像重试
 
 on:
   pull_request:
@@ -27,7 +28,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-8
     container:
-      image: swr.cn-south-west-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B081
+      image: swr.cn-south-west-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B082
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
