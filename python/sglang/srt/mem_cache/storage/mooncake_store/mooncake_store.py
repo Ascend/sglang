@@ -877,8 +877,19 @@ class MooncakeStore(HiCacheStorage, MooncakeBaseStore):
         for transfer in pool_transfers or []:
             if not restorable:
                 break
+            coverage = transfer.logical_pages_per_object
+            if coverage <= 0:
+                raise ValueError(
+                    f"Mooncake hybrid pool {transfer.name} has invalid "
+                    f"logical_pages_per_object={coverage}"
+                )
+            # Coarse pools such as DSV4 C128 have one object at the end of
+            # each complete group. Derive its key from the primary hash chain,
+            # as the MemCache backend does, so prefetch placeholders and request
+            # namespaces cannot change the lookup key.
+            object_keys = keys[coverage - 1 : kv_pages : coverage]
             component_keys, key_multiplier = self._get_hybrid_page_component_keys(
-                keys, transfer
+                object_keys, transfer
             )
             component_keys = self._tag_keys(component_keys)
             ex = self._batch_exist(component_keys, extra_info)
@@ -888,28 +899,28 @@ class MooncakeStore(HiCacheStorage, MooncakeBaseStore):
                         r == 1
                         for r in ex[i * key_multiplier : (i + 1) * key_multiplier]
                     )
-                    for i in range(kv_pages)
+                    for i in range(len(object_keys))
                 ]
             else:
-                page_exists = [False] * kv_pages
+                page_exists = [False] * len(object_keys)
             boundary = 0
             pool_restorable = []
             if transfer.hit_policy == PoolHitPolicy.ALL_PAGES:
                 try:
                     boundary = page_exists.index(False)
                 except ValueError:
-                    boundary = kv_pages
-                pool_restorable = list(range(1, boundary + 1))
+                    boundary = len(object_keys)
+                pool_restorable = range(coverage, boundary * coverage + 1, coverage)
             elif transfer.hit_policy == PoolHitPolicy.TRAILING_PAGES:
                 # A stop point works when the window ending there is complete,
                 # so scan every one instead of stopping at the longest.
                 trailing = max(1, len(transfer.keys) if transfer.keys else 1)
-                for prefix_len in range(kv_pages, 0, -1):
+                for prefix_len in range(len(object_keys), 0, -1):
                     if all(
                         page_exists[i]
                         for i in range(max(0, prefix_len - trailing), prefix_len)
                     ):
-                        pool_restorable.append(prefix_len)
+                        pool_restorable.append(prefix_len * coverage)
                         if boundary == 0:
                             boundary = prefix_len
             else:
@@ -932,7 +943,13 @@ class MooncakeStore(HiCacheStorage, MooncakeBaseStore):
             page_size = getattr(host_pool, "page_size", 1) or 1
             host_indices = transfer.host_indices
             assert len(keys) > 0
-            assert len(keys) == len(host_indices) // page_size
+            native_pages, remainder = divmod(len(host_indices), page_size)
+            if remainder or len(keys) != native_pages:
+                raise ValueError(
+                    f"Mooncake hybrid pool {transfer.name} key/page mismatch: "
+                    f"keys={len(keys)}, indices={len(host_indices)}, "
+                    f"page_size={page_size}"
+                )
 
             tagged_keys = self._tag_keys(keys)
             key_strs, key_multiplier = self._get_hybrid_page_component_keys(
