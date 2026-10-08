@@ -1,8 +1,5 @@
 name: Single Test (NPU)
-# test round 1: test_npu_enable_tokenizer_batch_encode.py - 验证 --enable-tokenizer-batch-encode 批量分词相对逐条分词的时延收益,
-#               并以 gsm8k 端到端精度兜底 (修复后用例重验证, 对应提单: 断言 153.5 < 160 失败)
-# test round 2: gsm8k server 由 --dp 8 改为 --dp 2 (a3-2 runner 保底 2 可见设备, 首轮 run 37758249176
-#               微基准已通过: 批量 19.17ms vs 逐条 103.62ms, 提升 81.5%)
+# test round 1: <测试用例描述>
 
 on:
   pull_request:
@@ -21,7 +18,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B081
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,7 +41,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/basic_function/optimization_debug_options/test_npu_enable_tokenizer_batch_encode.py"
+            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
           )
 
           for test_case in "${test_cases[@]}"; do

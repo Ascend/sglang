@@ -18,22 +18,20 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=900, suite="full-1-npu-a3", nightly=True)
 
-# 对齐 community v0.5.5 benchmark/benchmark_batch/benchmark_batch.py 的输入规模配置
+# Input scale aligned with community v0.5.5 benchmark/benchmark_batch/benchmark_batch.py
 NUM_REQUESTS = 10  # Total number of requests (each with BATCH_SIZE prompts)
 NUM_TOKENS = 32000  # Tokens per prompt
 BATCH_SIZE = 8  # Number of prompts per request
 
 
 class TestTokenizerBatchEncode(CustomTestCase):
-    """
-    参数最初合入的PR #5141 https://github.com/sgl-project/sglang/pull/5141
+    """Testcase: Verify tokenization latency improvement when enabling --enable-tokenizer-batch-encode.
 
-    用例修改逻辑为
-    1. 用 benchmark_batch.py 同样的随机长 prompt 生成 NUM_REQUESTS 个 BATCH_SIZE 批量；
-    2. 逐条编码（关闭参数路径）测出 avg per prompt latency；
-    3. 批量编码（开启参数路径）测出 avg per prompt latency；
-    4. 断言批量编码耗时更低；
-    5. test_gsm8k 复用开启参数的 server 做端到端正确性验证。
+    The parameter batches tokenization of all input texts into a single
+    tokenizer call (community PR #5141). The test compares avg per-prompt
+    tokenization latency between sequential encode (flag-off behavior) and
+    batch encode (flag-on behavior), then checks end-to-end correctness on a
+    server launched with the flag enabled (gsm8k).
 
     [Test Category] Parameter
     [Test Target] --enable-tokenizer-batch-encode
@@ -43,7 +41,6 @@ class TestTokenizerBatchEncode(CustomTestCase):
     def setUpClass(cls):
         cls.model = QWEN3_0_6B_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
-        # 测试进程内加载 tokenizer
         cls.tokenizer = get_tokenizer(cls.model)
         cls.process = None
 
@@ -53,8 +50,7 @@ class TestTokenizerBatchEncode(CustomTestCase):
             terminate_and_kill_process_tree(cls.process)
 
     def _launch_server(self, enable_tokenizer_batch_encode):
-        # NOTE: a3-2 runner 池保底 2 个可见设备 (910D 双 die), dp 不能超过 2,
-        # 否则 DP>=2 的 scheduler 会报 Invalid device ID
+        # a3-2 CI runners expose only 2 visible devices, so cap dp at 2
         other_args = [
             "--attention-backend", "ascend", "--dp", "2",
             "--disable-radix-cache", "--disable-cuda-graph",
@@ -117,15 +113,15 @@ class TestTokenizerBatchEncode(CustomTestCase):
         )
 
         print(
-            f"[TEMP] OFF per-request latencies (ms): "
+            f"[BENCH] OFF per-request latencies (ms): "
             f"{[f'{v:.1f}' for v in off_latencies]}, avg_per_prompt={off_avg_per_prompt:.2f}ms"
         )
         print(
-            f"[TEMP] ON per-request latencies (ms): "
+            f"[BENCH] ON per-request latencies (ms): "
             f"{[f'{v:.1f}' for v in on_latencies]}, avg_per_prompt={on_avg_per_prompt:.2f}ms"
         )
         print(
-            f"[TEMP] RESULT off_avg_per_prompt={off_avg_per_prompt:.2f}ms, "
+            f"[BENCH] RESULT off_avg_per_prompt={off_avg_per_prompt:.2f}ms, "
             f"on_avg_per_prompt={on_avg_per_prompt:.2f}ms, "
             f"improvement={(off_avg_per_prompt - on_avg_per_prompt) / off_avg_per_prompt * 100:.1f}%"
         )
@@ -137,7 +133,7 @@ class TestTokenizerBatchEncode(CustomTestCase):
         )
 
     def test_gsm8k(self):
-        # NOTE: 写回类属性, 保证 tearDownClass 能杀掉 server 进程
+        # store the process on the class so tearDownClass can kill the server
         self.__class__.process = self._launch_server(enable_tokenizer_batch_encode=True)
         args = SimpleNamespace(
             base_url=self.base_url,
