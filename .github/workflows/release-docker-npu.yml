@@ -66,7 +66,7 @@ jobs:
         with:
           context: docker
           # 合并后的单份 Dockerfile，a3 / 950 由 DEVICE_TYPE 分支决定
-          file: docker/npu.Dockerfile
+          file: docker/npu_cann9.2.0.Dockerfile
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -137,7 +137,7 @@ jobs:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
       # 与 build job 用同一份合并后的 Dockerfile，build_args 必须与上面 build-args 保持一致
       # （CANN_IMAGE_TAG 不传的话会落到 Dockerfile 里的默认值，9.1.0 那类 leg 就会用错镜像）
-      dockerfile: docker/npu.Dockerfile
+      dockerfile: docker/npu_cann9.2.0.Dockerfile
       build_args: |
         SGLANG_KERNEL_NPU_REPO=huangxiaojun15/sgl-kernel-npu
         SGLANG_KERNEL_NPU_TAG=2026.10.0.post9
