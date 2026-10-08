@@ -20,7 +20,8 @@ from sglang.test.test_utils import (
     popen_launch_pd_server,
 )
 
-register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+# register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-cleanup-npu", nightly=True)
 standard_accuracy = 0.9
 
 
@@ -176,7 +177,7 @@ class TestDisaggregationDecodeDisableOffload(DisaggregationHiCacheBase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
-            host="http://127.0.0.1",
+            host="127.0.0.1",
             port=self.lb_port,
         )
         metrics = run_eval(args)
@@ -244,7 +245,7 @@ class TestDisaggregationDecodeEnableOffload(DisaggregationHiCacheBase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
-            host="http://127.0.0.1",
+            host="127.0.0.1",
             port=self.lb_port,
         )
         metrics = run_eval(args)

@@ -15,8 +15,11 @@ from sglang.test.test_utils import (
     popen_launch_pd_server,
 )
 
-register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+# register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-cleanup-npu", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
     """
