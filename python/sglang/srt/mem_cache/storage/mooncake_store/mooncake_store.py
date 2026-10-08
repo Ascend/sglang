@@ -16,10 +16,10 @@ from sglang.srt.mem_cache.hicache_storage import (
     HiCacheStorage,
     HiCacheStorageConfig,
     HiCacheStorageExtraInfo,
-    PoolHitPolicy,
     PoolName,
     PoolTransfer,
     PoolTransferResult,
+    resolve_pool_transfer_hits,
 )
 from sglang.srt.mem_cache.pool_host import HostKVCache, HostTensorAllocator
 from sglang.srt.mem_cache.pool_host.mla import MLATokenToKVPoolHost
@@ -867,16 +867,8 @@ class MooncakeStore(HiCacheStorage, MooncakeBaseStore):
         else:
             kv_pages = self.batch_exists(keys, extra_info)
 
-        hit_count: dict = {PoolName.KV: kv_pages} if kv_pages else {}
-        # Start from every KV prefix and let each pool remove the stop points it
-        # cannot serve. Collect the whole set, not just its maximum: a
-        # TRAILING_PAGES pool leaves holes (see PoolTransferResult), and the
-        # caller has to intersect these sets across ranks.
-        restorable = list(range(1, kv_pages + 1))
-
+        pool_page_exists: list[list[bool]] = []
         for transfer in pool_transfers or []:
-            if not restorable:
-                break
             coverage = transfer.logical_pages_per_object
             if coverage <= 0:
                 raise ValueError(
@@ -903,35 +895,9 @@ class MooncakeStore(HiCacheStorage, MooncakeBaseStore):
                 ]
             else:
                 page_exists = [False] * len(object_keys)
-            boundary = 0
-            pool_restorable = []
-            if transfer.hit_policy == PoolHitPolicy.ALL_PAGES:
-                try:
-                    boundary = page_exists.index(False)
-                except ValueError:
-                    boundary = len(object_keys)
-                pool_restorable = range(coverage, boundary * coverage + 1, coverage)
-            elif transfer.hit_policy == PoolHitPolicy.TRAILING_PAGES:
-                # A stop point works when the window ending there is complete,
-                # so scan every one instead of stopping at the longest.
-                trailing = max(1, len(transfer.keys) if transfer.keys else 1)
-                for prefix_len in range(len(object_keys), 0, -1):
-                    if all(
-                        page_exists[i]
-                        for i in range(max(0, prefix_len - trailing), prefix_len)
-                    ):
-                        pool_restorable.append(prefix_len * coverage)
-                        if boundary == 0:
-                            boundary = prefix_len
-            else:
-                raise ValueError(f"Unsupported pool hit policy: {transfer.hit_policy}")
-            if boundary:
-                hit_count[transfer.name] = boundary
-            pool_restorable_set = set(pool_restorable)
-            restorable = [p for p in restorable if p in pool_restorable_set]
+            pool_page_exists.append(page_exists)
 
-        final_pages = restorable[-1] if restorable else 0
-        return PoolTransferResult(final_pages, hit_count, restorable)
+        return resolve_pool_transfer_hits(kv_pages, pool_transfers, pool_page_exists)
 
     def _batch_io_v2(self, transfers: List[PoolTransfer], is_set: bool):
         # Unified v2 I/O path: each PoolTransfer can expand to one or more
