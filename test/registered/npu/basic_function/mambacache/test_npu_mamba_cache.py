@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import requests
@@ -14,9 +15,11 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
-register_npu_ci(est_time=1100, suite="validate-cleanup-npu", nightly=True)
+register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
+# register_npu_ci(est_time=1100, suite="validate-cleanup-npu", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Test MambaCache basic functions using GSM8K dataset.
