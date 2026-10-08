@@ -1,5 +1,7 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# test round 1: test_npu_deepep_auto_deepseek_v2.py / test_npu_deepep_low_latency_deepseek_v2.py -
+#               验证 num_questions=None 全量 gsm8k 精度评估 (1314 题) 是否稳定高于 0.34 阈值,
+#               对应提单: B071/B072 上 200 题采样精度 0.33/0.31 < 0.34 门禁翻转
 
 on:
   pull_request:
@@ -16,9 +18,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-8
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B081
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,11 +30,14 @@ jobs:
           npu-smi info
 
       - name: Run test
-        timeout-minutes: 120
+        timeout-minutes: 180
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
           SGLANG_IS_IN_CI: true
+          # Override the runner-injected pull_request so GSM8KAscendMixin.test_gsm8k
+          # takes the full-accuracy path instead of the PR smoke shortcut.
+          GITHUB_EVENT_NAME: workflow_dispatch
         shell: bash
         run: |
           sglang_source_path=$(pwd)
@@ -41,7 +46,8 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py"
           )
 
           for test_case in "${test_cases[@]}"; do
