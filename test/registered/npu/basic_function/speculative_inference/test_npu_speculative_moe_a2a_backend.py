@@ -16,8 +16,9 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="base-b-test-16-npu-a3")
-register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
+# register_npu_ci(est_time=400, suite="base-b-test-16-npu-a3")
+# register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-cleanup-npu", nightly=True)
 
 
 class TestAscendDistTimeout(CustomTestCase):
@@ -60,6 +61,8 @@ class TestAscendDistTimeout(CustomTestCase):
             "ascend_fuseep",
             "--deepep-mode",
             "auto",
+            "--fuseep-mode",
+            1,
             "--speculative-draft-model-quantization",
             "unquant",
         ]
