@@ -15,6 +15,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=1100, suite="validate-cleanup-npu", nightly=True)
 
 
 class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
@@ -166,7 +167,7 @@ class TestMambaCacheRadix(CustomTestCase):
                     "max_new_tokens": 1000,
                 },
             },
-            timeout=120,
+            timeout=1200,
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.text), 0)

@@ -8,8 +8,7 @@ from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V2_LITE_W8A8_WEIGHTS_P
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-# register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
-register_npu_ci(est_time=400, suite="validate-cleanup-npu", nightly=True)
+register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 
 
 class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
