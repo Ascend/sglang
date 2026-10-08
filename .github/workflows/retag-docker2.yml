@@ -1,0 +1,106 @@
+name: Delete Quay Image Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "要删除的 tag，多个用逗号或换行分隔，如 cann9.1.0-a3-nightly"
+        required: true
+        type: string
+      include_arch_variants:
+        description: "同时删除对应的 -amd64 / -arm64 单架构 tag"
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: "只打印将要删除的 tag，不真正删除（改成 false 才真正执行）"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  delete-tag:
+    if: github.repository == 'Ascend/sglang'
+    runs-on: ubuntu-latest
+    steps:
+      # Quay 删除 tag 走的是 REST API，没有对应的 docker CLI 命令，
+      # 所以这里不需要 docker login，直接用 token 调 /api/v1 即可。
+      - name: Delete tags on Quay
+        env:
+          QUAY_PWD: ${{ secrets.QUAY_PWD }}
+          TAGS: ${{ inputs.tags }}
+          WITH_ARCH: ${{ inputs.include_arch_variants }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set +e
+          set -uo pipefail
+
+          # quay.io/ascend/sglang
+          QUAY_REPO="ascend/sglang"
+
+          # ---------- 把逗号 / 空格 / 换行分隔的 tag 拆成列表 ----------
+          mapfile -t raw_tags < <(
+            printf '%s\n' "$TAGS" \
+              | tr ',' '\n' \
+              | tr -s '[:space:]' '\n' \
+              | sed '/^$/d'
+          )
+
+          targets=()
+          for tg in "${raw_tags[@]}"; do
+            targets+=("$tg")
+            if [ "$WITH_ARCH" = "true" ]; then
+              targets+=("${tg}-amd64" "${tg}-arm64")
+            fi
+          done
+
+          echo "Repository: quay.io/${QUAY_REPO}"
+          echo "Dry run   : ${DRY_RUN}"
+          echo "Tags      : ${targets[*]}"
+          echo "========================================="
+
+          delete_quay() {
+            # DELETE /api/v1/repository/{namespace}/{repo}/tag/{tag}
+            curl -sS -o /tmp/api-resp.txt -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer ${QUAY_PWD}" \
+              "https://quay.io/api/v1/repository/${QUAY_REPO}/tag/$1"
+          }
+
+          failed=0
+          summary=""
+          for tag in "${targets[@]}"; do
+            image="quay.io/${QUAY_REPO}:${tag}"
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[dry-run] would delete ${image}"
+              summary="${summary}| ${image} | dry-run |\n"
+              continue
+            fi
+
+            code="$(delete_quay "$tag")"
+            if [ "$code" = "204" ] || [ "$code" = "200" ]; then
+              echo "deleted   ${image}  (HTTP ${code})"
+              summary="${summary}| ${image} | deleted (${code}) |\n"
+            elif [ "$code" = "404" ]; then
+              echo "not found ${image}  (HTTP 404)"
+              summary="${summary}| ${image} | not found |\n"
+            else
+              echo "FAILED    ${image}  (HTTP ${code})"
+              echo "          response: $(head -c 300 /tmp/api-resp.txt)"
+              summary="${summary}| ${image} | failed (${code}) |\n"
+              failed=1
+            fi
+          done
+
+          {
+            echo "### Delete Quay image tag"
+            echo ""
+            echo "| Image | Result |"
+            echo "| --- | --- |"
+            printf "%b" "$summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$failed" = "1" ]; then
+            echo "::error::有 tag 删除失败，看上面的 response"
+            exit 1
+          fi
