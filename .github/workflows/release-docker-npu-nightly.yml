@@ -8,15 +8,8 @@ on:
       - '.github/workflows/release-docker-npu-nightly.yml'
       - 'docker/npu.Dockerfile'
   workflow_dispatch:
-    inputs:
-      tag_suffix:
-        description: 'tag 后缀，如 B021, release20260810'
-        required: false
-        type: string
-        default: 'nightly'
   schedule:
     - cron: "0 14 * * *"
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: true
@@ -58,20 +51,22 @@ jobs:
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Generate full image tag
-        run: |
-          echo "FULL_TAG=cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}-${{ matrix.platform }}" >> "$GITHUB_ENV"
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
-          tags: type=raw,value=${{ env.FULL_TAG }}
+          tags: |
+            type=ref,event=pr
+            type=ref,event=branch
+            type=schedule,pattern=main
+          flavor: |
+            latest=false
+            suffix=-cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ matrix.platform }}
 
       - name: Log into SWR
         uses: docker/login-action@v3
-        if: ${{ github.repository == 'Ascend/sglang' && github.event_name != 'pull_request' }}
+        if: ${{ github.repository == 'sgl-project/sglang' && github.event_name != 'pull_request' }}
         with:
           registry: swr.cn-southwest-2.myhuaweicloud.com
           username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
@@ -85,7 +80,7 @@ jobs:
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          outputs: ${{ github.repository == 'Ascend/sglang' && github.event_name != 'pull_request' && 'type=registry,oci-mediatypes=false' || '' }}
+          outputs: ${{ github.repository == 'sgl-project/sglang' && github.event_name != 'pull_request' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
           build-args: |
@@ -96,7 +91,7 @@ jobs:
   merge:
     name: merge multi-arch manifest
     needs: build
-    if: ${{ github.repository == 'Ascend/sglang' && github.event_name != 'pull_request' }}
+    if: ${{ github.repository == 'sgl-project/sglang' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -113,34 +108,13 @@ jobs:
           username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
           password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
 
+      - name: Compute base image
+        run: |
+          echo "IMAGE=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${GITHUB_REF_NAME}-cann${{ matrix.cann_version }}-${{ matrix.device_type }}" >> "$GITHUB_ENV"
+
       - name: Create multi-arch manifest
-        env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann${{ matrix.cann_version }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
             "${IMAGE}-amd64" \
             "${IMAGE}-arm64"
-          # 如果 SWR 或下游拉取端不兼容 OCI index，改用 Docker schema2 manifest list：
-          #   docker manifest create "${IMAGE}" "${IMAGE}-amd64" "${IMAGE}-arm64"
-          #   docker manifest push "${IMAGE}"
-
-  manifest:
-    needs: merge
-    if: ${{ github.repository == 'Ascend/sglang' && github.event_name != 'pull_request' }}
-    uses: ./.github/workflows/generate-image-manifest.yml
-    secrets: inherit
-    strategy:
-      matrix:
-        include:
-          - device_type: a3
-          - device_type: 950
-    with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
-      dockerfile: docker/npu.Dockerfile
-      build_args: |
-        SGLANG_KERNEL_NPU_TAG=2026.9.0.post6
-        CANN_VERSION=9.1.0
-        DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'nightly' }}
-      deploy_pages: 'true'
