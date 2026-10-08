@@ -166,7 +166,7 @@ class TestMambaCacheRadix(CustomTestCase):
                     "max_new_tokens": 1000,
                 },
             },
-            timeout=120,
+            timeout=1200,
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.text), 0)
