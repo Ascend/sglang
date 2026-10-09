@@ -318,7 +318,7 @@ class DSANPUIndexerMixin:
                     pool.indexer_hadamard_128,
                     pool.dtype,
                 )
-                topk_indices = torch_npu.npu_quant_lightning_indexer(
+                topk_indices = torch.ops.npu.npu_quant_lightning_indexer(
                     query=query,
                     key=past_key_states,
                     weights=weights,
