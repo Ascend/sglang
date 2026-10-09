@@ -19,8 +19,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=1100, suite="validate-cleanup-npu", nightly=True)
 
 
-os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
-
 class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Test MambaCache basic functions using GSM8K dataset.
     The inference accuracy of the Qwen3-Next-80B-A3B-Instruct model
@@ -72,7 +70,7 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
         "--mamba-track-interval",
         "512",
         "--mamba-ssm-dtype",
-        "float32",
+        "bfloat16",
         "--tp-size",
         "8",
         "--disable-radix-cache",
