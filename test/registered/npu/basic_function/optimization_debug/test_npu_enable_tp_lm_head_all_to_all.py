@@ -8,15 +8,15 @@ from sglang.test.test_utils import CustomTestCase
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
 
-class TestQwen330B(GSM8KAscendMixin, CustomTestCase):
+class TestGsm8k(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Verify that the inference accuracy of the Qwen/Qwen3-30B-A3B model on the GSM8K dataset is no less than 0.90 
     with --enable-tp-lm-head-all-to-all which needs tp==dp .
 
     [Test Category] Parameter
-    [Test Target] Qwen/Qwen3-30B-A3B-Instruct-2507
+    [Test Target] --enable-tp-lm-head-all-to-all
     """
 
-    model = QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
+    model = QWEN3_30B_A3B_WEIGHTS_PATH
     accuracy = 0.90
     other_args = [
         "--trust-remote-code",
