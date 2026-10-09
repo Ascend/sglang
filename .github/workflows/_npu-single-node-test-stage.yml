@@ -217,6 +217,7 @@ jobs:
           SGLANG_IS_IN_CI: true
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
+          NPU_PR_SMOKE: ${{ inputs.is_nightly_pipeline_job == true && 'false' || 'true' }}
         shell: bash
         run: |
           # Fail fast on any command error, undefined variable, or pipe failure.
