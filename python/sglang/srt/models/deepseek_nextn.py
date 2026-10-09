@@ -25,9 +25,9 @@ from torch import nn
 from transformers import PretrainedConfig
 
 from sglang.kernels.ops.layernorm.fused_eh_norm import fused_eh_norm
+from sglang.srt.configs.model_config import is_deepseek_dsa
 from sglang.srt.environ import envs
 from sglang.srt.eplb.expert_distribution import get_global_expert_distribution_recorder
-from sglang.srt.configs.model_config import is_deepseek_dsa
 from sglang.srt.layers.attention.dsa.utils import dsa_use_prefill_cp
 from sglang.srt.layers.attention.index_topk_share import IndexTopKShareState
 from sglang.srt.layers.cp.utils import is_cp_active
