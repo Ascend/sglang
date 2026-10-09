@@ -23,7 +23,8 @@ from sglang.test.test_utils import (
     get_benchmark_args,
 )
 
-register_npu_ci(est_time=600, suite="full-2-npu-a3", nightly=True)
+# register_npu_ci(est_time=600, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="validate-cleanup-npu", nightly=True)
 
 BASE_URL = DEFAULT_URL_FOR_TEST
 HOST = urlparse(BASE_URL).hostname
