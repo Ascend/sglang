@@ -56,7 +56,7 @@ class TestQwen3(TestNpuAccuracyTestCaseBase):
     model = QWEN3_VL_8B_THINKING_MODEL_PATH
     envs = ENVS
     other_args = OTHER_ARGS
-    accuracy = 0.64 if _is_pr_pipeline else 0.693
+    accuracy = 0.64 if _is_pr_pipeline else 0.6930
     datasets = ["mmmu"]
     few_shot_num = 0
     limit = 5 if _is_pr_pipeline else 15
