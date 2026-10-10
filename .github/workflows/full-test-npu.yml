@@ -421,7 +421,20 @@ jobs:
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
       test_timeout_minutes: '150'
-    secrets: inherit
+      secrets: inherit
+  nightly-perf-2-npu-a3-tmp:
+    name: nightly-perf-2-npu-a3-tmp
+    needs: [set-image-config]
+    uses: ./.github/workflows/_npu-single-node-test-stage.yml
+    with:
+      runner: linux-aarch64-a3-800t-2
+      test_type: 'perf'
+      test_suite: nightly-perf-2-npu-a3-tmp
+      is_nightly_pipeline_job: true
+      skip_pr_test_health_check: 'true'
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+      install_sglang_deps: false
+      device_type_for_deps: 'a3'
 
   # check-all-jobs:
   #   if: github.repository == 'sgl-project/sglang' && always()
