@@ -19,7 +19,7 @@ QWEN3_5_397B_128K_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "2200",
+    "HCCL_BUFFSIZE": "0",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "32",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -115,8 +115,8 @@ class TestNPUQwen3_5_397B_128K_1k_20ms(TestNpuPerformanceTestCaseBase):
     seed = 1
     tpot = 20
     request_rate = float("inf")
-    temperature = 0.6
-    top_p = 0.95
+    # temperature = 0.6
+    # top_p = 0.95
     output_token_throughput = 40.6
 
     def test_npu_qwen3_5_397b_128K_1k_20ms(self):

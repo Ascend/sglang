@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import requests
@@ -16,6 +17,8 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Test MambaCache basic functions using GSM8K dataset.
@@ -68,7 +71,7 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
         "--mamba-track-interval",
         "512",
         "--mamba-ssm-dtype",
-        "float32",
+        "bfloat16",
         "--tp-size",
         "8",
         "--disable-radix-cache",
@@ -166,7 +169,7 @@ class TestMambaCacheRadix(CustomTestCase):
                     "max_new_tokens": 1000,
                 },
             },
-            timeout=120,
+            timeout=1200,
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.text), 0)

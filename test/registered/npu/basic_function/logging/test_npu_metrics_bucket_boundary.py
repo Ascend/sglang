@@ -126,6 +126,7 @@ class TestNPUMetricsDefaultBucketBoundary(TestNPULoggingBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.other_args.extend(["--enable-metrics"])
         cls.set_default_bucket()
         cls.launch_server()
 

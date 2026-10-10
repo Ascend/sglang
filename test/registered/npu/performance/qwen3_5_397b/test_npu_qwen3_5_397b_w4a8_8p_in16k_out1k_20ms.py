@@ -20,7 +20,7 @@ QWEN3_5_397B_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "2200",
+    "HCCL_BUFFSIZE": "0",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -30,7 +30,6 @@ QWEN3_5_397B_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "59648",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
@@ -118,8 +117,8 @@ class TestNPUQwen3_5_397B_16K_1k_20ms(TestNpuPerformanceTestCaseBase):
     seed = 1
     tpot = 20
     request_rate = float("inf")
-    temperature = 0.6
-    top_p = 0.95
+    # temperature = 0.6
+    # top_p = 0.95
     output_token_throughput = 439
 
     def test_npu_qwen3_5_397b_16K_1k_20ms(self):

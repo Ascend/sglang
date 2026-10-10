@@ -27,7 +27,7 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B082'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B083'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}-${{ github.sha }}
@@ -65,7 +65,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B082" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B083" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -182,6 +182,8 @@ jobs:
       test_suite: full-acc-2-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
+      timeout_per_file: '14400'
+      job_timeout_minutes: '360'
       partitions: '{"size":4,"arr":[0,1,2,3]}'
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
