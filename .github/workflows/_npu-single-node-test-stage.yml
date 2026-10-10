@@ -52,16 +52,16 @@ on:
         default: false
       run_timeout_minutes:
         description: 'timeout-minutes for the Run test step'
-        type: number
-        default: 300
+        type: string
+        default: '300'
       job_timeout_minutes:
         description: 'Job-level timeout-minutes (covers checkout + install + test)'
-        type: number
-        default: 360
+        type: string
+        default: '360'
       timeout_per_file:
         description: 'run_suite.py --timeout-per-file seconds; ignored when timeout_from_est_time is true'
-        type: number
-        default: 7200
+        type: string
+        default: '7200'
       timeout_from_est_time:
         description: 'Derive each file timeout from its est_time (--timeout-from-est-time)'
         type: boolean
@@ -85,7 +85,7 @@ env:
 jobs:
   e2e:
     name: ${{ inputs.test_suite }}
-    timeout-minutes: ${{ inputs.job_timeout_minutes }}
+    timeout-minutes: ${{ fromJson(inputs.job_timeout_minutes) }}
     concurrency:
       group: ascend-nightly-e2e-singlenode-${{ github.workflow_ref }}-${{ github.ref }}-${{ inputs.test_suite }}-${{ matrix.partition }}
       cancel-in-progress: true
@@ -227,7 +227,7 @@ jobs:
           curl -o /tmp/test.jsonl -L https://gh-proxy.test.osinfra.cn/https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl
 
       - name: Run test
-        timeout-minutes: ${{ inputs.run_timeout_minutes }}
+        timeout-minutes: ${{ fromJson(inputs.run_timeout_minutes) }}
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
