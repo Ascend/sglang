@@ -185,8 +185,7 @@ RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b
     else \
         echo "WARNING: ${ASCEND_HOME_PATH} 下找不到 tikcpp/ascendc_kernel_cmake/ascendc.cmake，跳过 vllm_ascend_C 编译"; \
     fi && \
-    cd ../.. && \
-    rm -rf vllm-ascend
+    rm -rf /workspace/vllm-ascend
 
 
 RUN mkdir cann-custom-ops && \
