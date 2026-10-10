@@ -153,6 +153,8 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
             "--enable-multimodal",
             "--mm-processor-worker-num",
             "4",
+            "--mm-attention-backend",
+            "ascend_attn",
             "--mm-io-worker-num",
             "8",
         ]
