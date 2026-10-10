@@ -85,9 +85,7 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         # Clean up any previous server resources
         self._cleanup_stderr()
 
-        fd, self._stderr_file = tempfile.mkstemp(
-            suffix=".txt", prefix="sglang_stderr_"
-        )
+        fd, self._stderr_file = tempfile.mkstemp(suffix=".txt", prefix="sglang_stderr_")
         os.close(fd)
         self._stderr_fh = open(self._stderr_file, "w")
 
@@ -307,8 +305,11 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         )
 
         # Verify content is correct (white image)
-        self.assertIn("white", output_1.lower(),
-                      f"Expected response about a white image, got: '{output_1}'")
+        self.assertIn(
+            "white",
+            output_1.lower(),
+            f"Expected response about a white image, got: '{output_1}'",
+        )
 
     def test_env_io_workers_suppressed_by_explicit_param(self):
         """Case 4: SGLANG_IO_WORKERS env var is suppressed when --mm-io-worker-num is explicit."""
