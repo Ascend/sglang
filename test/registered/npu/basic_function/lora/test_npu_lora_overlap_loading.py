@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import os
 import unittest
 
 import torch
@@ -12,6 +13,8 @@ from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestLoRAOverlapLoading(CustomTestCase):
 

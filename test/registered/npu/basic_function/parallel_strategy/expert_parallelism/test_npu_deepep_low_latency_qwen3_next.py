@@ -16,6 +16,8 @@ register_npu_ci(
 )
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestQwen3Next(GSM8KAscendMixin, TestMMLU, CustomTestCase):
     """
     Testcase:Test the Qwen3-Next-80B-A3B-Instruct-W8A8 model with DeepEP's low_latency mode enabled, and verify that
@@ -41,7 +43,7 @@ class TestQwen3Next(GSM8KAscendMixin, TestMMLU, CustomTestCase):
         "--watchdog-timeout",
         9000,
         "--disable-radix-cache",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         2,
         4,
         6,
@@ -70,6 +72,7 @@ class TestQwen3Next(GSM8KAscendMixin, TestMMLU, CustomTestCase):
         "HCCL_OP_EXPANSION_MODE": "AIV",
         "HCCL_ALGO": "level0:NA;level1:ring",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "160",
+        "DEEPEP_HYBRID_DEPLOYMENT": "1",
         "HCCL_BUFFSIZE": "2048",
         "GDN_ATTN_BACKEND_TRITON": "1",
         **os.environ,
