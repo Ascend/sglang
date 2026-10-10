@@ -3,7 +3,13 @@ import math
 
 import torch
 import torch.nn.functional as F
+from sglang.test.ci.ci_register import register_cpu_ci
 
+register_cpu_ci(
+    est_time=1,
+    suite="base-a-test-cpu",
+    disabled="Utility module; not a standalone CI test",
+)
 precision = {
     torch.bfloat16: 1e-2,
     torch.float16: 1e-3,
