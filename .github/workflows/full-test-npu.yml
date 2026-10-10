@@ -420,8 +420,7 @@ jobs:
       install_sglang_deps: true
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
-      test_timeout_minutes: '150'
-      secrets: inherit
+    secrets: inherit
   nightly-perf-2-npu-a3-tmp:
     name: nightly-perf-2-npu-a3-tmp
     needs: [set-image-config]
