@@ -27,9 +27,9 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      changes_exist: ${{ steps.filter.outputs.main_package == 'true' || steps.filter.outputs.multimodal_gen == 'true' || steps.run-mode.outputs.run_all_tests == 'true'}}
-      main_package: ${{ steps.filter.outputs.main_package == 'true' || steps.run-mode.outputs.run_all_tests == 'true' }}
-      multimodal_gen: ${{ steps.filter.outputs.multimodal_gen == 'true' || steps.run-mode.outputs.run_all_tests == 'true' }}
+      changes_exist: ${{ steps.skip-npu-pr.outputs.skip != 'true' && (steps.filter.outputs.main_package == 'true' || steps.filter.outputs.multimodal_gen == 'true' || steps.run-mode.outputs.run_all_tests == 'true') }}
+      main_package: ${{ steps.skip-npu-pr.outputs.skip != 'true' && (steps.filter.outputs.main_package == 'true' || steps.run-mode.outputs.run_all_tests == 'true') }}
+      multimodal_gen: ${{ steps.skip-npu-pr.outputs.skip != 'true' && (steps.filter.outputs.multimodal_gen == 'true' || steps.run-mode.outputs.run_all_tests == 'true') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,6 +48,16 @@ jobs:
             echo "run_all_tests=false" >> $GITHUB_OUTPUT
             echo "Run mode: FILTERED (triggered by ${{ github.event_name }})"
           fi
+
+      - name: Skip NPU PR test for validation PRs against testcases branches
+        id: skip-npu-pr
+        # Validation PRs targeting a testcases branch are covered by full-test-npu.yml
+        # (triggered by PRs to testcases-* that touch full-test-npu.yml). Running the
+        # whole PR Test (NPU) suite as well only burns NPU runners for nothing.
+        if: ${{ github.event_name == 'pull_request' && inputs.ref == '' && startsWith(github.base_ref, 'testcases') }}
+        run: |
+          echo "skip=true" >> $GITHUB_OUTPUT
+          echo "Skipping NPU PR test: validation PR against ${{ github.base_ref }} (covered by full-test-npu.yml)"
 
       - name: Detect file changes
         id: filter
