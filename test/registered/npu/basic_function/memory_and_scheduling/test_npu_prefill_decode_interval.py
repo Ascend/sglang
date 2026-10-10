@@ -48,10 +48,18 @@ class TestPrefillDecodeInterval(CustomTestCase):
                 pass
 
     def _read_stderr(self):
-        """Background thread: read stderr lines into stderr_lines."""
-        with open(self.stderr_file, "r") as f:
-            for line in f:
-                self.stderr_lines.append(line)
+        """Background thread: poll stderr file for new lines until stop event is set."""
+        pt = 0
+        while not self._stop_event.is_set():
+            try:
+                with open(self.stderr_file, "r") as f:
+                    for i, line in enumerate(f):
+                        if i >= pt:
+                            self.stderr_lines.append(line)
+                            pt += 1
+            except FileNotFoundError:
+                pass
+            time.sleep(0.1)
 
     def test_prefill_decode_interval(self):
         """Send 2 concurrent requests and assert prefill interval >= 400."""
@@ -89,7 +97,8 @@ class TestPrefillDecodeInterval(CustomTestCase):
             return_stdout_stderr=(None, stderr_fh),
         )
 
-        # Start background thread to collect stderr
+        # Start background thread to collect stderr (polls continuously)
+        self._stop_event = threading.Event()
         reader_thread = threading.Thread(target=self._read_stderr, daemon=True)
         reader_thread.start()
 
@@ -114,10 +123,9 @@ class TestPrefillDecodeInterval(CustomTestCase):
                 resp = future.result()
                 self.assertEqual(resp.status_code, 200)
 
-        # Wait a moment for stderr to flush
+        # Wait a moment for stderr to flush, then stop the reader thread
         time.sleep(2)
-
-        # Close stderr handle to flush and allow reader thread to finish
+        self._stop_event.set()
         stderr_fh.close()
         reader_thread.join(timeout=5)
 
