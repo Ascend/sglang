@@ -34,8 +34,6 @@ _BASE64_1X1_JPEG = (
 class TestMmProcessorIoWorkerNum(CustomTestCase):
     """Testcase: Verify --mm-processor-worker-num and --mm-io-worker-num parameters.
 
-    Reference: C:\\heyao\\work\\newParameter\\mm-processor-worker-num&mm-io-worker-num.md
-
     [Test Category] Parameter
     [Test Target] --mm-processor-worker-num, --mm-io-worker-num
     """
