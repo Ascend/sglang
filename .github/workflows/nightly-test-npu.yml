@@ -61,6 +61,11 @@ on:
         required: false
         type: string
         default: ''
+      coverage_run_id:
+        description: 'Unique identifier for coverage data grouping. Pass caller run_id-run_attempt to enable coverage.'
+        required: false
+        type: string
+        default: ''
 concurrency:
   group: nightly-test-npu-${{ inputs.ref || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
@@ -135,6 +140,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-2-npu-a3:
@@ -150,6 +156,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   # The nightly-4-npu-a3 suite is split across 2 parallel partition jobs, mirroring base-b-test-4-npu-a3 in the PR pipeline.
@@ -167,6 +174,7 @@ jobs:
       partitions: '{"size":2,"arr":[0,1]}'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-8-npu-a3:
@@ -182,6 +190,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-16-npu-a3:
@@ -197,6 +206,7 @@ jobs:
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      coverage_run_id: ${{ inputs.coverage_run_id }}
     secrets: inherit
 
   nightly-perf-2-npu-a3:
@@ -214,6 +224,9 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      # Perf suites run WITHOUT coverage: instrumentation distorts perf metrics
+      # and slows server startup (A/B comparison: runs 34210201362 vs 34234219033).
+      coverage_run_id: ''
 
   nightly-perf-4-npu-a3:
     name: nightly-perf-4-npu-a3
@@ -230,6 +243,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ''
 
   nightly-perf-8-npu-a3:
     name: nightly-perf-8-npu-a3
@@ -246,6 +260,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ''
 
   nightly-perf-16-npu-a3:
     name: nightly-perf-16-npu-a3
@@ -262,6 +277,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ''
 
   # The acc-2 suite is split across 4 parallel partition jobs via the single `partitions` input.
   nightly-acc-2-npu-a3:
@@ -280,6 +296,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-acc-4-npu-a3:
     name: nightly-acc-4-npu-a3
@@ -296,6 +313,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-acc-16-npu-a3:
     name: nightly-acc-16-npu-a3
@@ -312,6 +330,7 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   nightly-poc-multi-node-tests:
     name: multi-node-poc
@@ -329,13 +348,6 @@ jobs:
             router_size: 1
             test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms.py
             test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/accuracy/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26.py
-            test_type: 'accuracy'
             prefill_decode_deployment: 'separation'
           # deepseek_v4_flash performance tests
           - name: deepseek_v4_flash_w8a8_1p1d_16p_in8k_out1k_50ms
@@ -359,6 +371,42 @@ jobs:
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ''
+
+  # Accuracy multi-node cases run WITH coverage (accuracy results do not
+  # depend on execution speed). Kept in a separate job from the perf
+  # multi-node matrix above, because coverage_run_id is a job-level switch.
+  nightly-poc-multi-node-acc-tests:
+    name: multi-node-acc-poc
+    if: ${{ !cancelled() }}
+    needs: [set-image-config, nightly-perf-2-npu-a3, nightly-perf-4-npu-a3, nightly-perf-16-npu-a3, nightly-acc-2-npu-a3, nightly-acc-4-npu-a3, nightly-acc-16-npu-a3]
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_config:
+          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/accuracy/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26.py
+            test_type: 'accuracy'
+            prefill_decode_deployment: 'separation'
+    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
+    with:
+      runner: linux-amd64-cpu-4
+      test_type: ${{ matrix.test_config.test_type || 'accuracy' }}
+      test_config_name: ${{ matrix.test_config.name }}
+      prefill_size: ${{ matrix.test_config.prefill_size }}
+      decode_size: ${{ matrix.test_config.decode_size }}
+      router_size: ${{ matrix.test_config.router_size }}
+      test_case: ${{ matrix.test_config.test_case }}
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+      install_sglang_from_source: false
+      prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
+      transformers_version: ''
+      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      coverage_run_id: ${{ inputs.coverage_run_id }}
 
   check-all-jobs:
     if: ${{ !cancelled() }}
@@ -376,6 +424,7 @@ jobs:
       - nightly-acc-4-npu-a3
       - nightly-acc-16-npu-a3
       - nightly-poc-multi-node-tests
+      - nightly-poc-multi-node-acc-tests
     runs-on: ubuntu-latest
     steps:
       - name: Download all metrics
@@ -387,7 +436,14 @@ jobs:
 
       - name: Generate results table
         run: |
-          multi_result="${{ needs.nightly-poc-multi-node-tests.result }}"
+          multi_result="success"
+          for r in \
+            "${{ needs.nightly-poc-multi-node-tests.result }}" \
+            "${{ needs.nightly-poc-multi-node-acc-tests.result }}"; do
+            if [ "${r}" != "success" ] && [ "${r}" != "skipped" ]; then
+              multi_result="failure"
+            fi
+          done
 
           # single-node suites are reported per suite; overall status is success if none failed
           single_result="success"
