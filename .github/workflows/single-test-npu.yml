@@ -10,6 +10,10 @@ name: Single Test (NPU)
 #               (首次尝试 run 37785710869 因 runner 拉取 B081 镜像瞬时 ImagePullBackOff 失败,
 #                属基础设施抖动, 非测试问题, 本轮为重试)
 #               B081 持续拉取失败 4 次 (13:37~14:48), 改用 B082 镜像重试
+#               B082 同样 ImagePullBackOff (run 37817218278), 改用 B083 镜像重试
+#               B083 在 a3-8 池仍 ImagePullBackOff (run 38041063456, 10-10), a3-8 池拉镜像
+#               持续故障 2 天; 改用 a3-16 runner 绕行 (用例只需 8 卡, 16 设备足够;
+#               同期 a3-2/a3-16/a3-800t-4 池拉镜像均正常)
 
 on:
   pull_request:
@@ -26,7 +30,7 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-8
+    runs-on: linux-aarch64-a3-16
     container:
       image: swr.cn-south-west-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B083
     steps:
