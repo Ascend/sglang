@@ -166,8 +166,11 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         chat_resp = self._send_image_request()
         self.assertEqual(chat_resp.status_code, 200)
         content = chat_resp.json()["choices"][0]["message"]["content"]
-        self.assertIn("white", content.lower(),
-                      f"Expected response about a white image, got: '{content}'")
+        self.assertIn(
+            "white",
+            content.lower(),
+            f"Expected response about a white image, got: '{content}'"
+        )
 
         self._stop_server()
 
