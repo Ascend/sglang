@@ -13,6 +13,7 @@ register_npu_ci(
     est_time=1800,
     suite="debug-full-acc-16-npu-a3",
     nightly=True,
+    disabled="397B debug rerun",
 )
 
 QWEN3_5_397B_W4A8_1P_HIGH_ENVS = {
