@@ -21,6 +21,10 @@ from unittest.mock import patch
 
 import torch
 
+from sglang.test.ci.ci_register import register_cpu_ci
+
+register_cpu_ci(est_time=4, suite="base-a-test-cpu")
+
 # Mock NPU-only modules before importing the source module.
 for _ in (
     "torch_npu",
@@ -60,9 +64,7 @@ class _RecordingStrategy:
 
 
 def _cp_batch(out_cache_loc):
-    return SimpleNamespace(
-        out_cache_loc=out_cache_loc, encoder_out_cache_loc=None
-    )
+    return SimpleNamespace(out_cache_loc=out_cache_loc, encoder_out_cache_loc=None)
 
 
 def _attn_layer():
@@ -173,9 +175,7 @@ class TestDoCpAttnFia(unittest.TestCase):
     def test_query_rows_match_cumulative_actual_seq_lengths(self):
         self._run(total_q_prev=2, total_q_next=1, prev_len=2, next_len=1)
         for call in self.calls:
-            self.assertEqual(
-                call["query"].shape[0], sum(call["actual_seq_lengths"])
-            )
+            self.assertEqual(call["query"].shape[0], sum(call["actual_seq_lengths"]))
 
     def test_kv_lengths_are_forwarded(self):
         self._run(total_q_prev=2, total_q_next=1, prev_len=2, next_len=1)
