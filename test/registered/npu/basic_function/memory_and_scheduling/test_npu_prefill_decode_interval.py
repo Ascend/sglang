@@ -122,14 +122,22 @@ class TestPrefillDecodeInterval(CustomTestCase):
         reader_thread.join(timeout=5)
 
         # Parse stderr for "Prefill batch [N]" entries.
-        # Only collect a Prefill batch if the previous batch type was Decode,
-        # ensuring we measure intervals between distinct prefill operations.
+        # 1) Skip warmup lines before "ready to roll".
+        # 2) After server is ready, only collect a Prefill batch if the previous
+        #    batch type was Decode, ensuring we measure intervals between distinct
+        #    prefill operations (not chunked-prefill neighbors).
         prefill_ids = []
         prefill_pattern = re.compile(r"Prefill batch\s+\[(\d+)\]")
         decode_pattern = re.compile(r"Decode batch\s+\[(\d+)\]")
+        server_ready = False
         last_batch_type = None
 
         for line in self.stderr_lines:
+            if not server_ready:
+                if "ready to roll" in line:
+                    server_ready = True
+                continue
+
             prefill_match = prefill_pattern.search(line)
             if prefill_match:
                 if last_batch_type is None or last_batch_type == "decode":
