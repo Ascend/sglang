@@ -63,9 +63,10 @@ class TestPrefillDecodeInterval(CustomTestCase):
 
         stderr_fh = open(self.stderr_file, "w")
 
-        # Set environment variable to enable forward iteration logging
+        # Set environment variables
         env = os.environ.copy()
         env["SGLANG_LOG_FORWARD_ITERS"] = "1"
+        env["ASCEND_USE_FIA"] = "1"
 
         other_args = [
             "--attention-backend",
@@ -120,13 +121,22 @@ class TestPrefillDecodeInterval(CustomTestCase):
         stderr_fh.close()
         reader_thread.join(timeout=5)
 
-        # Parse stderr for "Prefill batch [N]" entries
+        # Parse stderr for "Prefill batch [N]" entries.
+        # Only collect a Prefill batch if the previous batch type was Decode,
+        # ensuring we measure intervals between distinct prefill operations.
         prefill_ids = []
-        pattern = re.compile(r"Prefill batch\s+\[(\d+)\]")
+        prefill_pattern = re.compile(r"Prefill batch\s+\[(\d+)\]")
+        decode_pattern = re.compile(r"Decode batch\s+\[(\d+)\]")
+        last_batch_type = None
+
         for line in self.stderr_lines:
-            match = pattern.search(line)
-            if match:
-                prefill_ids.append(int(match.group(1)))
+            prefill_match = prefill_pattern.search(line)
+            if prefill_match:
+                if last_batch_type is None or last_batch_type == "decode":
+                    prefill_ids.append(int(prefill_match.group(1)))
+                last_batch_type = "prefill"
+            elif decode_pattern.search(line):
+                last_batch_type = "decode"
 
         self.assertGreaterEqual(
             len(prefill_ids),

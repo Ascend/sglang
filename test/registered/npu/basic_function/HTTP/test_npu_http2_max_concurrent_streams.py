@@ -1,3 +1,4 @@
+import os
 import subprocess
 import unittest
 
@@ -44,6 +45,7 @@ class TestHttp2MaxConcurrentStreams(CustomTestCase):
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
+            env={**os.environ, "ASCEND_USE_FIA": "1"},
         )
 
     @classmethod

@@ -167,6 +167,9 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         # Send base64 image request
         chat_resp = self._send_image_request()
         self.assertEqual(chat_resp.status_code, 200)
+        content = chat_resp.json()["choices"][0]["message"]["content"]
+        self.assertIn("white", content.lower(),
+                      f"Expected response about a white image, got: '{content}'")
 
         self._stop_server()
 
@@ -302,6 +305,10 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
             output_4,
             f"Worker=1 output '{output_1}' != Worker=4 output '{output_4}'",
         )
+
+        # Verify content is correct (white image)
+        self.assertIn("white", output_1.lower(),
+                      f"Expected response about a white image, got: '{output_1}'")
 
     def test_env_io_workers_suppressed_by_explicit_param(self):
         """Case 4: SGLANG_IO_WORKERS env var is suppressed when --mm-io-worker-num is explicit."""
