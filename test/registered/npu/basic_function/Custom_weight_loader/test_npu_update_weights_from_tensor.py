@@ -54,10 +54,12 @@ class TestUpdateWeightsFromTensor(CustomTestCase):
         new_tensor = torch.full((3072, 2048), 1.5)
 
         # Update model weights using the custom loader
+        engine.begin_weight_update()
         engine.update_weights_from_tensor(
             [(name, new_tensor.clone()) for name in write_param_names],
             load_format=custom_loader_name,
         )
+        engine.end_weight_update()
 
         # Verify weights are updated successfully
         for read_param_name in read_param_names[:3]:

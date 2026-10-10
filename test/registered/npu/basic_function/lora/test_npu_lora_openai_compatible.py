@@ -52,6 +52,8 @@ def setup_class(cls, enable_lora=True):
         "--max-running-requests",
         "10",
         "--disable-radix-cache",  # Disable cache for cleaner tests
+        "--mem-fraction-static",
+        0.9,
     ]
 
     if enable_lora:

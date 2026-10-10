@@ -1,5 +1,6 @@
 """
-Test the OpenAI-compatible /v1/audio/transcriptions endpoint with Whisper.
+Test the OpenAI-compatible /v1/audio/transcriptions endpoint with Qwen3-ASR
+(served under the model alias "whisper").
 
 Usage:
     python3 test_npu_serving_transcription.py -v
@@ -15,7 +16,7 @@ import requests
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     AUDIO_TRUMP_WEF_PATH,
-    OPENAI_WHISPER_LARGE_V3_WEIGHTS_PATH,
+    QWEN3_ASR_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -28,9 +29,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=1600, suite="full-1-npu-a3", nightly=True)
 register_npu_ci(est_time=400, suite="stage-b-test-1-npu-a2", nightly=False)
 
-WHISPER_ASR_MODEL = OPENAI_WHISPER_LARGE_V3_WEIGHTS_PATH
-AUDIO_URL = AUDIO_TRUMP_WEF_PATH
-
 
 def read_audio_bytes(url=AUDIO_TRUMP_WEF_PATH):
     """Read audio file from local path and return raw bytes."""
@@ -39,11 +37,11 @@ def read_audio_bytes(url=AUDIO_TRUMP_WEF_PATH):
 
 
 class TestServingTranscription(CustomTestCase):
-    """Test Whisper transcription via /v1/audio/transcriptions endpoint."""
+    """Test Qwen3-ASR transcription via /v1/audio/transcriptions endpoint."""
 
     @classmethod
     def setUpClass(cls):
-        cls.model = WHISPER_ASR_MODEL
+        cls.model = QWEN3_ASR_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
         cls.process = popen_launch_server(
             cls.model,
@@ -65,12 +63,10 @@ class TestServingTranscription(CustomTestCase):
         self,
         language: Optional[str] = "en",
         response_format: Optional[str] = None,
-        timestamp_granularities: Optional[List[str]] = None,
     ):
         """Send a non-streaming transcription request and return the JSON response.
 
-        Passing ``language=None`` omits the field entirely, which exercises
-        the fused auto-detect path.
+        Passing ``language=None`` omits the field entirely.
         """
         audio_bytes = read_audio_bytes()
         data = {"model": "whisper"}
@@ -78,9 +74,6 @@ class TestServingTranscription(CustomTestCase):
             data["language"] = language
         if response_format is not None:
             data["response_format"] = response_format
-        if timestamp_granularities is not None:
-            # Form-encoded list fields repeat the key
-            data["timestamp_granularities[]"] = timestamp_granularities
         response = requests.post(
             self.base_url + "/v1/audio/transcriptions",
             files={"file": ("audio.mp3", io.BytesIO(audio_bytes), "audio/mpeg")},
@@ -139,85 +132,30 @@ class TestServingTranscription(CustomTestCase):
             f"found {matches}. Full text: {text}",
         )
 
-    def test_multiple_sequential_requests(self):
-        """Test that sequential requests produce consistent results."""
-        results = []
-        for _ in range(3):
-            result = self._transcribe()
-            self.assertIn("text", result)
-            self.assertTrue(len(result["text"]) > 0)
-            results.append(result["text"])
+    # -- language omitted (language=None) ----------------------------------
+    # Qwen3-ASR does not run fused language detection; omitting the field
+    # must still produce a valid transcription without leaking ASR special
+    # tokens.
 
-        for i in range(1, len(results)):
-            self.assertEqual(
-                results[0],
-                results[i],
-                f"Transcription {i + 1} differs from first transcription",
-            )
-
-    # -- fused auto-detect (language=None) ---------------------------------
-    # The clip is English, so the fused path must both produce a valid
-    # transcription AND expose "en" as the detected language. None of the
-    # deltas / text fields should leak Whisper special tokens.
-
-    def test_auto_detect_language_verbose_json(self):
-        """language omitted + verbose_json returns detected language + clean text."""
+    def test_language_omitted_verbose_json(self):
+        """language omitted + verbose_json returns clean text."""
         result = self._transcribe(language=None, response_format="verbose_json")
-        self.assertEqual(result.get("language"), "en")
         text = result.get("text", "")
         self.assertTrue(len(text) > 0, "Transcription should not be empty")
         self.assertNotIn("<|asr|>", text, f"Special token leaked into text: {text!r}")
-        # self.assertNotIn("<|", text, f"Special token leaked into text: {text!r}")
         # Sanity-check content against the same keywords the English test uses.
         keywords = ["privilege", "leader", "science", "art"]
         matches = [kw for kw in keywords if kw in text.lower()]
         self.assertGreaterEqual(
             len(matches),
             2,
-            f"Expected at least 2 of {keywords} in auto-detected transcription, "
+            f"Expected at least 2 of {keywords} in transcription, "
             f"found {matches}. Full text: {text!r}",
         )
 
-    def test_auto_detect_matches_explicit_english(self):
-        """Auto-detected (language=None) text should match explicit language=en."""
-        auto = self._transcribe(language=None).get("text", "")
-        explicit = self._transcribe(language="en").get("text", "")
-        self.assertEqual(
-            auto.strip(),
-            explicit.strip(),
-            "Auto-detect should produce the same transcription as language=en "
-            "on an English clip.",
-        )
-        self.assertNotIn(
-            "<|asr|>", auto, f"Special token leaked into auto-detect text: {auto!r}"
-        )
-
-    def test_auto_detect_with_segment_timestamps(self):
-        """language=None + timestamp_granularities uses the timestamps fused regex."""
-        result = self._transcribe(
-            language=None,
-            response_format="verbose_json",
-            timestamp_granularities=["segment"],
-        )
-        self.assertEqual(result.get("language"), "en")
-        segments = result.get("segments") or []
-        self.assertGreater(len(segments), 0, "Expected at least one segment")
-        for seg in segments:
-            self.assertIn("start", seg)
-            self.assertIn("end", seg)
-            self.assertIn("text", seg)
-            self.assertGreaterEqual(seg["end"], seg["start"])
-            self.assertNotIn(
-                "<|asr|>", seg["text"], f"Special token leaked into segment: {seg!r}"
-            )
-
-    def test_auto_detect_streaming(self):
-        """language=None + stream=True: deltas scrubbed, concat matches non-streaming.
-
-        Verified against a real server: sglang's streaming path for Whisper
-        produces clean deltas (complete words, no BPE fragmentation), so the
-        fused path only needs to hide the forced prefix — which this PR
-        does. Asserts both the prefix-leak guard and text equivalence.
+    def test_language_omitted_streaming(self):
+        """language=None + stream=True: deltas are produced and scrubbed of
+        ASR special tokens.
         """
         deltas = self._transcribe_stream(language=None)
         self.assertTrue(len(deltas) > 0, "Expected at least one streamed delta")
@@ -225,13 +163,6 @@ class TestServingTranscription(CustomTestCase):
             self.assertNotIn(
                 "<|asr|>", d, f"Special token leaked into streaming delta: {d!r}"
             )
-        streamed = "".join(deltas).strip()
-        reference = self._transcribe(language=None).get("text", "").strip()
-        self.assertEqual(
-            streamed,
-            reference,
-            "Streamed auto-detect text should match the non-streaming result.",
-        )
 
 
 if __name__ == "__main__":

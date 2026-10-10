@@ -4,6 +4,7 @@ NPU multimodal + multistream MoE tests.
 Verify dual-stream MoE execution does not break image routing on NPU.
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree
@@ -37,6 +38,8 @@ _SERVER_ARGS = [
     # "--disable-radix-cache",
 ]
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestMultimodalMultistreamMoE(CustomTestCase):
     """Verify dual-stream MoE execution does not break image routing.
