@@ -11,9 +11,11 @@ name: Single Test (NPU)
 #                属基础设施抖动, 非测试问题, 本轮为重试)
 #               B081 持续拉取失败 4 次 (13:37~14:48), 改用 B082 镜像重试
 #               B082 同样 ImagePullBackOff (run 37817218278), 改用 B083 镜像重试
-#               B083 在 a3-8 池仍 ImagePullBackOff (run 38041063456, 10-10), a3-8 池拉镜像
-#               持续故障 2 天; 改用 a3-16 runner 绕行 (用例只需 8 卡, 16 设备足够;
-#               同期 a3-2/a3-16/a3-800t-4 池拉镜像均正常)
+#               真实根因 (10-11 确认): round 3 重写 yml 时 SWR 域名误写成
+#               swr.cn-south-west-2 (多了连字符), DNS 无法解析导致全部 6 次
+#               ImagePullBackOff; round 1/2 成功时用的是正确域名 swr.cn-southwest-2,
+#               a3-8 池本身无故障 (此前"池链路故障"为误诊)。本次修正域名并恢复 a3-8,
+#               10-11 11:29 他人 run 用正确域名+同配置成功拉起 B083
 
 on:
   pull_request:
@@ -30,9 +32,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-16
+    runs-on: linux-aarch64-a3-8
     container:
-      image: swr.cn-south-west-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B083
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B083
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
