@@ -47,10 +47,17 @@ from sglang.srt.model_loader.weight_utils import (
     maybe_remap_kv_scale_name,
 )
 from sglang.srt.runtime_context import get_parallel
-from sglang.srt.utils import add_prefix, cpu_has_amx_support, is_cpu, make_layers
+from sglang.srt.utils import (
+    add_prefix,
+    cpu_has_amx_support,
+    is_cpu,
+    is_npu,
+    make_layers,
+)
 from sglang.srt.utils.hf_transformers.common import _resolve_local_or_cached_file
 
 _is_cpu = is_cpu()
+_is_npu = is_npu()
 _is_cpu_amx_available = cpu_has_amx_support()
 
 
@@ -301,6 +308,11 @@ class Gemma3Attention(nn.Module):
         # [b, h, s, head_dim] ->  [b, s, h, head_dim]
         q = q.permute(0, 2, 1, 3)
         k = k.permute(0, 2, 1, 3)
+
+        if _is_npu:
+            # Ascend expects token-major Q/K at the attention boundary.
+            q = q.reshape(-1, self.q_size)
+            k = k.reshape(-1, self.kv_size)
 
         attn_output = self.attn(q, k, v, forward_batch=forward_batch)
 
