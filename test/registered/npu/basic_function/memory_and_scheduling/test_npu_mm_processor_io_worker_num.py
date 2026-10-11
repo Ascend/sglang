@@ -20,8 +20,8 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=900, suite="full-1-npu-a3", nightly=True)
 
-# Minimal valid 1x1 white JPEG base64 for testing
-_BASE64_1X1_JPEG = (
+# Minimal valid 8x8 white JPEG base64 for testing (JPEG minimum block size is 8x8)
+_BASE64_WHITE_JPEG = (
     "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a"
     "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAAIAAgBAREA/8QAHwAAAQUBAQEB"
     "AQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1Fh"
@@ -122,7 +122,7 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/jpeg;base64,{_BASE64_1X1_JPEG}"
+                                    "url": f"data:image/jpeg;base64,{_BASE64_WHITE_JPEG}"
                                 },
                             },
                             {
