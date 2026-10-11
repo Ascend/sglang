@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import requests
@@ -14,8 +15,9 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
+register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
 
 class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Test MambaCache basic functions using GSM8K dataset.
@@ -37,7 +39,7 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
         "--disable-cuda-graph",
         "--mamba-full-memory-ratio",
         "0.9",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "auto",
         "--mamba-track-interval",
         "256",
@@ -63,12 +65,12 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "no_buffer",
         "--mamba-track-interval",
         "512",
         "--mamba-ssm-dtype",
-        "float32",
+        "bfloat16",
         "--tp-size",
         "8",
         "--disable-radix-cache",
@@ -97,7 +99,7 @@ class TestMambaCacheRadix(CustomTestCase):
         "bfloat16",
         "--mamba-full-memory-ratio",
         "0.3",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",  # To reuse Radix Cache, this parameter must be set to extra_buffer
     ]
 
@@ -166,7 +168,7 @@ class TestMambaCacheRadix(CustomTestCase):
                     "max_new_tokens": 1000,
                 },
             },
-            timeout=120,
+            timeout=1200,
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.text), 0)

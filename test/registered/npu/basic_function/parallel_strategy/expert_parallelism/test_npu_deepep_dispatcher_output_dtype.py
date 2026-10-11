@@ -1,3 +1,4 @@
+import os
 import unittest
 from types import SimpleNamespace
 
@@ -15,8 +16,11 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=200, suite="full-4-npu-a3", nightly=True)
+# register_npu_ci(est_time=200, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=200, suite="validate-16-npu", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestDtypeAuto(CustomTestCase):
     """Testcase: Verify set --deepep-dispatcher-output-dtype the inference accuracy of the model on the
@@ -52,7 +56,7 @@ class TestDtypeAuto(CustomTestCase):
                 "ascend",
                 "--max-total-tokens",
                 "66000",
-                "--cuda-graph-max-bs",
+                "--cuda-graph-max-bs-decode",
                 "128",
                 "--log-level",
                 "info",
@@ -61,6 +65,10 @@ class TestDtypeAuto(CustomTestCase):
             env={
                 "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",  # Quantize activations to INT8 before dispatch
                 "HCCL_BUFFSIZE": "1536",
+                "SGLANG_ZBAL_LOCAL_MEM_SIZE": "58000",
+                "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+                "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+                "ZBAL_ENABLE_GRAPH": "1",
             },
         )
 
@@ -111,7 +119,7 @@ class TestDtypeBf16(TestDtypeAuto):
                 "ascend",
                 "--max-total-tokens",
                 "66000",
-                "--cuda-graph-max-bs",
+                "--cuda-graph-max-bs-decode",
                 "128",
                 "--log-level",
                 "info",
@@ -119,6 +127,10 @@ class TestDtypeBf16(TestDtypeAuto):
             ],
             env={
                 "HCCL_BUFFSIZE": "1536",
+                "SGLANG_ZBAL_LOCAL_MEM_SIZE": "58000",
+                "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+                "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+                "ZBAL_ENABLE_GRAPH": "1",
             },
         )
 

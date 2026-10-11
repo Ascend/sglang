@@ -13,7 +13,6 @@ register_npu_ci(
     nightly=True,
 )
 
-
 class TestNpuHierarchicalCacheTTFT(CustomTestCase):
     """The test used the Qwen3-32B model, with hierarchical cache enabled, and TTFT improved by 40%.
 

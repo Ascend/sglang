@@ -29,16 +29,31 @@ from sglang.test.ascend.vlm_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True)
-
+# register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True)
+register_npu_ci(est_time=5600, suite="validate-cleanup-npu", nightly=True)
 
 class TestLlavaServer(ImageOpenAITestMixin):
+    # os.environ.setdefault("REQUEST_TIMEOUT", "40")
     model = LLAVA_ONEVISION_QWEN2_7B_OV_WEIGHTS_PATH
-    extra_args = [
+    extra_args = ([
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-    ]
+    ])
+
+    @classmethod
+    def setUpClass(cls):
+        cls._old_req_timeout = os.environ.get("REQUEST_TIMEOUT")
+        os.environ["REQUEST_TIMEOUT"] = "40"
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._old_req_timeout is None:
+            os.environ.pop("REQUEST_TIMEOUT", None)
+        else:
+            os.environ["REQUEST_TIMEOUT"] = cls._old_req_timeout
+        super().tearDownClass()
 
 
 class TestQwen3VL8BServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
