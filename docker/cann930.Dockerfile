@@ -125,7 +125,7 @@ RUN mkdir cann-custom-ops && \
 RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && mkdir sgl-kernel-npu \
     && cd sgl-kernel-npu \
-    && wget https://github.com/${SGLANG_KERNEL_NPU_REPO}/releases/download/2026.10.4/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch${PYTORCH_VERSION}-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
+    && wget https://github.com/${SGLANG_KERNEL_NPU_REPO}/releases/download/${SGLANG_KERNEL_NPU_TAG}/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch${PYTORCH_VERSION}-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
     && unzip sgl-kernel-npu-*.zip \
     && ${PIP_INSTALL} deep_ep*.whl sgl_kernel_npu*.whl torch_memory_saver*.whl \
     && cd .. && rm -rf sgl-kernel-npu \
