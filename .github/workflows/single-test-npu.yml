@@ -11,6 +11,10 @@ name: Single Test (NPU)
 #   B083 镜像 a3-8 池 ImagePullBackOff 持续 (PR #1301 run 38041063456 等), 用 a3-16 绕行
 #   (用例单卡即可); 注意 SWR 域名是 swr.cn-southwest-2 (PR #1301 误写为 south-west 连字符
 #   版本导致 run 38041689363 Initialize containers 失败)。
+# test round 2: round 1 (run 38063868249) 预加载验证成功 (preloaded 10042 条), 但 B083 镜像的
+#   sglang 已将 --cuda-graph-max-bs 拆分为 decode/prefill 变体, 裸参数名成歧义前缀被 argparse 拒绝,
+#   server 启动失败 (exit code 2)。本轮同步修复用例参数 (--cuda-graph-max-bs-decode, 与上游 main
+#   test_basic_sanity.py 一致), 重跑验证 hellaswag 全链路。
 
 on:
   pull_request:
