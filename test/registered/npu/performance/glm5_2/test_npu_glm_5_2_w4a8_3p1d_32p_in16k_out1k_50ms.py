@@ -96,7 +96,7 @@ GLM_5_2_PD_SEP_PREFILL_ARGS = [
     # "unquant",
     "--enable-prefill-cp",
     "--cp-strategy",
-    "zigzag",
+    "interleave",
     "--attn-cp-size",
     4,
     "--enable-dp-lm-head",
