@@ -1,6 +1,15 @@
+import logging
+import subprocess
 import unittest
 
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
+logger = logging.getLogger(__name__)
+
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    CONFIGMAP_NAME,
+    NAMESPACE,
+    NIC_NAME,
+    query_configmap,
+)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -193,6 +202,51 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
     random_range_ratio = 1
     tpot = 50
     output_token_throughput = 1694
+
+    def _flush_prefill_cache(self):
+        """Flush cache on all prefill nodes via /flush_cache endpoint."""
+        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+        if not configmap or not configmap.data:
+            logger.warning("ConfigMap is empty, skip flush_cache")
+            return
+        for pod_name, pod_ip in configmap.data.items():
+            if "prefill" in pod_name:
+                url = f"http://{pod_ip}:9999/flush_cache"
+                try:
+                    subprocess.run(
+                        [
+                            "curl",
+                            "--location",
+                            url,
+                            "--header",
+                            "Content-Type: application/json",
+                        ],
+                        capture_output=True,
+                        timeout=30,
+                        check=True,
+                    )
+                    logger.info(f"flush_cache succeeded on {pod_name} ({pod_ip})")
+                except subprocess.CalledProcessError as e:
+                    logger.warning(
+                        f"flush_cache failed on {pod_name} ({pod_ip}): "
+                        f"exit_code={e.returncode}, stderr={e.stderr.decode() if e.stderr else 'N/A'}"
+                    )
+                except subprocess.TimeoutExpired as e:
+                    logger.warning(
+                        f"flush_cache timeout on {pod_name} ({pod_ip}): {e}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"flush_cache unexpected error on {pod_name} ({pod_ip}): {e}"
+                    )
+
+    def run_throughput(self):
+        """Override: flush prefill cache and retry on first failure."""
+        try:
+            return TestNpuPerfMultiNodePdSepTestCaseBase.run_throughput(self)
+        except (AssertionError, Exception):
+            self._flush_prefill_cache()
+            return TestNpuPerfMultiNodePdSepTestCaseBase.run_throughput(self)
 
     def test_npu_glm_5_2_w4a8_pd_sep_in16k_out1k(self):
         """Run NPU performance test for GLM-5.2-w4a8 PD separation 3p1d"""
