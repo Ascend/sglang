@@ -244,6 +244,39 @@ def collect_coverage_data(
         )
         return
 
+    # GC: prune coverage run directories older than 7 days so the shared disk
+    # does not accumulate leftovers (kubectl cp copies, never deletes). Runs of
+    # the same workflow share the {coverage_run_id} dir and parallel jobs may
+    # still be writing to it, so only clearly stale dirs (mtime +7d, matching
+    # the 7-day artifact retention) are safe to remove.
+    coverage_root = "/data/ascend-ci-share-pkking-sglang/coverage_data"
+    gc_cmd = [
+        "kubectl",
+        "exec",
+        "-n",
+        namespace,
+        monitor_pod_name,
+        "--",
+        "find",
+        coverage_root,
+        "-maxdepth",
+        "1",
+        "-mindepth",
+        "1",
+        "-mtime",
+        "+7",
+        "-exec",
+        "rm",
+        "-rf",
+        "{}",
+        "+",
+    ]
+    try:
+        subprocess.run(gc_cmd, check=True, capture_output=True, text=True, timeout=60)
+        logger.info("Pruned coverage dirs older than 7 days on shared disk")
+    except Exception as e:
+        logger.warning(f"Failed to prune old coverage dirs (non-fatal): {e}")
+
     os.makedirs(local_dir, exist_ok=True)
     remote_dir = f"/data/ascend-ci-share-pkking-sglang/coverage_data/{coverage_run_id}"
     cmd = [
