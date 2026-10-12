@@ -19,7 +19,6 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "SGLANG_NPU_USE_MULTI_STREAM": "1",
     # deepep
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "DEEPEP_HCCL_BUFFSIZE": "2500",
@@ -44,6 +43,12 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     # mtp
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    # ZBAL
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:14699",
+    "ZBAL_ENABLE_GRAPH": "1",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
