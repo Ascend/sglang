@@ -30,7 +30,7 @@ from sglang.test.ascend.vlm_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 # register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True)
-register_npu_ci(est_time=7200, suite="validate-cleanup-npu", nightly=True)
+register_npu_ci(est_time=5600, suite="validate-cleanup-npu", nightly=True)
 
 class TestLlavaServer(ImageOpenAITestMixin):
     # os.environ.setdefault("REQUEST_TIMEOUT", "40")
@@ -147,7 +147,6 @@ class TestQwen2VLContextLengthServer(CustomTestCase):
 class TestMiniCPMV4Server(ImageOpenAITestMixin):
     model = MINICPM_V_2_6_WEIGHTS_PATH
     extra_args = [
-        "--disable-cuda-graph",
         "--cuda-graph-max-bs-decode",
         "4",
         "--attention-backend",
