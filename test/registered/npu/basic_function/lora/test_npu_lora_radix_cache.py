@@ -9,7 +9,6 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
-os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 PROMPTS = [
     "AI is a field of computer science focused on",
@@ -23,8 +22,11 @@ PROMPTS = [
     ### Answer:
     """,
 ]
-register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
+# register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=300, suite="validate-cleanup-2-npu", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestLoRARadixCache(CustomTestCase):
 
