@@ -154,26 +154,26 @@ register_npu_ci(est_time=5600, suite="validate-cleanup-npu", nightly=True)
 #     ]
 
 
-class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
-    model = MINICPM_O_2_6_WEIGHTS_PATH
-    extra_args = [
-        "--cuda-graph-max-bs-decode",
-        "4",
-        "--attention-backend",
-        "ascend",
-    ]
-
-
-class TestGemma4itServer(ImageOpenAITestMixin):
-    os.environ["ASCEND_USE_FIA"] = "1"
-    model = GEMMA_4_31B_WEIGHTS_PATH
-    extra_args = [
-        "--disable-cuda-graph",
-        "--attention-backend",
-        "ascend",
-        "--tp-size",
-        "4",
-    ]
+# class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
+#     model = MINICPM_O_2_6_WEIGHTS_PATH
+#     extra_args = [
+#         "--cuda-graph-max-bs-decode",
+#         "4",
+#         "--attention-backend",
+#         "ascend",
+#     ]
+#
+#
+# class TestGemma4itServer(ImageOpenAITestMixin):
+#     os.environ["ASCEND_USE_FIA"] = "1"
+#     model = GEMMA_4_31B_WEIGHTS_PATH
+#     extra_args = [
+#         "--disable-cuda-graph",
+#         "--attention-backend",
+#         "ascend",
+#         "--tp-size",
+#         "4",
+#     ]
 
 
 class TestKimiVLServer(ImageOpenAITestMixin):

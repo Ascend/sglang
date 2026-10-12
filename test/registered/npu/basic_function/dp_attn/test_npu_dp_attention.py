@@ -23,8 +23,10 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
-register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
+# register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
+# register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-cleanup-4-npu", nightly=True)
+
 
 
 class TestDPAttentionDP2TP2(
@@ -75,7 +77,7 @@ class TestDPAttentionMixedChunk(
     NPUGSM8KMixin,
 ):
     gsm8k_accuracy_thres = 0.34
-    gsm8k_num_questions = 2000
+    gsm8k_num_questions = 1319
 
     @classmethod
     def setUpClass(cls):

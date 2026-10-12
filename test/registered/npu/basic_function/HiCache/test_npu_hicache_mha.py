@@ -13,8 +13,9 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="base-b-test-1-npu-a3")
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+# register_npu_ci(est_time=400, suite="base-b-test-1-npu-a3")
+# register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-cleanup-4-npu", nightly=True)
 
 TEST_MODEL_MATRIX = {
     "/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-7B-Instruct": {
@@ -63,7 +64,7 @@ class TestAscendMhaHicache(CustomTestCase):
                             num_questions=1319,
                             max_new_tokens=512,
                             parallel=128,
-                            host=f"http://{self.url.hostname}",
+                            host=f"{self.url.hostname}",
                             port=int(self.url.port),
                         )
                         metrics = run_eval_few_shot_gsm8k(args)

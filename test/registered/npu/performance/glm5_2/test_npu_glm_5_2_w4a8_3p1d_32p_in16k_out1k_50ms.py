@@ -126,7 +126,7 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     "--ep-size",
     16,
     "--mem-fraction-static",
-    0.895,
+    0.97,
     "--max-running-requests",
     128,
     "--attention-backend",
@@ -186,8 +186,8 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 200
+    max_concurrency = 128
+    num_prompts = 512
     input_len = 16000
     output_len = 1000
     random_range_ratio = 1
