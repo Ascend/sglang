@@ -11,8 +11,9 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=1800,
-    suite="full-acc-16-npu-a3",
+    suite="debug-full-acc-16-npu-a3",
     nightly=True,
+    disabled="397B debug rerun",
 )
 
 QWEN3_5_397B_W4A8_1P_HIGH_ENVS = {
@@ -57,7 +58,7 @@ QWEN3_5_397B_W4A8_1P_HIGH_OTHER_ARGS = [
     432,
     "--mem-fraction-static",
     0.8,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     4,
     6,

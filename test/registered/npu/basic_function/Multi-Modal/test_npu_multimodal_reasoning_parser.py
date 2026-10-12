@@ -5,6 +5,7 @@ Verify the reasoning parser with image input, testing both
 ``separate_reasoning=True`` and ``separate_reasoning=False`` modes.
 """
 
+import os
 import unittest
 
 import openai
@@ -39,6 +40,8 @@ _EXTRA_SERVER_ARGS = [
     "0.7",
 ]
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestMultimodalReasoningParser(CustomTestCase):
     """Verify reasoning parser with image input.

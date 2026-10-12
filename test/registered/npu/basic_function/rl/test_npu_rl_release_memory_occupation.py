@@ -138,6 +138,8 @@ def _assert_mem_increased(mem_before, mem_func, min_delta, tag):
     return mem_after
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestReleaseMemoryOccupationNPU(CustomTestCase):
     """Test NPU release memory occupation.
 

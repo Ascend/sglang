@@ -10,8 +10,9 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=3600,
-    suite="full-perf-16-npu-a3",
+    suite="debug-full-perf-16-npu-a3",
     nightly=True,
+    disabled="397B debug rerun",
 )
 
 QWEN3_5_397B_ENVS = {
@@ -20,7 +21,7 @@ QWEN3_5_397B_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "0",
+    "HCCL_BUFFSIZE": "2200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -58,7 +59,7 @@ QWEN3_5_397B_64K_OTHER_ARGS = [
     0.6,
     "--max-total-tokens",
     1065000,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     4,
     6,

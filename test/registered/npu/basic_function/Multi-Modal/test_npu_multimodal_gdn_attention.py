@@ -43,7 +43,7 @@ class TestMultimodalGDNLinearAttention(CustomTestCase):
                 "--disable-radix-cache",
                 "--mem-fraction-static",
                 "0.7",
-                "--mamba-scheduler-strategy",
+                "--mamba-radix-cache-strategy",
                 "no_buffer",
                 "--mamba-ssm-dtype",
                 "bfloat16",

@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -17,6 +18,8 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=200, suite="full-4-npu-a3", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestEnableDeepepWaterFill(CustomTestCase):
     """Testcase: Verify set --enable-waterfill the inference accuracy of the model on the

@@ -334,7 +334,7 @@ class TestDisaggregationMooncakeSpec(
         "1",
         "--speculative-num-draft-tokens",
         "16",
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         "8",
         "--dtype=float16",
     ]

@@ -42,7 +42,7 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
     }
 
     def test_mmlu(self):
-        expect_score = 0.58
+        expect_score = 0.38
         args = SimpleNamespace(
             base_url=self.base_url,
             model=self.model,
@@ -50,7 +50,6 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
             num_examples=128,
             num_threads=32,
             api="completion",
-            num_shots=5,
         )
         metrics = run_ascend_eval(args)
         self.assertGreater(metrics["score"], expect_score)

@@ -27,7 +27,7 @@ class TestSWARadixCacheKL(KLDivergenceMixin, DefaultServerBase):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--disable-piecewise-cuda-graph",
+        "--cuda-graph-backend-prefill=disabled",
     ]
 
 

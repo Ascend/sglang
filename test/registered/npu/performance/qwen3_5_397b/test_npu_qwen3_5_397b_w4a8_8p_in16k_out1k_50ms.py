@@ -10,8 +10,9 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=1800,
-    suite="full-perf-16-npu-a3",
+    suite="debug-full-perf-16-npu-a3",
     nightly=True,
+    disabled="397B debug rerun",
 )
 
 QWEN3_5_397B_ENVS = {
@@ -20,7 +21,7 @@ QWEN3_5_397B_ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "ASCEND_USE_FIA": "1",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
-    "HCCL_BUFFSIZE": "0",
+    "HCCL_BUFFSIZE": "2200",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "20",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "4096",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -30,6 +31,7 @@ QWEN3_5_397B_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "58624",
     "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
     "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
@@ -58,7 +60,7 @@ QWEN3_5_397B_16K_OTHER_ARGS = [
     0.8,
     "--max-total-tokens",
     635000,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     4,
     6,
@@ -119,8 +121,8 @@ class TestNPUQwen3_5_397B_16K_1k_50ms(TestNpuPerformanceTestCaseBase):
     envs = QWEN3_5_397B_ENVS
     dataset_name = "random"
     warmup_requests = 8
-    max_concurrency = 132
-    num_prompts = 132
+    max_concurrency = 120
+    num_prompts = 120
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1

@@ -34,7 +34,7 @@ class TestDeepEpAutoDeepseekR1(GSM8KAscendMixin, CustomTestCase):
         "modelslim",
         "--watchdog-timeout",
         "9000",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         "4",
         "8",
         "20",
