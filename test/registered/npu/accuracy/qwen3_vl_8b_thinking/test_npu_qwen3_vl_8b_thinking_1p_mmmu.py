@@ -9,8 +9,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-# register_npu_ci(est_time=6500, suite="full-acc-2-npu-a3", nightly=True)
-register_npu_ci(est_time=6500, suite="validate-cleanup-2-npu", nightly=True)
+register_npu_ci(est_time=6500, suite="full-acc-2-npu-a3", nightly=True)
 
 _is_pr_pipeline = os.environ.get("NPU_PR_SMOKE") == "true"
 

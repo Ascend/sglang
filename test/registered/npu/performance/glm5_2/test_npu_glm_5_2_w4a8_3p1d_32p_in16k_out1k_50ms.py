@@ -241,12 +241,12 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
                     )
 
     def run_throughput(self):
-        """Override: flush prefill cache and retry on first failure."""
+        """Override: flush prefill cache after first failure, then retry once."""
         try:
-            return TestNpuPerfMultiNodePdSepTestCaseBase.run_throughput(self)
+            return super().run_throughput()
         except (AssertionError, Exception):
             self._flush_prefill_cache()
-            return TestNpuPerfMultiNodePdSepTestCaseBase.run_throughput(self)
+            return super().run_throughput()
 
     def test_npu_glm_5_2_w4a8_pd_sep_in16k_out1k(self):
         """Run NPU performance test for GLM-5.2-w4a8 PD separation 3p1d"""
