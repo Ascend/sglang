@@ -38,15 +38,15 @@ GLM_5_2_PD_SEP_PREFILL_ENVS = {
     "ENABLE_PROFILING": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
-    "HCCL_BUFFSIZE": "1200",
-    "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
-    "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
-    "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
-    # "ZBAL_HCCL_OP": "send,recv",
-    # "HCCL_BUFFSIZE": "128",
-    # "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
-    # "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    # "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    # "HCCL_BUFFSIZE": "1200",
+    # "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
+    # "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
+    # "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
+    "ZBAL_HCCL_OP": "send,recv",
+    "HCCL_BUFFSIZE": "128",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
     "SGLANG_PP_LAYER_PARTITION": "18,20,24,16",
     "DEEP_USE_ALLTOALL_MODE": "1",
 }
@@ -105,7 +105,7 @@ GLM_5_2_PD_SEP_PREFILL_ARGS = [
     # "unquant",
     "--enable-prefill-cp",
     "--cp-strategy",
-    "interleave",
+    "zigzag",
     "--attn-cp-size",
     4,
     "--enable-dp-lm-head",
@@ -203,14 +203,14 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
     tpot = 50
     output_token_throughput = 1694
 
-    def _flush_prefill_cache(self):
-        """Flush cache on all prefill nodes via /flush_cache endpoint."""
+    def _flush_pd_cache(self):
+        """Flush cache on all prefill and decode nodes via /flush_cache endpoint."""
         configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
         if not configmap or not configmap.data:
             logger.warning("ConfigMap is empty, skip flush_cache")
             return
         for pod_name, pod_ip in configmap.data.items():
-            if "prefill" in pod_name:
+            if "prefill" in pod_name or "decode" in pod_name:
                 url = f"http://{pod_ip}:9999/flush_cache"
                 try:
                     subprocess.run(
@@ -241,11 +241,11 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
                     )
 
     def run_throughput(self):
-        """Override: flush prefill cache after first failure, then retry once."""
+        """Override: flush all PD cache after first failure, then retry once."""
         try:
             return super().run_throughput()
         except (AssertionError, Exception):
-            self._flush_prefill_cache()
+            self._flush_pd_cache()
             return super().run_throughput()
 
     def test_npu_glm_5_2_w4a8_pd_sep_in16k_out1k(self):
