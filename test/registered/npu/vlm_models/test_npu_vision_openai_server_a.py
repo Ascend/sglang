@@ -64,8 +64,8 @@ class TestQwen3VL8BServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
         "--disable-cuda-graph",
         "--mem-fraction-static",
         "0.5",
-        "--ascend_attn",
-        "ascend",
+        "--mm-attention-backend",
+        "ascend_attn",
     ]
 
 
@@ -79,8 +79,8 @@ class TestQwen3VLServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
         "0.8",
         "--tp-size",
         "2",
-        "--ascend_attn",
-        "ascend",
+        "--mm-attention-backend",
+        "ascend_attn",
     ]
 
 
