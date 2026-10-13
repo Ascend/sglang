@@ -41,6 +41,8 @@ def provenance(case, utils, root):
             "srt/multimodal/processors/qwen_vl.py",
             "srt/hardware_backend/npu/modules/qwen_vl_processor.py",
             "srt/models/qwen2_5_vl.py",
+            "srt/models/qwen2.py",
+            "srt/layers/layernorm.py",
             "srt/managers/tokenizer_manager.py",
             "srt/managers/scheduler.py",
             "srt/managers/scheduler_components/request_receiver.py",
@@ -283,6 +285,13 @@ def main():
             "vision_block.input",
             "vision_block.output",
             "embedding_scatter.output",
+            "decoder.loaded_weights",
+            "model_forward.input",
+            "model_forward.output",
+            "decoder_layer.input",
+            "decoder_layer.output",
+            "decoder_component.input",
+            "decoder_component.output",
         }
         stages = {record["stage"] for record in records}
         per_rank_missing = {

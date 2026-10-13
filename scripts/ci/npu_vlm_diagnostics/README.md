@@ -3,11 +3,13 @@
 This temporary reproduction workflow runs B100 on `linux-aarch64-a3-2` using
 the container's installed SGLang and the original VLM test assertions.
 
-Three separate processes run sequentially on the same allocation:
+Four separate processes run sequentially on the same allocation:
 
 1. Independent Qwen raw-image baseline without internal hooks.
 2. All three original Qwen input paths with downstream observations.
 3. Independent Qwen raw-image case with the same observations.
+4. Replay that raw case's captured vision embedding through the original
+   precomputed-input helper, with the same assertions.
 
 The preceding run already compared the full nine cases with and without hooks,
 and reproduced the same failure in independent Qwen. This follow-up focuses on
@@ -41,7 +43,11 @@ Compare the no-hook baseline before interpreting a diagnostic pass. Hooks are
 restricted to this workflow by `PYTHONPATH` and `VLM_DIAGNOSTICS_DIR`; no runtime
 flags, inference operators, test thresholds or assertions are changed.
 Model checkpoint files are not uploaded or hashed in full; their sizes are recorded.
-Only the loaded vision parameters are hashed individually.
+Loaded vision parameters are hashed individually.
+Decoder parameter hashes are also recorded per rank. The prefill and first eight
+decode forwards record actual position/sequence metadata and logits, per-layer
+input/output hashes, and the first decoder layer's norm/QKV/RoPE/attention/MLP
+boundaries. This distinguishes vision differences from later model computation.
 
 For a local replay, invoke `run_case.py <original-test-file> --mode full|qwen|qwen-all
 --output-dir <directory>`. Optional `--gemma-model`, `--kimi-model`,

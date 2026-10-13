@@ -114,6 +114,43 @@ class TestDiagnosticHooks(CustomTestCase):
         self.assertEqual(item.offsets, [(15, 294)])
         torch.testing.assert_close(item.feature, feature)
 
+    def test_decoder_observers_preserve_results_exceptions_and_outer_context(self):
+        """Hooks must remain observational even when artifact writes fail."""
+
+        class Model(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model = torch.nn.Module()
+                self.model.layers = torch.nn.ModuleList([torch.nn.Linear(1, 1)])
+                self.lm_head = torch.nn.Linear(1, 1)
+                self.result = SimpleNamespace(next_token_logits=None)
+
+            def forward(self, input_ids, positions, forward_batch):
+                if isinstance(input_ids, Exception):
+                    raise input_ids
+                self.result.next_token_logits = self.model.layers[0](input_ids)
+                return self.result
+
+        hooks._wrap_model_forward(Model)
+        model = Model()
+        batch = SimpleNamespace(mm_inputs=[], forward_mode="EXTEND")
+        outer = hooks._FRAME.set("outer")
+        outer_rid = hooks._RID.set("decoder-test-request")
+        try:
+            with patch.object(Path, "mkdir", side_effect=PermissionError("denied")):
+                with contextlib.redirect_stdout(io.StringIO()) as log:
+                    self.assertIs(model(torch.ones(1, 1), None, batch), model.result)
+                    failure = RuntimeError("original decoder failure")
+                    with self.assertRaises(RuntimeError) as caught:
+                        model(failure, None, batch)
+                self.assertIs(caught.exception, failure)
+                self.assertIn("NPU_VLM_DIAG_ERROR", log.getvalue())
+            self.assertEqual(hooks._FRAME.get(), "outer")
+            self.assertEqual(hooks._RID.get(), "decoder-test-request")
+        finally:
+            hooks._FRAME.reset(outer)
+            hooks._RID.reset(outer_rid)
+
 
 if __name__ == "__main__":
     unittest.main()

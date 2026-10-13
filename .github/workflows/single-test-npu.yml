@@ -20,7 +20,7 @@ jobs:
   single-node-poc:
     name: VLM input format diagnostics
     runs-on: linux-aarch64-a3-2
-    timeout-minutes: 45
+    timeout-minutes: 75
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100
     env:
@@ -113,6 +113,24 @@ jobs:
             --mode qwen --output-dir artifacts/npu-vlm/qwen \
             2>&1 | tee artifacts/npu-vlm/qwen/console.log
 
+      - name: Replay captured raw vision output through precomputed input
+        id: replay
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/replay/snapshots"
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          mkdir -p artifacts/npu-vlm/replay
+          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/replay \
+            2>&1 | tee artifacts/npu-vlm/replay/console.log
+
       - name: Collect device and plog evidence
         if: always()
         shell: bash
@@ -139,9 +157,11 @@ jobs:
           BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
           DIAGNOSTICS_OUTCOME: ${{ steps.diagnostics.outcome }}
           QWEN_OUTCOME: ${{ steps.qwen.outcome }}
+          REPLAY_OUTCOME: ${{ steps.replay.outcome }}
         shell: bash
         run: |
-          printf 'prepare=%s baseline=%s full_diagnostics=%s qwen=%s\n' \
-            "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$DIAGNOSTICS_OUTCOME" "$QWEN_OUTCOME"
+          printf 'prepare=%s baseline=%s full_diagnostics=%s qwen=%s replay=%s\n' \
+            "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$DIAGNOSTICS_OUTCOME" "$QWEN_OUTCOME" "$REPLAY_OUTCOME"
           [ "$PREPARE_OUTCOME" = success ] && [ "$BASELINE_OUTCOME" = success ] && \
-            [ "$DIAGNOSTICS_OUTCOME" = success ] && [ "$QWEN_OUTCOME" = success ]
+            [ "$DIAGNOSTICS_OUTCOME" = success ] && [ "$QWEN_OUTCOME" = success ] && \
+            [ "$REPLAY_OUTCOME" = success ]

@@ -20,6 +20,9 @@ _SEQUENCE = itertools.count()
 _ITEM_REQUESTS = {}
 _WEIGHT_OWNERS = set()
 _LAYER_NAMES = {}
+_MODEL_COUNTS = {}
+_MODEL_OBSERVERS = set()
+_FRAME = contextvars.ContextVar("vlm_diagnostic_frame", default=None)
 _MODULES = {
     "sglang.srt.multimodal.processors.base_processor",
     "sglang.srt.multimodal.processors.qwen_vl",
@@ -251,6 +254,156 @@ def _vision_weights(owner):
         print(f"NPU_VLM_DIAG_ERROR vision.loaded_weights: {error!r}", flush=True)
 
 
+def _decoder_observers(owner):
+    if id(owner) in _MODEL_OBSERVERS:
+        return
+    import torch
+
+    weights = {}
+    for prefix, module in (("model", owner.model), ("lm_head", owner.lm_head)):
+        for name, value in module.named_parameters():
+            cpu = value.detach().cpu().contiguous()
+            weights[f"{prefix}.{name}"] = {
+                "shape": list(value.shape),
+                "dtype": str(value.dtype),
+                "sha256": hashlib.sha256(
+                    cpu.reshape(-1).view(torch.uint8).numpy().tobytes()
+                ).hexdigest(),
+            }
+    emit("decoder.loaded_weights", weights, save_tensors=False)
+
+    def selected(value):
+        if isinstance(value, torch.Tensor) or value is None:
+            return value
+        if isinstance(value, (list, tuple)):
+            return [selected(item) for item in value]
+        if isinstance(value, Mapping):
+            return {key: selected(item) for key, item in value.items()}
+        return {"type": type(value).__name__}
+
+    def observe(module, label, stage):
+        def before(_module, args, kwargs):
+            frame = _FRAME.get()
+            if frame is not None:
+                emit(
+                    stage + ".input",
+                    {
+                        "module": label,
+                        "frame": frame,
+                        "args": selected(args),
+                        "kwargs": selected(kwargs),
+                    },
+                    save_tensors=False,
+                )
+
+        def after(_module, _args, _kwargs, result):
+            frame = _FRAME.get()
+            if frame is not None:
+                emit(
+                    stage + ".output",
+                    {"module": label, "frame": frame, "result": selected(result)},
+                    save_tensors=False,
+                )
+
+        module.register_forward_pre_hook(before, with_kwargs=True)
+        module.register_forward_hook(after, with_kwargs=True)
+
+    for index, layer in enumerate(owner.model.layers):
+        observe(layer, f"layers.{index}", "decoder_layer")
+        if index == 0:
+            for name in (
+                "input_layernorm",
+                "self_attn",
+                "self_attn.qkv_proj",
+                "self_attn.rotary_emb",
+                "self_attn.attn",
+                "self_attn.o_proj",
+                "post_attention_layernorm",
+                "mlp",
+                "mlp.gate_up_proj",
+                "mlp.act_fn",
+                "mlp.down_proj",
+            ):
+                module = layer
+                for part in name.split("."):
+                    module = getattr(module, part, None)
+                if module is not None and hasattr(module, "register_forward_hook"):
+                    observe(module, "layers.0." + name, "decoder_component")
+    _MODEL_OBSERVERS.add(id(owner))
+
+
+def _wrap_model_forward(cls):
+    original = cls.forward
+    signature = inspect.signature(original)
+
+    @functools.wraps(original)
+    def wrapped(self, *args, **kwargs):
+        try:
+            values = dict(signature.bind(self, *args, **kwargs).arguments)
+            batch = values["forward_batch"]
+            items = [
+                item
+                for mm in getattr(batch, "mm_inputs", []) or []
+                if mm is not None
+                for item in mm.mm_items
+            ]
+            rid = _items_rid(items) or _ITEM_REQUESTS.get(("model", id(self)))
+        except Exception as error:
+            print(f"NPU_VLM_DIAG_ERROR model_forward.bind: {error!r}", flush=True)
+            return original(self, *args, **kwargs)
+        if rid is None:
+            return original(self, *args, **kwargs)
+        count = _MODEL_COUNTS.get((id(self), rid), 0)
+        _MODEL_COUNTS[(id(self), rid)] = count + 1
+        # Prefill plus the first eight decode steps includes the first divergent output token.
+        if count > 8:
+            return original(self, *args, **kwargs)
+        rid_token = frame_token = None
+        try:
+            rid_token = _RID.set(rid)
+            # Decode batches release mm_inputs; retain the single-request RID established at prefill.
+            _ITEM_REQUESTS[("model", id(self))] = rid
+            frame = {"index": count, "mode": str(batch.forward_mode)}
+            frame_token = _FRAME.set(frame)
+            _decoder_observers(self)
+            payload = {
+                "frame": frame,
+                "input_ids": values.get("input_ids"),
+                "positions": values.get("positions"),
+            }
+            for key in (
+                "mrope_positions",
+                "seq_lens",
+                "extend_seq_lens",
+                "extend_prefix_lens",
+                "extend_start_loc",
+                "extend_seq_lens_cpu",
+                "extend_prefix_lens_cpu",
+            ):
+                payload[key] = getattr(batch, key, None)
+            emit("model_forward.input", payload)
+        except Exception as error:
+            print(f"NPU_VLM_DIAG_ERROR model_forward.input: {error!r}", flush=True)
+        try:
+            result = original(self, *args, **kwargs)
+            try:
+                logits = getattr(result, "next_token_logits", None)
+                emit(
+                    "model_forward.output",
+                    {"frame": _FRAME.get(), "next_token_logits": logits},
+                )
+            except Exception as error:
+                print(f"NPU_VLM_DIAG_ERROR model_forward.output: {error!r}", flush=True)
+            return result
+        finally:
+            if frame_token is not None:
+                _FRAME.reset(frame_token)
+            if rid_token is not None:
+                _RID.reset(rid_token)
+
+    cls.forward = wrapped
+
+
 def _wrap_runtime_method(cls, name, stage, *, check_owner=True, save_tensors=True):
     original = getattr(cls, name)
     signature = inspect.signature(original)
@@ -447,6 +600,7 @@ def _instrument(module):
     elif module.__name__.endswith("mm_utils"):
         _wrap_embedding(module)
     elif module.__name__.endswith("models.qwen2_5_vl"):
+        _wrap_model_forward(module.Qwen2_5_VLForConditionalGeneration)
         _wrap_runtime_method(
             module.Qwen2_5_VLForConditionalGeneration,
             "get_image_feature",
