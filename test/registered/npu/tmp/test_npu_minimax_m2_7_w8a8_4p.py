@@ -8,7 +8,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
     BENCHMARK_TOOL_DEFAULT,
     MINIMAX_M2_5_EAGLE3_MODEL_PATH,
     MINIMAX_M2_7_W8A8_MODEL_PATH,
-    TestAscendPerformanceTestCaseBase,
+    TestNpuPerformanceTestCaseBase,
 )
 from sglang.test.ascend.test_ascend_utils import (
     logger,
@@ -105,7 +105,7 @@ MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS = [
 cmd = "npu-smi info"
 
 
-class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
+class TestKimiK25W4A8(TestNpuPerformanceTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = MINIMAX_M2_7_W8A8_MODEL_PATH
     other_args = MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_OTHER_ARGS
@@ -147,20 +147,20 @@ class TestKimiK25W4A8(TestAscendPerformanceTestCaseBase):
         )
 
     def test_1(self):
-        logger.info("S3、记录HCCL初始化完成后、模型加载前，通信域内存占用")
-        res1 = run_command("cat ./err_log.txt | grep 'Init torch distributed ends'")
-        logger.info("----- 通信域内存占用 -----\n%s", res1)
-        logger.info("S4、记录模型加载后，模型权重内存占用")
-        res2 = run_command("cat ./err_log.txt | grep 'Load weight end'")
-        logger.info("----- 模型权重内存占用 -----\n%s", res2)
-        logger.info("S5、记录KV cache分配后，KV cache内存占用")
-        res3 = run_command("cat ./err_log.txt | grep 'KV Cache is allocated'")
-        logger.info("----- KV cache内存占用 -----\n%s", res3)
-        logger.info("S6、记录NPU graph buffer分配后，NPU graph buffer内存占用")
-        res4 = run_command(
-            "cat ./err_log.txt | grep 'Capture target decode NPU graph end'"
-        )
-        logger.info("----- NPU graph buffer内存占用 -----\n%s", res4)
+        # logger.info("S3、记录HCCL初始化完成后、模型加载前，通信域内存占用")
+        # res1 = run_command("cat ./err_log.txt | grep 'Init torch distributed ends'")
+        # logger.info("----- 通信域内存占用 -----\n%s", res1)
+        # logger.info("S4、记录模型加载后，模型权重内存占用")
+        # res2 = run_command("cat ./err_log.txt | grep 'Load weight end'")
+        # logger.info("----- 模型权重内存占用 -----\n%s", res2)
+        # logger.info("S5、记录KV cache分配后，KV cache内存占用")
+        # res3 = run_command("cat ./err_log.txt | grep 'KV Cache is allocated'")
+        # logger.info("----- KV cache内存占用 -----\n%s", res3)
+        # logger.info("S6、记录NPU graph buffer分配后，NPU graph buffer内存占用")
+        # res4 = run_command(
+        #     "cat ./err_log.txt | grep 'Capture target decode NPU graph end'"
+        # )
+        # logger.info("----- NPU graph buffer内存占用 -----\n%s", res4)
         logger.info("S7、服务启动成功后执行npu-smi info")
         raw_result = run_command(cmd)
         logger.info(raw_result)
