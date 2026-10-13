@@ -1,5 +1,4 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
 
 on:
   pull_request:
@@ -8,93 +7,141 @@ on:
       - testcases-260813
     paths:
       - ".github/workflows/single-test-npu.yml"
+      - "scripts/ci/npu_vlm_diagnostics/**"
 
 concurrency:
   group: single-test-npu-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   single-node-poc:
-    name: single-node-poc
+    name: VLM input format diagnostics
     runs-on: linux-aarch64-a3-2
+    timeout-minutes: 120
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100
+    env:
+      SGLANG_USE_MODELSCOPE: "true"
+      HF_ENDPOINT: https://hf-mirror.com
+      SGLANG_IS_IN_CI: "true"
+      SGLANG_TEST_MAX_RETRY: "0"
+      SGLANG_SET_CPU_AFFINITY: "1"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check npu info
-        run: |
-          npu-smi info
-
-      - name: Run test
-        timeout-minutes: 120
-        env:
-          SGLANG_USE_MODELSCOPE: true
-          HF_ENDPOINT: https://hf-mirror.com
-          SGLANG_IS_IN_CI: true
+      - name: Prepare original test helpers and machine evidence
+        id: prepare
         shell: bash
         run: |
-          sglang_source_path=$(pwd)
-          echo "Source code path: ${sglang_source_path}"
-          ln -sf ${sglang_source_path} /root/sglang
-
-          # Test cases - 使用时替换为实际的测试用例路径
-          test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
-          )
-
-          for test_case in "${test_cases[@]}"; do
-            if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-              echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
-              exit 1
+          set -euo pipefail
+          mkdir -p artifacts/npu-vlm/machine
+          ln -sf "$GITHUB_WORKSPACE" /root/sglang
+          helper_path=/sgl-workspace/sglang/python/sglang/test/ascend
+          if [ -d "$helper_path" ]; then
+            mv "$helper_path" "${helper_path}_vlm_original"
+          fi
+          cp -r "$GITHUB_WORKSPACE/python/sglang/test/ascend" "$helper_path"
+          git rev-parse HEAD > artifacts/npu-vlm/machine/checkout-sha.txt
+          git -C /sgl-workspace/sglang rev-parse HEAD > artifacts/npu-vlm/machine/image-sha.txt
+          hostname > artifacts/npu-vlm/machine/hostname.txt
+          uname -a > artifacts/npu-vlm/machine/uname.txt
+          npu-smi info > artifacts/npu-vlm/machine/npu-before.txt 2>&1 || true
+          for info_file in \
+            /usr/local/Ascend/driver/version.info \
+            /usr/local/Ascend/firmware/version.info \
+            /usr/local/Ascend/cann/arm64-linux/ascend_toolkit_install.info \
+            /usr/local/Ascend/cann/opp/version.info; do
+            if [ -f "$info_file" ]; then
+              cat "$info_file" > "artifacts/npu-vlm/machine/${info_file//\//_}"
             fi
           done
+          printf '%s\n' "$RUNNER_NAME" > artifacts/npu-vlm/machine/runner.txt
+          printf '%s\n' 'cann9.1.0-a3-B100' > artifacts/npu-vlm/machine/image-tag.txt
 
-          # copy required file from our daily cache
-          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
-          echo "scaling_governor performance num: \
-            $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor | grep performance | wc -l)"
-          echo "swappiness: $(cat /proc/sys/vm/swappiness)"
-          echo "numa_balancing: $(cat /proc/sys/kernel/numa_balancing)"
-          echo "sched_migration_cost_ns: $(cat /proc/sys/kernel/sched_migration_cost_ns)"
-
-          export SGLANG_TEST_MAX_RETRY=0
-          export SGLANG_SET_CPU_AFFINITY=1
-          echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
-
-          echo "Use sglang from image"
-          sglang_pkg_path=/sgl-workspace/sglang/python
-          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-          mkdir -p ${ascend_test_util_path}
-          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-          cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-
-          # Set environment of cann
+      - name: Baseline full file without internal diagnostic hooks
+        id: baseline
+        continue-on-error: true
+        timeout-minutes: 35
+        shell: bash
+        run: |
+          set -o pipefail
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          mkdir -p artifacts/npu-vlm/baseline
+          timeout --kill-after=30s 1800s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --mode full --output-dir artifacts/npu-vlm/baseline \
+            2>&1 | tee artifacts/npu-vlm/baseline/console.log
 
-          current_date=$(date +%Y%m%d)
-          log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
-          rm -rf ${log_path}
-          mkdir -p ${log_path}
-          echo "Log path: ${log_path}"
+      - name: Full file with Qwen input diagnostics
+        id: diagnostics
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 35
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/full/snapshots"
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          mkdir -p artifacts/npu-vlm/full
+          timeout --kill-after=30s 1800s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --mode full --output-dir artifacts/npu-vlm/full \
+            2>&1 | tee artifacts/npu-vlm/full/console.log
 
-          for test_case in "${test_cases[@]}"; do
-            tc_name=$(basename ${test_case} .py)
-            echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
-            echo "Finished test case ${test_case}"
-          done
+      - name: Independent Qwen raw image with diagnostics
+        id: qwen
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/qwen/snapshots"
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          mkdir -p artifacts/npu-vlm/qwen
+          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --mode qwen --output-dir artifacts/npu-vlm/qwen \
+            2>&1 | tee artifacts/npu-vlm/qwen/console.log
 
-          plog_path="/root/ascend/log/debug/plog"
-          if [ -d "$plog_path" ];then
-            echo "Plog files found. Begin to backup them."
-            target_plog_path="/root/.cache/tests/logs/plog/${HOSTNAME}"
-            echo "Save path: ${target_plog_path}"
-            rm -rf ${target_plog_path}
-            mkdir -p ${target_plog_path}
-            cp ${plog_path}/* ${target_plog_path}
+      - name: Collect device and plog evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts/npu-vlm/machine
+          npu-smi info > artifacts/npu-vlm/machine/npu-after.txt 2>&1 || true
+          if [ -d /root/ascend/log/debug/plog ]; then
+            cp -r /root/ascend/log/debug/plog artifacts/npu-vlm/plog || true
           fi
+
+      - name: Upload diagnostic evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npu-vlm-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/npu-vlm
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Preserve every failed phase in job status
+        if: always()
+        env:
+          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
+          DIAGNOSTICS_OUTCOME: ${{ steps.diagnostics.outcome }}
+          QWEN_OUTCOME: ${{ steps.qwen.outcome }}
+        shell: bash
+        run: |
+          printf 'prepare=%s baseline=%s full_diagnostics=%s qwen=%s\n' \
+            "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$DIAGNOSTICS_OUTCOME" "$QWEN_OUTCOME"
+          [ "$PREPARE_OUTCOME" = success ] && [ "$BASELINE_OUTCOME" = success ] && \
+            [ "$DIAGNOSTICS_OUTCOME" = success ] && [ "$QWEN_OUTCOME" = success ]
