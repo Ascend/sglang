@@ -144,24 +144,24 @@ class TestQwen2VLContextLengthServer(CustomTestCase):
         )
 
 
-# class TestMiniCPMV4Server(ImageOpenAITestMixin):
-#     model = MINICPM_V_2_6_WEIGHTS_PATH
-#     extra_args = [
-#         "--cuda-graph-max-bs-decode",
-#         "4",
-#         "--attention-backend",
-#         "ascend",
-#     ]
+class TestMiniCPMV4Server(ImageOpenAITestMixin):
+    model = MINICPM_V_2_6_WEIGHTS_PATH
+    extra_args = [
+        "--cuda-graph-max-bs-decode",
+        "4",
+        "--attention-backend",
+        "ascend",
+    ]
 
 
-# class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
-#     model = MINICPM_O_2_6_WEIGHTS_PATH
-#     extra_args = [
-#         "--cuda-graph-max-bs-decode",
-#         "4",
-#         "--attention-backend",
-#         "ascend",
-#     ]
+class TestMiniCPMo26Server(ImageOpenAITestMixin, AudioOpenAITestMixin):
+    model = MINICPM_O_2_6_WEIGHTS_PATH
+    extra_args = [
+        "--cuda-graph-max-bs-decode",
+        "4",
+        "--attention-backend",
+        "ascend",
+    ]
 
 
 class TestGemma4itServer(ImageOpenAITestMixin):
