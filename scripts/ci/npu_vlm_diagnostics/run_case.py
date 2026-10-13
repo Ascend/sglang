@@ -42,6 +42,10 @@ def provenance(case, utils, root):
             "srt/hardware_backend/npu/modules/qwen_vl_processor.py",
             "srt/models/qwen2_5_vl.py",
             "srt/managers/tokenizer_manager.py",
+            "srt/managers/scheduler.py",
+            "srt/managers/scheduler_components/request_receiver.py",
+            "srt/managers/schedule_batch.py",
+            "srt/managers/mm_utils.py",
             "srt/layers/rotary_embedding.py",
             "srt/layers/rotary_embedding/mrope.py",
             "srt/layers/rotary_embedding/__init__.py",
@@ -156,7 +160,7 @@ def provenance(case, utils, root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("case", type=Path)
-    parser.add_argument("--mode", choices=("full", "qwen"), required=True)
+    parser.add_argument("--mode", choices=("full", "qwen", "qwen-all"), required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     for model in ("gemma", "kimi", "qwen"):
         parser.add_argument(f"--{model}-model")
@@ -229,6 +233,11 @@ def main():
             [namespace["TestQwenVLUnderstandsImage"]("test_accepts_image")]
         )
         expected = 1
+    elif args.mode == "qwen-all":
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(
+            namespace["TestQwenVLUnderstandsImage"]
+        )
+        expected = 3
     else:
         names = sorted(
             name
@@ -256,10 +265,50 @@ def main():
         "errors": [(str(t), trace) for t, trace in result.errors],
         "skipped": [(str(t), reason) for t, reason in result.skipped],
     }
+    diagnostic_complete = True
+    if os.environ.get("VLM_DIAGNOSTICS_DIR"):
+        records = [
+            json.loads(path.read_text())
+            for path in Path(os.environ["VLM_DIAGNOSTICS_DIR"]).glob("*.json")
+        ]
+        required = {
+            "tokenizer_send.input",
+            "scheduler_receive.output",
+            "scheduler_prepare.output",
+            "image_feature.input",
+            "image_feature.output",
+            "vision.input",
+            "vision.output",
+            "vision.loaded_weights",
+            "vision_block.input",
+            "vision_block.output",
+            "embedding_scatter.output",
+        }
+        stages = {record["stage"] for record in records}
+        per_rank_missing = {
+            str(rank): sorted(
+                required
+                - {"tokenizer_send.input"}
+                - {record["stage"] for record in records if record.get("rank") == rank}
+            )
+            for rank in (0, 1)
+        }
+        missing = sorted(required - stages)
+        diagnostic_complete = not missing and not any(per_rank_missing.values())
+        summary["diagnostics"] = {
+            "complete": diagnostic_complete,
+            "missing_stages": missing,
+            "per_rank_missing": per_rank_missing,
+            "record_count": len(records),
+        }
+        print("NPU_VLM_COVERAGE " + json.dumps(summary["diagnostics"]), flush=True)
     (root / "result.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2))
     sys.exit(
         0
-        if result.wasSuccessful() and result.testsRun == expected and not result.skipped
+        if result.wasSuccessful()
+        and result.testsRun == expected
+        and not result.skipped
+        and diagnostic_complete
         else 1
     )
 

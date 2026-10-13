@@ -20,7 +20,7 @@ jobs:
   single-node-poc:
     name: VLM input format diagnostics
     runs-on: linux-aarch64-a3-2
-    timeout-minutes: 120
+    timeout-minutes: 45
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100
     env:
@@ -62,26 +62,26 @@ jobs:
           printf '%s\n' "$RUNNER_NAME" > artifacts/npu-vlm/machine/runner.txt
           printf '%s\n' 'cann9.1.0-a3-B100' > artifacts/npu-vlm/machine/image-tag.txt
 
-      - name: Baseline full file without internal diagnostic hooks
+      - name: Independent Qwen baseline without internal diagnostic hooks
         id: baseline
         continue-on-error: true
-        timeout-minutes: 35
+        timeout-minutes: 15
         shell: bash
         run: |
           set -o pipefail
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           mkdir -p artifacts/npu-vlm/baseline
-          timeout --kill-after=30s 1800s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --mode full --output-dir artifacts/npu-vlm/baseline \
+            --mode qwen --output-dir artifacts/npu-vlm/baseline \
             2>&1 | tee artifacts/npu-vlm/baseline/console.log
 
-      - name: Full file with Qwen input diagnostics
+      - name: Three Qwen input paths with downstream diagnostics
         id: diagnostics
         if: always() && steps.prepare.outcome == 'success'
         continue-on-error: true
-        timeout-minutes: 35
+        timeout-minutes: 20
         shell: bash
         run: |
           set -o pipefail
@@ -90,9 +90,9 @@ jobs:
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/full/snapshots"
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
           mkdir -p artifacts/npu-vlm/full
-          timeout --kill-after=30s 1800s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+          timeout --kill-after=30s 1200s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --mode full --output-dir artifacts/npu-vlm/full \
+            --mode qwen-all --output-dir artifacts/npu-vlm/full \
             2>&1 | tee artifacts/npu-vlm/full/console.log
 
       - name: Independent Qwen raw image with diagnostics

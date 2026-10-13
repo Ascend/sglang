@@ -7,15 +7,17 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import torch
+from sglang.test.test_utils import CustomTestCase
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
 import npu_vlm_diagnostic_hooks as hooks
 
 
-class TestDiagnosticHooks(unittest.TestCase):
+class TestDiagnosticHooks(CustomTestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -66,7 +68,7 @@ class TestDiagnosticHooks(unittest.TestCase):
             def run(self, value):
                 return value
 
-        hooks._wrap_method(Processor, "run")
+        hooks._wrap_runtime_method(Processor, "run", "test_boundary")
         marker = object()
         with patch.object(Path, "mkdir", side_effect=PermissionError("denied")):
             with contextlib.redirect_stdout(io.StringIO()) as log:
@@ -94,6 +96,23 @@ class TestDiagnosticHooks(unittest.TestCase):
         self.assertEqual(len(records), 2)
         self.assertTrue(all(record["rid"] == "request-123" for record in records))
         self.assertIsNone(hooks._RID.get())
+
+    def test_nested_multimodal_features_and_offsets_are_not_truncated(self):
+        """The first CI artifact silently lost feature/offsets inside mm_items."""
+        feature = torch.arange(6, device="cpu").reshape(2, 3)
+        item = SimpleNamespace(feature=feature, offsets=[(15, 294)], hash=42)
+        output = SimpleNamespace(mm_items=[item])
+        with contextlib.redirect_stdout(io.StringIO()):
+            hooks.emit("processor.output", {"result": output})
+        root = Path(self.temp.name)
+        record = json.loads(next(root.glob("*.json")).read_text())
+        saved = torch.load(root / record["tensor_file"], weights_only=True)
+        torch.testing.assert_close(saved["value.result.mm_items.0.feature"], feature)
+        self.assertEqual(
+            record["payload"]["result"]["mm_items"][0]["offsets"], [[15, 294]]
+        )
+        self.assertEqual(item.offsets, [(15, 294)])
+        torch.testing.assert_close(item.feature, feature)
 
 
 if __name__ == "__main__":

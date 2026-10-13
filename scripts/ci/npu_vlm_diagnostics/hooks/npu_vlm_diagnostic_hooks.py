@@ -10,15 +10,25 @@ import itertools
 import json
 import os
 import time
+from array import array
 from collections.abc import Mapping
+from enum import Enum
 from pathlib import Path
 
 _RID = contextvars.ContextVar("vlm_diagnostic_rid", default=None)
 _SEQUENCE = itertools.count()
+_ITEM_REQUESTS = {}
+_WEIGHT_OWNERS = set()
+_LAYER_NAMES = {}
 _MODULES = {
     "sglang.srt.multimodal.processors.base_processor",
     "sglang.srt.multimodal.processors.qwen_vl",
     "sglang.srt.hardware_backend.npu.modules.qwen_vl_processor",
+    "sglang.srt.managers.tokenizer_manager",
+    "sglang.srt.managers.scheduler_components.request_receiver",
+    "sglang.srt.managers.scheduler",
+    "sglang.srt.managers.mm_utils",
+    "sglang.srt.models.qwen2_5_vl",
 }
 _FIELDS = (
     "input_ids",
@@ -33,6 +43,12 @@ _FIELDS = (
     "mrope_positions",
     "mrope_position_delta",
     "hash",
+    "pad_value",
+    "format",
+    "rid",
+    "mm_inputs",
+    "multimodal_inputs",
+    "origin_input_ids",
 )
 
 
@@ -61,14 +77,18 @@ def _summarize(value, tensors, key="value", depth=0):
         return result
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
-    if depth >= 5:
+    if isinstance(value, Enum):
+        return {"enum": type(value).__name__, "name": value.name}
+    if depth >= 12:
         return {"type": type(value).__name__}
     if isinstance(value, Mapping):
         return {
             str(k): _summarize(v, tensors, f"{key}.{k}", depth + 1)
             for k, v in value.items()
         }
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, (list, tuple, array)):
+        if isinstance(value, array):
+            value = list(value)
         if len(value) > 64 and all(isinstance(v, int) for v in value):
             tensors[key] = torch.tensor(value, dtype=torch.int64, device="cpu")
             return {
@@ -92,7 +112,7 @@ def _summarize(value, tensors, key="value", depth=0):
     return {"type": type(value).__name__, "repr": str(value)[:200]}
 
 
-def emit(stage, payload, owner=None):
+def emit(stage, payload, owner=None, *, save_tensors=True):
     """Diagnostic failures never replace the original test/runtime exception."""
     if not os.environ.get("VLM_DIAGNOSTICS_DIR"):
         return
@@ -109,6 +129,12 @@ def emit(stage, payload, owner=None):
             "ppid": os.getppid(),
             "rid": _RID.get(),
             "time_ns": time.time_ns(),
+            "rank": (
+                torch.distributed.get_rank()
+                if torch.distributed.is_available()
+                and torch.distributed.is_initialized()
+                else None
+            ),
             "payload": _summarize(payload, tensors),
         }
         if owner is not None:
@@ -142,7 +168,7 @@ def emit(stage, payload, owner=None):
                 record["image_token_id"] = image_id
                 record["image_token_count"] = flat.count(image_id)
                 record["image_token_spans"] = spans
-        if tensors:
+        if tensors and save_tensors:
             name = f"{stamp}.pt"
             torch.save(tensors, root / name)
             record["tensor_file"] = name
@@ -161,11 +187,188 @@ def emit(stage, payload, owner=None):
 
 
 def _is_qwen(owner):
-    config = getattr(owner, "hf_config", None)
+    config = getattr(owner, "hf_config", getattr(owner, "config", None))
+    if config is None:
+        config = getattr(getattr(owner, "model_config", None), "hf_config", None)
     return (
         getattr(owner, "model_type", getattr(config, "model_type", None))
         == "qwen2_5_vl"
     )
+
+
+def _observe_requests(stage, requests):
+    """Observe only materialized multimodal requests; never unwrap transports here."""
+    try:
+        for request in requests or []:
+            batch = getattr(request, "batch", None)
+            if batch is not None:
+                _observe_requests(stage, batch)
+                continue
+            if getattr(request, "mm_inputs", None) is None:
+                continue
+            token = _RID.set(getattr(request, "rid", None))
+            try:
+                emit(stage, {"request": request})
+            finally:
+                _RID.reset(token)
+    except Exception as error:
+        print(f"NPU_VLM_DIAG_ERROR {stage}: {error!r}", flush=True)
+
+
+def _remember_items(value):
+    for item in getattr(value, "mm_items", []) or []:
+        if getattr(item, "hash", None) is not None:
+            _ITEM_REQUESTS[item.hash] = _RID.get()
+
+
+def _items_rid(items):
+    rids = {_ITEM_REQUESTS.get(getattr(item, "hash", None)) for item in items} - {None}
+    return next(iter(rids)) if len(rids) == 1 else _RID.get()
+
+
+def _vision_weights(owner):
+    """Hash loaded per-rank weights once, without storing model weights in artifacts."""
+    if id(owner) in _WEIGHT_OWNERS:
+        return
+    try:
+        import torch
+
+        hashes = {}
+        for name, value in owner.named_parameters():
+            cpu = value.detach().cpu().contiguous()
+            hashes[name] = {
+                "shape": list(value.shape),
+                "dtype": str(value.dtype),
+                "sha256": hashlib.sha256(
+                    cpu.reshape(-1).view(torch.uint8).numpy().tobytes()
+                ).hexdigest(),
+            }
+        for index, block in enumerate(owner.blocks):
+            _LAYER_NAMES[id(block)] = f"blocks.{index}"
+        emit("vision.loaded_weights", hashes, save_tensors=False)
+        _WEIGHT_OWNERS.add(id(owner))
+    except Exception as error:
+        print(f"NPU_VLM_DIAG_ERROR vision.loaded_weights: {error!r}", flush=True)
+
+
+def _wrap_runtime_method(cls, name, stage, *, check_owner=True, save_tensors=True):
+    original = getattr(cls, name)
+    signature = inspect.signature(original)
+
+    def prepare(self, args, kwargs):
+        values = dict(signature.bind(self, *args, **kwargs).arguments)
+        values.pop("self", None)
+        request = values.get("tokenized_obj", values.get("recv_req"))
+        rid = getattr(request, "rid", _RID.get())
+        if stage == "image_feature":
+            rid = _items_rid(values.get("items", []))
+        if stage == "vision":
+            _vision_weights(self)
+        values["layer"] = _LAYER_NAMES.get(id(self))
+        return values, rid
+
+    def before(self, args, kwargs):
+        # All bookkeeping is diagnostic: failures cannot change inference behavior.
+        try:
+            values, rid = prepare(self, args, kwargs)
+            token = _RID.set(rid)
+            if stage != "scheduler_receive":
+                emit(stage + ".input", values, save_tensors=save_tensors)
+            return token, values
+        except Exception as error:
+            print(f"NPU_VLM_DIAG_ERROR {stage}.input: {error!r}", flush=True)
+            return None, {}
+
+    def after(values, result):
+        try:
+            if stage == "scheduler_receive":
+                _observe_requests(stage + ".output", values.get("recv_reqs"))
+            else:
+                if stage == "scheduler_prepare":
+                    _remember_items(result)
+                emit(
+                    stage + ".output",
+                    {"result": result, "layer": values.get("layer")},
+                    save_tensors=save_tensors,
+                )
+        except Exception as error:
+            print(f"NPU_VLM_DIAG_ERROR {stage}.output: {error!r}", flush=True)
+
+    if inspect.iscoroutinefunction(original):
+
+        @functools.wraps(original)
+        async def wrapped(self, *args, **kwargs):
+            if check_owner and not _is_qwen(self):
+                return await original(self, *args, **kwargs)
+            token, values = before(self, args, kwargs)
+            try:
+                result = await original(self, *args, **kwargs)
+                after(values, result)
+                return result
+            finally:
+                if token is not None:
+                    _RID.reset(token)
+    else:
+
+        @functools.wraps(original)
+        def wrapped(self, *args, **kwargs):
+            if check_owner and not _is_qwen(self):
+                return original(self, *args, **kwargs)
+            # Receiver polls with no work most of the time; avoid empty snapshots.
+            if stage == "scheduler_receive" and not (args or kwargs.get("recv_reqs")):
+                return original(self, *args, **kwargs)
+            token, values = before(self, args, kwargs)
+            try:
+                result = original(self, *args, **kwargs)
+                after(values, result)
+                return result
+            finally:
+                if token is not None:
+                    _RID.reset(token)
+
+    setattr(cls, name, wrapped)
+
+
+def _wrap_embedding(module):
+    original = module.embed_mm_inputs
+    signature = inspect.signature(original)
+
+    @functools.wraps(original)
+    def wrapped(*args, **kwargs):
+        values = dict(signature.bind(*args, **kwargs).arguments)
+        owner = values.get("multimodal_model")
+        if not _is_qwen(owner):
+            return original(*args, **kwargs)
+        selected = {
+            key: values.get(key)
+            for key in (
+                "mm_inputs_list",
+                "extend_prefix_lens",
+                "extend_seq_lens",
+                "input_ids",
+            )
+        }
+        token = None
+        try:
+            items = [
+                item
+                for mm in values.get("mm_inputs_list", []) or []
+                if mm is not None
+                for item in mm.mm_items
+            ]
+            token = _RID.set(_items_rid(items))
+            emit("embedding_scatter.input", selected)
+        except Exception as error:
+            print(f"NPU_VLM_DIAG_ERROR embedding_scatter.input: {error!r}", flush=True)
+        try:
+            result = original(*args, **kwargs)
+            emit("embedding_scatter.output", {"result": result})
+            return result
+        finally:
+            if token is not None:
+                _RID.reset(token)
+
+    module.embed_mm_inputs = wrapped
 
 
 def _wrap_method(cls, name):
@@ -224,6 +427,41 @@ def _instrument(module):
             _wrap_method(cls, name)
     elif module.__name__.endswith("processors.qwen_vl"):
         _wrap_method(module.QwenVLImageProcessor, "process_mm_data_async")
+    elif module.__name__.endswith("tokenizer_manager"):
+        _wrap_runtime_method(
+            module.TokenizerManager, "_send_one_request", "tokenizer_send"
+        )
+    elif module.__name__.endswith("request_receiver"):
+        _wrap_runtime_method(
+            module.SchedulerRequestReceiver,
+            "_finalize_shm_features",
+            "scheduler_receive",
+        )
+    elif module.__name__.endswith("scheduler"):
+        _wrap_runtime_method(
+            module.Scheduler, "handle_generate_request", "scheduler_request"
+        )
+        _wrap_runtime_method(
+            module.Scheduler, "_get_multimodal_inputs", "scheduler_prepare"
+        )
+    elif module.__name__.endswith("mm_utils"):
+        _wrap_embedding(module)
+    elif module.__name__.endswith("models.qwen2_5_vl"):
+        _wrap_runtime_method(
+            module.Qwen2_5_VLForConditionalGeneration,
+            "get_image_feature",
+            "image_feature",
+        )
+        _wrap_runtime_method(
+            module.Qwen2_5_VisionTransformer, "forward", "vision", check_owner=False
+        )
+        _wrap_runtime_method(
+            module.Qwen2_5_VisionBlock,
+            "forward",
+            "vision_block",
+            check_owner=False,
+            save_tensors=False,
+        )
     else:
         original_factory = module.npu_wrapper_preprocess
 
@@ -253,7 +491,10 @@ class _Loader(importlib.abc.Loader):
 
     def exec_module(self, module):
         self.original.exec_module(module)
-        _instrument(module)
+        try:
+            _instrument(module)
+        except Exception as error:
+            print(f"NPU_VLM_DIAG_ERROR hook {module.__name__}: {error!r}", flush=True)
 
     def __getattr__(self, name):
         return getattr(self.original, name)
