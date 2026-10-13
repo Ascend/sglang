@@ -83,7 +83,7 @@ DEEPSEEK_V4_FLASH_W8A8_MTP_OTHER_ARGS = [
     "--enable-dp-lm-head",
     "--kv-cache-dtype",
     "bfloat16",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     8,
     "--skip-server-warmup",
 ]
