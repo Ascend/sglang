@@ -35,7 +35,7 @@ OTHER_ARGS = [
     "modelslim",
     "--watchdog-timeout",
     "9000",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     4,
     8,
     12,

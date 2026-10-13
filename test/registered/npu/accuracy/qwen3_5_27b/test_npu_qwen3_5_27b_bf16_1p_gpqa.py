@@ -37,7 +37,7 @@ QWEN3_5_27B_OTHER_ARGS = [
     0.7,
     "--max-running-requests",
     32,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     32,
     "--enable-multimodal",
     "--mm-attention-backend",

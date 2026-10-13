@@ -220,6 +220,7 @@ jobs:
 #      device_type_for_deps: 'a3'
 #      skip_pr_test_health_check: 'true'
 #    secrets: inherit
+  # Debug jobs: run only the 8 bf16 accuracy cases registered under debug-full-acc-*.
   debug-full-acc-2-npu-a3:
     name: debug-full-acc-2-npu-a3
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}

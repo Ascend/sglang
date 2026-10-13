@@ -44,7 +44,7 @@ OTHER_ARGS = [
     "--trust-remote-code",
     "--mem-fraction-static",
     0.7,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,

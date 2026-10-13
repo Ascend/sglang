@@ -109,7 +109,9 @@ QWEN3_30B_A3B_W8A8_MODEL_PATH = (
 QWEN3_30B_A3B_W8A8_VLLM_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/vllm-ascend/Qwen3-30B-A3B-W8A8"
 )
-QWEN3_30B_A3B_HUB_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen3-30B-A3B"
+QWEN3_30B_A3B_HUB_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-Instruct-2507"
+)
 QWEN3_A3B_EAGLE_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-a3B_eagle3"
 QWEN3_32B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-32B"
 QWEN3_32B_W8A8_MODEL_PATH = (
