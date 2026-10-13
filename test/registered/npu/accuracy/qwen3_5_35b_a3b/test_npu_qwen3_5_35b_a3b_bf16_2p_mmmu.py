@@ -56,6 +56,8 @@ OTHER_ARGS = [
     30,
     "--mm-attention-backend",
     "ascend_attn",
+    "--mamba-ssm-dtype",
+    "bfloat16",
 ]
 
 

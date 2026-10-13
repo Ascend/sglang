@@ -46,6 +46,8 @@ QWEN3_5_27B_OTHER_ARGS = [
     "auto",
     "--reasoning-parser",
     "auto",
+    "--mamba-ssm-dtype",
+    "bfloat16",
 ]
 
 

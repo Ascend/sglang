@@ -46,6 +46,8 @@ QWEN3_5_9B_OTHER_ARGS = [
     "ascend_attn",
     "--dtype",
     "bfloat16",
+    "--mamba-ssm-dtype",
+    "bfloat16",
 ]
 
 
