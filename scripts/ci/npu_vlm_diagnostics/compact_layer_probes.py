@@ -11,7 +11,9 @@ import torch
 parser = argparse.ArgumentParser()
 parser.add_argument("--source", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--full-attention-layers", default="0")
 args = parser.parse_args()
+full_layers = set(map(int, args.full_attention_layers.split(",")))
 args.output.mkdir(parents=True, exist_ok=True)
 destination = args.output / "layer-probes"
 destination.mkdir(exist_ok=True)
@@ -22,7 +24,7 @@ for path in args.source.iterdir():
         path.suffix == ".pt"
         and "-f0-" in path.name
         and ".self_attn.attn-input.pt" in path.name
-        and "-layers.0." not in path.name
+        and not any(f"-layers.{layer}." in path.name for layer in full_layers)
     ):
         tensors = torch.load(path, weights_only=True, map_location="cpu")
         original = {key: list(value.shape) for key, value in tensors.items()}

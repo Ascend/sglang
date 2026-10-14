@@ -684,6 +684,9 @@ def _instrument(module):
         _wrap_embedding(module)
     elif module.__name__.endswith("models.qwen2_5_vl"):
         _wrap_model_forward(module.Qwen2_5_VLForConditionalGeneration)
+        from npu_vlm_core_limit import install as install_core_limit
+
+        install_core_limit(module.Qwen2_5_VLForConditionalGeneration)
         _wrap_runtime_method(
             module.Qwen2_5_VLForConditionalGeneration,
             "get_image_feature",

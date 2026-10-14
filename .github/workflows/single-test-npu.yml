@@ -95,6 +95,19 @@ jobs:
             --source-dir source-artifact/replay --model "$model_path" \
             --output-dir operator-artifacts/qkv-20-40 --profile-npu \
             --cube-num 20 --vector-num 40
+      - name: Isolate decode down projection local products and sum
+        shell: bash
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          model_path=$(cat operator-artifacts/model-path.txt)
+          python scripts/ci/npu_vlm_diagnostics/replay_down_projection.py \
+            --source source-artifact/replay/layer-probes --model "$model_path" \
+            --output operator-artifacts/down-default --profile
+          python scripts/ci/npu_vlm_diagnostics/replay_down_projection.py \
+            --source source-artifact/replay/layer-probes --model "$model_path" \
+            --output operator-artifacts/down-20-40 --profile \
+            --cube-num 20 --vector-num 40
       - name: Report actual profiled kernels
         if: always()
         shell: bash
@@ -111,12 +124,24 @@ jobs:
         shell: bash
         run: |
           python scripts/ci/npu_vlm_diagnostics/compact_layer_probes.py \
-            --source source-artifact/replay/layer-probes --output operator-artifacts
+            --source source-artifact/replay/layer-probes --output operator-artifacts \
+            --full-attention-layers 0,1
           cp source-artifact/replay/{result,responses,provenance}.json operator-artifacts/
           cp -r source-artifact/machine operator-artifacts/source-machine
           npu-smi info > operator-artifacts/replay-machine.txt
           python scripts/ci/npu_vlm_diagnostics/hooks/npu_vlm_fingerprint.py \
             --output operator-artifacts/replay-fingerprint.json
+      - name: Upload compact cross-machine replay inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npu-vlm-cache-probes-${{ github.run_id }}
+          path: |
+            operator-artifacts/layer-probes-compact.tar.gz
+            operator-artifacts/ci-attention-reference.*
+            operator-artifacts/down-default/result.json
+            operator-artifacts/down-20-40/result.json
+          retention-days: 14
       - name: Upload operator evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -232,6 +257,46 @@ jobs:
             --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/replay \
             2>&1 | tee artifacts/npu-vlm/replay/console.log
 
+      - name: Fixed CI vision with BF16 and 20-40 process core limits
+        id: core_replay
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          export VLM_DEVICE_LIMIT_CUBE=20
+          export VLM_DEVICE_LIMIT_VECTOR=40
+          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/core-replay/snapshots"
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          mkdir -p artifacts/npu-vlm/core-replay
+          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/core-replay \
+            2>&1 | tee artifacts/npu-vlm/core-replay/console.log
+
+      - name: Original Qwen raw image with BF16 and 20-40 process core limits
+        id: core_raw
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          export VLM_DEVICE_LIMIT_CUBE=20
+          export VLM_DEVICE_LIMIT_VECTOR=40
+          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/core-raw/snapshots"
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          mkdir -p artifacts/npu-vlm/core-raw
+          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --mode qwen --output-dir artifacts/npu-vlm/core-raw \
+            2>&1 | tee artifacts/npu-vlm/core-raw/console.log
+
       - name: Original Qwen raw image with native FP32 LM head
         id: fp32_head
         if: always() && steps.prepare.outcome == 'success'
@@ -318,6 +383,8 @@ jobs:
           QWEN_OUTCOME: ${{ steps.qwen.outcome }}
           REPLAY_OUTCOME: ${{ steps.replay.outcome }}
           FP32_HEAD_OUTCOME: ${{ steps.fp32_head.outcome }}
+          CORE_REPLAY_OUTCOME: ${{ steps.core_replay.outcome }}
+          CORE_RAW_OUTCOME: ${{ steps.core_raw.outcome }}
           PACK_PROBES_OUTCOME: ${{ steps.pack_probes.outcome }}
         shell: bash
         run: |
@@ -325,4 +392,5 @@ jobs:
             "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$QWEN_OUTCOME" "$REPLAY_OUTCOME" "$FP32_HEAD_OUTCOME"
           [ "$PREPARE_OUTCOME" = success ] && [ "$BASELINE_OUTCOME" = success ] && \
             [ "$QWEN_OUTCOME" = success ] && [ "$REPLAY_OUTCOME" = success ] && \
-            [ "$FP32_HEAD_OUTCOME" = success ] && [ "$PACK_PROBES_OUTCOME" = success ]
+            [ "$FP32_HEAD_OUTCOME" = success ] && [ "$PACK_PROBES_OUTCOME" = success ] && \
+            [ "$CORE_REPLAY_OUTCOME" = success ] && [ "$CORE_RAW_OUTCOME" = success ]
