@@ -212,6 +212,23 @@ jobs:
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           curl -o /tmp/test.jsonl -L https://gh-proxy.test.osinfra.cn/https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl
 
+      # Workaround: B101 image ships stale __pycache__ bytecode next to updated
+      # .py sources, so the scheduler runs WITHOUT the zmq Again fix even though
+      # the .py on disk has it (crash: request_receiver.py L137 zmq.error.Again
+      # kills the server right after startup). Remove __pycache__ so Python
+      # recompiles from the fixed sources; also print the on-disk code so the
+      # log proves which state the image is in. Remove this step once the image
+      # is rebuilt with consistent bytecode.
+      - name: Recompile image sglang bytecode (stale pycache workaround)
+        shell: bash
+        run: |
+          RC=/sgl-workspace/sglang/python/sglang/srt/managers/scheduler_components/request_receiver.py
+          echo "--- request_receiver.py L133-139 (on-disk source) ---"
+          sed -n '133,139p' "${RC}" || true
+          echo "--- removing stale __pycache__ under /sgl-workspace/sglang/python ---"
+          find /sgl-workspace/sglang/python -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+          echo "done"
+
       - name: Install coverage
         if: ${{ inputs.coverage_run_id != '' }}
         shell: bash
