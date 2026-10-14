@@ -11,6 +11,14 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.otel_collector import LightweightOtlpCollector
 from sglang.test.test_utils import CustomTestCase
 
+
+try:
+    import opentelemetry
+except ImportError:
+    import sys
+    import subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "opentelemetry-sdk", "opentelemetry-api", "opentelemetry-exporter-otlp", "opentelemetry-exporter-otlp-proto-grpc"])
+
 register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
 
 # Pre-computed expected span names for each trace level
