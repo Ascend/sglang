@@ -62,6 +62,14 @@ jobs:
           printf '%s\n' "$RUNNER_NAME" > artifacts/npu-vlm/machine/runner.txt
           printf '%s\n' 'cann9.1.0-a3-B100' > artifacts/npu-vlm/machine/image-tag.txt
 
+      - name: Fingerprint the installed NPU computation stack
+        shell: bash
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          python scripts/ci/npu_vlm_diagnostics/hooks/npu_vlm_fingerprint.py \
+            --output artifacts/npu-vlm/machine/binary-fingerprint.json
+
       - name: Independent Qwen baseline without internal diagnostic hooks
         id: baseline
         continue-on-error: true

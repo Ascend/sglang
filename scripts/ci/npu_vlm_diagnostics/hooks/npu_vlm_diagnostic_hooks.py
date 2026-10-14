@@ -66,8 +66,18 @@ def _summarize(value, tensors, key="value", depth=0):
             "shape": list(value.shape),
             "dtype": str(value.dtype),
             "device": str(value.device),
+            "stride": list(value.stride()),
+            "storage_offset": value.storage_offset(),
+            "is_contiguous": value.is_contiguous(),
             "sha256": hashlib.sha256(raw).hexdigest(),
         }
+        if value.device.type == "npu":
+            try:
+                import torch_npu
+
+                result["npu_format"] = torch_npu.get_npu_format(value)
+            except Exception as error:
+                result["npu_format_error"] = repr(error)
         if cpu.numel() and cpu.is_floating_point():
             floats = cpu.float()
             result.update(
@@ -271,6 +281,12 @@ def _decoder_observers(owner):
                 ).hexdigest(),
             }
     emit("decoder.loaded_weights", weights, save_tensors=False)
+    try:
+        from npu_vlm_fingerprint import runtime_manifest
+
+        emit("runtime.fingerprint", runtime_manifest(), save_tensors=False)
+    except Exception as error:
+        print(f"NPU_VLM_DIAG_ERROR runtime.fingerprint: {error!r}", flush=True)
 
     def selected(value):
         if isinstance(value, torch.Tensor) or value is None:
@@ -292,6 +308,17 @@ def _decoder_observers(owner):
                         "frame": frame,
                         "args": selected(args),
                         "kwargs": selected(kwargs),
+                        "parameters": (
+                            {
+                                name: value
+                                for name, value in _module.named_parameters(
+                                    recurse=False
+                                )
+                            }
+                            if label == "layers.0.self_attn.qkv_proj"
+                            and frame["index"] == 0
+                            else None
+                        ),
                     },
                     save_tensors=False,
                 )

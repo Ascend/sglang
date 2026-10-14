@@ -53,3 +53,12 @@ For a local replay, invoke `run_case.py <original-test-file> --mode full|qwen|qw
 --output-dir <directory>`. Optional `--gemma-model`, `--kimi-model`,
 `--qwen-model` and `--image-dir` select existing local fixtures. CI uses the
 original cache paths and does not silently download or replace input data.
+
+Binary fingerprints include torch_npu Python/shared-library files, torch shared
+libraries, CANN lib64 shared libraries, OPP shared libraries and Matmul-related
+source/config/object files, plus mounted driver libraries. This is a stated
+selection, not a hash of every image file or every OPP kernel. The model workers
+also record the actually loaded library hashes and effective JIT/HF32/precision
+options after server initialization. Tensor records retain physical format,
+strides, contiguity and storage offsets, including first-layer QKV parameters.
+No option is changed by these observations.
