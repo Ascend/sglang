@@ -1,5 +1,6 @@
 [run]
 source = sglang.srt.hardware_backend.npu
+branch = true
 parallel = true
 relative_files = true
 concurrency = multiprocessing
