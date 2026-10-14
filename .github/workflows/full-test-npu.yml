@@ -102,7 +102,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-1-npu-a3
-      runner_config: linux-aarch64-a3-2
+      runner_config: linux-aarch64-a3-2-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
@@ -118,7 +118,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-2-npu-a3
-      runner_config: linux-aarch64-a3-2
+      runner_config: linux-aarch64-a3-2-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
@@ -134,7 +134,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-4-npu-a3
-      runner_config: linux-aarch64-a3-4
+      runner_config: linux-aarch64-a3-4-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
@@ -150,7 +150,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-8-npu-a3
-      runner_config: linux-aarch64-a3-8
+      runner_config: linux-aarch64-a3-8-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
@@ -166,7 +166,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-16-npu-a3
-      runner_config: linux-aarch64-a3-16
+      runner_config: linux-aarch64-a3-16-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       run_timeout_minutes: '240'
       timeout_per_file: '3600'
