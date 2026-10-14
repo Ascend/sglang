@@ -106,6 +106,9 @@ def main():
         "--acl-import", choices=("never", "before-torch", "after-init"), default="never"
     )
     parser.add_argument("--cpu-only", action="store_true")
+    parser.add_argument("--cube-num", type=int)
+    parser.add_argument("--vector-num", type=int)
+    parser.add_argument("--profile-npu", action="store_true")
     parser.add_argument("--tp", type=int, default=2)
     args = parser.parse_args()
     if args.acl_import == "before-torch":
@@ -120,6 +123,11 @@ def main():
         import torch_npu
 
         torch.npu.set_device(0)
+        if args.cube_num is not None:
+            torch_npu.npu.set_device_limit(
+                0, cube_num=args.cube_num, vector_num=args.vector_num
+            )
+        results["device_limits"] = torch_npu.npu.get_device_limit(0)
         torch.npu.set_compile_mode(jit_compile=False)
         torch_npu._C._npu_setOption({"ALLOW_INTERNAL_FORMAT": "enable"})
         if args.acl_import == "after-init":
@@ -166,6 +174,18 @@ def main():
                 profile = [
                     {"name": e.key, "count": e.count} for e in prof.key_averages()
                 ]
+                if args.profile_npu:
+                    with torch_npu.profiler.profile(
+                        activities=[
+                            torch_npu.profiler.ProfilerActivity.CPU,
+                            torch_npu.profiler.ProfilerActivity.NPU,
+                        ],
+                        on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(
+                            str(root / f"profile-rank-{rank}")
+                        ),
+                        record_shapes=True,
+                    ):
+                        torch.nn.functional.linear(xn, wn, bn).cpu()
         summary = {
             "source_rid": rid,
             "x_sha256": digest(x),

@@ -120,6 +120,8 @@ for layer in map(int, args.layers.split(",")):
             "frame": frame,
             "rank": args.rank,
             "repeats_identical": True,
+            "replay_full_sha256": sha(ys[0]),
+            "replay_full_shape": list(ys[0].shape),
             "captured_tail_sha256": sha(captured),
             "replay_tail_sha256": sha(tail),
             "tail_matches_capture": torch.equal(tail, captured),
