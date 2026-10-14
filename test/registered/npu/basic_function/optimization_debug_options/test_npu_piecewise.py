@@ -27,7 +27,7 @@ class TestPiecewise(GSM8KAscendMixin, CustomTestCase):
         "--trust-remote-code",
         "--torch-compile-max-bs",
         "2",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         "16",
         "--mem-fraction-static",
         0.8,

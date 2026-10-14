@@ -58,7 +58,7 @@ GLM_5_2_W4A8_8P_OTHER_ARGS = [
     0.8,
     "--served-model-name",
     "glm5",
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     4,
     "--max-running-requests",
     8,

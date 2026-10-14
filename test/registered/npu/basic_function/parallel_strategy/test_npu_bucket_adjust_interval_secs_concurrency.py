@@ -121,7 +121,7 @@ MODEL_CONFIG = {
         68000,
         "--max-running-requests",
         128,
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         32,
         "--moe-a2a-backend",
         "deepep",
