@@ -97,6 +97,7 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/qwen/snapshots"
+          export VLM_LAYER_PROBE=1
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
           mkdir -p artifacts/npu-vlm/qwen
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
@@ -115,6 +116,7 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/replay/snapshots"
+          export VLM_LAYER_PROBE=1
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
           mkdir -p artifacts/npu-vlm/replay
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
@@ -150,6 +152,47 @@ jobs:
             cp -r /root/ascend/log/debug/plog artifacts/npu-vlm/plog || true
           fi
 
+      - name: Pack layer probes for replay
+        id: pack_probes
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import tarfile
+          import shutil
+          import json
+          import re
+          failures = []
+          for directory in Path("artifacts/npu-vlm").glob("*/layer-probes"):
+              records = [json.loads(line) for path in directory.glob("*.jsonl")
+                         for line in path.read_text().splitlines()]
+              available = {(r["rank"], r["frame"]["index"], r["module"], r["direction"])
+                           for r in records}
+              weights = next(json.loads(path.read_text())["payload"]
+                             for path in (directory.parent / "snapshots").glob("*.json")
+                             if json.loads(path.read_text())["stage"] == "decoder.loaded_weights")
+              layers = {int(re.search(r"model.layers.(\d+).", key).group(1))
+                        for key in weights if key.startswith("model.layers.")}
+              expected = {(rank, frame, f"layers.{layer}", direction)
+                          for rank in (0, 1) for frame in range(4)
+                          for layer in layers for direction in ("input", "output")}
+              expected |= {(rank, frame, "final_norm", direction)
+                           for rank in (0, 1) for frame in range(4)
+                           for direction in ("input", "output")}
+              missing = sorted(expected - available)
+              (directory.parent / "layer-probe-coverage.json").write_text(
+                  json.dumps({"records": len(records), "missing": missing}, indent=2))
+              if missing:
+                  failures.append(str(directory))
+              target = directory.parent / "layer-probes.tar.gz"
+              with tarfile.open(target, "w:gz") as archive:
+                  archive.add(directory, arcname="layer-probes")
+              shutil.rmtree(directory)
+          if failures:
+              raise RuntimeError(f"Incomplete layer probes: {failures}")
+          PY
+
       - name: Upload diagnostic evidence even on failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -167,10 +210,11 @@ jobs:
           QWEN_OUTCOME: ${{ steps.qwen.outcome }}
           REPLAY_OUTCOME: ${{ steps.replay.outcome }}
           FP32_HEAD_OUTCOME: ${{ steps.fp32_head.outcome }}
+          PACK_PROBES_OUTCOME: ${{ steps.pack_probes.outcome }}
         shell: bash
         run: |
           printf 'prepare=%s baseline=%s qwen=%s replay=%s fp32_head=%s\n' \
             "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$QWEN_OUTCOME" "$REPLAY_OUTCOME" "$FP32_HEAD_OUTCOME"
           [ "$PREPARE_OUTCOME" = success ] && [ "$BASELINE_OUTCOME" = success ] && \
             [ "$QWEN_OUTCOME" = success ] && [ "$REPLAY_OUTCOME" = success ] && \
-            [ "$FP32_HEAD_OUTCOME" = success ]
+            [ "$FP32_HEAD_OUTCOME" = success ] && [ "$PACK_PROBES_OUTCOME" = success ]

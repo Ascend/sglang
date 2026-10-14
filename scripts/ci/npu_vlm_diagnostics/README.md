@@ -76,3 +76,12 @@ selected experiment. Projection observations record the actual flag, input/weigh
 dtypes and result dtype on both ranks; the new phase requires those observations
 in its coverage check. The runtime fingerprint includes the actual chip model,
 Cube/Vector core count and L2 cache size.
+# Layer and operator comparison
+
+`VLM_LAYER_PROBE=1` records the first prefill and three decode forwards for every
+decoder layer. Hidden and residual snapshots retain the last prefill token;
+attention inputs preserve full Q/K/V for exact-shape replay. The raw and replay
+CI phases enable these probes and package them as `layer-probes.tar.gz`.
+Compare runs only after checking matching visual embeddings, weights, and prior
+output token IDs. This instrumentation does not change precision or sampling.
+

@@ -306,6 +306,11 @@ def _decoder_observers(owner):
         return
     import torch
 
+    if os.environ.get("VLM_LAYER_PROBE") == "1":
+        from npu_vlm_layer_probe import install
+
+        install(owner, _FRAME)
+
     weights = {}
     for prefix, module in (("model", owner.model), ("lm_head", owner.lm_head)):
         for name, value in module.named_parameters():

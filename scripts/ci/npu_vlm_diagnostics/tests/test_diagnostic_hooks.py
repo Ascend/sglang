@@ -15,6 +15,7 @@ from sglang.test.test_utils import CustomTestCase
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
 import npu_vlm_diagnostic_hooks as hooks
+import npu_vlm_layer_probe as layer_probe
 
 
 class TestDiagnosticHooks(CustomTestCase):
@@ -43,6 +44,43 @@ class TestDiagnosticHooks(CustomTestCase):
             torch.testing.assert_close(saved[f"value.{key}"], value)
         self.assertEqual(record["payload"]["scalar"]["values"], 3)
 
+    def test_layer_probe_retains_full_attention_inputs_and_prefill_hidden_tail(self):
+        class Attention(torch.nn.Module):
+            def forward(self, q, k, v):
+                return q
+
+        layer = torch.nn.Module()
+        layer.input_layernorm = torch.nn.Identity()
+        layer.self_attn = torch.nn.Module()
+        layer.self_attn.attn = Attention()
+        owner = SimpleNamespace(
+            model=SimpleNamespace(layers=[layer], norm=torch.nn.Identity())
+        )
+        with patch.object(torch.distributed, "get_rank", return_value=0):
+            with patch.dict(
+                os.environ,
+                VLM_DIAGNOSTICS_DIR=str(Path(self.temp.name) / "snapshots"),
+            ):
+                layer_probe.install(owner, hooks._FRAME)
+        frame_token = hooks._FRAME.set({"index": 0, "mode": "prefill"})
+        self.addCleanup(hooks._FRAME.reset, frame_token)
+        q = torch.arange(30, dtype=torch.bfloat16).reshape(5, 6)
+        self.assertIs(layer.input_layernorm(q), q)
+        self.assertIs(layer.self_attn.attn(q, q, q), q)
+        root = Path(self.temp.name) / "layer-probes"
+        norm = torch.load(
+            root / "r0-f0-layers.0.input_layernorm-input.pt", weights_only=True
+        )
+        attn = torch.load(
+            root / "r0-f0-layers.0.self_attn.attn-input.pt", weights_only=True
+        )
+        output = torch.load(
+            root / "r0-f0-layers.0.self_attn.attn-output.pt", weights_only=True
+        )
+        torch.testing.assert_close(norm["args.0"], q[-1:])
+        torch.testing.assert_close(attn["args.0"], q)
+        torch.testing.assert_close(output["result"], q[-1:])
+
     def test_sync_wrapper_preserves_return_identity_and_original_exception(self):
         class Processor:
             model_type = "qwen2_5_vl"
@@ -60,6 +98,46 @@ class TestDiagnosticHooks(CustomTestCase):
             with self.assertRaises(RuntimeError) as caught:
                 Processor().run(failure)
         self.assertIs(caught.exception, failure)
+
+    def test_layer_probe_handles_rotary_module_shared_between_layers(self):
+        rotary = torch.nn.Identity()
+
+        class Layer(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.self_attn = torch.nn.Module()
+                self.self_attn.rotary_emb = rotary
+
+            def forward(self, x):
+                return self.self_attn.rotary_emb(x)
+
+        layers = [Layer(), Layer()]
+        owner = SimpleNamespace(
+            model=SimpleNamespace(layers=layers, norm=torch.nn.Identity())
+        )
+        with patch.object(torch.distributed, "get_rank", return_value=0):
+            with patch.dict(
+                os.environ,
+                VLM_DIAGNOSTICS_DIR=str(Path(self.temp.name) / "snapshots"),
+            ):
+                layer_probe.install(owner, hooks._FRAME)
+        token = hooks._FRAME.set({"index": 0, "mode": "prefill"})
+        self.addCleanup(hooks._FRAME.reset, token)
+        x = torch.arange(8, dtype=torch.bfloat16).reshape(2, 4)
+        layers[0](x)
+        layers[1](x + 1)
+        root = Path(self.temp.name) / "layer-probes"
+        for index in (0, 1):
+            saved = torch.load(
+                root / f"r0-f0-layers.{index}.self_attn.rotary_emb-output.pt",
+                weights_only=True,
+            )
+            torch.testing.assert_close(saved["result"], (x + index)[-1:])
+        records = [
+            json.loads(line)
+            for line in (root / "rank-0.jsonl").read_text().splitlines()
+        ]
+        self.assertEqual(sum(r["module"].endswith("rotary_emb") for r in records), 4)
 
     def test_unwritable_artifact_directory_never_changes_runtime_result(self):
         class Processor:
