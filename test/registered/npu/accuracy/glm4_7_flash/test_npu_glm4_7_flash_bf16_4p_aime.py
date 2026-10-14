@@ -6,7 +6,12 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 from sglang.test.ascend.e2e.test_npu_performance_utils import GLM_4_7_FLASH_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3600, suite="debug-full-acc-4-npu-a3", nightly=True)
+register_npu_ci(
+    est_time=3600,
+    suite="debug-full-acc-4-npu-a3",
+    nightly=True,
+    disabled="debug new aime cases only",
+)
 
 ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
