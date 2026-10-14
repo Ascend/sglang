@@ -157,6 +157,51 @@ class TestDiagnosticHooks(CustomTestCase):
         finally:
             hooks._FRAME.reset(frame)
 
+    def test_focused_snapshots_keep_vision_replay_and_qkv_tensors(self):
+        with patch.dict(os.environ, VLM_DIAGNOSTICS_TENSOR_SCOPE="qkv"):
+            with contextlib.redirect_stdout(io.StringIO()):
+                for stage in (
+                    "tokenizer_send.input",
+                    "vision.output",
+                    "qkv.operator.input",
+                ):
+                    hooks.emit(stage, {"result": torch.ones(2, device="cpu")})
+        records = {
+            json.loads(p.read_text())["stage"]: json.loads(p.read_text())
+            for p in Path(self.temp.name).glob("*.json")
+        }
+        self.assertNotIn("tensor_file", records["tokenizer_send.input"])
+        for stage in ("vision.output", "qkv.operator.input"):
+            self.assertTrue(
+                (Path(self.temp.name) / records[stage]["tensor_file"]).is_file()
+            )
+
+    def test_lm_head_logging_preserves_fp32_result_and_context(self):
+        class Processor:
+            use_fp32_lm_head = True
+
+            def _compute_lm_head(self, hidden_states, lm_head):
+                self.output = hidden_states.float() @ lm_head.weight.float().t()
+                return self.output
+
+        hooks._wrap_lm_head_projection(Processor)
+        processor = Processor()
+        x = torch.ones(1, 2, dtype=torch.bfloat16)
+        head = SimpleNamespace(weight=torch.ones(3, 2, dtype=torch.bfloat16))
+        token = hooks._FRAME.set({"index": 3, "mode": "DECODE"})
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = processor._compute_lm_head(x, head)
+            self.assertIs(result, processor.output)
+            self.assertEqual(result.dtype, torch.float32)
+            self.assertEqual(hooks._FRAME.get()["index"], 3)
+            record = json.loads(next(Path(self.temp.name).glob("*.json")).read_text())
+            self.assertTrue(record["payload"]["enable_fp32_lm_head"])
+            self.assertEqual(record["payload"]["result"]["dtype"], "torch.float32")
+            self.assertTrue((Path(self.temp.name) / record["tensor_file"]).is_file())
+        finally:
+            hooks._FRAME.reset(token)
+
     def test_decoder_observers_preserve_results_exceptions_and_outer_context(self):
         """Hooks must remain observational even when artifact writes fail."""
 

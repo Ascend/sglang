@@ -167,6 +167,7 @@ def main():
     for model in ("gemma", "kimi", "qwen"):
         parser.add_argument(f"--{model}-model")
     parser.add_argument("--image-dir", type=Path)
+    parser.add_argument("--enable-fp32-lm-head", action="store_true")
     args = parser.parse_args()
     root = args.output_dir.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -188,6 +189,15 @@ def main():
     provenance(args.case, utils, root)
     namespace = runpy.run_path(str(args.case), run_name="vlm_diagnostic_case")
     base = namespace["VLMInputTestBase"]
+    if args.enable_fp32_lm_head:
+        original_engine = base.setUp.__globals__["Engine"]
+
+        def fp32_head_engine(*engine_args, **engine_kwargs):
+            engine_kwargs["enable_fp32_lm_head"] = True
+            return original_engine(*engine_args, **engine_kwargs)
+
+        base.setUp.__globals__["Engine"] = fp32_head_engine
+
     original_verify = base.verify_response
     original_processor = base.get_processor_output
     responses = []
@@ -259,6 +269,7 @@ def main():
     result = unittest.TextTestRunner(verbosity=2, failfast=False).run(suite)
     summary = {
         "mode": args.mode,
+        "experiment": {"enable_fp32_lm_head": args.enable_fp32_lm_head},
         "elapsed": time.time() - start,
         "successful": result.wasSuccessful(),
         "tests_run": result.testsRun,
@@ -293,6 +304,8 @@ def main():
             "decoder_component.input",
             "decoder_component.output",
         }
+        if args.enable_fp32_lm_head:
+            required.add("lm_head_projection.output")
         stages = {record["stage"] for record in records}
         per_rank_missing = {
             str(rank): sorted(

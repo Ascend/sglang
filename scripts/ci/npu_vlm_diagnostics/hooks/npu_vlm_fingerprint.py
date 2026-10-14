@@ -131,6 +131,9 @@ def runtime_manifest():
             result[name] = query()
         except Exception as error:
             result[name] = {"error": repr(error)}
+    result["device_properties"] = str(
+        torch.npu.get_device_properties(torch.npu.current_device())
+    )
     result["env"] = {
         name: os.environ.get(name)
         for name in (

@@ -32,6 +32,7 @@ _MODULES = {
     "sglang.srt.managers.scheduler",
     "sglang.srt.managers.mm_utils",
     "sglang.srt.models.qwen2_5_vl",
+    "sglang.srt.layers.logits_processor",
 }
 _FIELDS = (
     "input_ids",
@@ -132,6 +133,14 @@ def emit(stage, payload, owner=None, *, save_tensors=True):
     try:
         import torch
 
+        if os.environ.get("VLM_DIAGNOSTICS_TENSOR_SCOPE") == "qkv":
+            save_tensors = save_tensors and stage in {
+                "vision.output",
+                "qkv.operator.input",
+                "qkv.operator.output",
+                "model_forward.output",
+                "lm_head_projection.output",
+            }
         root = Path(os.environ["VLM_DIAGNOSTICS_DIR"])
         root.mkdir(parents=True, exist_ok=True)
         stamp = f"{time.time_ns()}-{os.getpid()}-{next(_SEQUENCE)}"
@@ -197,6 +206,34 @@ def emit(stage, payload, owner=None, *, save_tensors=True):
         print(
             f"NPU_VLM_DIAG_ERROR {stage}: {type(error).__name__}: {error}", flush=True
         )
+
+
+def _wrap_lm_head_projection(cls):
+    original = cls._compute_lm_head
+
+    @functools.wraps(original)
+    def wrapped(self, hidden_states, lm_head, *args, **kwargs):
+        result = original(self, hidden_states, lm_head, *args, **kwargs)
+        frame = _FRAME.get()
+        if frame is not None and frame["index"] <= 8:
+            emit(
+                "lm_head_projection.output",
+                {
+                    "frame": frame,
+                    "enable_fp32_lm_head": self.use_fp32_lm_head,
+                    "input_dtype": str(hidden_states.dtype),
+                    "weight_dtype": str(
+                        getattr(getattr(lm_head, "weight", None), "dtype", None)
+                    ),
+                    "layer_type": type(lm_head).__name__,
+                    "input": hidden_states,
+                    "result": result,
+                },
+                save_tensors=frame["index"] == 3,
+            )
+        return result
+
+    cls._compute_lm_head = wrapped
 
 
 def _is_qwen(owner):
@@ -613,7 +650,9 @@ def _wrap_method(cls, name):
 
 
 def _instrument(module):
-    if module.__name__.endswith("base_processor"):
+    if module.__name__.endswith("logits_processor"):
+        _wrap_lm_head_projection(module.LogitsProcessor)
+    elif module.__name__.endswith("base_processor"):
         cls = module.BaseMultimodalProcessor
         for name in ("process_mm_data", "_fast_image_processor_device"):
             _wrap_method(cls, name)

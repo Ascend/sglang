@@ -3,23 +3,25 @@
 This temporary reproduction workflow runs B100 on `linux-aarch64-a3-2` using
 the container's installed SGLang and the original VLM test assertions.
 
-Five separate processes run sequentially on the same allocation:
+Four separate processes run sequentially on the same allocation:
 
 1. Independent Qwen raw-image baseline without internal hooks.
 2. Independent Qwen raw-image case with downstream observations.
 3. Replay its captured vision embedding through the original precomputed helper.
-4. Replay captured first-layer QKV input using verified checkpoint TP shards,
-   comparing NPU linear, separate Matmul/bias and FP64/FP32 CPU references.
-5. Repeat the isolated operator in a fresh process with ACL imported first.
+4. The original raw-image case with SGLang's native `enable_fp32_lm_head=True`.
 
-Earlier runs already compared the full nine cases, all Qwen input paths and
-independent raw-image cases. This run focuses on the first QKV numeric divergence.
-Only QKV X/Y snapshots are uploaded; model weights are reconstructed locally and
-verified against the loaded model's parameter hashes before an operator replay.
-ACL import order can be tested in isolated processes with replay_qkv.py
---acl-import before-torch|after-init; the default never forces an ACL import.
-The reference metrics diagnose rounding, and do not introduce an acceptance
-threshold or replace any original model assertion.
+The fourth phase changes only the vocabulary projection precision. Its original
+semantic assertions remain unchanged; all original failures keep the final job
+red. This is a diagnostic comparison, not a claim that default CI is fixed.
+Earlier runs compared all nine cases, the three Qwen input paths, verified QKV
+operator replays with FP64 references and ACL import order. This run tests the
+near-tied generation logits without forcing tokens or model activations.
+
+`replay_qkv.py` remains available for standalone operator analysis with verified
+checkpoint shards. Only activations are uploaded; checkpoint weights stay local.
+`VLM_DIAGNOSTICS_TENSOR_SCOPE=qkv` retains vision output (needed for replay),
+QKV X/Y, model logits and the first divergent LM-head projection snapshots.
+Other stages retain their hashes/statistics, reducing duplicate artifact data.
 
 Each phase records responses, stop reasons, output token IDs, software versions,
 actual imported source hashes, model configuration/tokenizer hashes, weight
@@ -68,3 +70,9 @@ also record the actually loaded library hashes and effective JIT/HF32/precision
 options after server initialization. Tensor records retain physical format,
 strides, contiguity and storage offsets, including first-layer QKV parameters.
 No option is changed by these observations.
+
+`run_case.py --enable-fp32-lm-head` adds the native Engine flag to its explicitly
+selected experiment. Projection observations record the actual flag, input/weight
+dtypes and result dtype on both ranks; the new phase requires those observations
+in its coverage check. The runtime fingerprint includes the actual chip model,
+Cube/Vector core count and L2 cache size.
