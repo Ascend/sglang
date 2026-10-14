@@ -78,6 +78,14 @@ in its coverage check. The runtime fingerprint includes the actual chip model,
 Cube/Vector core count and L2 cache size.
 # Layer and operator comparison
 
+The frozen-input job reuses artifact `npu-vlm-diagnostics-38525733697-1`, computes
+FP64 attention references on CPU, and exports a compact probe archive. It also
+replays the deployed flash-qlens/paged kernels at default process resources and
+20 Cube / 40 Vector resources. The profiler must verify the actual block count;
+a successful resource-limit API call alone does not establish a hardware-path
+change. These operator experiments preserve the recorded failing case and do
+not enable FP32 LM-head projection.
+
 `VLM_LAYER_PROBE=1` records the first prefill and three decode forwards for every
 decoder layer. Hidden and residual snapshots retain the last prefill token;
 attention inputs preserve full Q/K/V for exact-shape replay. The raw and replay

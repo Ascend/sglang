@@ -15,8 +15,82 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  frozen-input-operators:
+    name: Frozen VLM inputs and NPU hardware path replay
+    runs-on: linux-aarch64-a3-2
+    timeout-minutes: 45
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100
+    env:
+      ASCEND_RT_VISIBLE_DEVICES: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download immutable failing run snapshots
+        uses: actions/download-artifact@v4
+        with:
+          name: npu-vlm-diagnostics-38525733697-1
+          run-id: 38525733697
+          github-token: ${{ github.token }}
+          path: source-artifact
+      - name: Unpack and verify original layer coverage
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import tarfile
+          from pathlib import Path
+          root = Path("source-artifact/replay")
+          coverage = json.loads((root / "layer-probe-coverage.json").read_text())
+          assert not coverage["missing"]
+          assert json.loads((root / "result.json").read_text())["successful"] is False
+          with tarfile.open(root / "layer-probes.tar.gz") as archive:
+              archive.extractall(root, filter="data")
+          PY
+      - name: Compute CPU FP64 references for captured attention inputs
+        shell: bash
+        run: |
+          mkdir -p operator-artifacts
+          python scripts/ci/npu_vlm_diagnostics/analyze_layers.py \
+            --local source-artifact/replay/layer-probes --local-label ci \
+            --output operator-artifacts/ci-attention-reference.json
+      - name: Replay actual attention kernels with default hardware resources
+        shell: bash
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          python scripts/ci/npu_vlm_diagnostics/replay_attention.py \
+            --source source-artifact/replay/layer-probes \
+            --output operator-artifacts/attention-default --layers 0 --profile
+      - name: Replay same inputs with process limits matching 88 core counts
+        shell: bash
+        run: |
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          python scripts/ci/npu_vlm_diagnostics/replay_attention.py \
+            --source source-artifact/replay/layer-probes \
+            --output operator-artifacts/attention-20-40 --layers 0 --profile \
+            --cube-num 20 --vector-num 40
+      - name: Export compact immutable probes and provenance
+        shell: bash
+        run: |
+          python scripts/ci/npu_vlm_diagnostics/compact_layer_probes.py \
+            --source source-artifact/replay/layer-probes --output operator-artifacts
+          cp source-artifact/replay/{result,responses,provenance}.json operator-artifacts/
+          cp -r source-artifact/machine operator-artifacts/source-machine
+          npu-smi info > operator-artifacts/replay-machine.txt
+          python scripts/ci/npu_vlm_diagnostics/hooks/npu_vlm_fingerprint.py \
+            --output operator-artifacts/replay-fingerprint.json
+      - name: Upload operator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npu-vlm-operators-${{ github.run_id }}
+          path: operator-artifacts
+          retention-days: 14
+
   single-node-poc:
     name: VLM input format diagnostics
     runs-on: linux-aarch64-a3-2
