@@ -206,6 +206,27 @@ jobs:
           RC=/sgl-workspace/sglang/python/sglang/srt/managers/scheduler_components/request_receiver.py
           echo "--- request_receiver.py L133-139 (on-disk source) ---"
           sed -n '133,139p' "${RC}" || true
+          echo "--- runtime diagnostics: bytecode + pycache timestamps ---"
+          python3 - <<'PYEOF' 2>&1 || true
+          import sys
+          sys.path.insert(0, "/sgl-workspace/sglang/python")
+          try:
+              import sglang.srt.managers.scheduler_components.request_receiver as rr
+              import dis, io
+              print("module file:", rr.__file__)
+              buf = io.StringIO()
+              dis.dis(rr._pull_raw_reqs, file=buf)
+              print("_pull_raw_reqs bytecode contains except handler:",
+                    "ExceptHandler" in buf.getvalue())
+              import zmq
+              print("zmq Again MRO:", zmq.error.Again.__mro__)
+          except Exception as e:
+              print("diag import failed (non-fatal):", repr(e))
+          import os, glob
+          d = os.path.dirname("/sgl-workspace/sglang/python/sglang/srt/managers/scheduler_components/__pycache__/")
+          for p in glob.glob(d + "request_receiver*"):
+              print("pyc entry:", p)
+          PYEOF
           echo "--- removing stale __pycache__ under /sgl-workspace/sglang/python ---"
           find /sgl-workspace/sglang/python -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
           echo "done"
