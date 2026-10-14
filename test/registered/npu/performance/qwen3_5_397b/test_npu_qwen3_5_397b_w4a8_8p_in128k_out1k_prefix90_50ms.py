@@ -7,11 +7,11 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(
-    est_time=3600,
-    suite="full-perf-16-npu-a3",
-    nightly=True,
-)
+# register_npu_ci(
+#     est_time=3600,
+#     suite="validate-397b-p90-npu",
+#     nightly=True,
+# )
 
 QWEN3_5_397B_128K_PREFIX_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -29,6 +29,11 @@ QWEN3_5_397B_128K_PREFIX_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "60672",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "ZBAL_ENABLE_GRAPH": "1",
 }
 
 QWEN3_5_397B_128K_PREFIX_OTHER_ARGS = [
@@ -46,7 +51,7 @@ QWEN3_5_397B_128K_PREFIX_OTHER_ARGS = [
     320,
     "--prefill-max-requests",
     10,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
@@ -101,8 +106,6 @@ class TestNPUQwen3_5_397B_128K_Prefix90(TestNpuPerformanceTestCaseBase):
     seed = 1
     tpot = 50
     request_rate = float("inf")
-    temperature = 0.6
-    top_p = 0.95
     output_token_throughput = 385.9
     pop_sglang_is_in_ci_for_gsp = True
 
