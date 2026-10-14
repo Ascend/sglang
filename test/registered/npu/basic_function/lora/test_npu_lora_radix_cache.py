@@ -22,8 +22,8 @@ PROMPTS = [
     ### Answer:
     """,
 ]
-# register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
-register_npu_ci(est_time=300, suite="validate-cleanup-2-npu", nightly=True)
+register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
+# register_npu_ci(est_time=300, suite="validate-cleanup-2-npu", nightly=True)
 
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"

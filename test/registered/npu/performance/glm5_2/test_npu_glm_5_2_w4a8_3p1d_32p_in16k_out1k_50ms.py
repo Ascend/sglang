@@ -8,6 +8,7 @@ from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
     CONFIGMAP_NAME,
     NAMESPACE,
     NIC_NAME,
+    PREFILL_DECODE_PORT,
     query_configmap,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -49,6 +50,7 @@ GLM_5_2_PD_SEP_PREFILL_ENVS = {
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
     "SGLANG_PP_LAYER_PARTITION": "18,20,24,16",
     "DEEP_USE_ALLTOALL_MODE": "1",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
 }
 
 GLM_5_2_PD_SEP_DECODE_ENVS = {
@@ -102,8 +104,8 @@ GLM_5_2_PD_SEP_PREFILL_ARGS = [
     "--disable-cuda-graph",
     "--dtype",
     "bfloat16",
-    # "--speculative-draft-model-quantization",
-    # "unquant",
+    "--speculative-draft-model-quantization",
+    "unquant",
     "--enable-prefill-cp",
     "--cp-strategy",
     "zigzag",
@@ -166,8 +168,8 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     "bfloat16",
     "--load-balance-method",
     "round_robin",
-    # "--speculative-draft-model-quantization",
-    # "unquant",
+    "--speculative-draft-model-quantization",
+    "unquant",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -212,7 +214,7 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
             return
         for pod_name, pod_ip in configmap.data.items():
             if "prefill" in pod_name or "decode" in pod_name:
-                url = f"http://{pod_ip}:9999/flush_cache"
+                url = f"http://{pod_ip}:{PREFILL_DECODE_PORT}/flush_cache"
                 try:
                     subprocess.run(
                         [
