@@ -254,6 +254,60 @@ class TestDiagnosticHooks(CustomTestCase):
                 (Path(self.temp.name) / records[stage]["tensor_file"]).is_file()
             )
 
+    def test_gate_up_capture_is_opt_in_prefill_only_and_retains_all_rows(self):
+        class TupleLinear(torch.nn.Linear):
+            def forward(self, x):
+                return super().forward(x), None
+
+        class Model(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model = torch.nn.Module()
+                layer = torch.nn.Module()
+                layer.mlp = torch.nn.Module()
+                layer.mlp.gate_up_proj = TupleLinear(2, 6, bias=False)
+                self.model.layers = torch.nn.ModuleList([layer])
+                self.lm_head = torch.nn.Linear(2, 3)
+
+        model = Model()
+        projection = model.model.layers[0].mlp.gate_up_proj
+        x = torch.arange(10, dtype=torch.float32).reshape(5, 2)
+        expected = projection(x)[0].clone()
+        with contextlib.redirect_stdout(io.StringIO()):
+            hooks._decoder_observers(model)
+            with patch.dict(os.environ, VLM_DIAGNOSTICS_TENSOR_SCOPE="qkv"):
+                for enabled, index in (("0", 0), ("1", 1), ("1", 0)):
+                    with patch.dict(os.environ, VLM_GATE_UP_PROBE=enabled):
+                        token = hooks._FRAME.set({"index": index, "mode": "EXTEND"})
+                        try:
+                            actual = projection(x)
+                            torch.testing.assert_close(actual[0], expected)
+                            self.assertIsNone(actual[1])
+                        finally:
+                            hooks._FRAME.reset(token)
+        records = [
+            json.loads(path.read_text()) for path in Path(self.temp.name).glob("*.json")
+        ]
+        captures = [
+            record
+            for record in records
+            if record["stage"].startswith("gate_up.operator.")
+        ]
+        self.assertEqual(len(captures), 2)
+        for record in captures:
+            self.assertEqual(record["payload"]["frame"]["index"], 0)
+            saved = torch.load(
+                Path(self.temp.name) / record["tensor_file"], weights_only=True
+            )
+            key, reference = (
+                ("value.x", x)
+                if record["stage"].endswith("input")
+                else ("value.y", expected)
+            )
+            self.assertEqual(set(saved), {key})
+            self.assertEqual(saved[key].shape[0], 5)
+            torch.testing.assert_close(saved[key], reference)
+
     def test_lm_head_logging_preserves_fp32_result_and_context(self):
         class Processor:
             use_fp32_lm_head = True

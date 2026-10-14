@@ -138,6 +138,8 @@ def emit(stage, payload, owner=None, *, save_tensors=True):
                 "vision.output",
                 "qkv.operator.input",
                 "qkv.operator.output",
+                "gate_up.operator.input",
+                "gate_up.operator.output",
                 "model_forward.output",
                 "lm_head_projection.output",
             }
@@ -348,6 +350,20 @@ def _decoder_observers(owner):
                 and label == "layers.0.self_attn.qkv_proj"
             ):
                 emit("qkv.operator.input", {"frame": frame, "x": args[0]})
+            if (
+                frame is not None
+                and frame["index"] == 0
+                and label == "layers.0.mlp.gate_up_proj"
+                and os.environ.get("VLM_GATE_UP_PROBE") == "1"
+            ):
+                emit(
+                    "gate_up.operator.input",
+                    {
+                        "frame": frame,
+                        "module": label,
+                        "x": args[0] if args else kwargs["x"],
+                    },
+                )
             if frame is not None:
                 emit(
                     stage + ".input",
@@ -379,6 +395,20 @@ def _decoder_observers(owner):
                 and label == "layers.0.self_attn.qkv_proj"
             ):
                 emit("qkv.operator.output", {"frame": frame, "y": result[0]})
+            if (
+                frame is not None
+                and frame["index"] == 0
+                and label == "layers.0.mlp.gate_up_proj"
+                and os.environ.get("VLM_GATE_UP_PROBE") == "1"
+            ):
+                emit(
+                    "gate_up.operator.output",
+                    {
+                        "frame": frame,
+                        "module": label,
+                        "y": result[0] if isinstance(result, (tuple, list)) else result,
+                    },
+                )
             if frame is not None:
                 emit(
                     stage + ".output",

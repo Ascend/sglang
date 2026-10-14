@@ -18,138 +18,6 @@ permissions:
   actions: read
 
 jobs:
-  frozen-input-operators:
-    name: Frozen VLM inputs and NPU hardware path replay
-    runs-on: linux-aarch64-a3-2
-    timeout-minutes: 45
-    container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100
-    env:
-      ASCEND_RT_VISIBLE_DEVICES: "0"
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download immutable failing run snapshots
-        uses: actions/download-artifact@v4
-        with:
-          name: npu-vlm-diagnostics-38525733697-1
-          run-id: 38525733697
-          github-token: ${{ github.token }}
-          path: source-artifact
-      - name: Unpack and verify original layer coverage
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json
-          import tarfile
-          from pathlib import Path
-          root = Path("source-artifact/replay")
-          coverage = json.loads((root / "layer-probe-coverage.json").read_text())
-          assert not coverage["missing"]
-          assert json.loads((root / "result.json").read_text())["successful"] is False
-          with tarfile.open(root / "layer-probes.tar.gz") as archive:
-              archive.extractall(root, filter="data")
-          PY
-      - name: Compute CPU FP64 references for captured attention inputs
-        shell: bash
-        run: |
-          mkdir -p operator-artifacts
-          python scripts/ci/npu_vlm_diagnostics/analyze_layers.py \
-            --local source-artifact/replay/layer-probes --local-label ci \
-            --output operator-artifacts/ci-attention-reference.json
-      - name: Replay actual attention kernels with default hardware resources
-        shell: bash
-        run: |
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          python scripts/ci/npu_vlm_diagnostics/replay_attention.py \
-            --source source-artifact/replay/layer-probes \
-            --output operator-artifacts/attention-default --layers 0 --profile
-      - name: Replay same inputs with process limits matching 88 core counts
-        shell: bash
-        run: |
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          python scripts/ci/npu_vlm_diagnostics/replay_attention.py \
-            --source source-artifact/replay/layer-probes \
-            --output operator-artifacts/attention-20-40 --layers 0 --profile \
-            --cube-num 20 --vector-num 40
-      - name: Replay full prefill QKV under both core configurations
-        shell: bash
-        run: |
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from modelscope import snapshot_download
-          p = Path("/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-VL-3B-Instruct")
-          if not (p / "model.safetensors.index.json").exists():
-              p = Path(snapshot_download("Qwen/Qwen2.5-VL-3B-Instruct"))
-          Path("operator-artifacts/model-path.txt").write_text(str(p))
-          PY
-          model_path=$(cat operator-artifacts/model-path.txt)
-          python scripts/ci/npu_vlm_diagnostics/replay_qkv.py \
-            --source-dir source-artifact/replay --model "$model_path" \
-            --output-dir operator-artifacts/qkv-default --profile-npu
-          python scripts/ci/npu_vlm_diagnostics/replay_qkv.py \
-            --source-dir source-artifact/replay --model "$model_path" \
-            --output-dir operator-artifacts/qkv-20-40 --profile-npu \
-            --cube-num 20 --vector-num 40
-      - name: Isolate decode down projection local products and sum
-        shell: bash
-        run: |
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          model_path=$(cat operator-artifacts/model-path.txt)
-          python scripts/ci/npu_vlm_diagnostics/replay_down_projection.py \
-            --source source-artifact/replay/layer-probes --model "$model_path" \
-            --output operator-artifacts/down-default --profile
-          python scripts/ci/npu_vlm_diagnostics/replay_down_projection.py \
-            --source source-artifact/replay/layer-probes --model "$model_path" \
-            --output operator-artifacts/down-20-40 --profile \
-            --cube-num 20 --vector-num 40
-      - name: Report actual profiled kernels
-        if: always()
-        shell: bash
-        run: |
-          python - <<'PY'
-          import csv
-          import json
-          from pathlib import Path
-          for path in sorted(Path("operator-artifacts").rglob("kernel_details.csv")):
-              for row in csv.DictReader(path.open()):
-                  print("VLM_PROFILE_KERNEL", json.dumps({"file": str(path), "row": row}))
-          PY
-      - name: Export compact immutable probes and provenance
-        shell: bash
-        run: |
-          python scripts/ci/npu_vlm_diagnostics/compact_layer_probes.py \
-            --source source-artifact/replay/layer-probes --output operator-artifacts \
-            --full-attention-layers 0,1
-          cp source-artifact/replay/{result,responses,provenance}.json operator-artifacts/
-          cp -r source-artifact/machine operator-artifacts/source-machine
-          npu-smi info > operator-artifacts/replay-machine.txt
-          python scripts/ci/npu_vlm_diagnostics/hooks/npu_vlm_fingerprint.py \
-            --output operator-artifacts/replay-fingerprint.json
-      - name: Upload compact cross-machine replay inputs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: npu-vlm-cache-probes-${{ github.run_id }}
-          path: |
-            operator-artifacts/layer-probes-compact.tar.gz
-            operator-artifacts/ci-attention-reference.*
-            operator-artifacts/down-default/result.json
-            operator-artifacts/down-20-40/result.json
-          retention-days: 14
-      - name: Upload operator evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: npu-vlm-operators-${{ github.run_id }}
-          path: operator-artifacts
-          retention-days: 14
-
   single-node-poc:
     name: VLM input format diagnostics
     runs-on: linux-aarch64-a3-2
@@ -230,7 +98,6 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/qwen/snapshots"
-          export VLM_LAYER_PROBE=1
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
           mkdir -p artifacts/npu-vlm/qwen
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
@@ -249,7 +116,6 @@ jobs:
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/replay/snapshots"
-          export VLM_LAYER_PROBE=1
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
           mkdir -p artifacts/npu-vlm/replay
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
@@ -270,12 +136,102 @@ jobs:
           export VLM_DEVICE_LIMIT_CUBE=20
           export VLM_DEVICE_LIMIT_VECTOR=40
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/core-replay/snapshots"
+          export VLM_GATE_UP_PROBE=1
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
           mkdir -p artifacts/npu-vlm/core-replay
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
             --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/core-replay \
             2>&1 | tee artifacts/npu-vlm/core-replay/console.log
+
+      - name: Replay frozen prefill gate-up at 20-40 resources
+        id: gate_up_replay
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -eo pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          set -u
+          mkdir -p artifacts/npu-vlm/gate-up-20-40
+          python - <<'INNER'
+          from pathlib import Path
+          from modelscope import snapshot_download
+          model = Path("/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-VL-3B-Instruct")
+          if not (model / "model.safetensors.index.json").exists():
+              model = Path(snapshot_download("Qwen/Qwen2.5-VL-3B-Instruct"))
+          Path("artifacts/npu-vlm/gate-up-20-40/model-path.txt").write_text(str(model))
+          INNER
+          model_path=$(cat artifacts/npu-vlm/gate-up-20-40/model-path.txt)
+          ASCEND_GLOBAL_LOG_LEVEL=0 python -u scripts/ci/npu_vlm_diagnostics/replay_gate_up.py \
+            --source artifacts/npu-vlm/core-replay/snapshots --model "$model_path" \
+            --output artifacts/npu-vlm/gate-up-20-40 \
+            --cube-num 20 --vector-num 40 --profile --require-match \
+            2>&1 | tee artifacts/npu-vlm/gate-up-20-40/console.log
+
+      - name: Export exact gate-up replay inputs and profiled kernels
+        id: export_gate_up
+        if: always() && steps.prepare.outcome == 'success'
+        shell: bash
+        run: |
+          python - <<'INNER'
+          import csv
+          import json
+          import re
+          import shutil
+          from pathlib import Path
+          source = Path("artifacts/npu-vlm/core-replay/snapshots")
+          target = Path("artifacts/npu-vlm/gate-up-frozen/snapshots")
+          target.mkdir(parents=True, exist_ok=True)
+          counts = {}
+          stages = {"gate_up.operator.input", "gate_up.operator.output", "decoder.loaded_weights", "runtime.fingerprint"}
+          for path in sorted(source.glob("*.json")):
+              record = json.loads(path.read_text())
+              stage = record["stage"]
+              if stage not in stages:
+                  continue
+              key = (stage, record["rank"])
+              counts[key] = counts.get(key, 0) + 1
+              shutil.copy2(path, target / path.name)
+              if record.get("tensor_file"):
+                  name = record["tensor_file"]
+                  shutil.copy2(path.parent / name, target / name)
+          expected = {(stage, rank) for stage in stages for rank in (0, 1)}
+          assert set(counts) == expected and all(v == 1 for v in counts.values()), counts
+          (target.parent / "coverage.json").write_text(json.dumps([
+              {"stage": stage, "rank": rank, "records": count}
+              for (stage, rank), count in sorted(counts.items())], indent=2))
+          runtime_file = Path("artifacts/npu-vlm/gate-up-20-40/runtime.json")
+          if runtime_file.exists():
+              pid = str(json.loads(runtime_file.read_text())["pid"])
+              plog_output = Path("artifacts/npu-vlm/gate-up-20-40/plog")
+              plog_output.mkdir(exist_ok=True)
+              files = []
+              for path in Path("/root/ascend/log").glob("*/plog/*"):
+                  if path.is_file() and re.search(rf"(?:^|[-_]){pid}(?:[-_.]|$)", path.name):
+                      name = path.parent.parent.name + "-" + path.name
+                      shutil.copy2(path, plog_output / name)
+                      files.append({"file": name, "bytes": path.stat().st_size})
+              coverage = {"pid": pid, "matched_files": files, "available": bool(files)}
+              (plog_output / "coverage.json").write_text(json.dumps(coverage, indent=2))
+              print("VLM_GATE_UP_PLOG", json.dumps(coverage))
+          for path in sorted(Path("artifacts/npu-vlm/gate-up-20-40").rglob("kernel_details.csv")):
+              for row in csv.DictReader(path.open()):
+                  print("VLM_PROFILE_KERNEL", json.dumps({"file": str(path), "row": row}))
+          INNER
+
+      - name: Upload gate-up cross-machine inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npu-vlm-gate-up-${{ github.run_id }}
+          path: |
+            artifacts/npu-vlm/gate-up-frozen
+            artifacts/npu-vlm/gate-up-20-40
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Original Qwen raw image with BF16 and 20-40 process core limits
         id: core_raw
@@ -386,6 +342,8 @@ jobs:
           CORE_REPLAY_OUTCOME: ${{ steps.core_replay.outcome }}
           CORE_RAW_OUTCOME: ${{ steps.core_raw.outcome }}
           PACK_PROBES_OUTCOME: ${{ steps.pack_probes.outcome }}
+          GATE_UP_REPLAY_OUTCOME: ${{ steps.gate_up_replay.outcome }}
+          EXPORT_GATE_UP_OUTCOME: ${{ steps.export_gate_up.outcome }}
         shell: bash
         run: |
           printf 'prepare=%s baseline=%s qwen=%s replay=%s fp32_head=%s\n' \
@@ -393,4 +351,5 @@ jobs:
           [ "$PREPARE_OUTCOME" = success ] && [ "$BASELINE_OUTCOME" = success ] && \
             [ "$QWEN_OUTCOME" = success ] && [ "$REPLAY_OUTCOME" = success ] && \
             [ "$FP32_HEAD_OUTCOME" = success ] && [ "$PACK_PROBES_OUTCOME" = success ] && \
-            [ "$CORE_REPLAY_OUTCOME" = success ] && [ "$CORE_RAW_OUTCOME" = success ]
+            [ "$CORE_REPLAY_OUTCOME" = success ] && [ "$CORE_RAW_OUTCOME" = success ] && \
+            [ "$GATE_UP_REPLAY_OUTCOME" = success ] && [ "$EXPORT_GATE_UP_OUTCOME" = success ]
