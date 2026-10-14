@@ -114,6 +114,49 @@ class TestDiagnosticHooks(CustomTestCase):
         self.assertEqual(item.offsets, [(15, 294)])
         torch.testing.assert_close(item.feature, feature)
 
+    def test_qkv_capture_excludes_checkpoint_parameters_and_preserves_output(self):
+        class TupleLinear(torch.nn.Linear):
+            def forward(self, x):
+                return super().forward(x), None
+
+        class Model(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model = torch.nn.Module()
+                layer = torch.nn.Module()
+                layer.self_attn = torch.nn.Module()
+                layer.self_attn.qkv_proj = TupleLinear(2, 3)
+                self.model.layers = torch.nn.ModuleList([layer])
+                self.lm_head = torch.nn.Linear(2, 3)
+
+        model = Model()
+        x = torch.ones(1, 2)
+        qkv = model.model.layers[0].self_attn.qkv_proj
+        expected = qkv(x)[0].clone()
+        frame = hooks._FRAME.set({"index": 0, "mode": "EXTEND"})
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                hooks._decoder_observers(model)
+                actual = qkv(x)
+            torch.testing.assert_close(actual[0], expected)
+            records = [
+                json.loads(p.read_text()) for p in Path(self.temp.name).glob("*.json")
+            ]
+            for stage, key in (
+                ("qkv.operator.input", "value.x"),
+                ("qkv.operator.output", "value.y"),
+            ):
+                record = next(d for d in records if d["stage"] == stage)
+                saved = torch.load(
+                    Path(self.temp.name) / record["tensor_file"], weights_only=True
+                )
+                self.assertEqual(set(saved), {key})
+                torch.testing.assert_close(
+                    saved[key], x if stage.endswith("input") else actual[0]
+                )
+        finally:
+            hooks._FRAME.reset(frame)
+
     def test_decoder_observers_preserve_results_exceptions_and_outer_context(self):
         """Hooks must remain observational even when artifact writes fail."""
 

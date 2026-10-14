@@ -300,6 +300,12 @@ def _decoder_observers(owner):
     def observe(module, label, stage):
         def before(_module, args, kwargs):
             frame = _FRAME.get()
+            if (
+                frame is not None
+                and frame["index"] == 0
+                and label == "layers.0.self_attn.qkv_proj"
+            ):
+                emit("qkv.operator.input", {"frame": frame, "x": args[0]})
             if frame is not None:
                 emit(
                     stage + ".input",
@@ -325,6 +331,12 @@ def _decoder_observers(owner):
 
         def after(_module, _args, _kwargs, result):
             frame = _FRAME.get()
+            if (
+                frame is not None
+                and frame["index"] == 0
+                and label == "layers.0.self_attn.qkv_proj"
+            ):
+                emit("qkv.operator.output", {"frame": frame, "y": result[0]})
             if frame is not None:
                 emit(
                     stage + ".output",

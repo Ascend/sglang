@@ -3,17 +3,23 @@
 This temporary reproduction workflow runs B100 on `linux-aarch64-a3-2` using
 the container's installed SGLang and the original VLM test assertions.
 
-Four separate processes run sequentially on the same allocation:
+Five separate processes run sequentially on the same allocation:
 
 1. Independent Qwen raw-image baseline without internal hooks.
-2. All three original Qwen input paths with downstream observations.
-3. Independent Qwen raw-image case with the same observations.
-4. Replay that raw case's captured vision embedding through the original
-   precomputed-input helper, with the same assertions.
+2. Independent Qwen raw-image case with downstream observations.
+3. Replay its captured vision embedding through the original precomputed helper.
+4. Replay captured first-layer QKV input using verified checkpoint TP shards,
+   comparing NPU linear, separate Matmul/bias and FP64/FP32 CPU references.
+5. Repeat the isolated operator in a fresh process with ACL imported first.
 
-The preceding run already compared the full nine cases with and without hooks,
-and reproduced the same failure in independent Qwen. This follow-up focuses on
-the failing raw-image path and its two passing processor/embedding controls.
+Earlier runs already compared the full nine cases, all Qwen input paths and
+independent raw-image cases. This run focuses on the first QKV numeric divergence.
+Only QKV X/Y snapshots are uploaded; model weights are reconstructed locally and
+verified against the loaded model's parameter hashes before an operator replay.
+ACL import order can be tested in isolated processes with replay_qkv.py
+--acl-import before-torch|after-init; the default never forces an ACL import.
+The reference metrics diagnose rounding, and do not introduce an acceptance
+threshold or replace any original model assertion.
 
 Each phase records responses, stop reasons, output token IDs, software versions,
 actual imported source hashes, model configuration/tokenizer hashes, weight

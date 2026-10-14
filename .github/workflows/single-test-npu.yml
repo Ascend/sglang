@@ -85,24 +85,6 @@ jobs:
             --mode qwen --output-dir artifacts/npu-vlm/baseline \
             2>&1 | tee artifacts/npu-vlm/baseline/console.log
 
-      - name: Three Qwen input paths with downstream diagnostics
-        id: diagnostics
-        if: always() && steps.prepare.outcome == 'success'
-        continue-on-error: true
-        timeout-minutes: 20
-        shell: bash
-        run: |
-          set -o pipefail
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/full/snapshots"
-          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          mkdir -p artifacts/npu-vlm/full
-          timeout --kill-after=30s 1200s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
-            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --mode qwen-all --output-dir artifacts/npu-vlm/full \
-            2>&1 | tee artifacts/npu-vlm/full/console.log
-
       - name: Independent Qwen raw image with diagnostics
         id: qwen
         if: always() && steps.prepare.outcome == 'success'
@@ -139,6 +121,40 @@ jobs:
             --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/replay \
             2>&1 | tee artifacts/npu-vlm/replay/console.log
 
+      - name: Isolated QKV with high precision reference
+        id: qkv
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          mkdir -p artifacts/npu-vlm/operator
+          timeout --kill-after=15s 300s python -u scripts/ci/npu_vlm_diagnostics/replay_qkv.py \
+            --source-dir artifacts/npu-vlm/qwen \
+            --model /root/.cache/modelscope/hub/models/Qwen/Qwen2.5-VL-3B-Instruct \
+            --output-dir artifacts/npu-vlm/operator \
+            2>&1 | tee artifacts/npu-vlm/operator/console.log
+
+      - name: Isolated QKV with ACL imported first
+        id: qkv_acl
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          mkdir -p artifacts/npu-vlm/operator-acl
+          timeout --kill-after=15s 300s python -u scripts/ci/npu_vlm_diagnostics/replay_qkv.py \
+            --source-dir artifacts/npu-vlm/qwen \
+            --model /root/.cache/modelscope/hub/models/Qwen/Qwen2.5-VL-3B-Instruct \
+            --acl-import before-torch --output-dir artifacts/npu-vlm/operator-acl \
+            2>&1 | tee artifacts/npu-vlm/operator-acl/console.log
+
       - name: Collect device and plog evidence
         if: always()
         shell: bash
@@ -163,13 +179,14 @@ jobs:
         env:
           PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
           BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
-          DIAGNOSTICS_OUTCOME: ${{ steps.diagnostics.outcome }}
           QWEN_OUTCOME: ${{ steps.qwen.outcome }}
           REPLAY_OUTCOME: ${{ steps.replay.outcome }}
+          QKV_OUTCOME: ${{ steps.qkv.outcome }}
+          QKV_ACL_OUTCOME: ${{ steps.qkv_acl.outcome }}
         shell: bash
         run: |
-          printf 'prepare=%s baseline=%s full_diagnostics=%s qwen=%s replay=%s\n' \
-            "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$DIAGNOSTICS_OUTCOME" "$QWEN_OUTCOME" "$REPLAY_OUTCOME"
+          printf 'prepare=%s baseline=%s qwen=%s replay=%s qkv=%s qkv_acl=%s\n' \
+            "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$QWEN_OUTCOME" "$REPLAY_OUTCOME" "$QKV_OUTCOME" "$QKV_ACL_OUTCOME"
           [ "$PREPARE_OUTCOME" = success ] && [ "$BASELINE_OUTCOME" = success ] && \
-            [ "$DIAGNOSTICS_OUTCOME" = success ] && [ "$QWEN_OUTCOME" = success ] && \
-            [ "$REPLAY_OUTCOME" = success ]
+            [ "$QWEN_OUTCOME" = success ] && [ "$REPLAY_OUTCOME" = success ] && \
+            [ "$QKV_OUTCOME" = success ] && [ "$QKV_ACL_OUTCOME" = success ]
