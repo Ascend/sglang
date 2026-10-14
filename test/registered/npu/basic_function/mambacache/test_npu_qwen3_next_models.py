@@ -31,7 +31,7 @@ class TestQwen3Next(
         "4",
         "--chunked-prefill-size",
         "1024",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",
         "--mamba-track-interval",
         "16",
@@ -57,7 +57,6 @@ class TestQwen3Next(
                 other_args=cls.other_args,
                 env={
                     "ASCEND_USE_FIA": "1",
-                    "GDN_USE_MEGA_GDN": "1",
                 },
             )
 
