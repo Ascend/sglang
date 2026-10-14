@@ -44,7 +44,7 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     65536,
     "--max-mamba-cache-size",
     640,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
