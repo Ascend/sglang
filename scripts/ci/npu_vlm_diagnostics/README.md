@@ -1,3 +1,13 @@
+## R13: original 24/48-core routing-only comparison
+
+This round keeps the CI runner's original 24 Cube / 48 Vector resources and BF16 model/head. It runs the original raw-image baseline, observed raw-image and frozen-vision controls, then frozen-vision and raw-image arms changing only the CANN MatMul routing budget. No core-limit or FP32-head intervention runs in this workflow revision.
+
+`VLM_CANN_ROUTE_BUDGET=observe` verifies the exact library, Ascend910_9392 and untouched 24/48 resources without changing code. `96` changes the process-private 9392 routing-budget instruction from 192 to 96 MiB before the first model forward, including warmup. It verifies the installed library SHA, original instruction and epilogue, restores page permissions, registers exit restoration, and records each worker's actual resources and unchanged BF16 parameters. Other libraries/devices/resources fail explicitly. This is a version-specific causal diagnostic, not a production fix; installed files remain unchanged.
+
+Frozen gate/up profiles use identical default-CI full inputs and weights with both route settings and no core limits. The observed arm must reproduce its captured output. The compact `npu-vlm-routing-*` artifact includes model logs/results, frame-3 head tensors, all 36-layer boundaries for four forwards, and actual operator launch/tiling logs. Original failed assertions remain failures in job status even when a comparison arm passes. Compare numeric hidden-state differences separately from semantic pass/fail; passing does not imply matching host88 hidden states.
+
+The sections below retain documentation of earlier diagnostics; those scripts remain available, but the 20/40-core and FP32-head phases are not scheduled in R13.
+
 # NPU VLM input diagnostics
 
 This temporary reproduction workflow runs B100 on `linux-aarch64-a3-2` using

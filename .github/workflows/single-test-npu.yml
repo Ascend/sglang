@@ -31,6 +31,7 @@ jobs:
       SGLANG_TEST_MAX_RETRY: "0"
       SGLANG_SET_CPU_AFFINITY: "1"
       VLM_DIAGNOSTICS_TENSOR_SCOPE: qkv
+      VLM_CANN_ROUTE_BUDGET: observe
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -117,14 +118,16 @@ jobs:
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/replay/snapshots"
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          export VLM_GATE_UP_PROBE=1
+          export VLM_LAYER_PROBE=1
           mkdir -p artifacts/npu-vlm/replay
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
             --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/replay \
             2>&1 | tee artifacts/npu-vlm/replay/console.log
 
-      - name: Fixed CI vision with BF16 and 20-40 process core limits
-        id: core_replay
+      - name: Default 24-48 cores BF16 route-replay with only CANN routing budget changed
+        id: route_replay
         if: always() && steps.prepare.outcome == 'success'
         continue-on-error: true
         timeout-minutes: 15
@@ -133,18 +136,40 @@ jobs:
           set -o pipefail
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          export VLM_DEVICE_LIMIT_CUBE=20
-          export VLM_DEVICE_LIMIT_VECTOR=40
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/core-replay/snapshots"
+          unset VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
+          export VLM_CANN_ROUTE_BUDGET=96
+          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/route-replay/snapshots"
           export VLM_GATE_UP_PROBE=1
+          export VLM_LAYER_PROBE=1
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          mkdir -p artifacts/npu-vlm/core-replay
+          mkdir -p artifacts/npu-vlm/route-replay
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/core-replay \
-            2>&1 | tee artifacts/npu-vlm/core-replay/console.log
+            --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/route-replay \
+            2>&1 | tee artifacts/npu-vlm/route-replay/console.log
 
-      - name: Replay frozen prefill gate-up at 20-40 resources
+      - name: Default 24-48 cores BF16 route-raw with only CANN routing budget changed
+        id: route_raw
+        if: always() && steps.prepare.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          unset VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
+          export VLM_CANN_ROUTE_BUDGET=96
+          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/route-raw/snapshots"
+          export VLM_GATE_UP_PROBE=1
+          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          mkdir -p artifacts/npu-vlm/route-raw
+          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --mode qwen --output-dir artifacts/npu-vlm/route-raw \
+            2>&1 | tee artifacts/npu-vlm/route-raw/console.log
+
+      - name: Frozen gate-up default-24-core routing A-B profiles
         id: gate_up_replay
         if: always() && steps.prepare.outcome == 'success'
         continue-on-error: true
@@ -154,122 +179,44 @@ jobs:
           set -eo pipefail
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          set -u
-          mkdir -p artifacts/npu-vlm/gate-up-20-40
+          unset VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
+          mkdir -p artifacts/npu-vlm/routing-operators
           python - <<'INNER'
           from pathlib import Path
           from modelscope import snapshot_download
           model = Path("/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-VL-3B-Instruct")
           if not (model / "model.safetensors.index.json").exists():
               model = Path(snapshot_download("Qwen/Qwen2.5-VL-3B-Instruct"))
-          Path("artifacts/npu-vlm/gate-up-20-40/model-path.txt").write_text(str(model))
+          Path("artifacts/npu-vlm/routing-operators/model-path.txt").write_text(str(model))
           INNER
-          model_path=$(cat artifacts/npu-vlm/gate-up-20-40/model-path.txt)
-          ASCEND_GLOBAL_LOG_LEVEL=0 python -u scripts/ci/npu_vlm_diagnostics/replay_gate_up.py \
-            --source artifacts/npu-vlm/core-replay/snapshots --model "$model_path" \
-            --output artifacts/npu-vlm/gate-up-20-40 \
-            --cube-num 20 --vector-num 40 --profile --require-match \
-            2>&1 | tee artifacts/npu-vlm/gate-up-20-40/console.log
+          model_path=$(cat artifacts/npu-vlm/routing-operators/model-path.txt)
+          for route in observe 96; do
+            args=()
+            if [ "$route" = observe ]; then args+=(--require-match); fi
+            mkdir -p "artifacts/npu-vlm/routing-operators/$route"
+            VLM_CANN_ROUTE_BUDGET="$route" ASCEND_GLOBAL_LOG_LEVEL=0 \
+              python -u scripts/ci/npu_vlm_diagnostics/replay_gate_up.py \
+              --source artifacts/npu-vlm/replay/snapshots --model "$model_path" \
+              --output "artifacts/npu-vlm/routing-operators/$route" \
+              --profile --save-output "${args[@]}" \
+              2>&1 | tee "artifacts/npu-vlm/routing-operators/$route/console.log"
+          done
 
-      - name: Export exact gate-up replay inputs and profiled kernels
-        id: export_gate_up
+      - name: Export compact routing and hidden-state evidence
+        id: export_routing
         if: always() && steps.prepare.outcome == 'success'
         shell: bash
         run: |
-          python - <<'INNER'
-          import csv
-          import json
-          import re
-          import shutil
-          from pathlib import Path
-          source = Path("artifacts/npu-vlm/core-replay/snapshots")
-          target = Path("artifacts/npu-vlm/gate-up-frozen/snapshots")
-          target.mkdir(parents=True, exist_ok=True)
-          counts = {}
-          stages = {"gate_up.operator.input", "gate_up.operator.output", "decoder.loaded_weights", "runtime.fingerprint"}
-          for path in sorted(source.glob("*.json")):
-              record = json.loads(path.read_text())
-              stage = record["stage"]
-              if stage not in stages:
-                  continue
-              key = (stage, record["rank"])
-              counts[key] = counts.get(key, 0) + 1
-              shutil.copy2(path, target / path.name)
-              if record.get("tensor_file"):
-                  name = record["tensor_file"]
-                  shutil.copy2(path.parent / name, target / name)
-          expected = {(stage, rank) for stage in stages for rank in (0, 1)}
-          assert set(counts) == expected and all(v == 1 for v in counts.values()), counts
-          (target.parent / "coverage.json").write_text(json.dumps([
-              {"stage": stage, "rank": rank, "records": count}
-              for (stage, rank), count in sorted(counts.items())], indent=2))
-          runtime_file = Path("artifacts/npu-vlm/gate-up-20-40/runtime.json")
-          if runtime_file.exists():
-              pid = str(json.loads(runtime_file.read_text())["pid"])
-              plog_output = Path("artifacts/npu-vlm/gate-up-20-40/plog")
-              plog_output.mkdir(exist_ok=True)
-              files = []
-              for path in Path("/root/ascend/log").glob("*/plog/*"):
-                  if path.is_file() and re.search(rf"(?:^|[-_]){pid}(?:[-_.]|$)", path.name):
-                      name = path.parent.parent.name + "-" + path.name
-                      shutil.copy2(path, plog_output / name)
-                      files.append({"file": name, "bytes": path.stat().st_size})
-              coverage = {"pid": pid, "matched_files": files, "available": bool(files)}
-              (plog_output / "coverage.json").write_text(json.dumps(coverage, indent=2))
-              print("VLM_GATE_UP_PLOG", json.dumps(coverage))
-          for path in sorted(Path("artifacts/npu-vlm/gate-up-20-40").rglob("kernel_details.csv")):
-              for row in csv.DictReader(path.open()):
-                  print("VLM_PROFILE_KERNEL", json.dumps({"file": str(path), "row": row}))
-          INNER
+          python scripts/ci/npu_vlm_diagnostics/export_routing_evidence.py artifacts/npu-vlm
 
-      - name: Upload gate-up cross-machine inputs
+      - name: Upload compact routing evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: npu-vlm-gate-up-${{ github.run_id }}
-          path: |
-            artifacts/npu-vlm/gate-up-frozen
-            artifacts/npu-vlm/gate-up-20-40
+          name: npu-vlm-routing-${{ github.run_id }}
+          path: artifacts/npu-vlm-routing
           retention-days: 14
           if-no-files-found: error
-
-      - name: Original Qwen raw image with BF16 and 20-40 process core limits
-        id: core_raw
-        if: always() && steps.prepare.outcome == 'success'
-        continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -o pipefail
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          export VLM_DEVICE_LIMIT_CUBE=20
-          export VLM_DEVICE_LIMIT_VECTOR=40
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/core-raw/snapshots"
-          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          mkdir -p artifacts/npu-vlm/core-raw
-          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
-            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --mode qwen --output-dir artifacts/npu-vlm/core-raw \
-            2>&1 | tee artifacts/npu-vlm/core-raw/console.log
-
-      - name: Original Qwen raw image with native FP32 LM head
-        id: fp32_head
-        if: always() && steps.prepare.outcome == 'success'
-        continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -o pipefail
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/fp32-head/snapshots"
-          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          mkdir -p artifacts/npu-vlm/fp32-head
-          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
-            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --mode qwen --enable-fp32-lm-head --output-dir artifacts/npu-vlm/fp32-head \
-            2>&1 | tee artifacts/npu-vlm/fp32-head/console.log
 
       - name: Collect device and plog evidence
         if: always()
@@ -331,25 +278,22 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      - name: Preserve every failed phase in job status
+      - name: Preserve original failed assertions in job status
         if: always()
         env:
           PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
           BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
           QWEN_OUTCOME: ${{ steps.qwen.outcome }}
           REPLAY_OUTCOME: ${{ steps.replay.outcome }}
-          FP32_HEAD_OUTCOME: ${{ steps.fp32_head.outcome }}
-          CORE_REPLAY_OUTCOME: ${{ steps.core_replay.outcome }}
-          CORE_RAW_OUTCOME: ${{ steps.core_raw.outcome }}
-          PACK_PROBES_OUTCOME: ${{ steps.pack_probes.outcome }}
-          GATE_UP_REPLAY_OUTCOME: ${{ steps.gate_up_replay.outcome }}
-          EXPORT_GATE_UP_OUTCOME: ${{ steps.export_gate_up.outcome }}
+          ROUTE_REPLAY_OUTCOME: ${{ steps.route_replay.outcome }}
+          ROUTE_RAW_OUTCOME: ${{ steps.route_raw.outcome }}
+          OPERATORS_OUTCOME: ${{ steps.gate_up_replay.outcome }}
+          EXPORT_OUTCOME: ${{ steps.export_routing.outcome }}
+          PACK_OUTCOME: ${{ steps.pack_probes.outcome }}
         shell: bash
         run: |
-          printf 'prepare=%s baseline=%s qwen=%s replay=%s fp32_head=%s\n' \
-            "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$QWEN_OUTCOME" "$REPLAY_OUTCOME" "$FP32_HEAD_OUTCOME"
-          [ "$PREPARE_OUTCOME" = success ] && [ "$BASELINE_OUTCOME" = success ] && \
-            [ "$QWEN_OUTCOME" = success ] && [ "$REPLAY_OUTCOME" = success ] && \
-            [ "$FP32_HEAD_OUTCOME" = success ] && [ "$PACK_PROBES_OUTCOME" = success ] && \
-            [ "$CORE_REPLAY_OUTCOME" = success ] && [ "$CORE_RAW_OUTCOME" = success ] && \
-            [ "$GATE_UP_REPLAY_OUTCOME" = success ] && [ "$EXPORT_GATE_UP_OUTCOME" = success ]
+          for outcome in "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$QWEN_OUTCOME" \
+            "$REPLAY_OUTCOME" "$ROUTE_REPLAY_OUTCOME" "$ROUTE_RAW_OUTCOME" \
+            "$OPERATORS_OUTCOME" "$EXPORT_OUTCOME" "$PACK_OUTCOME"; do
+            [ "$outcome" = success ] || exit 1
+          done

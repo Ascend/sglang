@@ -229,6 +229,14 @@ def main():
                 cube_num=args.cube_num if args.cube_num is not None else -1,
                 vector_num=args.vector_num if args.vector_num is not None else -1,
             )
+        route_mode = os.environ.get("VLM_CANN_ROUTE_BUDGET")
+        if route_mode is not None:
+            import sys
+
+            sys.path.insert(0, str(Path(__file__).parent / "hooks"))
+            from npu_vlm_route_budget import apply
+
+            runtime["route_budget"] = apply(route_mode, torch, torch_npu)
         actual = torch_npu.npu.get_device_limit(0)
         for field, requested in (
             ("cube_core_num", args.cube_num),
