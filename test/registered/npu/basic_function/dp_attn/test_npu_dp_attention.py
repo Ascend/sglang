@@ -27,6 +27,7 @@ register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
 
 
+
 class TestDPAttentionDP2TP2(
     CustomTestCase,
     NPUGSM8KMixin,
@@ -75,6 +76,7 @@ class TestDPAttentionMixedChunk(
     NPUGSM8KMixin,
 ):
     gsm8k_accuracy_thres = 0.34
+    gsm8k_num_questions = 1319
 
     @classmethod
     def setUpClass(cls):

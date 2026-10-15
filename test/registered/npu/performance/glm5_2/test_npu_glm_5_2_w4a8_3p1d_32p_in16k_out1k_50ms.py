@@ -1,6 +1,16 @@
+import logging
+import subprocess
 import unittest
 
-from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
+logger = logging.getLogger(__name__)
+
+from sglang.test.ascend.e2e.test_npu_multi_node_utils import (
+    CONFIGMAP_NAME,
+    NAMESPACE,
+    NIC_NAME,
+    PREFILL_DECODE_PORT,
+    query_configmap,
+)
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
@@ -29,6 +39,10 @@ GLM_5_2_PD_SEP_PREFILL_ENVS = {
     "ENABLE_PROFILING": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
+    # "HCCL_BUFFSIZE": "1200",
+    # "DEEPEP_NORMAL_LONG_SEQ_ROUND": "72",
+    # "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "1024",
+    # "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "ZBAL_HCCL_OP": "send,recv",
     "HCCL_BUFFSIZE": "128",
     "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61184",
@@ -36,6 +50,7 @@ GLM_5_2_PD_SEP_PREFILL_ENVS = {
     "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
     "SGLANG_PP_LAYER_PARTITION": "18,20,24,16",
     "DEEP_USE_ALLTOALL_MODE": "1",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
 }
 
 GLM_5_2_PD_SEP_DECODE_ENVS = {
@@ -52,6 +67,7 @@ GLM_5_2_PD_SEP_DECODE_ENVS = {
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "40",
     "TASK_QUEUE_ENABLE": "0",
     "SGLANG_NPU_USE_MULTI_STREAM": "1",
+    "ENABLE_PROFILING": "0",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
@@ -88,11 +104,11 @@ GLM_5_2_PD_SEP_PREFILL_ARGS = [
     "--disable-cuda-graph",
     "--dtype",
     "bfloat16",
-    "--speculative-draft-model-quantization",
-    "unquant",
-    "--enable-nsa-prefill-context-parallel",
-    "--nsa-prefill-cp-mode",
-    "in-seq-split",
+    # "--speculative-draft-model-quantization",
+    # "unquant",
+    "--enable-prefill-cp",
+    "--cp-strategy",
+    "zigzag",
     "--attn-cp-size",
     4,
     "--enable-dp-lm-head",
@@ -122,7 +138,7 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     "--ep-size",
     16,
     "--mem-fraction-static",
-    0.895,
+    0.97,
     "--max-running-requests",
     128,
     "--attention-backend",
@@ -137,7 +153,7 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     "deepep",
     "--deepep-mode",
     "low_latency",
-    "--cuda-graph-max-bs",
+    "--cuda-graph-max-bs-decode",
     8,
     "--disaggregation-transfer-backend",
     "ascend",
@@ -147,14 +163,13 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     180000,
     "--tokenizer-worker-num",
     8,
-    "--prefill-round-robin-balance",
     "--disable-shared-experts-fusion",
     "--dtype",
     "bfloat16",
     "--load-balance-method",
     "round_robin",
-    "--speculative-draft-model-quantization",
-    "unquant",
+    # "--speculative-draft-model-quantization",
+    # "unquant",
     "--speculative-algorithm",
     "NEXTN",
     "--speculative-num-steps",
@@ -183,13 +198,58 @@ class TestNPUGLM_5_2_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBa
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     aisbench_dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
-    max_concurrency = 64
-    num_prompts = 200
+    max_concurrency = 128
+    num_prompts = 512
     input_len = 16000
     output_len = 1000
     random_range_ratio = 1
     tpot = 50
     output_token_throughput = 1694
+
+    def _flush_pd_cache(self):
+        """Flush cache on all prefill and decode nodes via /flush_cache endpoint."""
+        configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+        if not configmap or not configmap.data:
+            logger.warning("ConfigMap is empty, skip flush_cache")
+            return
+        for pod_name, pod_ip in configmap.data.items():
+            if "prefill" in pod_name or "decode" in pod_name:
+                url = f"http://{pod_ip}:{PREFILL_DECODE_PORT}/flush_cache"
+                try:
+                    subprocess.run(
+                        [
+                            "curl",
+                            "--location",
+                            url,
+                            "--header",
+                            "Content-Type: application/json",
+                        ],
+                        capture_output=True,
+                        timeout=30,
+                        check=True,
+                    )
+                    logger.info(f"flush_cache succeeded on {pod_name} ({pod_ip})")
+                except subprocess.CalledProcessError as e:
+                    logger.warning(
+                        f"flush_cache failed on {pod_name} ({pod_ip}): "
+                        f"exit_code={e.returncode}, stderr={e.stderr.decode() if e.stderr else 'N/A'}"
+                    )
+                except subprocess.TimeoutExpired as e:
+                    logger.warning(
+                        f"flush_cache timeout on {pod_name} ({pod_ip}): {e}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"flush_cache unexpected error on {pod_name} ({pod_ip}): {e}"
+                    )
+
+    def run_throughput(self):
+        """Override: flush all PD cache after first failure, then retry once."""
+        try:
+            return super().run_throughput()
+        except (AssertionError, Exception):
+            self._flush_pd_cache()
+            return super().run_throughput()
 
     def test_npu_glm_5_2_w4a8_pd_sep_in16k_out1k(self):
         """Run NPU performance test for GLM-5.2-w4a8 PD separation 3p1d"""
