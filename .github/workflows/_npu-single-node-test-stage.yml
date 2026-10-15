@@ -81,6 +81,7 @@ on:
 
 env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
+  SGLANG_TEST_IMAGE: ${{ inputs.image }}
 
 jobs:
   e2e:

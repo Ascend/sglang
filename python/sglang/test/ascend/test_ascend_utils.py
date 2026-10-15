@@ -41,6 +41,26 @@ from sglang.test.test_utils import (
 STDERR_FILENAME = "/tmp/stderr.txt"
 STDOUT_FILENAME = "/tmp/stdout.txt"
 
+
+def is_npu_a5() -> bool:
+    """Whether the tests run on the A5 (950) NPU; otherwise A3.
+
+    In CI the stage workflows export the container image name as
+    SGLANG_TEST_IMAGE; A5 images contain "950" (e.g. ...:cann9.1.0-950-xxx).
+
+    For local runs (no SGLANG_TEST_IMAGE), fall back to the NPU device name
+    containing "Ascend950". Any detection failure falls back to False (A3).
+    """
+    image = os.environ.get("SGLANG_TEST_IMAGE", "")
+    if "950" in image:
+        return True
+    try:
+        import torch
+
+        return "Ascend950" in torch.npu.get_device_name(0)
+    except Exception:
+        return False
+
 # Model weights storage directory
 MODEL_WEIGHTS_DIR = "/root/.cache/modelscope/hub/models/"
 HF_MODEL_WEIGHTS_DIR = "/root/.cache/huggingface/hub/"

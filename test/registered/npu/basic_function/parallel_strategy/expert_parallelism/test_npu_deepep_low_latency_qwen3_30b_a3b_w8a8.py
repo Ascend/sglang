@@ -50,6 +50,7 @@ class TestDeepepLowlatencyQwen3(CustomTestCase):
                 "SGLANG_EXPERT_LOCATION_UPDATER_CANARY": "1",
                 "HCCL_BUFFSIZE": "2048",
                 "TRANSFORMERS_VERBOSITY": "error",
+                "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "256",
                 **os.environ,
             },
         )
