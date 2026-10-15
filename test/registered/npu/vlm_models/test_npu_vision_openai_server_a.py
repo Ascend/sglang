@@ -31,7 +31,6 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True)
 
-
 class TestLlavaServer(ImageOpenAITestMixin):
     os.environ.setdefault("REQUEST_TIMEOUT", "40")
     model = LLAVA_ONEVISION_QWEN2_7B_OV_WEIGHTS_PATH
@@ -51,7 +50,7 @@ class TestQwen3VL8BServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
         "--mem-fraction-static",
         "0.5",
         "--mm-attention-backend",
-        "ascend",
+        "ascend_attn",
     ]
 
 
@@ -66,7 +65,7 @@ class TestQwen3VLServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
         "--tp-size",
         "2",
         "--mm-attention-backend",
-        "ascend",
+        "ascend_attn",
     ]
 
 
