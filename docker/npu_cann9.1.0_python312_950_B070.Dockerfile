@@ -142,6 +142,7 @@ RUN . /etc/environment_new && \
 # Install SGLang
 RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
+    sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
 RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
