@@ -117,6 +117,7 @@ def run_evalscope(
     timeout=60000,
     stream=True,
     eval_type="openai_api",
+    sandbox=None,
 ):
 
     metrics_path = os.getenv("METRICS_DATA_FILE")
@@ -144,6 +145,8 @@ def run_evalscope(
         config_dict["dataset_args"] = dataset_args
     if dataset_dir:
         config_dict["dataset_dir"] = dataset_dir
+    if sandbox:
+        config_dict["sandbox"] = sandbox
 
     config_json = json.dumps(config_dict, ensure_ascii=False, indent=2)
     config_json_escaped = config_json.replace("\\", "\\\\").replace("'''", "\\'\\'\\'")
@@ -204,17 +207,35 @@ def run_evalscope(
             try:
                 with open(report_path, "r") as rf:
                     report_data = json.load(rf)
-                for item in report_data:
-                    score = item.get("score")
-                    if score is not None:
-                        metrics["accuracy"] = float(score)
-                        logger.info(f"The Final Accuracy from report: {score}")
-                        break
+                    logger.info(f"report_data type: {type(report_data)}")
+                    logger.info(
+                        f"report_data content: {json.dumps(report_data, indent=2, ensure_ascii=False)}"
+                    )
+                if isinstance(report_data, dict):
+                    for m in report_data.get("metrics", []):
+                        if m.get("name") == "overall_EN":
+                            metrics["accuracy"] = float(m["score"])
+                            logger.info(f"The Final Accuracy from report: {m['score']}")
+                            break
+                    else:
+                        if report_data.get("score") is not None:
+                            metrics["accuracy"] = float(report_data["score"])
+                            logger.info(
+                                f"The Final Accuracy from report: {report_data['score']}"
+                            )
+                else:
+                    for item in report_data:
+                        score = item.get("score")
+                        if score is not None:
+                            metrics["accuracy"] = float(score)
+                            logger.info(f"The Final Accuracy from report: {score}")
+                            break
             except Exception as e:
                 logger.warning(f"Failed to read report file {report_path}: {e}")
 
         if "accuracy" not in metrics:
             accuracy_patterns = [
+                r"overall_EN\s*.*?│\s*\d+\s*│\s*([\d.]+)\s*│",
                 r"mean_acc\s*.*?│\s*\d+\s*│\s*([\d.]+)\s*│",
                 r"│\s+([\d.]+)\s+│\s+\S+\s+│\s*$",
                 r"accuracy\s*[:=]?\s*([\d.]+)",
@@ -295,6 +316,7 @@ class TestNpuAccuracyTestCaseBase(CustomTestCase):
     n_runs = 3
     accuracy = 0.1
     test_type = "accuracy"
+    sandbox = None
 
     @classmethod
     def _get_tc_name(cls):
@@ -474,6 +496,7 @@ class TestNpuAccuracyTestCaseBase(CustomTestCase):
                     stream=self.stream,
                     timeout=self.timeout,
                     eval_type=self.eval_type,
+                    sandbox=self.sandbox,
                 )
                 if best_metrics is None or float(metrics.get("accuracy", 0)) > float(
                     best_metrics.get("accuracy", 0)
@@ -520,6 +543,7 @@ class TestNpuAccuracyTestCaseBase(CustomTestCase):
                 stream=self.stream,
                 timeout=self.timeout,
                 eval_type=self.eval_type,
+                sandbox=self.sandbox,
             )
             all_metrics.append(metrics)
             if metrics and "accuracy" in metrics:
@@ -568,6 +592,7 @@ class TestNpuAccuracyMultiNodePdMixTestCaseBase(CustomTestCase):
     server_timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
     envs = None
     accuracy = 0.1
+    sandbox = None
 
     @classmethod
     def setUpClass(cls):
@@ -637,6 +662,7 @@ class TestNpuAccuracyMultiNodePdMixTestCaseBase(CustomTestCase):
                     stream=self.stream,
                     timeout=self.timeout,
                     eval_type=self.eval_type,
+                    sandbox=self.sandbox,
                 )
                 if best_metrics is None or float(metrics.get("accuracy", 0)) > float(
                     best_metrics.get("accuracy", 0)
@@ -669,6 +695,7 @@ class TestNpuAccuracyMultiNodePdSepTestCaseBase(CustomTestCase):
     other_args = None
     server_timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
     accuracy = 0.1
+    sandbox = None
 
     @classmethod
     def setUpClass(cls):
@@ -752,6 +779,7 @@ class TestNpuAccuracyMultiNodePdSepTestCaseBase(CustomTestCase):
                     stream=self.stream,
                     timeout=self.timeout,
                     eval_type=self.eval_type,
+                    sandbox=self.sandbox,
                 )
                 if best_metrics is None or float(metrics.get("accuracy", 0)) > float(
                     best_metrics.get("accuracy", 0)
