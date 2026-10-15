@@ -18,7 +18,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=900, suite="full-1-npu-a3", nightly=True)
 
-# Input scale aligned with community v0.5.5 benchmark/benchmark_batch/benchmark_batch.py
+# Input scale aligned with benchmark/benchmark_batch/benchmark_batch.py
 NUM_REQUESTS = 10  # Total number of requests (each with BATCH_SIZE prompts)
 NUM_TOKENS = 32000  # Tokens per prompt
 BATCH_SIZE = 8  # Number of prompts per request
@@ -27,11 +27,9 @@ BATCH_SIZE = 8  # Number of prompts per request
 class TestTokenizerBatchEncode(CustomTestCase):
     """Testcase: Verify tokenization latency improvement when enabling --enable-tokenizer-batch-encode.
 
-    The parameter batches tokenization of all input texts into a single
-    tokenizer call (community PR #5141). The test compares avg per-prompt
-    tokenization latency between sequential encode (flag-off behavior) and
-    batch encode (flag-on behavior), then checks end-to-end correctness on a
-    server launched with the flag enabled (gsm8k).
+    The parameter batches tokenization of all input texts into a single tokenizer call.
+    The test compares avg per-prompt tokenization latency between sequential encode and
+    batch encode, then checks gsm8k correctness on a server launched with the batch encode enabled.
 
     [Test Category] Parameter
     [Test Target] --enable-tokenizer-batch-encode
@@ -133,7 +131,6 @@ class TestTokenizerBatchEncode(CustomTestCase):
         )
 
     def test_gsm8k(self):
-        # store the process on the class so tearDownClass can kill the server
         self.__class__.process = self._launch_server(enable_tokenizer_batch_encode=True)
         args = SimpleNamespace(
             base_url=self.base_url,
