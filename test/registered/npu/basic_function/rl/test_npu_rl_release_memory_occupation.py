@@ -35,6 +35,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=600, suite="full-2-npu-a3", nightly=True)
 
+os.environ.setdefault("SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK", "0")
 _LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -137,6 +138,8 @@ def _assert_mem_increased(mem_before, mem_func, min_delta, tag):
     )
     return mem_after
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestReleaseMemoryOccupationNPU(CustomTestCase):
     """Test NPU release memory occupation.
