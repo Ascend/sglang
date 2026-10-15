@@ -8,11 +8,13 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3600, suite="full-acc-4-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="debug-full-acc-4-npu-a3", nightly=True)
 
 QWEN3_30B_A3B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": (
+        "expandable_segments:True,pin_memory_expandable_segments:True"
+    ),
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
