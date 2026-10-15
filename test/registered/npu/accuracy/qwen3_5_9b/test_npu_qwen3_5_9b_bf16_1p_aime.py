@@ -8,7 +8,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3600, suite="full-acc-2-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="debug-full-acc-2-npu-a3", nightly=True)
 
 QWEN3_5_9B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
@@ -59,8 +59,10 @@ class TestNPUQwen3_5_9B_aime26(TestNpuAccuracyTestCaseBase):
     datasets = ["aime26"]
     eval_batch_size = 64
     generation_config = {
-        "max_tokens": 40000,
-        "temperature": 0.0,
+        "max_tokens": 81920,
+        "temperature": 1.0,
+        "top_k": 20,
+        "top_p": 0.95,
     }
 
     def test_aime26(self):
