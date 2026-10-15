@@ -59,8 +59,10 @@ class TestNPUQwen3_5_9B_aime26(TestNpuAccuracyTestCaseBase):
     datasets = ["aime26"]
     eval_batch_size = 64
     generation_config = {
-        "max_tokens": 40000,
-        "temperature": 0.0,
+        "max_tokens": 81920,
+        "temperature": 1.0,
+        "top_k": 20,
+        "top_p": 0.95,
     }
 
     def test_aime26(self):
