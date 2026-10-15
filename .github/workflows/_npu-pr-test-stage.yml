@@ -227,8 +227,14 @@ jobs:
           for p in glob.glob(d + "request_receiver*"):
               print("pyc entry:", p)
           PYEOF
-          echo "--- removing stale __pycache__ under /sgl-workspace/sglang/python ---"
-          find /sgl-workspace/sglang/python -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+          echo "--- all request_receiver pyc copies on disk (before removal) ---"
+          find / -xdev -name "request_receiver*.pyc" 2>/dev/null || true
+          echo "--- sys.pycache_prefix / env ---"
+          python3 -c "import sys, os; print('pycache_prefix:', sys.pycache_prefix); print('env:', os.environ.get('PYTHONPYCACHEPREFIX'))" || true
+          echo "--- removing stale sglang __pycache__ everywhere ---"
+          find / -xdev -type d -name '__pycache__' -path '*sglang*' -exec rm -rf {} + 2>/dev/null || true
+          echo "--- verify: remaining request_receiver pyc copies (should be empty) ---"
+          find / -xdev -name "request_receiver*.pyc" 2>/dev/null || true
           echo "done"
 
       - name: Install dependencies
