@@ -162,6 +162,64 @@ class PoolTransferResult:
         self.extra_pool_hit_pages.update(results)
 
 
+def resolve_pool_transfer_hits(
+    kv_hit_pages: int,
+    pool_transfers: Optional[List[PoolTransfer]],
+    pool_page_exists: List[List[bool]],
+) -> PoolTransferResult:
+    """Intersect the prefix endpoints restorable by every physical pool.
+
+    Each existence entry describes one storage object. A coarse object closes
+    ``logical_pages_per_object`` primary KV pages; trailing pools need only
+    their final window at a candidate endpoint. Keep every valid endpoint for
+    callers that intersect candidates across ranks.
+    """
+    transfers = pool_transfers or []
+    if len(transfers) != len(pool_page_exists):
+        raise ValueError(
+            "pool transfer/existence count mismatch: "
+            f"{len(transfers)} != {len(pool_page_exists)}"
+        )
+
+    hit_count: dict[str, int] = {PoolName.KV: kv_hit_pages} if kv_hit_pages else {}
+    restorable = list(range(1, kv_hit_pages + 1))
+    for transfer, page_exists in zip(transfers, pool_page_exists):
+        if not restorable:
+            break
+        coverage = transfer.logical_pages_per_object
+        if coverage <= 0:
+            raise ValueError(
+                f"Pool {transfer.name} has invalid logical_pages_per_object={coverage}"
+            )
+
+        boundary = 0
+        if transfer.hit_policy == PoolHitPolicy.ALL_PAGES:
+            boundary = next(
+                (i for i, exists in enumerate(page_exists) if not exists),
+                len(page_exists),
+            )
+            pool_restorable = range(coverage, (boundary + 1) * coverage, coverage)
+        elif transfer.hit_policy == PoolHitPolicy.TRAILING_PAGES:
+            trailing = max(1, len(transfer.keys) if transfer.keys else 1)
+            pool_restorable = []
+            for prefix_len in range(len(page_exists), 0, -1):
+                if all(page_exists[max(0, prefix_len - trailing) : prefix_len]):
+                    pool_restorable.append(prefix_len * coverage)
+                    if boundary == 0:
+                        boundary = prefix_len
+        else:
+            raise ValueError(f"Unsupported pool hit policy: {transfer.hit_policy}")
+
+        if boundary:
+            hit_count[transfer.name] = boundary
+        candidates = set(pool_restorable)
+        restorable = [page for page in restorable if page in candidates]
+
+    return PoolTransferResult(
+        restorable[-1] if restorable else 0, hit_count, restorable
+    )
+
+
 def count_pool_hits(results: dict[str, List[bool]]) -> dict[str, int]:
     return {
         name: (rs.index(False) if False in rs else len(rs))
