@@ -44,11 +44,11 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     # ZBAL
-    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
-    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:14699",
-    "ZBAL_ENABLE_GRAPH": "1",
+    #"SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
+    #"SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    #"ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    #"SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:14699",
+    #"ZBAL_ENABLE_GRAPH": "1",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
