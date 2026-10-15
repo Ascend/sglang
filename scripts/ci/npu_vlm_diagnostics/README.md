@@ -1,3 +1,7 @@
+# R16: production-source validation
+
+The production patch is based on the exact SGLang runtime commit in B100. It adds a scoped A3 Qwen2.5-VL prefill GMM path, preserves decode/LoRA/quantized fallbacks, and propagates ForwardMode explicitly. No diagnostic import hook or model monkeypatch is loaded. CI applies the reviewable source patch to its pinned runtime, verifies hashes and default 24/48 cores, runs operator contract tests, and runs the original nine assertions. The native 123-token failure remains an independent control before applying the patch.
+
 ## R15: complete nine-case acceptance without operator debug tracing
 
 R14 proved the public grouped-matmul candidate reproduces V3's complete frozen outputs at default24/48 and changes the original raw-image failure from123 to244 tokens. Its full-suite attempt passed the six Gemma/Kimi assertions but exceeded the35-minute outer limit during Qwen, so it is not a9/9 result. It had inherited CANN debug logging and full tensor instrumentation.

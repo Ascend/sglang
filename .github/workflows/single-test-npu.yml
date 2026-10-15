@@ -30,9 +30,6 @@ jobs:
       SGLANG_IS_IN_CI: "true"
       SGLANG_TEST_MAX_RETRY: "0"
       SGLANG_SET_CPU_AFFINITY: "1"
-      VLM_DIAGNOSTICS_TENSOR_SCOPE: qkv
-      VLM_REQUIRE_24_CORES: "1"
-      VLM_SUPPORTED_MATMUL: default
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -89,22 +86,44 @@ jobs:
             --mode qwen --output-dir artifacts/npu-vlm/baseline \
             2>&1 | tee artifacts/npu-vlm/baseline/console.log
 
-      - name: Complete original nine cases with supported GMM at default 24 cores
-        id: full
-        if: always() && steps.prepare.outcome == 'success'
+      - name: Apply production source fix to the pinned runtime
+        id: production
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C /sgl-workspace/sglang rev-parse HEAD)" = 8dbf2b366b690d83843c42498e972745a89072ee
+          git -C /sgl-workspace/sglang apply --check "$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/production.patch"
+          git -C /sgl-workspace/sglang apply "$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/production.patch"
+          source /usr/local/Ascend/cann/set_env.sh || true
+          python scripts/ci/npu_vlm_diagnostics/verify_production.py
+
+      - name: Exercise production GMM and fallback contracts
+        id: operator
         continue-on-error: true
-        timeout-minutes: 60
+        timeout-minutes: 10
         shell: bash
         run: |
           set -o pipefail
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          unset VLM_DIAGNOSTICS_DIR VLM_CANN_ROUTE_BUDGET VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
           export ASCEND_GLOBAL_LOG_LEVEL=3
-          export VLM_SUPPORTED_ONLY=1 VLM_SUPPORTED_MATMUL=gmm VLM_REQUIRE_24_CORES=1
-          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          python -u /sgl-workspace/sglang/test/registered/kernels/ops/gemm/test_npu_qwen_vl_prefill.py \
+            2>&1 | tee artifacts/npu-vlm/operator-tests.log
+
+      - name: Complete original nine cases with production code and no diagnostic hooks
+        id: full
+        if: always() && steps.production.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 40
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          unset VLM_DIAGNOSTICS_DIR VLM_SUPPORTED_ONLY VLM_SUPPORTED_MATMUL VLM_CANN_ROUTE_BUDGET VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
+          export ASCEND_GLOBAL_LOG_LEVEL=3
           mkdir -p artifacts/npu-vlm/supported-full
-          timeout --kill-after=30s 3300s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+          timeout --kill-after=30s 2100s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
             --mode full --output-dir artifacts/npu-vlm/supported-full \
             2>&1 | tee artifacts/npu-vlm/supported-full/console.log
@@ -125,27 +144,36 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-      - name: Require nine assertions and actual GMM resource evidence
+      - name: Require nine assertions and unhooked production source evidence
         if: always()
+        env:
+          OPERATOR_OUTCOME: ${{ steps.operator.outcome }}
         shell: bash
         run: |
           python - <<'INNER'
-          import json
+          import json, os
           from pathlib import Path
+          assert os.environ["OPERATOR_OUTCOME"] == "success"
           root = Path("artifacts/npu-vlm/supported-full")
           result = json.loads((root / "result.json").read_text())
           assert result["successful"] and result["tests_run"] == result["expected"] == 9
           assert not result["errors"] and not result["failures"] and not result["skipped"]
+          assert not result["experiment"]["enable_fp32_lm_head"]
           progress = json.loads((root / "test-progress.json").read_text())
           assert len({r["test"] for r in progress if r["status"] == "passed"}) == 9
-          records = [json.loads(line.split("NPU_VLM_SUPPORTED_MATMUL ", 1)[1])
-                     for line in (root / "console.log").read_text().splitlines()
-                     if "NPU_VLM_SUPPORTED_MATMUL " in line]
-          assert len(records) == 6, f"Expected two workers for each of three Qwen cases: {len(records)}"
-          for record in records:
-              assert record["mode"] == "gmm" and not record["binary_patch"]
-              assert record["limits"] == {"cube_core_num": 24, "vector_core_num": 48}
-              assert record["parameter_identities_and_dtypes_unchanged"]
-              assert record["parameter_dtypes"] == ["torch.bfloat16"] and len(record["layers"]) == 36
-          print("Verified all nine original assertions, zero skips, and six unchanged-BF16 24/48-core GMM workers")
+          provenance = json.loads((root / "provenance.json").read_text())
+          for key in ("VLM_DIAGNOSTICS_DIR", "VLM_SUPPORTED_ONLY", "VLM_SUPPORTED_MATMUL"):
+              assert not provenance["env"][key]
+          assert "hooks" not in (provenance["env"]["PYTHONPATH"] or "")
+          expected = json.loads(Path("scripts/ci/npu_vlm_diagnostics/production-manifest.json").read_text())
+          for name, sha in expected["files"].items():
+              if not name.startswith("python/"):
+                  continue
+              record = next(r for r in provenance["files"] if r["path"].endswith(name[7:]))
+              assert record["sha256"] == sha, name
+          production = json.loads(Path("artifacts/npu-vlm/machine/production.json").read_text())
+          assert len(production["devices"]) == 2
+          for device in production["devices"]:
+              assert device["limits"] == {"cube_core_num": 24, "vector_core_num": 48}
+          print("Verified all nine original assertions with production sources, no hooks, BF16 head, and default 24/48 cores")
           INNER

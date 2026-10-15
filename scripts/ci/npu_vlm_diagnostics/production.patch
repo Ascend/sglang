@@ -1,0 +1,294 @@
+diff --git a/python/sglang/srt/hardware_backend/npu/modules/linear.py b/python/sglang/srt/hardware_backend/npu/modules/linear.py
+new file mode 100644
+index 0000000000..dc76c0d15a
+--- /dev/null
++++ b/python/sglang/srt/hardware_backend/npu/modules/linear.py
+@@ -0,0 +1,42 @@
++"""NPU linear paths for unquantized Qwen2.5-VL prefill."""
++
++from typing import Optional
++
++import torch
++
++from sglang.srt.layers.linear import MergedColumnParallelLinear
++from sglang.srt.layers.quantization.unquant import UnquantizedLinearMethod
++from sglang.srt.model_executor.forward_batch_info import ForwardMode
++
++
++def prefill_gate_up(
++    layer: torch.nn.Module,
++    x: torch.Tensor,
++    forward_mode: Optional[ForwardMode],
++) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
++    # Use the execution mode: a multi-request decode also has more than one row.
++    # Exact types preserve LoRA wrappers and custom/quantized linear methods.
++    if (
++        forward_mode in (ForwardMode.EXTEND, ForwardMode.SPLIT_PREFILL)
++        and type(layer) is MergedColumnParallelLinear
++        and type(layer.quant_method) is UnquantizedLinearMethod
++        and layer.bias is None
++        and not layer.gather_output
++        and x.device.type == "npu"
++        and x.ndim == 2
++        and x.shape[0] > 0
++        and x.dtype == layer.weight.dtype == torch.bfloat16
++        and x.is_contiguous()
++        and layer.weight.is_contiguous()
++    ):
++        import torch_npu
++
++        # A3 MatMulV2/V3 routing changes K-block accumulation order. GMM avoids
++        # the legacy route that makes Qwen2.5-VL lose the second image description.
++        return (
++            torch_npu.npu_grouped_matmul(
++                [x], [layer.weight.t()], split_item=0, group_type=-1
++            )[0],
++            None,
++        )
++    return layer(x)
+diff --git a/python/sglang/srt/models/qwen2.py b/python/sglang/srt/models/qwen2.py
+index 9181b275cf..ebfd08417b 100644
+--- a/python/sglang/srt/models/qwen2.py
++++ b/python/sglang/srt/models/qwen2.py
+@@ -43,7 +43,11 @@ from sglang.srt.layers.vocab_parallel_embedding import (
+     ParallelLMHead,
+     VocabParallelEmbedding,
+ )
+-from sglang.srt.model_executor.forward_batch_info import ForwardBatch, PPProxyTensors
++from sglang.srt.model_executor.forward_batch_info import (
++    ForwardBatch,
++    ForwardMode,
++    PPProxyTensors,
++)
+ from sglang.srt.model_loader.weight_utils import (
+     default_weight_loader,
+     kv_cache_scales_loader,
+@@ -67,8 +71,10 @@ class Qwen2MLP(nn.Module):
+         hidden_act: str,
+         quant_config: Optional[QuantizationConfig] = None,
+         prefix: str = "",
++        use_npu_gmm: bool = False,
+     ) -> None:
+         super().__init__()
++        self.use_npu_gmm = use_npu_gmm
+         self.gate_up_proj = MergedColumnParallelLinear(
+             hidden_size,
+             [intermediate_size] * 2,
+@@ -93,11 +99,17 @@ class Qwen2MLP(nn.Module):
+         self,
+         x: torch.Tensor,
+         forward_batch: ForwardBatch = None,
++        forward_mode: Optional[ForwardMode] = None,
+     ) -> torch.Tensor:
+         if get_exec().deterministic.rl_on_policy_target is not None:
+             x = x.bfloat16()
+ 
+-        gate_up, _ = self.gate_up_proj(x)
++        if self.use_npu_gmm:
++            from sglang.srt.hardware_backend.npu.modules.linear import prefill_gate_up
++
++            gate_up, _ = prefill_gate_up(self.gate_up_proj, x, forward_mode)
++        else:
++            gate_up, _ = self.gate_up_proj(x)
+         x = self.act_fn(gate_up)
+         x, _ = self.down_proj(x, forward_batch=forward_batch)
+         return x
+@@ -241,6 +253,7 @@ class Qwen2DecoderLayer(nn.Module):
+         quant_config: Optional[QuantizationConfig] = None,
+         prefix: str = "",
+         alt_stream: Optional[torch.cuda.Stream] = None,
++        use_npu_gmm: bool = False,
+     ) -> None:
+         super().__init__()
+         self.hidden_size = config.hidden_size
+@@ -273,6 +286,7 @@ class Qwen2DecoderLayer(nn.Module):
+             hidden_act=config.hidden_act,
+             quant_config=quant_config,
+             prefix=add_prefix("mlp", prefix),
++            use_npu_gmm=use_npu_gmm,
+         )
+         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+         self.post_attention_layernorm = RMSNorm(
+@@ -306,7 +320,7 @@ class Qwen2DecoderLayer(nn.Module):
+         hidden_states, residual = self.post_attention_layernorm(
+             hidden_states, residual, quant_linear=self.mlp.gate_up_proj
+         )
+-        hidden_states = self.mlp(hidden_states)
++        hidden_states = self.mlp(hidden_states, forward_mode=forward_batch.forward_mode)
+         return hidden_states, residual
+ 
+ 
+diff --git a/python/sglang/srt/models/qwen2_5_vl.py b/python/sglang/srt/models/qwen2_5_vl.py
+index 110710655c..363063d8ae 100644
+--- a/python/sglang/srt/models/qwen2_5_vl.py
++++ b/python/sglang/srt/models/qwen2_5_vl.py
+@@ -70,7 +70,7 @@ from sglang.srt.managers.schedule_batch import (
+ )
+ from sglang.srt.model_executor.forward_batch_info import ForwardBatch, PPProxyTensors
+ from sglang.srt.model_loader.weight_utils import default_weight_loader
+-from sglang.srt.models.qwen2 import Qwen2Model
++from sglang.srt.models.qwen2 import Qwen2DecoderLayer, Qwen2Model
+ from sglang.srt.models.utils import RotaryPosMixin, WeightsMapper, permute_inv
+ from sglang.srt.multimodal.mm_utils import run_dp_sharded_mrope_vision_model
+ from sglang.srt.multimodal.vit_cuda_graph_runner import ViTCudaGraphRunner
+@@ -730,6 +730,14 @@ class Qwen2_5_VLForConditionalGeneration(nn.Module):
+                 config,
+                 quant_config,
+                 prefix=add_prefix("model", prefix),
++                decoder_layer_type=partial(
++                    Qwen2DecoderLayer,
++                    use_npu_gmm=(
++                        is_npu()
++                        and quant_config is None
++                        and torch.npu.get_device_name().startswith("Ascend910_93")
++                    ),
++                ),
+             )
+ 
+             if self.pp_group.is_last_rank:
+diff --git a/test/registered/kernels/ops/gemm/test_npu_qwen_vl_prefill.py b/test/registered/kernels/ops/gemm/test_npu_qwen_vl_prefill.py
+new file mode 100644
+index 0000000000..cde84c9a8c
+--- /dev/null
++++ b/test/registered/kernels/ops/gemm/test_npu_qwen_vl_prefill.py
+@@ -0,0 +1,140 @@
++"""Exercise Qwen2.5-VL's NPU prefill projection and its fallback contracts."""
++
++import unittest
++from unittest.mock import patch
++
++import torch
++import torch.nn.functional as F
++import torch_npu
++
++from sglang.srt.hardware_backend.npu.modules.linear import prefill_gate_up
++from sglang.srt.layers.linear import MergedColumnParallelLinear
++from sglang.srt.layers.quantization.unquant import UnquantizedLinearMethod
++from sglang.srt.model_executor.forward_batch_info import ForwardMode
++from sglang.srt.runtime_context import publish, reset_context
++from sglang.srt.server_args import ServerArgs
++from sglang.test.ci.ci_register import register_npu_ci
++from sglang.test.test_utils import CustomTestCase
++
++register_npu_ci(est_time=30, suite="base-b-test-1-npu-a3")
++
++
++class TestNPUQwenVLPrefill(CustomTestCase):
++    def setUp(self):
++        reset_context()
++        publish(ServerArgs(model_path="dummy", device="npu"), role="test")
++        self.addCleanup(reset_context)
++        torch.manual_seed(42)
++
++    def make_layer(self, k=64, n=128, dtype=torch.bfloat16, **kwargs):
++        layer = MergedColumnParallelLinear(
++            k,
++            [n // 2, n // 2],
++            params_dtype=dtype,
++            tp_rank=0,
++            tp_size=1,
++            bias=kwargs.pop("bias", False),
++            **kwargs,
++        ).to("npu")
++        with torch.no_grad():
++            layer.weight.normal_(std=0.02)
++            if layer.bias is not None:
++                layer.bias.fill_(0.25)
++        return layer
++
++    def assert_fallback(self, layer, x, mode):
++        expected, expected_bias = layer(x)
++        with patch.object(
++            torch_npu,
++            "npu_grouped_matmul",
++            side_effect=AssertionError("unexpected GMM"),
++        ):
++            actual, actual_bias = prefill_gate_up(layer, x, mode)
++        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
++        self.assertIs(actual_bias, expected_bias)
++
++    def test_prefill_shapes_and_parameter_identity(self):
++        # Include the full failing CI shape; a last-row GEMM misses its K tiling.
++        for m, k, n in [(1, 64, 128), (17, 64, 128), (2526, 2048, 11008)]:
++            for mode in (ForwardMode.EXTEND, ForwardMode.SPLIT_PREFILL):
++                with self.subTest(shape=(m, k, n), mode=mode):
++                    layer = self.make_layer(k, n)
++                    x = torch.randn(m, k, device="npu", dtype=torch.bfloat16)
++                    weight = layer.weight
++                    saved = weight.detach().clone()
++                    actual, bias = prefill_gate_up(layer, x, mode)
++                    expected = F.linear(x.float(), weight.float())
++                    self.assertEqual(actual.dtype, torch.bfloat16)
++                    self.assertEqual(actual.shape, (m, n))
++                    self.assertIsNone(bias)
++                    self.assertIs(layer.weight, weight)
++                    torch.testing.assert_close(weight, saved, rtol=0, atol=0)
++                    torch.testing.assert_close(
++                        actual.float(), expected, rtol=0.005, atol=0.001
++                    )
++
++    def test_batched_decode_and_other_modes_preserve_linear(self):
++        layer = self.make_layer()
++        for mode in ForwardMode:
++            if mode in (ForwardMode.EXTEND, ForwardMode.SPLIT_PREFILL):
++                continue
++            with self.subTest(mode=mode):
++                self.assert_fallback(
++                    layer, torch.randn(8, 64, device="npu", dtype=torch.bfloat16), mode
++                )
++        self.assert_fallback(
++            layer,
++            torch.empty(0, 64, device="npu", dtype=torch.bfloat16),
++            ForwardMode.EXTEND,
++        )
++        self.assert_fallback(
++            layer, torch.ones(8, 64, device="npu", dtype=torch.bfloat16), None
++        )
++
++    def test_dtype_bias_and_layout_fallbacks(self):
++        cases = [
++            (
++                self.make_layer(dtype=torch.float16),
++                torch.ones(8, 64, device="npu", dtype=torch.float16),
++            ),
++            (
++                self.make_layer(bias=True),
++                torch.ones(8, 64, device="npu", dtype=torch.bfloat16),
++            ),
++            (
++                self.make_layer(bias=True, skip_bias_add=True),
++                torch.ones(8, 64, device="npu", dtype=torch.bfloat16),
++            ),
++            (
++                self.make_layer(),
++                torch.ones(64, 8, device="npu", dtype=torch.bfloat16).t(),
++            ),
++            (self.make_layer().cpu(), torch.ones(8, 64, dtype=torch.bfloat16)),
++        ]
++        for i, (layer, x) in enumerate(cases):
++            with self.subTest(case=i):
++                self.assert_fallback(layer, x, ForwardMode.EXTEND)
++
++    def test_custom_methods_and_adapter_wrappers_are_preserved(self):
++        class CustomMethod(UnquantizedLinearMethod):
++            def apply(self, layer, x, bias=None):
++                return F.linear(x, layer.weight, bias) + 1
++
++        class Adapter(torch.nn.Module):
++            def __init__(self, base):
++                super().__init__()
++                self.base = base
++
++            def forward(self, x):
++                output, bias = self.base(x)
++                return output + 2, bias
++
++        x = torch.ones(8, 64, device="npu", dtype=torch.bfloat16)
++        layer = self.make_layer()
++        layer.quant_method = CustomMethod()
++        self.assert_fallback(layer, x, ForwardMode.EXTEND)
++        self.assert_fallback(Adapter(self.make_layer()), x, ForwardMode.EXTEND)
++
++
++if __name__ == "__main__":
++    unittest.main()

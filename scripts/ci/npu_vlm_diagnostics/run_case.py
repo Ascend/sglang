@@ -42,6 +42,7 @@ def provenance(case, utils, root):
             "srt/hardware_backend/npu/modules/qwen_vl_processor.py",
             "srt/models/qwen2_5_vl.py",
             "srt/models/qwen2.py",
+        "srt/hardware_backend/npu/modules/linear.py",
             "srt/layers/layernorm.py",
             "srt/managers/tokenizer_manager.py",
             "srt/managers/scheduler.py",
