@@ -7,15 +7,16 @@ from urllib.parse import urlparse
 import requests
 
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    MIMO_V2_5_PRO_DFLASH_MODEL_PATH,
+    MIMO_V2_5_PRO_FP4_MODEL_PATH,
+)
+
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
-)
-from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    MIMO_V2_5_PRO_DFLASH_MODEL_PATH,
-    MIMO_V2_5_PRO_FP4_MODEL_PATH,
 )
 
 register_npu_ci(
