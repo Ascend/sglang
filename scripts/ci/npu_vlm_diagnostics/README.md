@@ -1,3 +1,9 @@
+## R15: complete nine-case acceptance without operator debug tracing
+
+R14 proved the public grouped-matmul candidate reproduces V3's complete frozen outputs at default24/48 and changes the original raw-image failure from123 to244 tokens. Its full-suite attempt passed the six Gemma/Kimi assertions but exceeded the35-minute outer limit during Qwen, so it is not a9/9 result. It had inherited CANN debug logging and full tensor instrumentation.
+
+R15 keeps exactly the same GMM computation and original tests. It uses ordinary CANN error logging, installs only the Qwen operator replacement, and removes tensor observers from whole-model acceptance. Each test immediately records start and outcome. Acceptance requires nine actual passes, zero skips, and all six Qwen workers reporting36 gate/up layers, unchanged BF16 parameters and actual24/48 resources. No binary patch, core limit, FP32 head or assertion change is used. R14's frozen operator profiles remain the kernel-selection evidence; R15 does not rerun that diagnostic matrix.
+
 ## R14: supported APIs, K-order reconstruction, and all nine original cases
 
 This revision uses the runner's default 24 Cube / 48 Vector cores and BF16 model/head. No routing-budget instruction patch or device limit is installed. Each Qwen worker validates actual resources and unchanged parameter identities/dtypes.

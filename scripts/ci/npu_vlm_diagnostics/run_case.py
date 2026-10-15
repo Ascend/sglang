@@ -142,6 +142,10 @@ def provenance(case, utils, root):
             "LD_LIBRARY_PATH",
             "HF_ENDPOINT",
             "VLM_DIAGNOSTICS_DIR",
+            "VLM_SUPPORTED_ONLY",
+            "VLM_SUPPORTED_MATMUL",
+            "VLM_REQUIRE_24_CORES",
+            "ASCEND_GLOBAL_LOG_LEVEL",
         )
     }
     manifest = {
@@ -265,8 +269,37 @@ def main():
         expected = 9
     if suite.countTestCases() != expected:
         raise RuntimeError(f"Expected {expected} cases, got {suite.countTestCases()}")
+    progress = []
+
+    class RecordingResult(unittest.TextTestResult):
+        def record(self, test, status):
+            item = {"test": test.id(), "status": status, "time": time.time()}
+            progress.append(item)
+            (root / "test-progress.json").write_text(json.dumps(progress, indent=2))
+            print("NPU_VLM_TEST_STATUS " + json.dumps(item), flush=True)
+
+        def startTest(self, test):
+            super().startTest(test)
+            self.record(test, "started")
+
+        def addSuccess(self, test):
+            super().addSuccess(test)
+            self.record(test, "passed")
+
+        def addFailure(self, test, err):
+            super().addFailure(test, err)
+            self.record(test, "failed")
+
+        def addError(self, test, err):
+            super().addError(test, err)
+            self.record(test, "error")
+
+        def addSkip(self, test, reason):
+            super().addSkip(test, reason)
+            self.record(test, "skipped")
+
     start = time.time()
-    result = unittest.TextTestRunner(verbosity=2, failfast=False).run(suite)
+    result = unittest.TextTestRunner(verbosity=2, failfast=False, resultclass=RecordingResult).run(suite)
     summary = {
         "mode": args.mode,
         "experiment": {"enable_fp32_lm_head": args.enable_fp32_lm_head},

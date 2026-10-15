@@ -685,6 +685,11 @@ def _wrap_method(cls, name):
 
 
 def _instrument(module):
+    if os.environ.get("VLM_SUPPORTED_ONLY") == "1":
+        if module.__name__.endswith("models.qwen2_5_vl"):
+            from npu_vlm_supported_matmul import install
+            install(module.Qwen2_5_VLForConditionalGeneration)
+        return
     if module.__name__.endswith("logits_processor"):
         _wrap_lm_head_projection(module.LogitsProcessor)
     elif module.__name__.endswith("base_processor"):
@@ -767,6 +772,8 @@ class _Loader(importlib.abc.Loader):
         try:
             _instrument(module)
         except Exception as error:
+            if os.environ.get("VLM_SUPPORTED_ONLY") == "1":
+                raise
             print(f"NPU_VLM_DIAG_ERROR hook {module.__name__}: {error!r}", flush=True)
 
     def __getattr__(self, name):
@@ -775,6 +782,8 @@ class _Loader(importlib.abc.Loader):
 
 class _Finder(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
+        if os.environ.get("VLM_SUPPORTED_ONLY") == "1" and fullname != "sglang.srt.models.qwen2_5_vl":
+            return None
         if fullname not in _MODULES:
             return None
         spec = importlib.machinery.PathFinder.find_spec(fullname, path, target)

@@ -89,45 +89,34 @@ jobs:
             --mode qwen --output-dir artifacts/npu-vlm/baseline \
             2>&1 | tee artifacts/npu-vlm/baseline/console.log
 
-      - name: Independent Qwen raw image with diagnostics
-        id: qwen
+      - name: Complete original nine cases with supported GMM at default 24 cores
+        id: full
         if: always() && steps.prepare.outcome == 'success'
         continue-on-error: true
-        timeout-minutes: 15
+        timeout-minutes: 60
         shell: bash
         run: |
           set -o pipefail
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/qwen/snapshots"
+          unset VLM_DIAGNOSTICS_DIR VLM_CANN_ROUTE_BUDGET VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
+          export ASCEND_GLOBAL_LOG_LEVEL=3
+          export VLM_SUPPORTED_ONLY=1 VLM_SUPPORTED_MATMUL=gmm VLM_REQUIRE_24_CORES=1
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          export VLM_GATE_UP_PROBE=1
-          mkdir -p artifacts/npu-vlm/qwen
-          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+          mkdir -p artifacts/npu-vlm/supported-full
+          timeout --kill-after=30s 3300s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --mode qwen --output-dir artifacts/npu-vlm/qwen \
-            2>&1 | tee artifacts/npu-vlm/qwen/console.log
+            --mode full --output-dir artifacts/npu-vlm/supported-full \
+            2>&1 | tee artifacts/npu-vlm/supported-full/console.log
 
-      - name: Public API operator comparison and complete original nine cases
-        id: supported
-        if: always() && steps.prepare.outcome == 'success'
-        continue-on-error: true
-        timeout-minutes: 75
-        shell: bash
-        run: |
-          set -eo pipefail
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          python -u scripts/ci/npu_vlm_diagnostics/run_supported_comparison.py
-
-      - name: Export compact supported API evidence
+      - name: Export compact full-suite evidence
         if: always()
         shell: bash
         run: |
           python scripts/ci/npu_vlm_diagnostics/export_supported_evidence.py artifacts/npu-vlm
           npu-smi info > artifacts/npu-vlm-supported/npu-after.txt 2>&1 || true
 
-      - name: Upload compact evidence
+      - name: Upload full-suite evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -136,20 +125,27 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-      - name: Upload full diagnostic evidence
+      - name: Require nine assertions and actual GMM resource evidence
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: npu-vlm-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/npu-vlm
-          retention-days: 14
-          if-no-files-found: warn
-
-      - name: Require actual complete nine-case success
-        if: always()
-        env:
-          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
-          SUPPORTED_OUTCOME: ${{ steps.supported.outcome }}
         shell: bash
         run: |
-          [ "$PREPARE_OUTCOME" = success ] && [ "$SUPPORTED_OUTCOME" = success ]
+          python - <<'INNER'
+          import json
+          from pathlib import Path
+          root = Path("artifacts/npu-vlm/supported-full")
+          result = json.loads((root / "result.json").read_text())
+          assert result["successful"] and result["tests_run"] == result["expected"] == 9
+          assert not result["errors"] and not result["failures"] and not result["skipped"]
+          progress = json.loads((root / "test-progress.json").read_text())
+          assert len({r["test"] for r in progress if r["status"] == "passed"}) == 9
+          records = [json.loads(line.split("NPU_VLM_SUPPORTED_MATMUL ", 1)[1])
+                     for line in (root / "console.log").read_text().splitlines()
+                     if "NPU_VLM_SUPPORTED_MATMUL " in line]
+          assert len(records) == 6, f"Expected two workers for each of three Qwen cases: {len(records)}"
+          for record in records:
+              assert record["mode"] == "gmm" and not record["binary_patch"]
+              assert record["limits"] == {"cube_core_num": 24, "vector_core_num": 48}
+              assert record["parameter_identities_and_dtypes_unchanged"]
+              assert record["parameter_dtypes"] == ["torch.bfloat16"] and len(record["layers"]) == 36
+          print("Verified all nine original assertions, zero skips, and six unchanged-BF16 24/48-core GMM workers")
+          INNER
