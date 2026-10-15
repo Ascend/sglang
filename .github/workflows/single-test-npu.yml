@@ -21,7 +21,7 @@ jobs:
   single-node-poc:
     name: VLM input format diagnostics
     runs-on: linux-aarch64-a3-2
-    timeout-minutes: 75
+    timeout-minutes: 110
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100
     env:
@@ -31,7 +31,8 @@ jobs:
       SGLANG_TEST_MAX_RETRY: "0"
       SGLANG_SET_CPU_AFFINITY: "1"
       VLM_DIAGNOSTICS_TENSOR_SCOPE: qkv
-      VLM_CANN_ROUTE_BUDGET: observe
+      VLM_REQUIRE_24_CORES: "1"
+      VLM_SUPPORTED_MATMUL: default
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,176 +101,42 @@ jobs:
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
           export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/qwen/snapshots"
           export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
+          export VLM_GATE_UP_PROBE=1
           mkdir -p artifacts/npu-vlm/qwen
           timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
             test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
             --mode qwen --output-dir artifacts/npu-vlm/qwen \
             2>&1 | tee artifacts/npu-vlm/qwen/console.log
 
-      - name: Replay captured raw vision output through precomputed input
-        id: replay
+      - name: Public API operator comparison and complete original nine cases
+        id: supported
         if: always() && steps.prepare.outcome == 'success'
         continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -o pipefail
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/replay/snapshots"
-          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          export VLM_GATE_UP_PROBE=1
-          export VLM_LAYER_PROBE=1
-          mkdir -p artifacts/npu-vlm/replay
-          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
-            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/replay \
-            2>&1 | tee artifacts/npu-vlm/replay/console.log
-
-      - name: Default 24-48 cores BF16 route-replay with only CANN routing budget changed
-        id: route_replay
-        if: always() && steps.prepare.outcome == 'success'
-        continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -o pipefail
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          unset VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
-          export VLM_CANN_ROUTE_BUDGET=96
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/route-replay/snapshots"
-          export VLM_GATE_UP_PROBE=1
-          export VLM_LAYER_PROBE=1
-          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          mkdir -p artifacts/npu-vlm/route-replay
-          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/replay_embeddings.py \
-            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --source-dir artifacts/npu-vlm/qwen --output-dir artifacts/npu-vlm/route-replay \
-            2>&1 | tee artifacts/npu-vlm/route-replay/console.log
-
-      - name: Default 24-48 cores BF16 route-raw with only CANN routing budget changed
-        id: route_raw
-        if: always() && steps.prepare.outcome == 'success'
-        continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -o pipefail
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          unset VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
-          export VLM_CANN_ROUTE_BUDGET=96
-          export VLM_DIAGNOSTICS_DIR="$GITHUB_WORKSPACE/artifacts/npu-vlm/route-raw/snapshots"
-          export VLM_GATE_UP_PROBE=1
-          export PYTHONPATH="$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/hooks:${PYTHONPATH:-}"
-          mkdir -p artifacts/npu-vlm/route-raw
-          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
-            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
-            --mode qwen --output-dir artifacts/npu-vlm/route-raw \
-            2>&1 | tee artifacts/npu-vlm/route-raw/console.log
-
-      - name: Frozen gate-up default-24-core routing A-B profiles
-        id: gate_up_replay
-        if: always() && steps.prepare.outcome == 'success'
-        continue-on-error: true
-        timeout-minutes: 10
+        timeout-minutes: 75
         shell: bash
         run: |
           set -eo pipefail
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
-          unset VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
-          mkdir -p artifacts/npu-vlm/routing-operators
-          python - <<'INNER'
-          from pathlib import Path
-          from modelscope import snapshot_download
-          model = Path("/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-VL-3B-Instruct")
-          if not (model / "model.safetensors.index.json").exists():
-              model = Path(snapshot_download("Qwen/Qwen2.5-VL-3B-Instruct"))
-          Path("artifacts/npu-vlm/routing-operators/model-path.txt").write_text(str(model))
-          INNER
-          model_path=$(cat artifacts/npu-vlm/routing-operators/model-path.txt)
-          for route in observe 96; do
-            args=()
-            if [ "$route" = observe ]; then args+=(--require-match); fi
-            mkdir -p "artifacts/npu-vlm/routing-operators/$route"
-            VLM_CANN_ROUTE_BUDGET="$route" ASCEND_GLOBAL_LOG_LEVEL=0 \
-              python -u scripts/ci/npu_vlm_diagnostics/replay_gate_up.py \
-              --source artifacts/npu-vlm/replay/snapshots --model "$model_path" \
-              --output "artifacts/npu-vlm/routing-operators/$route" \
-              --profile --save-output "${args[@]}" \
-              2>&1 | tee "artifacts/npu-vlm/routing-operators/$route/console.log"
-          done
+          python -u scripts/ci/npu_vlm_diagnostics/run_supported_comparison.py
 
-      - name: Export compact routing and hidden-state evidence
-        id: export_routing
-        if: always() && steps.prepare.outcome == 'success'
+      - name: Export compact supported API evidence
+        if: always()
         shell: bash
         run: |
-          python scripts/ci/npu_vlm_diagnostics/export_routing_evidence.py artifacts/npu-vlm
+          python scripts/ci/npu_vlm_diagnostics/export_supported_evidence.py artifacts/npu-vlm
+          npu-smi info > artifacts/npu-vlm-supported/npu-after.txt 2>&1 || true
 
-      - name: Upload compact routing evidence
+      - name: Upload compact evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: npu-vlm-routing-${{ github.run_id }}
-          path: artifacts/npu-vlm-routing
+          name: npu-vlm-supported-${{ github.run_id }}
+          path: artifacts/npu-vlm-supported
           retention-days: 14
           if-no-files-found: error
 
-      - name: Collect device and plog evidence
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p artifacts/npu-vlm/machine
-          npu-smi info > artifacts/npu-vlm/machine/npu-after.txt 2>&1 || true
-          if [ -d /root/ascend/log/debug/plog ]; then
-            cp -r /root/ascend/log/debug/plog artifacts/npu-vlm/plog || true
-          fi
-
-      - name: Pack layer probes for replay
-        id: pack_probes
-        if: always()
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import tarfile
-          import shutil
-          import json
-          import re
-          failures = []
-          for directory in Path("artifacts/npu-vlm").glob("*/layer-probes"):
-              records = [json.loads(line) for path in directory.glob("*.jsonl")
-                         for line in path.read_text().splitlines()]
-              available = {(r["rank"], r["frame"]["index"], r["module"], r["direction"])
-                           for r in records}
-              weights = next(json.loads(path.read_text())["payload"]
-                             for path in (directory.parent / "snapshots").glob("*.json")
-                             if json.loads(path.read_text())["stage"] == "decoder.loaded_weights")
-              layers = {int(re.search(r"model.layers.(\d+).", key).group(1))
-                        for key in weights if key.startswith("model.layers.")}
-              expected = {(rank, frame, f"layers.{layer}", direction)
-                          for rank in (0, 1) for frame in range(4)
-                          for layer in layers for direction in ("input", "output")}
-              expected |= {(rank, frame, "final_norm", direction)
-                           for rank in (0, 1) for frame in range(4)
-                           for direction in ("input", "output")}
-              missing = sorted(expected - available)
-              (directory.parent / "layer-probe-coverage.json").write_text(
-                  json.dumps({"records": len(records), "missing": missing}, indent=2))
-              if missing:
-                  failures.append(str(directory))
-              target = directory.parent / "layer-probes.tar.gz"
-              with tarfile.open(target, "w:gz") as archive:
-                  archive.add(directory, arcname="layer-probes")
-              shutil.rmtree(directory)
-          if failures:
-              raise RuntimeError(f"Incomplete layer probes: {failures}")
-          PY
-
-      - name: Upload diagnostic evidence even on failure
+      - name: Upload full diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -278,22 +145,11 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      - name: Preserve original failed assertions in job status
+      - name: Require actual complete nine-case success
         if: always()
         env:
           PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
-          BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
-          QWEN_OUTCOME: ${{ steps.qwen.outcome }}
-          REPLAY_OUTCOME: ${{ steps.replay.outcome }}
-          ROUTE_REPLAY_OUTCOME: ${{ steps.route_replay.outcome }}
-          ROUTE_RAW_OUTCOME: ${{ steps.route_raw.outcome }}
-          OPERATORS_OUTCOME: ${{ steps.gate_up_replay.outcome }}
-          EXPORT_OUTCOME: ${{ steps.export_routing.outcome }}
-          PACK_OUTCOME: ${{ steps.pack_probes.outcome }}
+          SUPPORTED_OUTCOME: ${{ steps.supported.outcome }}
         shell: bash
         run: |
-          for outcome in "$PREPARE_OUTCOME" "$BASELINE_OUTCOME" "$QWEN_OUTCOME" \
-            "$REPLAY_OUTCOME" "$ROUTE_REPLAY_OUTCOME" "$ROUTE_RAW_OUTCOME" \
-            "$OPERATORS_OUTCOME" "$EXPORT_OUTCOME" "$PACK_OUTCOME"; do
-            [ "$outcome" = success ] || exit 1
-          done
+          [ "$PREPARE_OUTCOME" = success ] && [ "$SUPPORTED_OUTCOME" = success ]

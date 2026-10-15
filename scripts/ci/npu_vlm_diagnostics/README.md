@@ -1,3 +1,13 @@
+## R14: supported APIs, K-order reconstruction, and all nine original cases
+
+This revision uses the runner's default 24 Cube / 48 Vector cores and BF16 model/head. No routing-budget instruction patch or device limit is installed. Each Qwen worker validates actual resources and unchanged parameter identities/dtypes.
+
+After recording the original raw-image failure, fresh-process frozen X/W replays compare native linear, non-grouped `npu_grouped_matmul`, weight-NZ `npu_format_cast` plus linear, zero-bias `addmm`, deterministic algorithms and the legacy high-precision compile option. The latter is a diagnostic negative control, not a recommended fix. Kernel profiles identify what actually executes; the default replay must exactly reproduce the captured output. Simultaneous K-axis permutations of both inputs test the specific accumulation-order explanation without changing the mathematical product.
+
+Operator alternatives affect Qwen's 36 decoder gate/up prefill projections only. Decode, vision, lm_head and other model implementations retain their original operators. Each supported candidate is tried with the original raw-image assertion; the first passing candidate is then tested against the entire original file, all nine methods in the original class ordering, without fail-fast, changed assertions or skipped cases. If no raw candidate passes, the first valid operator alternative still runs all nine cases and records failures. The original failing baseline is a recorded control; the final job gate requires actual nine-case success, default-operator calibration, and K-order evidence.
+
+The compact `npu-vlm-supported-*` artifact contains results, responses, provenance, resources, profiles and head tensors. The full artifact retains frozen inputs/outputs. Earlier scripts below are historical and are not invoked by this revision.
+
 ## R13: original 24/48-core routing-only comparison
 
 This round keeps the CI runner's original 24 Cube / 48 Vector resources and BF16 model/head. It runs the original raw-image baseline, observed raw-image and frozen-vision controls, then frozen-vision and raw-image arms changing only the CANN MatMul routing budget. No core-limit or FP32-head intervention runs in this workflow revision.

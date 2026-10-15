@@ -717,9 +717,9 @@ def _instrument(module):
         from npu_vlm_core_limit import install as install_core_limit
 
         install_core_limit(module.Qwen2_5_VLForConditionalGeneration)
-        from npu_vlm_route_budget import install as install_route_budget
+        from npu_vlm_supported_matmul import install as install_supported_matmul
 
-        install_route_budget(module.Qwen2_5_VLForConditionalGeneration)
+        install_supported_matmul(module.Qwen2_5_VLForConditionalGeneration)
         _wrap_runtime_method(
             module.Qwen2_5_VLForConditionalGeneration,
             "get_image_feature",
