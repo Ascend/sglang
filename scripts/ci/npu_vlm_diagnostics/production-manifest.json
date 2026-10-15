@@ -1,0 +1,9 @@
+{
+  "base": "8dbf2b366b690d83843c42498e972745a89072ee",
+  "files": {
+    "python/sglang/srt/models/qwen2.py": "cea091d154984e3114f415ede51d399b32e6a950298cfa9a841d6ddbd1bb57cf",
+    "python/sglang/srt/models/qwen2_5_vl.py": "fe9b5f695eefd8f1fddafd2fc06510a077a0453a868c9e254aa769fdd2b754a9",
+    "python/sglang/srt/hardware_backend/npu/modules/linear.py": "644a839efd2fbefda031aac6028938b80b434ace2dca1b4523e12a8257c64ede",
+    "test/registered/kernels/ops/gemm/test_npu_qwen_vl_prefill.py": "f1809b065f019dccc35213c3ddf885f560ad232d2003c48a2bde7f60abc9ff40"
+  }
+}

@@ -1,5 +1,4 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
 
 on:
   pull_request:
@@ -8,93 +7,173 @@ on:
       - testcases-260813
     paths:
       - ".github/workflows/single-test-npu.yml"
+      - "scripts/ci/npu_vlm_diagnostics/**"
 
 concurrency:
   group: single-test-npu-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   single-node-poc:
-    name: single-node-poc
+    name: VLM input format diagnostics
     runs-on: linux-aarch64-a3-2
+    timeout-minutes: 110
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100
+    env:
+      SGLANG_USE_MODELSCOPE: "true"
+      HF_ENDPOINT: https://hf-mirror.com
+      SGLANG_IS_IN_CI: "true"
+      SGLANG_TEST_MAX_RETRY: "0"
+      SGLANG_SET_CPU_AFFINITY: "1"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check npu info
-        run: |
-          npu-smi info
-
-      - name: Run test
-        timeout-minutes: 120
-        env:
-          SGLANG_USE_MODELSCOPE: true
-          HF_ENDPOINT: https://hf-mirror.com
-          SGLANG_IS_IN_CI: true
+      - name: Prepare original test helpers and machine evidence
+        id: prepare
         shell: bash
         run: |
-          sglang_source_path=$(pwd)
-          echo "Source code path: ${sglang_source_path}"
-          ln -sf ${sglang_source_path} /root/sglang
-
-          # Test cases - 使用时替换为实际的测试用例路径
-          test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
-          )
-
-          for test_case in "${test_cases[@]}"; do
-            if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-              echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
-              exit 1
+          set -euo pipefail
+          mkdir -p artifacts/npu-vlm/machine
+          ln -sf "$GITHUB_WORKSPACE" /root/sglang
+          helper_path=/sgl-workspace/sglang/python/sglang/test/ascend
+          if [ -d "$helper_path" ]; then
+            mv "$helper_path" "${helper_path}_vlm_original"
+          fi
+          cp -r "$GITHUB_WORKSPACE/python/sglang/test/ascend" "$helper_path"
+          git rev-parse HEAD > artifacts/npu-vlm/machine/checkout-sha.txt
+          git -C /sgl-workspace/sglang rev-parse HEAD > artifacts/npu-vlm/machine/image-sha.txt
+          hostname > artifacts/npu-vlm/machine/hostname.txt
+          uname -a > artifacts/npu-vlm/machine/uname.txt
+          npu-smi info > artifacts/npu-vlm/machine/npu-before.txt 2>&1 || true
+          for info_file in \
+            /usr/local/Ascend/driver/version.info \
+            /usr/local/Ascend/firmware/version.info \
+            /usr/local/Ascend/cann/arm64-linux/ascend_toolkit_install.info \
+            /usr/local/Ascend/cann/opp/version.info; do
+            if [ -f "$info_file" ]; then
+              cat "$info_file" > "artifacts/npu-vlm/machine/${info_file//\//_}"
             fi
           done
+          printf '%s\n' "$RUNNER_NAME" > artifacts/npu-vlm/machine/runner.txt
+          printf '%s\n' 'cann9.1.0-a3-B100' > artifacts/npu-vlm/machine/image-tag.txt
 
-          # copy required file from our daily cache
-          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
-          echo "scaling_governor performance num: \
-            $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor | grep performance | wc -l)"
-          echo "swappiness: $(cat /proc/sys/vm/swappiness)"
-          echo "numa_balancing: $(cat /proc/sys/kernel/numa_balancing)"
-          echo "sched_migration_cost_ns: $(cat /proc/sys/kernel/sched_migration_cost_ns)"
-
-          export SGLANG_TEST_MAX_RETRY=0
-          export SGLANG_SET_CPU_AFFINITY=1
-          echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
-
-          echo "Use sglang from image"
-          sglang_pkg_path=/sgl-workspace/sglang/python
-          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-          mkdir -p ${ascend_test_util_path}
-          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-          cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-
-          # Set environment of cann
+      - name: Fingerprint the installed NPU computation stack
+        shell: bash
+        run: |
           source /usr/local/Ascend/cann/set_env.sh || true
           source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          python scripts/ci/npu_vlm_diagnostics/hooks/npu_vlm_fingerprint.py \
+            --output artifacts/npu-vlm/machine/binary-fingerprint.json
 
-          current_date=$(date +%Y%m%d)
-          log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
-          rm -rf ${log_path}
-          mkdir -p ${log_path}
-          echo "Log path: ${log_path}"
+      - name: Independent Qwen baseline without internal diagnostic hooks
+        id: baseline
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          mkdir -p artifacts/npu-vlm/baseline
+          timeout --kill-after=30s 600s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --mode qwen --output-dir artifacts/npu-vlm/baseline \
+            2>&1 | tee artifacts/npu-vlm/baseline/console.log
 
-          for test_case in "${test_cases[@]}"; do
-            tc_name=$(basename ${test_case} .py)
-            echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
-            echo "Finished test case ${test_case}"
-          done
+      - name: Apply production source fix to the pinned runtime
+        id: production
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C /sgl-workspace/sglang rev-parse HEAD)" = 8dbf2b366b690d83843c42498e972745a89072ee
+          git -C /sgl-workspace/sglang apply --check "$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/production.patch"
+          git -C /sgl-workspace/sglang apply "$GITHUB_WORKSPACE/scripts/ci/npu_vlm_diagnostics/production.patch"
+          source /usr/local/Ascend/cann/set_env.sh || true
+          python scripts/ci/npu_vlm_diagnostics/verify_production.py
 
-          plog_path="/root/ascend/log/debug/plog"
-          if [ -d "$plog_path" ];then
-            echo "Plog files found. Begin to backup them."
-            target_plog_path="/root/.cache/tests/logs/plog/${HOSTNAME}"
-            echo "Save path: ${target_plog_path}"
-            rm -rf ${target_plog_path}
-            mkdir -p ${target_plog_path}
-            cp ${plog_path}/* ${target_plog_path}
-          fi
+      - name: Exercise production GMM and fallback contracts
+        id: operator
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          export ASCEND_GLOBAL_LOG_LEVEL=3
+          python -u /sgl-workspace/sglang/test/registered/kernels/ops/gemm/test_npu_qwen_vl_prefill.py \
+            2>&1 | tee artifacts/npu-vlm/operator-tests.log
+
+      - name: Complete original nine cases with production code and no diagnostic hooks
+        id: full
+        if: always() && steps.production.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 40
+        shell: bash
+        run: |
+          set -o pipefail
+          source /usr/local/Ascend/cann/set_env.sh || true
+          source /usr/local/Ascend/nnal/atb/set_env.sh || true
+          unset VLM_DIAGNOSTICS_DIR VLM_SUPPORTED_ONLY VLM_SUPPORTED_MATMUL VLM_CANN_ROUTE_BUDGET VLM_DEVICE_LIMIT_CUBE VLM_DEVICE_LIMIT_VECTOR
+          export ASCEND_GLOBAL_LOG_LEVEL=3
+          mkdir -p artifacts/npu-vlm/supported-full
+          timeout --kill-after=30s 2100s python -u scripts/ci/npu_vlm_diagnostics/run_case.py \
+            test/registered/npu/vlm_models/test_npu_vlm_input_format.py \
+            --mode full --output-dir artifacts/npu-vlm/supported-full \
+            2>&1 | tee artifacts/npu-vlm/supported-full/console.log
+
+      - name: Export compact full-suite evidence
+        if: always()
+        shell: bash
+        run: |
+          python scripts/ci/npu_vlm_diagnostics/export_supported_evidence.py artifacts/npu-vlm
+          npu-smi info > artifacts/npu-vlm-supported/npu-after.txt 2>&1 || true
+
+      - name: Upload full-suite evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npu-vlm-supported-${{ github.run_id }}
+          path: artifacts/npu-vlm-supported
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Require nine assertions and unhooked production source evidence
+        if: always()
+        env:
+          OPERATOR_OUTCOME: ${{ steps.operator.outcome }}
+        shell: bash
+        run: |
+          python - <<'INNER'
+          import json, os
+          from pathlib import Path
+          assert os.environ["OPERATOR_OUTCOME"] == "success"
+          root = Path("artifacts/npu-vlm/supported-full")
+          result = json.loads((root / "result.json").read_text())
+          assert result["successful"] and result["tests_run"] == result["expected"] == 9
+          assert not result["errors"] and not result["failures"] and not result["skipped"]
+          assert not result["experiment"]["enable_fp32_lm_head"]
+          progress = json.loads((root / "test-progress.json").read_text())
+          assert len({r["test"] for r in progress if r["status"] == "passed"}) == 9
+          provenance = json.loads((root / "provenance.json").read_text())
+          for key in ("VLM_DIAGNOSTICS_DIR", "VLM_SUPPORTED_ONLY", "VLM_SUPPORTED_MATMUL"):
+              assert not provenance["env"][key]
+          assert "hooks" not in (provenance["env"]["PYTHONPATH"] or "")
+          expected = json.loads(Path("scripts/ci/npu_vlm_diagnostics/production-manifest.json").read_text())
+          for name, sha in expected["files"].items():
+              if not name.startswith("python/"):
+                  continue
+              record = next(r for r in provenance["files"] if r["path"].endswith(name[7:]))
+              assert record["sha256"] == sha, name
+          production = json.loads(Path("artifacts/npu-vlm/machine/production.json").read_text())
+          assert len(production["devices"]) == 2
+          for device in production["devices"]:
+              assert device["limits"] == {"cube_core_num": 24, "vector_core_num": 48}
+          print("Verified all nine original assertions with production sources, no hooks, BF16 head, and default 24/48 cores")
+          INNER
