@@ -169,7 +169,7 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         self.assertIn(
             "white",
             content.lower(),
-            f"Expected response about a white image, got: '{content}'"
+            f"Expected response about a white image, got: '{content}'",
         )
 
         self._stop_server()
