@@ -1,4 +1,5 @@
 import unittest
+import os
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestNpuAccuracyTestCaseBase,
@@ -9,6 +10,8 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=2800, suite="full-acc-2-npu-a3", nightly=True)
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 QWEN3_5_9B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
@@ -39,7 +42,7 @@ QWEN3_5_9B_OTHER_ARGS = [
     "--trust-remote-code",
     "--mem-fraction-static",
     0.7,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     16,
     "--enable-multimodal",
     "--mm-attention-backend",
@@ -57,7 +60,7 @@ class TestNPUQwen3_5_9B_GSM8K(TestNpuAccuracyTestCaseBase):
     datasets = ["gsm8k"]
     few_shot_num = 5
     generation_config = {
-        "max_tokens": 8192,
+        "max_tokens": 16384,
         "temperature": 0.6,
     }
     eval_batch_size = 64
