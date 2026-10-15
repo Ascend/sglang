@@ -255,19 +255,19 @@ jobs:
             python3 -c "from datasets import LargeList" 2>/dev/null || pip install --force-reinstall --no-deps "datasets==4.8.5"
             python3 -c "from datasets import LargeList" || { echo "ERROR: datasets still broken after reinstall"; exit 1; }
 
-            # Preload hellaswag: rowanz/hellaswag was DMCA-taken-down on 2026-09-14, the URL in
-            # test_programs.py 404s since. download_and_cache_file skips download when file exists.
-            # HF parquet stores label as string; test code does endings[label] -> cast to int.
-            python3 -c "
-            import json
-            from datasets import load_dataset
-            ds = load_dataset('Rowan/hellaswag', split='validation')
-            with open('/tmp/hellaswag_val.jsonl', 'w') as f:
-                for row in ds:
-                    row['label'] = int(row['label'])
-                    f.write(json.dumps(row) + '\n')
-            print(f'preloaded {len(ds)} hellaswag examples to /tmp/hellaswag_val.jsonl')
-            " || echo "WARN: hellaswag preload failed; test_accuracy_floor will fail if /tmp file is absent"
+            # Preload the hellaswag validation split to /tmp/hellaswag_val.jsonl for tests.
+            # Loads the 'Rowan/hellaswag' validation split, converts each row's 'label' to an integer,
+            # and writes each example as a JSON Lines file at /tmp/hellaswag_val.jsonl.
+            python3 - <<'PYEOF' || echo "WARN: hellaswag preload failed; test_accuracy_floor will fail if /tmp file is absent"
+          import json
+          from datasets import load_dataset
+          ds = load_dataset('Rowan/hellaswag', split='validation')
+          with open('/tmp/hellaswag_val.jsonl', 'w') as f:
+              for row in ds:
+                  row['label'] = int(row['label'])
+                  f.write(json.dumps(row) + '\n')
+          print(f'preloaded {len(ds)} hellaswag examples to /tmp/hellaswag_val.jsonl')
+          PYEOF
 
             hf download MMMU/MMMU --repo-type dataset
             pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc opentelemetry-exporter-otlp-proto-http
