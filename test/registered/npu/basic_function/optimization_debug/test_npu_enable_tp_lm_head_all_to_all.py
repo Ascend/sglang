@@ -9,7 +9,7 @@ register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
 
 class TestGsm8k(GSM8KAscendMixin, CustomTestCase):
-    """Testcase: Verify that the inference accuracy of the Qwen/Qwen3-30B-A3B model on the GSM8K dataset is no less than 0.90 
+    """Testcase: Verify that the inference accuracy of the Qwen/Qwen3-30B-A3B model on the GSM8K dataset is no less than 0.90
     with --enable-tp-lm-head-all-to-all which needs tp==dp .
 
     [Test Category] Parameter
@@ -34,7 +34,7 @@ class TestGsm8k(GSM8KAscendMixin, CustomTestCase):
         2,
         "--dp-size",
         2,
-        "--enable-tp-lm-head-all-to-all"
+        "--enable-tp-lm-head-all-to-all",
     ]
 
 
