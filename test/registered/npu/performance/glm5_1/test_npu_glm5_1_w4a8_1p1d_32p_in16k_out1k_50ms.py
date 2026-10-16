@@ -171,8 +171,10 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
     "prefill_envs": GLM_5_1_PD_SEP_PREFILL_ENVS,
     "decode_envs": GLM_5_1_PD_SEP_DECODE_ENVS,
     "router_args": [
-        "--policy", "round_robin",
-        "--request-timeout-secs", 7200,
+        "--policy",
+        "round_robin",
+        "--request-timeout-secs",
+        7200,
         "--disable-health-check",
         "--disable-circuit-breaker",
     ],
