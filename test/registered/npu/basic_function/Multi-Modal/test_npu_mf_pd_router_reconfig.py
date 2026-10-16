@@ -332,9 +332,7 @@ class MFPDRouterReconfigTest(CustomTestCase):
         """Check worker /health endpoints directly (bypassing the router)."""
         for name in names:
             resp = requests.get(f"{self.urls[name]}/health", timeout=10)
-            self.assertEqual(
-                resp.status_code, 200, f"Worker {name} is not healthy"
-            )
+            self.assertEqual(resp.status_code, 200, f"Worker {name} is not healthy")
         logger.info(f"Workers {names} are healthy")
 
     def _kill_worker(self, name):
