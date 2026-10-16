@@ -108,10 +108,6 @@ GLM_5_1_PD_SEP_PREFILL_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     2,
-    "--reasoning-parser",
-    "glm45",
-    "--tool-call-parser",
-    "glm47",
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
@@ -166,10 +162,6 @@ GLM_5_1_PD_SEP_DECODE_ARGS = [
     1,
     "--speculative-num-draft-tokens",
     4,
-    "--reasoning-parser",
-    "glm45",
-    "--tool-call-parser",
-    "glm47",
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {
@@ -178,7 +170,12 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
     "decode_args": GLM_5_1_PD_SEP_DECODE_ARGS,
     "prefill_envs": GLM_5_1_PD_SEP_PREFILL_ENVS,
     "decode_envs": GLM_5_1_PD_SEP_DECODE_ENVS,
-    "router_args": ["--policy", "round_robin"],
+    "router_args": [
+        "--policy", "round_robin",
+        "--request-timeout-secs", 7200,
+        "--disable-health-check",
+        "--disable-circuit-breaker",
+    ],
     "router_envs": {},
 }
 
