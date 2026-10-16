@@ -202,7 +202,22 @@ def alloc_paged_token_slots_extend(
         extra_alloc_kwargs["rotation_bases"] = kv_shard_rotation_bases
     if is_dsv4:
         c128_num_pages = allocator.c128_num_pages_needed(prefix_lens_cpu, seq_lens_cpu)
-        allocator.ensure_c128_capacity(tree_cache, c128_num_pages)
+        if not allocator.ensure_c128_capacity(tree_cache, c128_num_pages):
+            # The C128 pool is a separate page-granular pool. When it cannot be
+            # reclaimed (every FULL leaf is either path-locked or already
+            # evicted), alloc_extend returns None — which used to surface here
+            # as a FULL/SWA "out of memory" listing free FULL tokens and hiding
+            # the pool that actually ran dry. Report the real cause instead.
+            error_msg = (
+                f"Prefill out of memory. "
+                f"{allocator.c128_pool_exhausted_msg(c128_num_pages, 'prefill')}\n"
+                f"Try to allocate {extend_num_tokens} tokens.\n"
+                f"{available_and_evictable_str(tree_cache)}"
+            )
+            logger.error(error_msg)
+            if tree_cache is not None:
+                tree_cache.pretty_print()
+            raise RuntimeError(error_msg)
         extra_alloc_kwargs["req_pool_indices"] = req_pool_indices
         # Per-call per-req table for the C128 KV last_loc lookup.
         if batch is not None:
@@ -554,7 +569,17 @@ def alloc_paged_token_slots_decode(
         c128_num_pages = allocator.c128_num_pages_needed(
             (seq_lens_cpu - 1).clamp(min=0), seq_lens_cpu
         )
-        allocator.ensure_c128_capacity(tree_cache, c128_num_pages)
+        if not allocator.ensure_c128_capacity(tree_cache, c128_num_pages):
+            error_msg = (
+                f"Decode out of memory. "
+                f"{allocator.c128_pool_exhausted_msg(c128_num_pages, 'decode')}\n"
+                f"Try to allocate {len(seq_lens) * token_per_req} tokens.\n"
+                f"{available_and_evictable_str(tree_cache)}"
+            )
+            logger.error(error_msg)
+            if tree_cache is not None:
+                tree_cache.pretty_print()
+            raise RuntimeError(error_msg)
         extra_alloc_kwargs["req_pool_indices"] = req_pool_indices
         # Per-call per-req C128 table for the last_loc lookup.
         if batch is not None:

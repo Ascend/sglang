@@ -3695,6 +3695,15 @@ class UnifiedRadixCache(BasePrefixCache):
             elif ct.is_mamba:
                 available_size = self.req_to_token_pool.mamba_allocator.available_size()
             else:
+                # Auxiliary pools that are not full-token addressed (the DSV4
+                # C128 compressed-KV pool) own a page-granular allocator, so
+                # the token arithmetic above does not apply to them. Skipping
+                # them entirely made an OOM report FULL/SWA headroom only and
+                # hid the pool that actually ran dry (DSV4 "Prefill out of
+                # memory" with free full tokens left).
+                c128_line = self._c128_capacity_line(ct)
+                if c128_line is not None:
+                    lines.append(c128_line)
                 continue
 
             lines.append(
@@ -3702,6 +3711,32 @@ class UnifiedRadixCache(BasePrefixCache):
                 f"(available_size={available_size} + component_evictable_size_={self.tree_core.component_evictable_size(ct)})"
             )
         return "\n".join(lines) + "\n"
+
+    def _c128_capacity_line(self, component_type: ComponentType) -> Optional[str]:
+        """Page-granular capacity line for the DSV4 C128 compressed-KV pool.
+
+        C128 is one compressed token per 128 full tokens, allocated in whole
+        ``c128_page_size`` pages, so its free space must be reported in pages:
+        the token counts used for FULL/SWA are not comparable to it.
+        """
+        if component_type != ComponentType.C128:
+            return None
+        c128_allocator = getattr(
+            self.token_to_kv_pool_allocator, "c128_attn_allocator", None
+        )
+        if c128_allocator is None:
+            return None
+        page_size = c128_allocator.page_size
+        free_pages = c128_allocator.available_size() // page_size
+        evictable_pages = (
+            self.tree_core.component_evictable_size(component_type) // page_size
+        )
+        return (
+            f"Available {component_type} pages: {free_pages + evictable_pages} "
+            f"(free_pages={free_pages} + component_evictable_pages_={evictable_pages}) "
+            f"of {c128_allocator.num_pages} ({page_size} compressed tokens/page, "
+            f"1 compressed token per 128 full tokens)"
+        )
 
     def sanity_check(self):
         """Verify tree invariants.

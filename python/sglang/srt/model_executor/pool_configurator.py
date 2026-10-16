@@ -1006,6 +1006,15 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
     # object.__new__ stubs (SWA floor tests) skip __init__
     _dspark_draft_on_bf16 = False
 
+    # Spare C128 pages kept on top of the FULL-token footprint. 1 covers the
+    # ceil-vs-floor page the FULL pool's own rounding needs. Per-live-chain tail
+    # pages are NOT added here: they are priced per request at admission
+    # (DSV4PrefillBudget) where the chain lengths are exact, while the only
+    # concurrency number available at sizing time (_resolve_max_running_
+    # requests_per_worker) is a deliberate over-estimate for a different
+    # purpose and would inflate this pool by orders of magnitude.
+    _c128_tail_pages: int = 1
+
     def __init__(self, kvc: KVCacheConfigurator):
         self.kv_cache_dtype_str = kvc.kv_cache_dtype_str
         cfg = kvc.model_config
@@ -1343,6 +1352,38 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
             return int(full_token * self.swa_ratio) // page_size * page_size
         return self.swa_cap_tokens
 
+    def _c128_page_size(self) -> int:
+        """Physical page size of the C128 compressed-KV pool, in compressed
+        tokens (one compressed token spans 128 full tokens)."""
+        return get_schedule().c128_page_size
+
+    def _c128_pool_pages(self, full_token: int) -> int:
+        """C128 pages needed to represent ``full_token`` full tokens.
+
+        ``ceil`` of the FULL footprint in whole pages, plus the tail-page
+        headroom. Sizing the pool as ``full_token // 128`` compressed tokens
+        instead rounds down to whole pages and leaves no slack, which makes C128
+        the first pool to run dry while FULL still has free tokens: each live
+        chain owns a whole tail page, so a pool that only covers the FULL
+        footprint cannot serve more than one chain, and a new prefill then dies
+        in alloc_extend.
+        """
+        group_tokens = 128 * self._c128_page_size()
+        return ceil_div(full_token, group_tokens) + self._c128_tail_pages
+
+    def _c128_tail_headroom_bytes(self) -> int:
+        """Bytes the tail-page headroom takes, charged as fixed pool bytes.
+
+        Mirrors the ``1 / 128 * kv_bytes`` term of ``_get_bytes_per_full_token``:
+        one compressed token costs ``kv_bytes * num_layers_ca128`` bytes.
+        """
+        if self.num_layers_ca128 == 0:
+            return 0
+        bytes_per_compressed_token = self.kv_bytes * self.num_layers_ca128
+        return (
+            self._c128_tail_pages * self._c128_page_size() * bytes_per_compressed_token
+        )
+
     def _compute_dsv4_sizes(self, full_token: int, page_size: int) -> _DSV4PoolSizes:
         full_token = full_token // page_size * page_size
         swa_tokens = self._get_swa_tokens(full_token, page_size)
@@ -1373,7 +1414,11 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
             full_max_total_num_tokens=full_token,
             swa_max_total_num_tokens=swa_tokens,
             c4_max_total_num_tokens=full_token // (4 * self.c4_shrink_factor),
-            c128_max_total_num_tokens=full_token // 128,
+            # Page-granular C128 pool: see _c128_pool_pages for why this is not
+            # simply full_token // 128.
+            c128_max_total_num_tokens=(
+                self._c128_pool_pages(full_token) * self._c128_page_size()
+            ),
             # Unified_kv: request-scoped, finalized once concurrency is known.
             c4_state_pool_size=(
                 0
@@ -1521,6 +1566,7 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
         c4_state_fixed_bytes = self._fixed_c4_state_bytes(
             max_running_requests_per_worker
         )
+        c128_tail_fixed_bytes = self._c128_tail_headroom_bytes()
 
         swa_fixed_bytes = self._get_swa_fixed_bytes()
         fixed_bytes = (
@@ -1528,6 +1574,7 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
             + swa_fixed_bytes
             + swa_ring_fixed_bytes
             + c4_state_fixed_bytes
+            + c128_tail_fixed_bytes
         )
         available_bytes_for_tokens = max(available_bytes - fixed_bytes, 0)
         full_token = int(available_bytes_for_tokens / self.bytes_per_full_token)
@@ -1551,6 +1598,8 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
             f"swa_fixed={swa_fixed_bytes / (1 << 30):.2f} GB, "
             f"swa_ring_fixed={swa_ring_fixed_bytes / (1 << 30):.2f} GB, "
             f"c4_state_fixed={c4_state_fixed_bytes / (1 << 30):.2f} GB, "
+            f"c128_tail_fixed={c128_tail_fixed_bytes / (1 << 30):.2f} GB, "
+            f"c128_tail_pages={self._c128_tail_pages}, "
             f"full_token={sizes.full_max_total_num_tokens}"
         )
         return self._to_config(sizes)

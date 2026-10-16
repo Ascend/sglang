@@ -20,6 +20,7 @@ mem_cache/common.py unpacks ``out_full_loc`` and stashes the bundle on
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 import torch
@@ -37,6 +38,11 @@ from sglang.srt.mem_cache.allocation_sizing import (
 from sglang.srt.mem_cache.allocator.swa import SWATokenToKVPoolAllocator
 from sglang.srt.mem_cache.base_prefix_cache import BasePrefixCache, EvictParams
 from sglang.srt.model_executor.forward_batch_info import DSV4OutCacheLoc
+
+logger = logging.getLogger(__name__)
+
+#: Compression ratio of the C128 sidecar: one compressed KV token per N full tokens.
+C128_RATIO = 128
 
 
 def get_last_loc(
@@ -218,6 +224,60 @@ class DSV4NPUTokenToKVPoolAllocator(SWATokenToKVPoolAllocator):
             f"on req finish."
         )
 
+    def c128_pages_available(self) -> int:
+        """Free C128 physical pages — the page is the C128 allocation unit."""
+        allocator = self.c128_attn_allocator
+        return allocator.available_size() // allocator.page_size
+
+    def c128_pages_total(self) -> int:
+        return self.c128_attn_allocator.num_pages
+
+    def c128_pool_exhausted_msg(self, need_pages: int, phase: str) -> str:
+        """Human-readable C128 shortfall, for the caller's OOM report.
+
+        Kept separate from the raise so the caller can attach it to the
+        existing "Prefill/Decode out of memory" diagnostic — which also dumps
+        the radix tree — instead of replacing it.
+        """
+        page_size = self.c128_attn_allocator.page_size
+        return (
+            f"DSV4 C128 compressed-KV pool exhausted during {phase}: need "
+            f"{need_pages} free page(s) of {page_size} compressed tokens, have "
+            f"{self.c128_pages_available()}/{self.c128_pages_total()} pages. "
+            f"C128 is a separate page-granular pool (1 compressed token per "
+            f"{C128_RATIO} full tokens) whose only reclaim path is FULL-leaf "
+            f"eviction, so it can run dry while FULL still has free tokens."
+        )
+
+    def _c128_sidecar_short(
+        self, prefix_lens_cpu: torch.Tensor, seq_lens_cpu: torch.Tensor, where: str
+    ) -> bool:
+        """True when the C128 pool cannot serve this step. Never silent: a
+        bare ``return None`` here surfaced as a FULL/SWA "out of memory" that
+        could not be attributed to C128."""
+        if self._has_c128_sidecar_capacity(prefix_lens_cpu, seq_lens_cpu):
+            return False
+        logger.warning(
+            "DSV4 c128 KV pool short in %s: need %d page(s), available %d/%d "
+            "(component_evictable page(s) are reclaimable only via FULL-leaf "
+            "eviction). Returning None for the caller to report.",
+            where,
+            self.c128_num_pages_needed(prefix_lens_cpu, seq_lens_cpu),
+            self.c128_pages_available(),
+            self.c128_pages_total(),
+        )
+        return True
+
+    def create_prefill_budget(self, tree_cache, *, num_mixed_decode_tokens=0):
+        # DSV4 additionally prices the C128 page pool at admission; see
+        # DSV4PrefillBudget. Without it the adder admits batches that die in
+        # alloc_extend ("Prefill out of memory" with free FULL tokens left).
+        from sglang.srt.mem_cache.prefill_budget import DSV4PrefillBudget
+
+        return DSV4PrefillBudget(
+            self, tree_cache, num_mixed_decode_tokens=num_mixed_decode_tokens
+        )
+
     def _alloc_c_extend(
         self,
         allocator: NPUPagedTokenToKVPoolAllocator,
@@ -392,7 +452,7 @@ class DSV4NPUTokenToKVPoolAllocator(SWATokenToKVPoolAllocator):
         # Stash per-req tables for this call's last_loc lookups (read by
         # _alloc_c_extend / _alloc_state_extend); no permanent allocator->pool ref.
         self._cur_req_to_token_pool = req_to_token_pool
-        if not self._has_c128_sidecar_capacity(prefix_lens_cpu, seq_lens_cpu):
+        if self._c128_sidecar_short(prefix_lens_cpu, seq_lens_cpu, "alloc_extend"):
             return None
         out_full_loc = super().alloc_extend(
             prefix_lens,
@@ -452,8 +512,8 @@ class DSV4NPUTokenToKVPoolAllocator(SWATokenToKVPoolAllocator):
         req_to_token_pool=None,
     ) -> Optional[DSV4OutCacheLoc]:
         self._cur_req_to_token_pool = req_to_token_pool
-        if not self._has_c128_sidecar_capacity(
-            (seq_lens_cpu - 1).clamp(min=0), seq_lens_cpu
+        if self._c128_sidecar_short(
+            (seq_lens_cpu - 1).clamp(min=0), seq_lens_cpu, "alloc_decode"
         ):
             return None
         out_full_loc = super().alloc_decode(seq_lens, seq_lens_cpu, last_loc)
@@ -493,7 +553,9 @@ class DSV4NPUTokenToKVPoolAllocator(SWATokenToKVPoolAllocator):
         full+swa-tail, then _alloc_compressed_kv adds c4/c128 KV → DSV4OutCacheLoc.
         """
         self._cur_req_to_token_pool = req_to_token_pool
-        if not self._has_c128_sidecar_capacity(prefix_lens_cpu, seq_lens_cpu):
+        if self._c128_sidecar_short(
+            prefix_lens_cpu, seq_lens_cpu, "alloc_extend_swa_tail"
+        ):
             return None
         out_full_loc = super().alloc_extend_swa_tail(
             prefix_lens,
@@ -536,14 +598,24 @@ class DSV4NPUTokenToKVPoolAllocator(SWATokenToKVPoolAllocator):
 
         if req is None or req_to_token_pool is None:
             return
-        kv_len = max(req.kv.kv_committed_len, req.kv.kv_allocated_len)
         req_pool_idx = req.kv.req_pool_idx
-        if kv_len <= 0 or req_pool_idx is None:
+        if req_pool_idx is None:
             return
 
+        # Release + clear the sidecar row unconditionally. The row is the only
+        # record of which C128 pages the request owns and the page refcount has
+        # no back-reference to it, so skipping this release (e.g. once the FULL
+        # length accounting reads zero after a retraction) strands those pages
+        # in c128_page_refcount forever: the C128 pool then drains over a long
+        # run and nothing can find the leak again. Zeroing the row is also what
+        # makes a later fresh owner of this req_pool_idx safe.
         row = req_to_token_pool.req_to_c128_sidecar[int(req_pool_idx)]
         self.release_c128_pages(row[row > 0])
         row.zero_()
+
+        kv_len = max(req.kv.kv_committed_len, req.kv.kv_allocated_len)
+        if kv_len <= 0:
+            return
         self.get_kvcache().clear_request_scoped_state(int(req_pool_idx))
 
     def available_size(self):
