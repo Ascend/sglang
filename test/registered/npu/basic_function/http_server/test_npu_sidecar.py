@@ -74,9 +74,9 @@ def _deploy_rust_extensions():
     if any(target_dir.glob("_*.so")):
         return
     so_files = (
-      sorted(PREBUILT_RUST_EXT_DIR.glob("_*.so"))
-      if PREBUILT_RUST_EXT_DIR.is_dir()
-      else []
+        sorted(PREBUILT_RUST_EXT_DIR.glob("_*.so"))
+        if PREBUILT_RUST_EXT_DIR.is_dir()
+        else []
     )
     if not so_files:
         raise FileNotFoundError(
@@ -138,10 +138,10 @@ class TestSidecar(CustomTestCase):
             if hasattr(cls, attr) and getattr(cls, attr):
                 getattr(cls, attr).close()
         for path in (
-          OUT_LOG_PATH,
-          ERR_LOG_PATH,
-          SIDECAR_MODULE_PATH,
-          SIDECAR_MARKER_PATH,
+            OUT_LOG_PATH,
+            ERR_LOG_PATH,
+            SIDECAR_MODULE_PATH,
+            SIDECAR_MARKER_PATH,
         ):
             if os.path.exists(path):
                 os.remove(path)
