@@ -17,8 +17,8 @@ import unittest
 from pathlib import Path
 
 import requests
-import sglang
 
+import sglang
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -33,9 +33,7 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 # Directory holding the prebuilt Rust extension _*.so files.
 PREBUILT_RUST_EXT_DIR = Path(
-    os.environ.get(
-        "PREBUILT_RUST_EXT_DIR", "/root/.cache/.cache/npu-pkgs/rust"
-    )
+    os.environ.get("PREBUILT_RUST_EXT_DIR", "/root/.cache/.cache/npu-pkgs/rust")
 )
 
 # The sidecar is resolved by module name through sys.path, so the probe module
@@ -75,7 +73,11 @@ def _deploy_rust_extensions():
     target_dir = Path(sglang.__file__).resolve().parent / "srt" / "rust_extensions"
     if any(target_dir.glob("_*.so")):
         return
-    so_files = sorted(PREBUILT_RUST_EXT_DIR.glob("_*.so")) if PREBUILT_RUST_EXT_DIR.is_dir() else []
+    so_files = (
+      sorted(PREBUILT_RUST_EXT_DIR.glob("_*.so"))
+      if PREBUILT_RUST_EXT_DIR.is_dir()
+      else []
+    )
     if not so_files:
         raise FileNotFoundError(
             f"No prebuilt _*.so files found in {PREBUILT_RUST_EXT_DIR}; "
@@ -135,7 +137,12 @@ class TestSidecar(CustomTestCase):
         for attr in ("out_log_file", "err_log_file"):
             if hasattr(cls, attr) and getattr(cls, attr):
                 getattr(cls, attr).close()
-        for path in (OUT_LOG_PATH, ERR_LOG_PATH, SIDECAR_MODULE_PATH, SIDECAR_MARKER_PATH):
+        for path in (
+          OUT_LOG_PATH,
+          ERR_LOG_PATH,
+          SIDECAR_MODULE_PATH,
+          SIDECAR_MARKER_PATH,
+        ):
             if os.path.exists(path):
                 os.remove(path)
 
