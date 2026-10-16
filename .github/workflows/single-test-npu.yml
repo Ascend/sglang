@@ -1,5 +1,7 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# Qwen3-VL 8B (TP4) / 30B-A3B (DP8) accuracy validation: full mmlu/mmmu/aime26.
+# Temporary single-test wiring — revert this workflow before merging the cases
+# into a regular suite.
 
 on:
   pull_request:
@@ -15,10 +17,19 @@ concurrency:
 
 jobs:
   single-node-poc:
-    name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: qwen3-vl-8b-tp4-mmlu-mmmu
+            test_case: "test/registered/npu/accuracy/qwen3_vl_8b/test_npu_qwen3_vl_8b_bf16_4p_mmlu_mmmu.py"
+          - name: qwen3-vl-30b-dp8-aime26-mmmu
+            test_case: "test/registered/npu/accuracy/qwen3_vl_30b_a3b/test_npu_qwen3_vl_30b_a3b_bf16_dp8_aime26_mmmu.py"
+    name: ${{ matrix.name }}
+    runs-on: linux-aarch64-a3-8
+    timeout-minutes: 660
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B103
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,7 +39,7 @@ jobs:
           npu-smi info
 
       - name: Run test
-        timeout-minutes: 120
+        timeout-minutes: 640
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
@@ -39,14 +50,14 @@ jobs:
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - 使用时替换为实际的测试用例路径
+          # Test cases
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "${{ matrix.test_case }}"
           )
 
           for test_case in "${test_cases[@]}"; do
             if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-              echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
+              echo "The testcase does not exit: ${test_case}"
               exit 1
             fi
           done
