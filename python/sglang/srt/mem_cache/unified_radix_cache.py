@@ -3695,6 +3695,23 @@ class UnifiedRadixCache(BasePrefixCache):
             elif ct.is_mamba:
                 available_size = self.req_to_token_pool.mamba_allocator.available_size()
             else:
+                # Non-full-token pools report in their own unit; skipping them hid
+                # the DSV4 C128 pool from every OOM report.
+                c128_allocator = getattr(
+                    self.token_to_kv_pool_allocator, "c128_attn_allocator", None
+                )
+                if c128_allocator is None:
+                    continue
+                c128_page_size = c128_allocator.page_size
+                c128_free = c128_allocator.available_size() // c128_page_size
+                c128_evictable = (
+                    self.tree_core.component_evictable_size(ct) // c128_page_size
+                )
+                lines.append(
+                    f"Available {ct} pages: {c128_free + c128_evictable} "
+                    f"(free_pages={c128_free} + evictable_pages={c128_evictable}) "
+                    f"of {c128_allocator.num_pages}"
+                )
                 continue
 
             lines.append(
