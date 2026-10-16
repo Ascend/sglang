@@ -411,3 +411,110 @@ class SharedSWAPrefillBudget(SWAPrefillBudget):
             extend_input_len + max_new_tokens + self.page_size,
             self.swa_tokens(extend_input_len, max_new_tokens, chunk_limit=chunk_limit),
         )
+
+
+class DSV4PrefillBudget(SWAPrefillBudget):
+    """FULL/SWA budget plus the DSV4 C128 compressed-KV page pool.
+
+    FULL/SWA pricing cannot see C128: it is a separate page-granular pool (one
+    compressed token per 128 full tokens, allocated in whole
+    ``c128_page_size`` pages) and every live chain owns its own tail page. Its
+    only reclaim path is FULL-leaf eviction, which cannot help while the live
+    chains are path-locked — so a batch FULL accepts can still die in
+    ``alloc_extend`` with free FULL tokens left (the reported DSV4 "Prefill out
+    of memory").
+
+    Charge each admitted request its whole-chain page footprint against the free
+    C128 pages so the adder defers/chunks it instead. A request's pages are
+    returned when it finishes, so a deferred request becomes admissible again:
+    this back-pressures, it cannot livelock.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.c128_offset = 0
+
+    @property
+    def _c128_allocator(self):
+        return getattr(self.allocator, "c128_attn_allocator", None)
+
+    def c128_pages_needed(self, chain_tokens: int) -> int:
+        """Whole-page footprint of a chain of ``chain_tokens`` full tokens."""
+        allocator = self._c128_allocator
+        if allocator is None:
+            return 0
+        group_tokens = 128 * allocator.page_size
+        return -(-max(0, int(chain_tokens)) // group_tokens)
+
+    def c128_pages_free(self) -> int:
+        allocator = self._c128_allocator
+        if allocator is None:
+            return 1 << 30
+        return allocator.available_size() // allocator.page_size
+
+    def _c128_fits(self, chain_tokens: int) -> bool:
+        return (
+            self.c128_pages_needed(chain_tokens)
+            <= self.c128_pages_free() - self.c128_offset
+        )
+
+    def check_prefill(
+        self,
+        *,
+        extend_input_len: int,
+        total_tokens: int,
+        max_new_tokens: int,
+        input_tokens: int,
+        swa_host_hit_length: int,
+        chunk_limit: int | None,
+    ) -> tuple[bool, int | None]:
+        ok, cap = super().check_prefill(
+            extend_input_len=extend_input_len,
+            total_tokens=total_tokens,
+            max_new_tokens=max_new_tokens,
+            input_tokens=input_tokens,
+            swa_host_hit_length=swa_host_hit_length,
+            chunk_limit=chunk_limit,
+        )
+        # Only a boundary-aligned chunk shrinks the C128 footprint by at most one
+        # page, so a C128 shortfall is permanent for this pass rather than a
+        # reason to hand back a smaller chunk.
+        if ok and not self._c128_fits(extend_input_len):
+            return False, None
+        return ok, cap
+
+    def can_allocate_prefill(
+        self,
+        *,
+        paged_input: int,
+        extend_input_len: int,
+        max_new_tokens: int,
+        chunk_limit: int | None,
+    ) -> bool:
+        return super().can_allocate_prefill(
+            paged_input=paged_input,
+            extend_input_len=extend_input_len,
+            max_new_tokens=max_new_tokens,
+            chunk_limit=chunk_limit,
+        ) and self._c128_fits(paged_input)
+
+    def reserve(
+        self,
+        extend_input_len: int,
+        max_new_tokens: int,
+        *,
+        extra_tokens: int = 0,
+        chunk_limit: int | None = None,
+        is_chunked_continuation: bool = False,
+    ) -> None:
+        super().reserve(
+            extend_input_len,
+            max_new_tokens,
+            extra_tokens=extra_tokens,
+            chunk_limit=chunk_limit,
+            is_chunked_continuation=is_chunked_continuation,
+        )
+        # A chunked continuation extends a chain whose page footprint was
+        # already reserved; only a new chain takes fresh page budget here.
+        if not is_chunked_continuation:
+            self.c128_offset += self.c128_pages_needed(extend_input_len)
