@@ -206,27 +206,31 @@ jobs:
           RC=/sgl-workspace/sglang/python/sglang/srt/managers/scheduler_components/request_receiver.py
           echo "--- request_receiver.py L133-139 (on-disk source) ---"
           sed -n '133,139p' "${RC}" || true
-          echo "--- runtime diagnostics: bytecode + pycache timestamps ---"
+          echo "--- runtime diagnostics: server-style import / exception table / MRO ---"
           python3 - <<'PYEOF' 2>&1 || true
+          # Do NOT insert /sgl-workspace into sys.path: reproduce exactly how the
+          # sglang-serve console script resolves sglang (bare import).
+          import inspect
+          import sglang.srt.managers.scheduler_components.request_receiver as rr
+          print("module file:", rr.__file__)
+          cls = None
+          for name, obj in vars(rr).items():
+              if inspect.isclass(obj) and hasattr(obj, "_pull_raw_reqs"):
+                  cls = obj
+                  break
+          print("class found:", cls.__name__ if cls else None)
+          if cls is not None:
+              code = cls._pull_raw_reqs.__code__
+              et = getattr(code, "co_exceptiontable", None)
+              print("exception table non-empty (try/except in bytecode):", bool(et))
+          import zmq
+          print("zmq Again MRO:", zmq.error.Again.__mro__)
+          print("zmq module file:", zmq.__file__)
           import sys
-          sys.path.insert(0, "/sgl-workspace/sglang/python")
-          try:
-              import sglang.srt.managers.scheduler_components.request_receiver as rr
-              import dis, io
-              print("module file:", rr.__file__)
-              buf = io.StringIO()
-              dis.dis(rr._pull_raw_reqs, file=buf)
-              print("_pull_raw_reqs bytecode contains except handler:",
-                    "ExceptHandler" in buf.getvalue())
-              import zmq
-              print("zmq Again MRO:", zmq.error.Again.__mro__)
-          except Exception as e:
-              print("diag import failed (non-fatal):", repr(e))
-          import os, glob
-          d = os.path.dirname("/sgl-workspace/sglang/python/sglang/srt/managers/scheduler_components/__pycache__/")
-          for p in glob.glob(d + "request_receiver*"):
-              print("pyc entry:", p)
+          print("sys.path:", sys.path)
           PYEOF
+          echo "--- mount check: is /sgl-workspace a separate filesystem? ---"
+          grep -E "sgl-workspace|/sgl" /proc/mounts || true
           echo "--- all request_receiver pyc copies on disk (before removal) ---"
           find / -xdev -name "request_receiver*.pyc" 2>/dev/null || true
           echo "--- sys.pycache_prefix / env ---"
