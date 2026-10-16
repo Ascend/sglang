@@ -31,6 +31,8 @@ OTHER_ARGS = [
     "--attention-backend",
     "ascend",
     "--trust-remote-code",
+    "--tp-size",
+    8,
     "--dp-size",
     8,
     "--enable-dp-attention",
