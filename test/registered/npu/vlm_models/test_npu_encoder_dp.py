@@ -10,7 +10,7 @@ register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 class TestVLMEncoderDP(TestVLMModels):
     model = QWEN2_5_VL_72B_INSTRUCT_WEIGHTS_PATH
     mmmu_accuracy = 0.55
-    # --cuda-graph-max-bs 32 last-wins over the kit's default 64.
+    # --cuda-graph-max-bs-decode 32 last-wins over the kit's default 64.
     other_args = [
         "--mm-enable-dp-encoder",
         "--tp-size",
