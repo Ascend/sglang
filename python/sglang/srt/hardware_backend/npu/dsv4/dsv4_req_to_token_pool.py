@@ -103,7 +103,7 @@ class DSV4ReqToTokenTablesMixin:
             return None
         for is_fresh, req, req_pool_idx in zip(fresh, reqs, indices):
             if is_fresh:
-                self.req_to_c128_sidecar[int(req_pool_idx)].zero_()
+                self._release_stale_c128_row(int(req_pool_idx))
             pages = getattr(req, "c128_prefix_page_ids", None)
             if pages is not None:
                 self._dsv4_allocator.replace_req_c128_prefix(
@@ -117,6 +117,17 @@ class DSV4ReqToTokenTablesMixin:
         # between __init__ and register_dsv4_allocator — defensive None check.
         if self._dsv4_allocator is not None:
             self._dsv4_allocator.free(req=req, req_to_token_pool=self)
+
+    def _release_stale_c128_row(self, req_pool_idx: int) -> None:
+        """Release then zero a sidecar row before a fresh owner reuses it.
+
+        The row can still hold ids from a tenant whose release was skipped; the
+        ids exist nowhere else, so zeroing without releasing leaks the pages.
+        """
+        row = self.req_to_c128_sidecar[req_pool_idx]
+        if self._dsv4_allocator is not None:
+            self._dsv4_allocator.release_c128_pages(row)
+        row.zero_()
 
 
 class DSV4NPUReqToTokenPool(DSV4ReqToTokenTablesMixin, ReqToTokenPool):
