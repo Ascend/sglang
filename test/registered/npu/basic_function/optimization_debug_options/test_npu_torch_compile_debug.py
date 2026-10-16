@@ -3,7 +3,11 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
+    QWEN3_8B_WEIGHTS_PATH,
+    is_npu_a5,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval
 from sglang.test.test_utils import (
@@ -29,11 +33,11 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
     [Test Target] --enable-torch-compile-debug-mode
     """
 
-    model = QWEN3_8B_WEIGHTS_PATH
+    model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH if is_npu_a5() else QWEN3_8B_WEIGHTS_PATH
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.7",
+        "0.8" if is_npu_a5() else "0.7",
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",

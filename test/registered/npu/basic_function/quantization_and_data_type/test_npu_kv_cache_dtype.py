@@ -78,23 +78,17 @@ class TestNPUKVCacheDtype(CustomTestCase):
 
         # The capturer drains server output asynchronously; poll for the log
         # line instead of asserting immediately so no retry is needed.
-        expected = f"Using KV cache dtype: {self.using_kv_cache_dtype}"
+        expected = f"KV Cache is allocated. dtype: {self.using_kv_cache_dtype}"
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline and expected not in (
-                self.__class__.capturer.get_output() + self.__class__.capturer.get_error()
+            self.__class__.capturer.get_output() + self.__class__.capturer.get_error()
         ):
             time.sleep(0.5)
 
         output = (
-                self.__class__.capturer.get_output() + self.__class__.capturer.get_error()
-        )
-        self.assertIn(f"Using KV cache dtype: {self.using_kv_cache_dtype}", output)
-        self.assertIn(expected, output)
-
-        output = (
             self.__class__.capturer.get_output() + self.__class__.capturer.get_error()
         )
-        self.assertIn(f"Using KV cache dtype: {self.using_kv_cache_dtype}", output)
+        self.assertIn(expected, output)
 
 
 if __name__ == "__main__":
