@@ -9,9 +9,9 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=12000, suite="full-acc-2-npu-a3", nightly=True)
+register_npu_ci(est_time=6500, suite="full-acc-2-npu-a3", nightly=True)
 
-_is_pr_pipeline = os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+_is_pr_pipeline = os.environ.get("NPU_PR_SMOKE") == "true"
 
 ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
@@ -55,7 +55,7 @@ class TestQwen3_VL_8B_Thinking_MMMU(TestNpuAccuracyTestCaseBase):
     model = QWEN3_VL_8B_THINKING_MODEL_PATH
     envs = ENVS
     other_args = OTHER_ARGS
-    accuracy = 0.64 if _is_pr_pipeline else 0.7011
+    accuracy = 0.7011
     datasets = ["mmmu"]
     few_shot_num = 0
     limit = 5 if _is_pr_pipeline else 100000
