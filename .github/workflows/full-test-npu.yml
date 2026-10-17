@@ -27,7 +27,7 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B103'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}
@@ -65,7 +65,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B100" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B103" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -311,13 +311,13 @@ jobs:
             test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          # - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
-          #   prefill_size: 2
-          #   decode_size: 2
-          #   router_size: 1
-          #   test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
-          #   test_type: 'perf'
-          #   prefill_decode_deployment: 'separation'
+          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms
             prefill_size: 2
             decode_size: 2
