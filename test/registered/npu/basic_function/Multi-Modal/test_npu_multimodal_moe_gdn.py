@@ -5,6 +5,7 @@ Verifies that GDN linear attention + MoE + visual encoder work together
 correctly on Qwen3.5-35B-A3B.
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree
@@ -22,6 +23,8 @@ from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=120, suite="full-2-npu-a3", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestMultimodalGDNMoE(CustomTestCase):
     """Verify GDN + MoE + visual encoder work together correctly.

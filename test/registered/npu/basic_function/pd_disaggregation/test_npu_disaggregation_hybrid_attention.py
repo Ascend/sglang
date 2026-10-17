@@ -18,6 +18,8 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestDisaggregationHybridAttentionBase(PDDisaggregationServerBase):
     """
     Base class for PD-disaggregation tests on Ascend NPU.

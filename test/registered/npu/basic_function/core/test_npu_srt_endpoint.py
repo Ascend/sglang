@@ -41,7 +41,7 @@ class TestSRTEndpoint(CustomTestCase):
                 "--enable-custom-logit-processor",
                 "--mem-fraction-static",
                 "0.7",
-                "--cuda-graph-max-bs",
+                "--cuda-graph-max-bs-decode",
                 "8",
                 "--attention-backend",
                 "ascend",
