@@ -19,12 +19,6 @@ register_npu_ci(
     nightly=True,
 )
 
-register_npu_ci(
-    est_time=7200,
-    suite="nightly-acc-16-npu-a3-cann910",
-    nightly=True,
-)
-
 DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
@@ -58,6 +52,12 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS = {
     # war barrier
     "SGLANG_ENABLE_WAR_BARRIER": "1",
     "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
+    # ZBAL
+    #"SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
+    #"SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    #"ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    #"SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:14699",
+    #"ZBAL_ENABLE_GRAPH": "1",
 }
 
 DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS = [
