@@ -59,6 +59,8 @@ class TestAscendDistTimeout(CustomTestCase):
             1,
             "--deepep-mode",
             "auto",
+            "--fuseep-mode",
+            1,
             "--speculative-draft-model-quantization",
             "unquant",
             "--speculative-draft-attention-backend",

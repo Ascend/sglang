@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.npu_eval_accuracy_kit import _is_pr_pipeline, run_npu_pr_smoke
+from sglang.test.ascend.npu_eval_accuracy_kit import run_npu_pr_smoke
 from sglang.test.ascend.test_ascend_utils import (
     FR_SPEC_TOKEN_MAP_PATH,
     LLAMA_3_8B_EAGLE_WEIGHTS_PATH,
@@ -76,21 +76,18 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
             env=env,
         )
         try:
-            if _is_pr_pipeline:
-                run_npu_pr_smoke(DEFAULT_URL_FOR_TEST)
-            else:
-                eval_args = SimpleNamespace(
-                    base_url=DEFAULT_URL_FOR_TEST,
-                    eval_name="gsm8k",
-                    api="completion",
-                    num_examples=1319,
-                    num_threads=128,
-                    max_tokens=512,
-                    num_shots=5,
-                    temperature=0.0,
-                )
-                metrics = run_eval(eval_args)
-                self.assertGreaterEqual(metrics["score"], 0.83)
+            eval_args = SimpleNamespace(
+                base_url=DEFAULT_URL_FOR_TEST,
+                eval_name="gsm8k",
+                api="completion",
+                num_examples=1319,
+                num_threads=128,
+                max_tokens=512,
+                num_shots=5,
+                temperature=0.0,
+            )
+            metrics = run_eval(eval_args)
+            self.assertGreaterEqual(metrics["score"], 0.83)
         finally:
             kill_process_tree(process.pid)
 
@@ -113,8 +110,12 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
             "8",
             "--speculative-token-map",
             FR_SPEC_TOKEN_MAP_PATH,
+            # NOTE: --speculative-token-map (FR-Spec) uses global vocab token IDs to
+            # index the lm_head, which is TP-split when tp-size>1, causing an index
+            # out-of-bounds crash (see sgl-project/sglang#4328, unfixed upstream).
+            # Use tp-size=1 so the lm_head is not sharded.
             "--tp-size",
-            "4",
+            "1",
             "--mem-fraction-static",
             "0.7",
             "--disable-cuda-graph",
@@ -135,23 +136,20 @@ class TestNpuSpeculativeTokenMap(CustomTestCase):
             env=env,
         )
         try:
-            if _is_pr_pipeline:
-                run_npu_pr_smoke(DEFAULT_URL_FOR_TEST)
-            else:
-                eval_args = SimpleNamespace(
-                    base_url=DEFAULT_URL_FOR_TEST,
-                    eval_name="gsm8k",
-                    api="completion",
-                    num_examples=1319,
-                    num_threads=128,
-                    max_tokens=512,
-                    num_shots=5,
-                    temperature=0.0,
-                )
-                metrics = run_eval(eval_args)
-                self.assertGreaterEqual(
-                    metrics["score"], 0.75
-                )  # adjust threshold as needed
+            eval_args = SimpleNamespace(
+                base_url=DEFAULT_URL_FOR_TEST,
+                eval_name="gsm8k",
+                api="completion",
+                num_examples=1319,
+                num_threads=128,
+                max_tokens=512,
+                num_shots=5,
+                temperature=0.0,
+            )
+            metrics = run_eval(eval_args)
+            self.assertGreaterEqual(
+                metrics["score"], 0.75
+            )  # adjust threshold as needed
         finally:
             kill_process_tree(process.pid)
 

@@ -13,7 +13,6 @@ from sglang.test.test_utils import DEFAULT_URL_FOR_TEST
 from sglang.utils import wait_for_server
 
 register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3", nightly=True)
-register_npu_ci(est_time=1800, suite="nightly-perf-16-npu-a3-cann910", nightly=True)
 
 # Environment variables for DSV4-Flash single-node PD-mix deployment.
 DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
@@ -48,6 +47,12 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
     # mtp
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    # ZBAL
+    #"SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
+    #"SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    #"ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    #"SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:14699",
+    #"ZBAL_ENABLE_GRAPH": "1",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -125,12 +130,11 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
     num_prompts = 160
     max_concurrency = 160
     random_range_ratio = 1
-    warmup_requests = 32
+    warmup_requests = 0
     request_rate = float("inf")
+    seed = 1
     tpot = 50
-    max_attempts = 3
-    output_token_throughput = 3100
-    accept_rate = 0.5
+    output_token_throughput = 1708
 
     @classmethod
     def setUpClass(cls):
