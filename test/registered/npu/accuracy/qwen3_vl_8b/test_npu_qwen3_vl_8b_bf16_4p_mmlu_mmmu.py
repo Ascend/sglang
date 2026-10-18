@@ -67,8 +67,11 @@ OTHER_ARGS = [
 # Generation config follows the manually-verified A5 setup.
 # chat_template_kwargs passthrough via evalscope generation_config is
 # unverified; drop it if the first run errors out.
+# MMLU answers are short (multiple choice); a 16k cap trims long-tail
+# generations. Batch 64 fits the KV pool comfortably (extreme case
+# 64 x 18k tokens ~= 1.15M vs ~5.2M pool across 4 cards).
 MMLU_GENERATION_CONFIG = {
-    "max_tokens": 32768,
+    "max_tokens": 16384,
     "temperature": 1.0,
     "top_p": 1.0,
     "top_k": 40,
@@ -77,6 +80,8 @@ MMLU_GENERATION_CONFIG = {
     "chat_template_kwargs": {"enable_thinking": False},
 }
 
+# MMMU keeps the full 32k budget for long generations; batch 32 bounds
+# vision-prefill activation peaks.
 MMMU_GENERATION_CONFIG = {
     "max_tokens": 32768,
     "temperature": 1.0,
@@ -105,12 +110,14 @@ class TestQwen3VL8B_BF16_4P_MMLU_MMMU(TestNpuAccuracyTestCaseBase):
     def test_mmlu(self):
         self.datasets = ["mmlu"]
         self.accuracy = 0.75
+        self.eval_batch_size = 64
         self.generation_config = MMLU_GENERATION_CONFIG
         self.run_accuracy()
 
     def test_mmmu(self):
         self.datasets = ["mmmu"]
         self.accuracy = 0.58
+        self.eval_batch_size = 32
         self.generation_config = MMMU_GENERATION_CONFIG
         self.run_accuracy()
 
