@@ -62,7 +62,7 @@ MMMU_GENERATION_CONFIG = {
 
 
 class TestQwen3VL30BA3B_BF16_DP8_AIME26_MMMU(TestNpuAccuracyTestCaseBase):
-    """Qwen3-VL-30B-A3B-Instruct bf16 TP8+DP8 accuracy: AIME26 + full MMMU on A3; MMMU threshold sits below the public score (0.742) for evalscope scoring variance, AIME26 0.6 is a placeholder pending a GPU baseline."""
+    """Qwen3-VL-30B-A3B-Instruct bf16 TP8+DP8 accuracy: AIME26 + full MMMU on A3; MMMU threshold sits below the public score (0.742) for evalscope scoring variance, AIME26 0.7 anchored to the first NPU run (pending GPU re-anchor)."""
 
     model = QWEN3_VL_30B_MODEL_PATH
     envs = ENVS
@@ -71,7 +71,7 @@ class TestQwen3VL30BA3B_BF16_DP8_AIME26_MMMU(TestNpuAccuracyTestCaseBase):
 
     def test_aime26(self):
         self.datasets = ["aime26"]
-        self.accuracy = 0.6
+        self.accuracy = 0.7
         self.generation_config = AIME26_GENERATION_CONFIG
         self.run_accuracy()
 
