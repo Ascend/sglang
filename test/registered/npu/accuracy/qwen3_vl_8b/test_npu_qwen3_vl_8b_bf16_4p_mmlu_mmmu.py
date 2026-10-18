@@ -90,14 +90,14 @@ class TestQwen3VL8B_BF16_4P_MMLU_MMMU(TestNpuAccuracyTestCaseBase):
 
     def test_mmlu(self):
         self.datasets = ["mmlu"]
-        self.accuracy = 0.75
+        self.accuracy = 0.80
         self.eval_batch_size = 64
         self.generation_config = MMLU_GENERATION_CONFIG
         self.run_accuracy()
 
     def test_mmmu(self):
         self.datasets = ["mmmu"]
-        self.accuracy = 0.58
+        self.accuracy = 0.6
         self.eval_batch_size = 32
         self.generation_config = MMMU_GENERATION_CONFIG
         self.run_accuracy()
