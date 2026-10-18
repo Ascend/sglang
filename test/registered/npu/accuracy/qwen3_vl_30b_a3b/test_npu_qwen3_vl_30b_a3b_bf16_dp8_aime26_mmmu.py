@@ -37,9 +37,7 @@ OTHER_ARGS = [
     0.7,
 ]
 
-# Generation config follows the manually-verified A5 setup.
-# chat_template_kwargs passthrough via evalscope generation_config is
-# unverified; drop it if the first run errors out.
+# Thinking-mode generation config shared by AIME26 and MMMU.
 AIME26_GENERATION_CONFIG = {
     "max_tokens": 40000,
     "temperature": 1.0,
@@ -64,14 +62,7 @@ MMMU_GENERATION_CONFIG = {
 
 
 class TestQwen3VL30BA3B_BF16_DP8_AIME26_MMMU(TestNpuAccuracyTestCaseBase):
-    """Qwen3-VL-30B-A3B-Instruct bf16 DP8 accuracy: AIME26 + full MMMU on A3.
-
-    Baselines: AIME26 has no official public score (to be re-anchored after
-    the first GPU baseline run; 0.6 is a conservative placeholder with the
-    built-in 2/30-question fluctuation tolerance). MMMU threshold 0.65
-    (public score 0.742, https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct,
-    lower bound covers evalscope-vs-VLMEvalKit scoring delta).
-    """
+    """Qwen3-VL-30B-A3B-Instruct bf16 TP8+DP8 accuracy: AIME26 + full MMMU on A3; MMMU threshold sits below the public score (0.742) for evalscope scoring variance, AIME26 0.6 is a placeholder pending a GPU baseline."""
 
     model = QWEN3_VL_30B_MODEL_PATH
     envs = ENVS

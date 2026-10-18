@@ -57,12 +57,7 @@ OTHER_ARGS = [
     0.85,
 ]
 
-# Generation config follows the manually-verified A5 setup.
-# chat_template_kwargs passthrough via evalscope generation_config is
-# unverified; drop it if the first run errors out.
-# MMLU answers are short (multiple choice); a 16k cap trims long-tail
-# generations. Batch 64 fits the KV pool comfortably (extreme case
-# 64 x 18k tokens ~= 1.15M vs ~5.2M pool across 4 cards).
+# MMLU answers are short multiple choice; 16k cap trims long-tail generations.
 MMLU_GENERATION_CONFIG = {
     "max_tokens": 16384,
     "temperature": 1.0,
@@ -73,8 +68,7 @@ MMLU_GENERATION_CONFIG = {
     "chat_template_kwargs": {"enable_thinking": False},
 }
 
-# MMMU keeps the full 32k budget for long generations; batch 32 bounds
-# vision-prefill activation peaks.
+# MMMU needs the 32k budget for long generations; batch 32 bounds vision peaks.
 MMMU_GENERATION_CONFIG = {
     "max_tokens": 32768,
     "temperature": 1.0,
@@ -87,13 +81,7 @@ MMMU_GENERATION_CONFIG = {
 
 
 class TestQwen3VL8B_BF16_4P_MMLU_MMMU(TestNpuAccuracyTestCaseBase):
-    """Qwen3-VL-8B-Instruct bf16 TP4 accuracy: full MMLU + full MMMU on A3.
-
-    Baselines: MMLU threshold 0.75 (public score 0.807,
-    https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct); MMMU threshold 0.58
-    (public score 0.696, lower bound covers evalscope-vs-VLMEvalKit scoring
-    delta; local A5 evalscope measured 0.58+).
-    """
+    """Qwen3-VL-8B-Instruct bf16 TP4 accuracy: full MMLU + full MMMU on A3; thresholds sit below public scores (MMLU 0.807, MMMU 0.696) to absorb evalscope scoring variance."""
 
     model = QWEN3_VL_8B_MODEL_PATH
     envs = ENVS
