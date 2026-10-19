@@ -27,7 +27,6 @@ register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
 
 
-
 class TestDPAttentionDP2TP2(
     CustomTestCase,
     NPUGSM8KMixin,

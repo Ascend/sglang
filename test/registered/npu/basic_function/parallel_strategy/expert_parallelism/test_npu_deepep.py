@@ -89,7 +89,7 @@ class TestAscendDeepEP(CustomTestCase):
                             num_questions=500,
                             max_new_tokens=512,
                             parallel=128,
-                            host=f"http://{self.url.hostname}",
+                            host=f"{self.url.hostname}",
                             port=int(self.url.port),
                         )
 

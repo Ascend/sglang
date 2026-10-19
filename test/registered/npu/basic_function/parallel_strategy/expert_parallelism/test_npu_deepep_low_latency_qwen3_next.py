@@ -9,12 +9,11 @@ from sglang.test.ascend.test_mmlu import TestMMLU
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-# register_npu_ci(
-#     est_time=200,
-#     suite="full-8-npu-a3",
-#     nightly=True,
-# )
-register_npu_ci(est_time=200, suite="validate-16-npu", nightly=True)
+register_npu_ci(
+    est_time=200,
+    suite="full-8-npu-a3",
+    nightly=True,
+)
 
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
@@ -76,10 +75,6 @@ class TestQwen3Next(GSM8KAscendMixin, TestMMLU, CustomTestCase):
         "DEEPEP_HYBRID_DEPLOYMENT": "1",
         "HCCL_BUFFSIZE": "2048",
         "GDN_ATTN_BACKEND_TRITON": "1",
-        "SGLANG_ZBAL_LOCAL_MEM_SIZE": "60000",
-        "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
-        "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-        "ZBAL_ENABLE_GRAPH": "1",
         **os.environ,
     }
 
