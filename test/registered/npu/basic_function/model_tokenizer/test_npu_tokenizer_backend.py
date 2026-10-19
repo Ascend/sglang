@@ -53,22 +53,26 @@ class TestNpuTokenizerBackendConcurrent(CustomTestCase):
 
     @classmethod
     def _send_concurrent(cls, n):
-        def _request():
+        def _request(i):
             with requests.Session() as session:
                 return session.post(
                     f"{cls.base_url}/generate",
                     json={
-                        "text": "The capital of France is",
+                        "text": (
+                            "The capital of France is Paris. " * 200
+                            + f"Request number {i}. "
+                            + "The capital of France is"
+                        ),
                         "sampling_params": {
                             "temperature": 0,
-                            "max_new_tokens": 32,
+                            "max_new_tokens": 1,
                         },
                     },
                 )
 
         start = time.time()
         with ThreadPoolExecutor(max_workers=n) as executor:
-            futures = [executor.submit(_request) for _ in range(n)]
+            futures = [executor.submit(_request, i) for i in range(n)]
             results = [f.result() for f in as_completed(futures)]
         elapsed = time.time() - start
         return results, elapsed
@@ -111,6 +115,12 @@ class TestNpuTokenizerBackendConcurrent(CustomTestCase):
                 self.assertIn("Paris", r.text)
         finally:
             kill_process_tree(self.process.pid)
+
+        print(
+            f"huggingface elapsed: {elapsed_hf:.4f}s, "
+            f"fastokens elapsed: {elapsed_ft:.4f}s, "
+            f"speedup: {elapsed_hf / elapsed_ft:.2f}x"
+        )
 
         self.assertLess(
             elapsed_ft,
