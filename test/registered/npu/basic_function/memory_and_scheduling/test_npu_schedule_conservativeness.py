@@ -39,7 +39,7 @@ class TestScheduleConservativeness(CustomTestCase):
             "--tp-size",
             2,
             "--mem-fraction-static",
-            "0.52",
+            "0.35",
         ]
         cls.out_log_file = open("./cache_out_log.txt", "w+", encoding="utf-8")
         cls.err_log_file = open("./cache_err_log.txt", "w+", encoding="utf-8")

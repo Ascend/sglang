@@ -3,8 +3,6 @@ import unittest
 
 import requests
 
-os.environ.setdefault("HCCL_BUFFSIZE", "600")
-
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
@@ -22,6 +20,8 @@ register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
 
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+os.environ.setdefault("HCCL_BUFFSIZE", "600")
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
 
 class TestAttnTpGatherDense(CustomTestCase):
     """Verify --disable-attn-tp-gather does not break non-MOE (dense) models.
