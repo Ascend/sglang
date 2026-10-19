@@ -114,7 +114,10 @@ jobs:
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
-      coverage_run_id: ${{ github.run_id }}-${{ github.run_attempt }}
+      # TEMP EXPERIMENT (revert after): zmq.Again crashes correlate 1:1 with
+      # coverage-instrumented jobs across four rounds. Disable coverage ONLY
+      # here to prove/disprove causation.
+      coverage_run_id: ''
     secrets: inherit
 
   full-2-npu-a3:
