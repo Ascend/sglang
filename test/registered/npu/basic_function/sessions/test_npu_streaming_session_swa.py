@@ -10,6 +10,9 @@ NPU adaptations:
 - uses the NPU kit sglang.test.ascend.npu_streaming_session_kit
 """
 
+import os
+os.environ["ASCEND_USE_FIA"] = "0"
+
 import unittest
 
 from sglang.test.ascend.npu_streaming_session_kit import (

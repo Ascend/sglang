@@ -1,9 +1,12 @@
+import os
 import unittest
 
 from sglang.test.ascend.output_capturer import OutputCapturer
 from sglang.test.ascend.test_ascend_utils import GEMMA_3_4B_IT_WEIGHTS_PATH
 from sglang.test.ascend.vlm_utils import TestVLMModels
 from sglang.test.ci.ci_register import register_npu_ci
+
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
 
 register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 

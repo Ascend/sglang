@@ -14,6 +14,8 @@ import subprocess
 import time
 import unittest
 
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
+
 import torch
 
 from sglang.srt.constants import (

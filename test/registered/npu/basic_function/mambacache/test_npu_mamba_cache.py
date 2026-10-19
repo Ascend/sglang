@@ -1,6 +1,8 @@
 import os
 import unittest
 
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
+
 import requests
 
 from sglang.srt.utils import kill_process_tree
@@ -28,6 +30,11 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     [Test Category] Parameter
     [Test Target] --mamba-scheduler-strategy, --mamba-full-memory-ratio, --mamba-track-interval
     """
+
+    env = {
+        **GSM8KAscendMixin.env,
+        "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
+    }
 
     model = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_FOR_TEST.model_path
     accuracy = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_FOR_TEST.gsm8k_accuracy

@@ -62,6 +62,7 @@ class TestEnableDeepepWaterFill(CustomTestCase):
             env={
                 "HCCL_BUFFSIZE": "2048",
                 "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",  # Quantize activations to INT8 before dispatch
+                "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
             },
         )
 
