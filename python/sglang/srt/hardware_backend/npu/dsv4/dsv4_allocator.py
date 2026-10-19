@@ -544,20 +544,14 @@ class DSV4NPUTokenToKVPoolAllocator(SWATokenToKVPoolAllocator):
 
         if req is None or req_to_token_pool is None:
             return
+        kv_len = max(req.kv.kv_committed_len, req.kv.kv_allocated_len)
         req_pool_idx = req.kv.req_pool_idx
-        if req_pool_idx is None:
+        if kv_len <= 0 or req_pool_idx is None:
             return
 
-        # The sidecar row is the only record of this request's C128 pages, so
-        # release it even when the FULL-length accounting already reads zero:
-        # zeroing without releasing strands those page ids in the refcount.
         row = req_to_token_pool.req_to_c128_sidecar[int(req_pool_idx)]
         self.release_c128_pages(row[row > 0])
         row.zero_()
-
-        kv_len = max(req.kv.kv_committed_len, req.kv.kv_allocated_len)
-        if kv_len <= 0:
-            return
         self.get_kvcache().clear_request_scoped_state(int(req_pool_idx))
 
     def available_size(self):

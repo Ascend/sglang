@@ -1006,9 +1006,6 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
     # object.__new__ stubs (SWA floor tests) skip __init__
     _dspark_draft_on_bf16 = False
 
-    # One spare C128 page beyond the FULL footprint (whole-page capacity only).
-    _c128_tail_pages: int = 1
-
     def __init__(self, kvc: KVCacheConfigurator):
         self.kv_cache_dtype_str = kvc.kv_cache_dtype_str
         cfg = kvc.model_config
@@ -1346,27 +1343,6 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
             return int(full_token * self.swa_ratio) // page_size * page_size
         return self.swa_cap_tokens
 
-    def _c128_page_size(self) -> int:
-        # Compressed tokens per C128 physical page (one compressed token spans
-        # 128 full tokens).
-        return get_schedule().c128_page_size
-
-    def _c128_pool_pages(self, full_token: int) -> int:
-        # Whole pages for the FULL footprint, plus the tail-page floor. Sizing
-        # as full_token // 128 compressed tokens rounds down twice and leaves no
-        # slack, so C128 runs dry while FULL still has free tokens.
-        group_tokens = 128 * self._c128_page_size()
-        return ceil_div(full_token, group_tokens) + self._c128_tail_pages
-
-    def _c128_tail_headroom_bytes(self) -> int:
-        # Mirrors the 1/128 * kv_bytes term of _get_bytes_per_full_token.
-        if self.num_layers_ca128 == 0:
-            return 0
-        bytes_per_compressed_token = self.kv_bytes * self.num_layers_ca128
-        return (
-            self._c128_tail_pages * self._c128_page_size() * bytes_per_compressed_token
-        )
-
     def _compute_dsv4_sizes(self, full_token: int, page_size: int) -> _DSV4PoolSizes:
         full_token = full_token // page_size * page_size
         swa_tokens = self._get_swa_tokens(full_token, page_size)
@@ -1397,9 +1373,7 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
             full_max_total_num_tokens=full_token,
             swa_max_total_num_tokens=swa_tokens,
             c4_max_total_num_tokens=full_token // (4 * self.c4_shrink_factor),
-            c128_max_total_num_tokens=(
-                self._c128_pool_pages(full_token) * self._c128_page_size()
-            ),
+            c128_max_total_num_tokens=full_token // 128,
             # Unified_kv: request-scoped, finalized once concurrency is known.
             c4_state_pool_size=(
                 0
@@ -1547,7 +1521,6 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
         c4_state_fixed_bytes = self._fixed_c4_state_bytes(
             max_running_requests_per_worker
         )
-        c128_tail_fixed_bytes = self._c128_tail_headroom_bytes()
 
         swa_fixed_bytes = self._get_swa_fixed_bytes()
         fixed_bytes = (
@@ -1555,7 +1528,6 @@ class DSV4PoolConfigurator(MemoryPoolConfigurator):
             + swa_fixed_bytes
             + swa_ring_fixed_bytes
             + c4_state_fixed_bytes
-            + c128_tail_fixed_bytes
         )
         available_bytes_for_tokens = max(available_bytes - fixed_bytes, 0)
         full_token = int(available_bytes_for_tokens / self.bytes_per_full_token)
