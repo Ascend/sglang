@@ -19,6 +19,7 @@ register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
 
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
 
 class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Test MambaCache basic functions using GSM8K dataset.
