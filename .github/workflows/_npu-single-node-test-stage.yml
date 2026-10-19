@@ -368,6 +368,9 @@ jobs:
             install_pkg "${pkg}"
           done
 
+          # Canary: evalscope reuses the system python; a broken datasets breaks MMMU evals.
+          python3 -c "from datasets import LargeList" 2>/dev/null || pip install --force-reinstall --no-deps "datasets==4.8.5"
+
           echo "scaling_governor performance num: \
             $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor | grep performance | wc -l)"
           echo "swappiness: $(cat /proc/sys/vm/swappiness)"
