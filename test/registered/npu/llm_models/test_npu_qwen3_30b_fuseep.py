@@ -6,7 +6,7 @@ from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=400, suite="per-commit-4-npu-a3")
+register_npu_ci(est_time=400, suite="per-commit-8-npu-a3")
 
 
 class TestQwen330Bw8a8FuseEP(GSM8KAscendMixin, CustomTestCase):
