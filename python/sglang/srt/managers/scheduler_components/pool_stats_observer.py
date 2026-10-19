@@ -54,11 +54,6 @@ class PoolStats:
     hisparse_host_tokens: Optional[int] = None
     hisparse_host_token_usage: Optional[float] = None
 
-    # DSV4 C128 compressed-KV pages (NPU): this pool can run dry while `full_*`
-    # still reports headroom, so it has to appear in the periodic lines.
-    c128_free_pages: Optional[int] = None
-    c128_total_pages: Optional[int] = None
-
     def get_kv_token_stats(self) -> Tuple[int, float]:
         # NOTE: mamba pool is not included in the "token usage" calculation.
         if self.is_hybrid_swa:
@@ -90,10 +85,6 @@ class PoolStats:
             if not self.is_hybrid_swa:
                 parts.append(f"full token usage: {self.full_token_usage:.2f}")
             parts.append(f"mamba usage: {self.mamba_usage:.2f}")
-        if self.c128_free_pages is not None:
-            parts.append(
-                f"#c128 pages: {self.c128_free_pages}/{self.c128_total_pages}"
-            )
         if not parts:
             parts.append(f"token usage: {self.full_token_usage:.2f}")
         return parts
@@ -124,10 +115,6 @@ class PoolStats:
                 f"#cpu token: {self.hisparse_host_tokens}",
                 f"cpu token usage: {self.hisparse_host_token_usage:.2f}",
             ]
-        if self.c128_free_pages is not None:
-            parts.append(
-                f"#c128 pages: {self.c128_free_pages}/{self.c128_total_pages}"
-            )
         if not parts:
             parts.append(
                 f"#token: {self.full_num_used}, token usage: {self.full_token_usage:.2f}"
@@ -227,19 +214,6 @@ class SchedulerPoolStatsObserver:
             pool_stats.mamba_usage = mamba_stats.mamba_usage
             pool_stats.mamba_available_size = mamba_stats.mamba_available_size
             pool_stats.mamba_evictable_size = mamba_stats.mamba_evictable_size
-
-        # C128 pages are plain counters here (no device sync), so this is cheap
-        # enough for the stats path; the retired/release queue would not be.
-        c128_allocator = getattr(
-            self.token_to_kv_pool_allocator, "c128_attn_allocator", None
-        )
-        if c128_allocator is not None:
-            pool_stats = dataclasses.replace(
-                pool_stats,
-                c128_free_pages=c128_allocator.available_size()
-                // c128_allocator.page_size,
-                c128_total_pages=c128_allocator.num_pages,
-            )
 
         return pool_stats
 
