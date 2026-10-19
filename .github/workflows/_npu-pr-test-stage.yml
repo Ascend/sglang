@@ -229,6 +229,8 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r $(pwd)/python/sglang/test/ascend ${ascend_test_util_path}
+            # Overlay sgl_eval_utils.py as well (image may predate the in-process sgl-eval adapter)
+            cp $(pwd)/python/sglang/test/sgl_eval_utils.py ${sglang_pkg_path}/sglang/test/sgl_eval_utils.py
             # Overlay test kits from the PR checkout (image snapshots may predate kits/,
             # which breaks `from sglang.test.kits.hellaswag_kit import ...`)
             rm -rf ${sglang_pkg_path}/sglang/test/kits

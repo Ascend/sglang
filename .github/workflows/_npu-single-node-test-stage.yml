@@ -385,6 +385,8 @@ jobs:
           mkdir -p ${ascend_test_util_path}
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+          # Overlay sgl_eval_utils.py as well (image may predate the in-process sgl-eval adapter)
+          cp ${sglang_source_path}/python/sglang/test/sgl_eval_utils.py ${sglang_pkg_path}/sglang/test/sgl_eval_utils.py
 
           # External env scripts may reference unset shell vars (e.g. ZSH_VERSION),
           # which abort the whole script under `set -u`. Temporarily disable -u.
