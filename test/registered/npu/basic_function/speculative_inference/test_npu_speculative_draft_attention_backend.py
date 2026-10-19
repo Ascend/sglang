@@ -53,12 +53,10 @@ class TestAscendSpeculativeDraftAttentionAndMoeRunner(CustomTestCase):
     [Test Target] --speculative-draft-attention-backend; --speculative-moe-runner-backend
     """
 
-    #os.environ["DEEP_NORMAL_MODE_USE_INT8_QUANT"] = "1"
     os.environ["HCCL_BUFFSIZE"] = "2048"
     os.environ["SGLANG_ENABLE_OVERLAP_PLAN_SITEAM"] = "1"
     os.environ["SGLANG_ENABLE_SPEC_V2"] = "1"
     os.environ["ASCEND_USE_FIA"] = "1"
-    #os.environ["SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT"] = "1"
     env = os.environ.copy()
 
     @classmethod
@@ -70,8 +68,6 @@ class TestAscendSpeculativeDraftAttentionAndMoeRunner(CustomTestCase):
             "--trust-remote-code",
             "--attention-backend",
             "ascend",
-            #"--quantization",
-            #"modelslim",
             "--mem-fraction-static",
             0.7,
             "--disable-radix-cache",
