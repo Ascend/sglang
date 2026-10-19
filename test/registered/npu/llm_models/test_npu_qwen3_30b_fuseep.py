@@ -40,11 +40,14 @@ class TestQwen330Bw8a8FuseEP(GSM8KAscendMixin, CustomTestCase):
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "188416",
     }
 
-class TestQwen330Bw8a8FuseEPTestQwen330Bw8a8FuseModeWithTwo(GSM8KAscendMixin, CustomTestCase):
+class TestQwen330Bw8a8FuseEPTestQwen330Bw8a8FuseModeWithOne(
+    GSM8KAscendMixin, CustomTestCase
+):
     """Testcase: Verify that the inference accuracy of the Qwen/Qwen3-30B-A3B-w8a8 model on the GSM8K dataset is
     no less than 0.90 with --fuseep-mode = 1.
-    [Test Category] Model
-    [Test Target] Qwen/Qwen3-30B-A3B-w8a8
+
+    [Test Category] Parameter
+    [Test Target] ---fuseep-mode
     """
 
     model = QWEN3_30B_A3B_W8A8_WEIGHTS_PATH
