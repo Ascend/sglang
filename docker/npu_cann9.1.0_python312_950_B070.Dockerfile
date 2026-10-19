@@ -187,6 +187,9 @@ RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b
     fi && \
     rm -rf /workspace/vllm-ascend
 
+RUN git clone --depth 1 https://github.com/vllm-project/vllm-ascend.git
+    cd vllm-ascend
+    bash csrc/build_batch_invariant_ops.sh ascend950
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
