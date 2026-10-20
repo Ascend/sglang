@@ -44,7 +44,7 @@ jobs:
 
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}-${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "FULL_TAG=${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}-${{ matrix.platform }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -66,7 +66,7 @@ jobs:
         with:
           context: docker
           # 合并后的单份 Dockerfile，a3 / 950 由 DEVICE_TYPE 分支决定
-          file: docker/npu_cann9.2.0.Dockerfile
+          file: docker/npu.Dockerfile
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -75,16 +75,9 @@ jobs:
           sbom: false
           # 不使用构建缓存：每轮全量构建，保证 sglang / modelscope 等上游内容一定是最新的。
           # 代价是构建阶段从「秒级」回到约 8~9 分钟（base 镜像约 100s + apt 约 120s + 各 pip 安装）。
-          #
-          # CANN_IMAGE_TAG：quay 上还没有正式的 9.2.0 镜像（只有 9.2.0-beta.1），
-          # 正式 tag 发布后改成 9.2.0；CANN_VERSION 是 kernel 产物名里的版本号，保持 9.2.0。
-          # SGLANG_KERNEL_NPU_REPO/TAG：kernel 产物来源，目前用 fork 上 2026.10.0.post9 的
-          # cann9.2.0 包，官方仓发布同名 tag 后改回 sgl-project/sgl-kernel-npu。
           build-args: |
-            SGLANG_KERNEL_NPU_REPO=huangxiaojun15/sgl-kernel-npu
-            SGLANG_KERNEL_NPU_TAG=2026.10.0.post9
-            CANN_VERSION=9.2.0
-            CANN_IMAGE_TAG=9.2.0-beta.1
+            SGLANG_KERNEL_NPU_TAG=2026.9.0.post10
+            CANN_VERSION=9.1.0
             DEVICE_TYPE=${{ matrix.device_type }}
 
   merge:
@@ -108,7 +101,7 @@ jobs:
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
@@ -134,15 +127,12 @@ jobs:
           - device_type: a3
           - device_type: 950
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
-      # 与 build job 用同一份合并后的 Dockerfile，build_args 必须与上面 build-args 保持一致
-      # （CANN_IMAGE_TAG 不传的话会落到 Dockerfile 里的默认值，9.1.0 那类 leg 就会用错镜像）
-      dockerfile: docker/npu_cann9.2.0.Dockerfile
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
+      # 与 build job 用同一份合并后的 Dockerfile
+      dockerfile: docker/npu.Dockerfile
       build_args: |
-        SGLANG_KERNEL_NPU_REPO=huangxiaojun15/sgl-kernel-npu
-        SGLANG_KERNEL_NPU_TAG=2026.10.0.post9
-        CANN_VERSION=9.2.0
-        CANN_IMAGE_TAG=9.2.0-beta.1
+        SGLANG_KERNEL_NPU_TAG=2026.9.0.post10
+        CANN_VERSION=9.1.0
         DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
+      artifact_name: image-manifest-${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
       deploy_pages: 'true'
