@@ -22,7 +22,7 @@ ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"  
 ARG SGLANG_TAG=main
 
 #kernel算子包对应版本
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post9
+ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post10
 
 #memfabric-hybrid / memcache-hybrid的版本
 ARG MF_VERSION="1.2.1"
