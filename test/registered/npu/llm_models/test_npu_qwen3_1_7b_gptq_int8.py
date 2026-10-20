@@ -5,8 +5,9 @@ from sglang.test.ascend.test_ascend_utils import QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PA
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=400, suite="per-commit-1-npu-a2")
+register_npu_ci(est_time=400, suite="base-b-test-1-npu-a3", nightly=False)
 register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestQwen317BGPTQInt8(GSM8KAscendMixin, CustomTestCase):

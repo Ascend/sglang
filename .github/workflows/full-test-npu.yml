@@ -343,6 +343,20 @@ jobs:
             test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in128k_out1k_20ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
+          - name: cp_vs_nocp_ttft
+            prefill_size: 2
+            decode_size: 2
+            router_size: 1
+            test_case: test/registered/npu/basic_function/cp/test_npu_cp_vs_nocp_ttft.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
+          - name: bucket_adjust_interval_secs_concurrency
+            prefill_size: 1
+            decode_size: 1
+            router_size: 1
+            test_case: test/registered/npu/basic_function/parallel_strategy/test_npu_bucket_adjust_interval_secs_concurrency.py
+            test_type: 'perf'
+            prefill_decode_deployment: 'separation'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-amd64-cpu-8

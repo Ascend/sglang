@@ -21,8 +21,13 @@ from sglang.utils import wait_for_http_ready
 
 register_npu_ci(
     est_time=500,
-    suite="stage-b-test-4-npu-a3",
+    suite="base-b-test-4-npu-a3",
     nightly=False,
+)
+register_npu_ci(
+    est_time=500,
+    suite="nightly-4-npu-a3",
+    nightly=True,
 )
 
 ADMIN_API_KEY = "admin-hicache-test-key"

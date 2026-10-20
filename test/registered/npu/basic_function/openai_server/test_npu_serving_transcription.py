@@ -26,8 +26,8 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=1600, suite="full-1-npu-a3", nightly=True)
-register_npu_ci(est_time=400, suite="stage-b-test-1-npu-a2", nightly=False)
+register_npu_ci(est_time=400, suite="base-b-test-1-npu-a3", nightly=False)
+register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
 
 
 def read_audio_bytes(url=AUDIO_TRUMP_WEF_PATH):
