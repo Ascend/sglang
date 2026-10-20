@@ -14,7 +14,7 @@ ARG DEVICE_TYPE
 #具体的版本配套可以到这里看 https://gitcode.com/Ascend/pytorch/blob/master/COMPATIBILITY.md
 ARG PYTORCH_VERSION="2.13.0"             #pytorch版本，框架版本
 ARG TORCHVISION_VERSION="0.28.0"         #视觉库版本，torch 的次版本号 + 15
-ARG TORCHAUDIO_VERSION="2.13.0"          #音频库版本，与pytorch版本保持一致
+ARG TORCHAUDIO_VERSION="2.11.0"          #音频库版本，与pytorch版本保持一致
 ARG TORCH_NPU_VERSION="2.10.0.post6"     #torch_npu版本，设备后端扩展版本
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"   #这个源是用来下载torch_npu的包的，和前面的pytorch使用的不是同一个源
 
