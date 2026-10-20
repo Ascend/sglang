@@ -101,7 +101,7 @@ jobs:
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
@@ -127,7 +127,7 @@ jobs:
           - device_type: a3
           - device_type: 950
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
       # 与 build job 用同一份合并后的 Dockerfile
       dockerfile: docker/npu.Dockerfile
       build_args: |
