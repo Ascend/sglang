@@ -134,5 +134,5 @@ jobs:
         SGLANG_KERNEL_NPU_TAG=2026.10.20.post3
         CANN_VERSION=9.2.0
         DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
+      artifact_name: image-manifest-${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
       deploy_pages: 'true'
