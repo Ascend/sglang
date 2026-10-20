@@ -97,7 +97,7 @@ MODEL_CONFIG_NOCPNOMTP = {
         68000,
         "--max-running-requests",
         32,
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         4,
         "--moe-a2a-backend",
         "deepep",
