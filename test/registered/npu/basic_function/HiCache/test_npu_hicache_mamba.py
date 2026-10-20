@@ -42,6 +42,8 @@ class TestNPUMambaHiCache(CustomTestCase):
         cls.common_args = [
             "--tp-size",
             "1",
+            "--mamba-ssm-dtype",
+            "bfloat16",
             "--mem-fraction-static",
             "0.20",
             "--chunked-prefill-size",
