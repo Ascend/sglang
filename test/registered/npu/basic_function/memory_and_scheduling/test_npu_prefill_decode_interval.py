@@ -169,7 +169,7 @@ class TestPrefillDecodeInterval(CustomTestCase):
                 diff,
                 interval,
                 f"Prefill batch interval {diff} < {interval} "
-                f"(batch {prefill_ids[i-1]} -> {prefill_ids[i]})",
+                f"(batch {prefill_ids[i - 1]} -> {prefill_ids[i]})",
             )
 
 
