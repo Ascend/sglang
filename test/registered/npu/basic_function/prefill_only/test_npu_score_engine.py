@@ -182,8 +182,8 @@ class TestCausalLMScoring(CustomTestCase):
     def test_score_unicode(self):
         """Unicode query and items do not crash and produce valid scores."""
         scores = self.engine.score(
-            query="选择最佳选项：",
-            items=["选项A", "选项B", "选项C"],
+            query="Select the best option:",
+            items=["Option A", "Option B", "Option C"],
             label_token_ids=[1, 2, 3],
             apply_softmax=True,
         ).scores

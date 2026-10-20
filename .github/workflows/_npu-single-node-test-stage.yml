@@ -50,9 +50,6 @@ on:
         description: 'Run the test suite with --nightly (collects nightly-registered tests) and --continue-on-error'
         type: boolean
         default: false
-      run_timeout_minutes:
-        type: string
-        default: '300'
       partitions:
         description: 'Partition config to parallelize a suite across jobs, e.g. {"size":3,"arr":[0,1,2]}. Each element of arr is a partition id; the template expands one matrix job per element. size is passed to run_suite.py --auto-partition-size.'
         type: string
@@ -73,7 +70,7 @@ on:
         required: false
         type: string
         default: '300'
-        description: 'timeout-minutes for the Run test step (legacy; superseded by run_timeout_minutes)'
+        description: 'timeout-minutes for the Run test step'
       use_coverage_runner:
         description: 'If true, delegate test execution to scripts/ci/npu/precise-test/run_tests_with_coverage.sh instead of running via run_suite.py directly'
         type: boolean
@@ -240,7 +237,7 @@ jobs:
           curl -o /tmp/test.jsonl -L https://gh-proxy.test.osinfra.cn/https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl
 
       - name: Run test
-        timeout-minutes: ${{ fromJson(inputs.run_timeout_minutes) }}
+        timeout-minutes: ${{ fromJson(inputs.test_timeout_minutes) }}
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com

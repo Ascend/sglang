@@ -671,7 +671,7 @@ class TestTokenizeDetokenize(CustomTestCase):
 
     def test_tokenize_various_inputs(self):
         single = "Hello SGLang world! 123 😊, ಪರ್ವತದ ಮೇಲೆ ಹಿಮ."
-        multi = ["First sentence.", "Second, with 中文."]
+        multi = ["First sentence.", "Second, with Chinese text."]
         scenarios = [
             {"prompt": single, "add_special_tokens": True},
             {"prompt": single, "add_special_tokens": False},

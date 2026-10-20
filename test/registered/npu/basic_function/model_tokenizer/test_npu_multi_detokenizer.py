@@ -63,7 +63,7 @@ class TestMultiDetokenizer(CustomTestCase):
         lines = [line for line in result.stdout.strip().split("\n") if line.strip()]
         count = len(lines)
 
-        logging.warning(f"sglang::detokenizer 数量: {count}")
+        logging.warning(f"sglang::detokenizer count: {count}")
         for line in lines:
             logging.warning(line)
         return count
