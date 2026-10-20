@@ -77,7 +77,7 @@ jobs:
           # 代价是构建阶段从「秒级」回到约 8~9 分钟（base 镜像约 100s + apt 约 120s + 各 pip 安装）。
           build-args: |
             SGLANG_KERNEL_NPU_TAG=2026.10.20.post3
-            CANN_VERSION=9.1.0
+            CANN_VERSION=9.2.0
             DEVICE_TYPE=${{ matrix.device_type }}
 
   merge:
@@ -129,7 +129,7 @@ jobs:
     with:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
       # 与 build job 用同一份合并后的 Dockerfile
-      dockerfile: docker/npu.Dockerfile
+      dockerfile: npu_cann9.2.0.Dockerfile
       build_args: |
         SGLANG_KERNEL_NPU_TAG=2026.10.20.post3
         CANN_VERSION=9.2.0
