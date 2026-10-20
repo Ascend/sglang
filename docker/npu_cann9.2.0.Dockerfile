@@ -15,7 +15,9 @@ ARG DEVICE_TYPE
 ARG PYTORCH_VERSION="2.13.0"             #pytorch版本，框架版本
 ARG TORCHVISION_VERSION="0.28.0"         #视觉库版本，torch 的次版本号 + 15
 ARG TORCHAUDIO_VERSION="2.11.0"          #音频库版本，与pytorch版本保持一致
-ARG TORCH_NPU_VERSION="2.10.0.post6"     #torch_npu版本，设备后端扩展版本
+ARG TORCH_NPU_VERSION="2.13.0"           #torch_npu版本
+ARG TORCH_NPU_WHEEL_URL_AARCH64="https://gitcode.com/Ascend/pytorch/releases/download/v26.2.0-pytorch2.13.0/torch_npu-2.13.0-cp312-cp312-manylinux_2_28_aarch64.whl"
+ARG TORCH_NPU_WHEEL_URL_X86_64="https://gitcode.com/Ascend/pytorch/releases/download/v26.2.0-pytorch2.13.0/torch_npu-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"   #这个源是用来下载torch_npu的包的，和前面的pytorch使用的不是同一个源
 
 #sglang对应分支
@@ -96,8 +98,18 @@ RUN ${PIP_INSTALL} sglang-router
 
 
 ### Install PyTorch and PTA
-RUN (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
-    && (${PIP_INSTALL} torch-npu==${TORCH_NPU_VERSION} --extra-index-url ${TORCH_NPU_INDEX_URL})
+RUN set -eux; \
+    case "$TARGETARCH" in \
+      arm64) TORCH_NPU_WHEEL="${TORCH_NPU_WHEEL_URL_AARCH64}" ;; \
+      amd64) TORCH_NPU_WHEEL="${TORCH_NPU_WHEEL_URL_X86_64}" ;; \
+      *) echo "Unsupported architecture: $TARGETARCH" >&2; \
+         exit 1 ;; \
+    esac; \
+    ${PIP_INSTALL} torch==${PYTORCH_VERSION} \
+        torchvision==${TORCHVISION_VERSION} \
+        torchaudio==${TORCHAUDIO_VERSION} \
+        --index-url https://download.pytorch.org/whl/cpu; \
+    ${PIP_INSTALL} "${TORCH_NPU_WHEEL}"
 
 RUN ${PIP_INSTALL} modelscope evalscope
 
