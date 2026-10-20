@@ -25,12 +25,7 @@ ARG SGLANG_TAG=main
 ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post10
 
 #memfabric-hybrid / memcache-hybrid的版本
-ARG MF_VERSION="1.2.1"
-
-#memfabric-zbal的版本，950和a3使用不同版本
-ARG ZBAL_VERSION_950="1.2.21004.post1"
-ARG ZBAL_VERSION_A3="1.1.3"
-
+ARG MF_VERSION="1.3.0"
 
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
@@ -84,10 +79,6 @@ RUN set -eux; \
     mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
     ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
 
-### Install memfabric-zbal
-RUN if [ "$DEVICE_TYPE" = "950" ]; then ZBAL_PKG="memfabric-zbal==${ZBAL_VERSION_950}"; \
-    else ZBAL_PKG="memfabric-zbal==${ZBAL_VERSION_A3}"; fi; \
-    ${PIP_INSTALL} "$ZBAL_PKG" -i https://pypi.org/simple/
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
 
