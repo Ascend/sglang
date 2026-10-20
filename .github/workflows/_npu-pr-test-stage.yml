@@ -26,10 +26,6 @@ on:
         description: 'timeout-minutes for the Run test step. Required so compute_partitions.py can read it from pr-test.yml without a duplicated default constant.'
         type: string
         required: true
-      job_timeout_minutes:
-        description: 'Job-level timeout-minutes (covers checkout + install + test). Must be >= run_timeout_minutes plus install time.'
-        type: string
-        default: '240'
       timeout_per_file:
         description: 'run_suite.py --timeout-per-file value (empty = unset).'
         type: string
@@ -78,7 +74,7 @@ jobs:
     runs-on: ${{ inputs.runner_config }}
     container:
       image: ${{ inputs.image }}
-    timeout-minutes: ${{ fromJson(inputs.job_timeout_minutes) }}
+    timeout-minutes: 540
     strategy:
       fail-fast: false
       matrix:
@@ -229,13 +225,9 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r $(pwd)/python/sglang/test/ascend ${ascend_test_util_path}
-            # Overlay sgl_eval_utils.py as well (image may predate the in-process sgl-eval adapter)
             cp $(pwd)/python/sglang/test/sgl_eval_utils.py ${sglang_pkg_path}/sglang/test/sgl_eval_utils.py
-            # Overlay test kits from the PR checkout (image snapshots may predate kits/,
-            # which breaks `from sglang.test.kits.hellaswag_kit import ...`)
             rm -rf ${sglang_pkg_path}/sglang/test/kits
             cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
-            # Overlay test_programs.py as well (image may predate test_hellaswag_select)
             cp $(pwd)/python/sglang/test/test_programs.py ${sglang_pkg_path}/sglang/test/test_programs.py
 
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
@@ -245,7 +237,6 @@ jobs:
             pip install watchfiles granian whisper_normalizer msgpack
             pip install fastokens
             pip install mindstudio-probe --pre
-            # latex2sympy2 (pulled in above) pins antlr==4.7.2; restore 4.9.3 for sgl-eval
             pip install "antlr4-python3-runtime==4.9.3" --force-reinstall --no-deps
             pip install "uvicorn[standard]"
             # Install sgl-eval
@@ -258,13 +249,11 @@ jobs:
             git clone --branch v0.3.3 --depth 1 https://github.com/EvolvingLMMs-Lab/lmms-eval.git
             cd ./lmms-eval
             sed -i "/decord; platform_system/d" pyproject.toml
-            # lmms-eval v0.3.3 pins old deps (antlr==4.7.2 / datasets==2.16.1 / numpy==1.26.4 ...)
             # that break sgl-eval and modelscope workloads; install the package itself only.
             python3 -m pip install . --no-deps > lmmslog.txt 2>&1 || { cat lmmslog.txt; exit 1; }
             python3 -c "import lmms_eval" || { echo "lmms_eval import check failed"; cat lmmslog.txt; exit 1; }
             cd ../
 
-            # Canary: antlr runtime must be one of the versions latex2sympy2-extended supports.
             python3 -c "from importlib.metadata import version; v = version('antlr4-python3-runtime'); assert v in ('4.9.3', '4.11.0', '4.13.2'), 'antlr4-python3-runtime is ' + v" || { echo "ERROR: antlr4-python3-runtime not in supported set"; exit 1; }
             # Canary: modelscope needs `from datasets import LargeList` to work.
             python3 -c "from datasets import LargeList" 2>/dev/null || pip install --force-reinstall --no-deps "datasets==4.8.5"
