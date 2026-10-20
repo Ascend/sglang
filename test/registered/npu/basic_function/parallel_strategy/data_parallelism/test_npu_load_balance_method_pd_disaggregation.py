@@ -52,6 +52,7 @@ class BaseTestNPULoadBalanceMethodDPDisaggregation(TestDisaggregationBase):
         cls.prefill_load_balance_method, cls.decode_load_balance_method = cls.params
         cls.model = QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
+        os.environ["PYTORCH_NPU_ALLOC_CONF"] = "expandable_segments:True,pin_memory_expandable_segments:True"
 
         # Non blocking start servers
         cls.start_prefill()
