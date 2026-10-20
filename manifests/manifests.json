@@ -2,6 +2,36 @@
   "manifests": [
     {
       "schema_version": 1,
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:nightly-cann9.2.0-a3",
+      "dockerfile": "npu_cann9.2.0.Dockerfile",
+      "generated_at": "2026-10-20T10:58:12.257591+00:00",
+      "build_args": {
+        "SGLANG_KERNEL_NPU_TAG": "2026.10.20.post3",
+        "CANN_VERSION": "9.2.0",
+        "DEVICE_TYPE": "a3"
+      },
+      "git_clones": [],
+      "declared_pip_pins": [],
+      "sglang": {
+        "dir": "/sgl-workspace/sglang",
+        "remote": "https://github.com/sgl-project/sglang",
+        "branch": "main",
+        "commit": "306ccf6f57bcd6efc9edc626e39a9673e22cb9d6",
+        "describe": "gateway-v0.3.1-11736-g306ccf6f57",
+        "commit_date": "2026-10-20T03:05:42-07:00"
+      },
+      "os": {
+        "distro": "Ubuntu 22.04.5 LTS",
+        "kernel": "6.8.0-1064-azure",
+        "arch": "aarch64"
+      },
+      "cann": {
+        "toolkit": "latest set_env.sh",
+        "version_files": ""
+      }
+    },
+    {
+      "schema_version": 1,
       "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:nightly-cann9.1.0-950",
       "dockerfile": "docker/npu.Dockerfile",
       "generated_at": "2026-10-20T10:05:06.528958+00:00",
