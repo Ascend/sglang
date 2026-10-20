@@ -59,7 +59,7 @@ class TestNPUQwen3_5_9B_gpqa(TestNpuAccuracyTestCaseBase):
     datasets = ["gpqa_diamond"]
     eval_batch_size = 64
     generation_config = {
-        "max_tokens": 40000,
+        "max_tokens": 128000,
         "temperature": 0.0,
     }
 

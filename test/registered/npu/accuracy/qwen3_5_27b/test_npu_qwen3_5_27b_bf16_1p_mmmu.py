@@ -58,7 +58,7 @@ class TestQwen3_5_27B_mmmu(TestNpuAccuracyTestCaseBase):
     accuracy = 0.782
     datasets = ["mmmu"]
     generation_config = {
-        "max_tokens": 40000,
+        "max_tokens": 128000,
         "temperature": 0.0,
     }
     eval_batch_size = 32
