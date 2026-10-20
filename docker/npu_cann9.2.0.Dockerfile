@@ -79,9 +79,17 @@ RUN set -eux; \
       *)   echo "Unsupported DEVICE_TYPE for mfcli kernel install: $DEVICE_TYPE" >&2; \
            exit 1 ;; \
     esac; \
-    ${PIP_INSTALL} memfabric-hybrid==${MF_VERSION}; \
+    case "$TARGETARCH" in \
+      arm64) MF_WHEEL_URL="${MF_WHEEL_URL_AARCH64}"; \
+             MC_WHEEL_URL="${MC_WHEEL_URL_AARCH64}" ;; \
+      amd64) MF_WHEEL_URL="${MF_WHEEL_URL_X86_64}"; \
+             MC_WHEEL_URL="${MC_WHEEL_URL_X86_64}" ;; \
+      *)     echo "Unsupported architecture for MemFabric install: $TARGETARCH" >&2; \
+             exit 1 ;; \
+    esac; \
+    ${PIP_INSTALL} "${MF_WHEEL_URL}"; \
     mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
-    ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
+    ${PIP_INSTALL} "${MC_WHEEL_URL}"
 
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
