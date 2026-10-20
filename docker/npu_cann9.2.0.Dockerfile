@@ -1,5 +1,5 @@
 #关于基础镜像版本配套
-ARG CANN_VERSION=9.1.0
+ARG CANN_VERSION=9.2.0
 ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
@@ -12,9 +12,9 @@ ARG DEVICE_TYPE
 
 #PTA版本配套，pytorch属于框架本体，用于训练模型；torch_npu属于设备后端扩展，将算子和设备资源接入 PyTorch；pta和torch_npu是同一种东西的不同叫法；
 #具体的版本配套可以到这里看 https://gitcode.com/Ascend/pytorch/blob/master/COMPATIBILITY.md
-ARG PYTORCH_VERSION="2.10.0"             #pytorch版本，框架版本
-ARG TORCHVISION_VERSION="0.25.0"         #视觉库版本，torch 的次版本号 + 15
-ARG TORCHAUDIO_VERSION="2.10.0"          #音频库版本，与pytorch版本保持一致
+ARG PYTORCH_VERSION="2.13.0"             #pytorch版本，框架版本
+ARG TORCHVISION_VERSION="0.28.0"         #视觉库版本，torch 的次版本号 + 15
+ARG TORCHAUDIO_VERSION="2.13.0"          #音频库版本，与pytorch版本保持一致
 ARG TORCH_NPU_VERSION="2.10.0.post6"     #torch_npu版本，设备后端扩展版本
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"   #这个源是用来下载torch_npu的包的，和前面的pytorch使用的不是同一个源
 
