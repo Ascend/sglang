@@ -40,7 +40,6 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# Include a cold build of the batch-invariant extension in CI partition estimates.
 register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
