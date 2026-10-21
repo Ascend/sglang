@@ -112,14 +112,6 @@ class TestMultimodalParameterInteractions(CustomTestCase):
     @classmethod
     def setUpClass(cls):
         """Start the SGLang server for VLM inference on Qwen3.5-9B."""
-        if is_in_ci():
-            # Install only when CI executes this file, never during discovery.
-            installer = (
-                Path(__file__).resolve().parents[5]
-                / "scripts/ci/npu/install_batch_invariant_ops.py"
-            )
-            runpy.run_path(str(installer))["install"]()
-
         cls.api_key = "sk-123456"
         cls.base_url = DEFAULT_URL_FOR_TEST
 
