@@ -27,7 +27,7 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B103'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B104'
 
 concurrency:
   group: full-test-npu-${{ inputs.ref || github.ref }}-${{ github.sha }}
@@ -64,7 +64,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B103" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B104" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -316,42 +316,43 @@ jobs:
 #      prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
 #      transformers_version: ''
 
-#  validate-cleanup:
-#    name: validate-cleanup
-#    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-#    needs: [set-image-config]
-#    uses: ./.github/workflows/_npu-pr-test-stage.yml
-#    with:
-#      self_name: validate-cleanup-npu
-#      runner_config: linux-aarch64-a3-16
-#      image: ${{ needs.set-image-config.outputs.image_a3 }}
-#      run_timeout_minutes: '240'
-#      job_timeout_minutes: '300'
-#      timeout_per_file: '7200'
-#      partitions: '{"size":1,"arr":[0]}'
-#      ref: ${{ needs.set-image-config.outputs.ref }}
-#      is_nightly_pipeline_job: true
-#      skip_pr_test_health_check: 'true'
-#    secrets: inherit
-  validate-cleanup-acc:
-    name: validate-cleanup-acc
+  validate-cleanup:
+    name: validate-cleanup
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    needs: [ set-image-config ]
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
+    needs: [set-image-config]
+    uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
-      runner: linux-aarch64-a3-2-
-      test_type: 'accuracy'
-      test_suite: validate-cleanup-acc
+      self_name: validate-cleanup-npu
+      runner_config: linux-aarch64-a3-16
       image: ${{ needs.set-image-config.outputs.image_a3 }}
+      run_timeout_minutes: '240'
+      job_timeout_minutes: '300'
+      timeout_per_file: '7200'
+      partitions: '{"size":1,"arr":[0]}'
+      ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
-      timeout_from_est_time: false
-      timeout_per_file: '25200'
-      run_timeout_minutes: '480'
-      job_timeout_minutes: '480'
-      partitions: '{"size":4,"arr":[0,1,2,3]}'
-      device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
     secrets: inherit
+
+#  validate-cleanup-acc:
+#    name: validate-cleanup-acc
+#    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+#    needs: [ set-image-config ]
+#    uses: ./.github/workflows/_npu-single-node-test-stage.yml
+#    with:
+#      runner: linux-aarch64-a3-2-
+#      test_type: 'accuracy'
+#      test_suite: validate-cleanup-acc
+#      image: ${{ needs.set-image-config.outputs.image_a3 }}
+#      is_nightly_pipeline_job: true
+#      timeout_from_est_time: false
+#      timeout_per_file: '18000'
+#      run_timeout_minutes: '480'
+#      job_timeout_minutes: '480'
+#      partitions: '{"size":3,"arr":[0,1,2]}'
+#      device_type_for_deps: 'a3'
+#      skip_pr_test_health_check: 'true'
+#    secrets: inherit
 
 #  validate-cleanup-2:
 #    name: validate-cleanup-2

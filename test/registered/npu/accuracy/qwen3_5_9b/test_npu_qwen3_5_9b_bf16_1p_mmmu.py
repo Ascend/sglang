@@ -16,7 +16,7 @@ ENVS = {
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
-    "ASCEND_LAUNCH_BLOCKING": "1",
+    # "ASCEND_LAUNCH_BLOCKING": "1",
     "HCCL_BUFFSIZE": "1536",
     "HCCL_OP_EXPANSION_MODE": "AIV",
 }
@@ -40,7 +40,7 @@ OTHER_ARGS = [
     "--mem-fraction-static",
     0.7,
     "--cuda-graph-bs-decode",
-    16,
+    48,
     "--enable-multimodal",
     "--mm-attention-backend",
     "ascend_attn",
@@ -58,7 +58,7 @@ class TestNPUQwen3_5_9B_mmmu(TestNpuAccuracyTestCaseBase):
     accuracy = 0.723
     datasets = ["mmmu"]
     generation_config = {
-        "max_tokens": 128000,
+        "max_tokens": 64000,
         "temperature": 0.0,
     }
     eval_batch_size = 64
