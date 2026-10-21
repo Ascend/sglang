@@ -51,7 +51,7 @@ class TestQwen3VL8BServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
         "--mem-fraction-static",
         "0.5",
         "--mm-attention-backend",
-        "ascend",
+        "ascend_attn",
     ]
 
 
@@ -66,7 +66,7 @@ class TestQwen3VLServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
         "--tp-size",
         "2",
         "--mm-attention-backend",
-        "ascend",
+        "ascend_attn",
     ]
 
 
