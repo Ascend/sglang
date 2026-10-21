@@ -15,15 +15,15 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
 )
+from sglang.test.ascend.test_ascend_utils import (
+    LLAMA_4_SCOUT_17B_16E_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
-# Model path: Llama-4-Scout-17B-16E-Instruct from the shared dzc mount
-_MODEL_PATH = (
-    "/mnt/share/dzc/data/modelscope/hub/models/meta-llama/Llama-4-Scout-17B-16E-Instruct"
-)
+_MODEL_PATH = LLAMA_4_SCOUT_17B_16E_INSTRUCT_WEIGHTS_PATH
 
 # Launch args: aligned with the command provided by dev
 _BASE_ARGS = [
