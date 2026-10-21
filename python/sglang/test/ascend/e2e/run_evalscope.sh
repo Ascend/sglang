@@ -8,6 +8,16 @@ PIP_FOR_EVALSCOPE=${PYTHON_ENV_FOR_EVALSCOPE}/bin/pip
 EVALSCOPE_SOURCE_PATH=/root/.cache/.cache/evalscope
 pip_mirror_source="https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
 
+MMMU_MODELSCOPE_CACHE="${MODELSCOPE_CACHE:-/root/.cache/modelscope}/hub/datasets/AI-ModelScope/MMMU"
+if [ -d "${MMMU_MODELSCOPE_CACHE}" ]; then
+    find "${MMMU_MODELSCOPE_CACHE}" -name dataset_infos.json | while read -r info_file; do
+        if ! grep -q '"dtype"' "${info_file}"; then
+            echo "Removing legacy dataset_infos.json (missing dtype fields): ${info_file}"
+            rm -f "${info_file}"
+        fi
+    done
+fi
+
 # Bound key deps so the resolver cannot fall back to ancient versions.
 EVALSCOPE_CONSTRAINTS=(
     "aiohttp>=3.11,<4"
@@ -26,9 +36,6 @@ if python -c "import evalscope" >/dev/null 2>&1; then
     fi
     # Only skip the install when the env really imports evalscope.
     if ${PYTHON_FOR_EVALSCOPE} -c "import evalscope" >/dev/null 2>&1; then
-        # Reusing system evalscope also reuses the system datasets; pin it to
-        # modelscope's constraint (<=4.8.4) so cached MMMU metadata parses
-        # (newer datasets makes Value(dtype=...) required).
         python -m pip install --force-reinstall --no-deps "datasets<=4.8.4"
         exit 0
     fi
