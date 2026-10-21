@@ -6,7 +6,10 @@ import requests
 
 from sglang.srt.observability.req_time_stats import RequestStage
 from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_0_6B_WEIGHTS_PATH,
+    is_npu_a5,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.otel_collector import LightweightOtlpCollector
 from sglang.test.test_utils import (
@@ -35,9 +38,10 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
         cls.model = QWEN3_0_6B_WEIGHTS_PATH
 
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
-        os.environ["ASCEND_MF_TRANSFER_PROTOCOL"] = "device_urma"
         os.environ["SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS"] = "50"
         os.environ["SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE"] = "4"
+        if is_npu_a5():
+        os.environ["ASCEND_MF_TRANSFER_PROTOCOL"] = "device_urma"
 
         # Initialize collector first
         cls.collector = LightweightOtlpCollector()
