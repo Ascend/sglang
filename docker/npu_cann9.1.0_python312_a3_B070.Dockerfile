@@ -153,7 +153,8 @@ RUN ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device/lib
 RUN git clone --depth 1 https://github.com/vllm-project/vllm-ascend.git && \
     cd vllm-ascend && \
     bash csrc/build_batch_invariant_ops.sh ascend910_93
-    rm -rf vllm-ascend
+    cd /workspace && \
+    rm -rf /workspace/vllm-ascend
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
