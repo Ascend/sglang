@@ -37,6 +37,7 @@ class TestNpuTokenizerBackendConcurrent(CustomTestCase):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
+        "--disable-radix-cache",
     ]
 
     @classmethod
