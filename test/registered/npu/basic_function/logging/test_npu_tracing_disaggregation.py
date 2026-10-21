@@ -41,7 +41,7 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
         os.environ["SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS"] = "50"
         os.environ["SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE"] = "4"
         if is_npu_a5():
-        os.environ["ASCEND_MF_TRANSFER_PROTOCOL"] = "device_urma"
+            os.environ["ASCEND_MF_TRANSFER_PROTOCOL"] = "device_urma"
 
         # Initialize collector first
         cls.collector = LightweightOtlpCollector()
