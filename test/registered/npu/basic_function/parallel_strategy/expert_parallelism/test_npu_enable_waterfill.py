@@ -57,7 +57,7 @@ class TestEnableDeepepWaterFill(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--enable-waterfill",
-                "mamba-ssm-dtype",
+                "--mamba-ssm-dtype",
                 "bfloat16",
             ],
             return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
