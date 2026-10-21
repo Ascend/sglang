@@ -11,6 +11,9 @@ from sglang.test.ascend.test_ascend_utils import (
     QWEN3_30B_A3B_WEIGHTS_PATH,
     
 )
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    QWEN3_A3B_EAGLE_MODEL_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -76,7 +79,7 @@ class TestAscendSpeculativeDraftAttentionAndMoeRunner(CustomTestCase):
             "--speculative-algorithm",
             "EAGLE3",
             "--speculative-draft-model-path",
-            "/root/.cache/modelscope/hub/models/Qwen/Qwen3-a3B_eagle3",
+            QWEN3_A3B_EAGLE_MODEL_PATH,
             "--speculative-num-steps",
             3,
             "--speculative-eagle-topk",
