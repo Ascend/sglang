@@ -8,6 +8,7 @@ from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH,
+    is_npu_a5,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -21,7 +22,11 @@ from sglang.utils import wait_for_http_ready
 register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
-SHAREGPT_DATASET_PATH = "/tmp/ShareGPT_V3_unfiltered_cleaned_split.json"
+# A5 has no HF hub access; use the local copy placed by run_npu_testcase.sh.
+# A3 uses the benchmark default, which downloads ShareGPT from the HF hub.
+SHAREGPT_DATASET_PATH = (
+    "/tmp/ShareGPT_V3_unfiltered_cleaned_split.json" if is_npu_a5() else ""
+)
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
 _DECODE_RE = re.compile(r"Capture target decode.*begin.*bs=\[([^\]]+)\]")

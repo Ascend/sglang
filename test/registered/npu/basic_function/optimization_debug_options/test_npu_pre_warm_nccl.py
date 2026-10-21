@@ -14,7 +14,11 @@ import requests
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.network import wait_port_available
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH, logger
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_0_6B_WEIGHTS_PATH,
+    is_npu_a5,
+    logger,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -29,8 +33,11 @@ BASE_URL = DEFAULT_URL_FOR_TEST
 HOST = urlparse(BASE_URL).hostname
 PORT = urlparse(BASE_URL).port
 
-# Local ShareGPT copy (see run_npu_testcase.sh); avoids HF hub download
-SHAREGPT_DATASET_PATH = "/tmp/ShareGPT_V3_unfiltered_cleaned_split.json"
+# A5 has no HF hub access; use the local copy placed by run_npu_testcase.sh.
+# A3 uses the benchmark default, which downloads ShareGPT from the HF hub.
+SHAREGPT_DATASET_PATH = (
+    "/tmp/ShareGPT_V3_unfiltered_cleaned_split.json" if is_npu_a5() else ""
+)
 
 
 class TestPreWarmNccl(CustomTestCase):

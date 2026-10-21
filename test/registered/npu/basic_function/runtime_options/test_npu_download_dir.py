@@ -5,7 +5,7 @@ import unittest
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import run_command
+from sglang.test.ascend.test_ascend_utils import is_npu_a5, run_command
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -37,11 +37,15 @@ class TestDownloadDir(CustomTestCase):
             "ascend",
             "--disable-cuda-graph",
         ]
+        env = {**os.environ}
+        if is_npu_a5():
+            env["SGLANG_USE_MODELSCOPE"] = "true"
         cls.process = popen_launch_server(
             cls.model,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
+            env=env,
         )
 
     @classmethod
