@@ -23,6 +23,7 @@ register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True)
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
+
 class TestAttnTpGatherDense(CustomTestCase):
     """Verify --disable-attn-tp-gather does not break non-MOE (dense) models.
 
@@ -105,7 +106,13 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
             str(tp_size),
             "--dp-size",
             str(dp_size),
+            "--mamba-ssm-dtype",
+            "bfloat16",
         ]
+        env = {
+            **os.environ,
+            "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
+        }
         if disable_gather:
             args.append("--disable-attn-tp-gather")
         return popen_launch_server(
@@ -113,6 +120,7 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
             TestAttnTpGatherDPAttn.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
+            env=env,
         )
 
     def _make_request(self):
