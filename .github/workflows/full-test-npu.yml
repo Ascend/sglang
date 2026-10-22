@@ -346,7 +346,7 @@ jobs:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
       timeout_from_est_time: false
-      timeout_per_file: '25validate-cleanup-acc-4000'
+      timeout_per_file: '25200'
       run_timeout_minutes: '480'
       job_timeout_minutes: '480'
       partitions: '{"size":3,"arr":[0,1,2]}'
