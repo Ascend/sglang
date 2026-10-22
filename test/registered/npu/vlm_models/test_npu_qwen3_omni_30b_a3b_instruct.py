@@ -408,7 +408,7 @@ class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):
             model="default",
             messages=messages,
             temperature=0,
-            max_tokens=128,
+            max_tokens=1024,
             stream=False,
         )
 
