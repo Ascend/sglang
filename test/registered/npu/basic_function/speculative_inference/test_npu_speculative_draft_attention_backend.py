@@ -8,7 +8,11 @@ import requests
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.npu_eval_accuracy_kit import _is_pr_pipeline, run_npu_pr_smoke
 from sglang.test.ascend.test_ascend_utils import (
-    DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH,
+    QWEN3_30B_A3B_WEIGHTS_PATH,
+    
+)
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    QWEN3_A3B_EAGLE_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
@@ -21,8 +25,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="base-b-test-16-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
 
-MODEL_PATH = DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH
-
+MODEL_PATH = QWEN3_30B_A3B_WEIGHTS_PATH
 
 def get_server_info(base_url: str) -> dict:
     response = requests.get(base_url + "/server_info", timeout=10)
@@ -52,7 +55,6 @@ class TestAscendSpeculativeDraftAttentionAndMoeRunner(CustomTestCase):
     [Test Target] --speculative-draft-attention-backend; --speculative-moe-runner-backend
     """
 
-    os.environ["DEEP_NORMAL_MODE_USE_INT8_QUANT"] = "1"
     os.environ["HCCL_BUFFSIZE"] = "2048"
     os.environ["SGLANG_ENABLE_OVERLAP_PLAN_SITEAM"] = "1"
     os.environ["SGLANG_ENABLE_SPEC_V2"] = "1"
@@ -67,8 +69,6 @@ class TestAscendSpeculativeDraftAttentionAndMoeRunner(CustomTestCase):
             "--trust-remote-code",
             "--attention-backend",
             "ascend",
-            "--quantization",
-            "modelslim",
             "--mem-fraction-static",
             0.7,
             "--disable-radix-cache",
@@ -77,13 +77,17 @@ class TestAscendSpeculativeDraftAttentionAndMoeRunner(CustomTestCase):
             "--tp-size",
             16,
             "--speculative-algorithm",
-            "NEXTN",
+            "EAGLE3",
+            "--speculative-draft-model-path",
+            QWEN3_A3B_EAGLE_MODEL_PATH,
             "--speculative-num-steps",
-            1,
+            3,
             "--speculative-eagle-topk",
             1,
             "--speculative-num-draft-tokens",
-            2,
+            4,
+            "--speculative-draft-model-quantization",
+            "unquant",
             "--moe-a2a-backend",
             "deepep",
             "--deepep-mode",
