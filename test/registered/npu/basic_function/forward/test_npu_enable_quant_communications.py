@@ -1,3 +1,4 @@
+import os
 import unittest
 from types import SimpleNamespace
 
@@ -15,6 +16,10 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=200, suite="full-4-npu-a3", nightly=True)
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
+
+
 class TestEnableQuantCommunications(CustomTestCase):
     """Testcase: Verify set --enable-quant-communications the inference accuracy of the model on the
     GSM8K dataset is no less than 0.74.
@@ -27,6 +32,10 @@ class TestEnableQuantCommunications(CustomTestCase):
     def setUpClass(cls):
         cls.model = QWEN3_5_35B_W8A8_MODEL_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.env = {
+            **os.environ,
+            "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
+        }
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -43,7 +52,10 @@ class TestEnableQuantCommunications(CustomTestCase):
                 "--enable-quant-communications",
                 "--log-level",
                 "info",
+                "--mamba-ssm-dtype",
+                "bfloat16",
             ],
+            env=cls.env,
         )
 
     @classmethod

@@ -44,7 +44,7 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     65536,
     "--max-mamba-cache-size",
     640,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
@@ -105,8 +105,6 @@ class TestNPUQwen3_5_397B_64K_Prefix90(TestNpuPerformanceTestCaseBase):
     seed = 1
     tpot = 50
     request_rate = float("inf")
-    temperature = 0.6
-    top_p = 0.95
     output_token_throughput = 1012.3
     pop_sglang_is_in_ci_for_gsp = True
 

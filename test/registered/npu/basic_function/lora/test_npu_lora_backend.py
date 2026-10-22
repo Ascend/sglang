@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import requests
@@ -16,6 +17,9 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 
 class TestLoraBackend(CustomTestCase):
@@ -38,12 +42,21 @@ class TestLoraBackend(CustomTestCase):
             "--disable-cuda-graph",
             "--lora-path",
             f"lora_a={QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH}",
+            "--mamba-ssm-dtype",
+            "bfloat16",
+            "--dtype",
+            "bfloat16",
         ]
+        cls.env = {
+            **os.environ,
+            "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
+        }
         cls.process = popen_launch_server(
             QWEN3_5_4B_WEIGHTS_PATH,
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
+            env=cls.env,
         )
 
     @classmethod

@@ -1,9 +1,13 @@
+import os
 import unittest
 
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
+    is_npu_a5,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -29,6 +33,12 @@ class TestMoreRunnerBackendTriton(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
+        env = {
+            "HCCL_BUFFSIZE": "1024",
+            **os.environ,
+        }
+        if is_npu_a5():
+            env["SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT"] = "1"
         cls.process = popen_launch_server(
             cls.model,
             DEFAULT_URL_FOR_TEST,
@@ -56,9 +66,7 @@ class TestMoreRunnerBackendTriton(CustomTestCase):
                 "--moe-runner-backend",
                 cls.moe_runner_backend,
             ],
-            env={
-                "HCCL_BUFFSIZE": "1024",
-            },
+            env=env,
         )
 
     @classmethod

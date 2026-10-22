@@ -2,8 +2,6 @@ import subprocess
 import time
 import unittest
 
-import psutil
-
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
@@ -30,6 +28,18 @@ class TestTPServerNPUProcesses(CustomTestCase):
     def setUpClass(cls):
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+
+        # Record existing NPU processes before launching this test server.
+        cls.baseline_npu_pids = {
+            row["pid"] for row in cls._query_npu_processes_static()
+        }
+
+        print(
+            "baseline npu pids:",
+            cls.baseline_npu_pids,
+            flush=True,
+        )
+
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -55,15 +65,18 @@ class TestTPServerNPUProcesses(CustomTestCase):
 
     def test_tp_server_has_only_worker_npu_processes(self):
         rows = self._wait_for_server_npu_processes()
-        # On NPU the launcher parent may acquire a lightweight context
-        # (e.g. HCCL init) — filter it out, only count TP worker processes.
-        worker_pids = {row["pid"] for row in rows if row["pid"] != self.process.pid}
+        new_npu_pids = {row["pid"] for row in rows}
 
-        self.assertEqual(
-            len(worker_pids),
-            self.tp_size,
-            f"TP={self.tp_size} server should have exactly {self.tp_size} "
-            f"NPU worker processes, got {len(worker_pids)}: {self._format_rows(rows)}",
+        # Normally TP=2 should create two NPU worker processes.
+        #
+        # On some NPU environments the launcher may also acquire a lightweight
+        # NPU context, so allow at most one additional NPU process.
+        self.assertIn(
+            len(new_npu_pids),
+            (self.tp_size, self.tp_size + 1),
+            f"TP={self.tp_size} server should create {self.tp_size} worker "
+            f"NPU processes and at most one launcher NPU context, "
+            f"got {len(new_npu_pids)}: {self._format_rows(rows)}",
         )
 
     def _wait_for_server_npu_processes(self):
@@ -72,13 +85,38 @@ class TestTPServerNPUProcesses(CustomTestCase):
         last_rows = []
 
         while time.monotonic() < deadline:
-            tree_pids = self._server_process_tree_pids()
+            raw_rows = self._query_npu_processes_static()
+
+            # npu-smi returns host-side PIDs. Instead of comparing them with
+            # container PIDs, only keep NPU processes that appeared after this
+            # test server was launched.
             rows = [
-                row for row in self._query_npu_processes() if row["pid"] in tree_pids
+                row
+                for row in raw_rows
+                if row["pid"] not in self.baseline_npu_pids
             ]
+
             last_rows = rows
 
-            if len({row["pid"] for row in rows}) >= self.tp_size:
+            print(
+                "raw npu-smi rows:",
+                raw_rows,
+                flush=True,
+            )
+            print(
+                "baseline npu pids:",
+                self.baseline_npu_pids,
+                flush=True,
+            )
+            print(
+                "new npu rows:",
+                rows,
+                flush=True,
+            )
+
+            num_new_pids = len({row["pid"] for row in rows})
+
+            if num_new_pids >= self.tp_size:
                 if stable_since is None:
                     stable_since = time.monotonic()
                 elif time.monotonic() - stable_since >= 3:
@@ -89,20 +127,12 @@ class TestTPServerNPUProcesses(CustomTestCase):
             time.sleep(0.5)
 
         self.fail(
-            f"Timed out waiting for TP={self.tp_size} NPU worker processes. "
+            f"Timed out waiting for TP={self.tp_size} NPU processes. "
             f"Last observed rows: {self._format_rows(last_rows)}"
         )
 
-    def _server_process_tree_pids(self):
-        pids = {self.process.pid}
-        try:
-            parent = psutil.Process(self.process.pid)
-            pids.update(child.pid for child in parent.children(recursive=True))
-        except psutil.NoSuchProcess:
-            pass
-        return pids
-
-    def _query_npu_processes(self):
+    @staticmethod
+    def _query_npu_processes_static():
         result = subprocess.run(
             ["npu-smi", "info"],
             check=True,
@@ -112,9 +142,11 @@ class TestTPServerNPUProcesses(CustomTestCase):
 
         rows = []
         pid_col = None  # column index of "Process id" header
+
         for line in result.stdout.splitlines():
             if "|" not in line:
                 continue
+
             parts = [p.strip() for p in line.split("|")]
 
             # Locate the process table by its "Process id" column header.
@@ -123,28 +155,33 @@ class TestTPServerNPUProcesses(CustomTestCase):
                     if part == "Process id":
                         pid_col = i
                         break
-                continue  # skip the header row itself
+                continue
 
-            # Reached the next section header ("NPU" row) → stop.
-            if any(parts) and parts[1].startswith("NPU"):
+            # Reached the next section header ("NPU" row) -> stop.
+            if len(parts) > 1 and parts[1].startswith("NPU"):
                 break
-            # Separator line or empty data row → skip.
+
+            # Separator line or empty data row -> skip.
             if "+" in line or not any(parts):
                 continue
-            # No data in PID column → skip.
+
+            # Malformed row -> skip.
+            if pid_col >= len(parts):
+                continue
+
+            # No data in PID column -> skip.
             if not parts[pid_col].isdigit():
                 continue
 
             pid = int(parts[pid_col])
-            # Safety guard: only accept real OS-level PIDs.
-            if psutil.pid_exists(pid):
-                rows.append({"pid": pid})
+            rows.append({"pid": pid})
 
         return rows
 
     def _format_rows(self, rows):
         if not rows:
             return "[]"
+
         return "[" + ", ".join(str(row) for row in rows) + "]"
 
 

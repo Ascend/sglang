@@ -3,7 +3,11 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_8B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
+    QWEN3_8B_WEIGHTS_PATH,
+    is_npu_a5,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval
 from sglang.test.test_utils import (
@@ -29,21 +33,21 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
     [Test Target] --enable-torch-compile-debug-mode
     """
 
-    model = QWEN3_8B_WEIGHTS_PATH
+    model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH if is_npu_a5() else QWEN3_8B_WEIGHTS_PATH
     other_args = [
         "--trust-remote-code",
         "--mem-fraction-static",
-        "0.7",
+        "0.8" if is_npu_a5() else "0.7",
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
         "--disable-radix-cache",
-        "--enforce-piecewise-cuda-graph",
+        "--cuda-graph-backend-prefill=tc_piecewise",
     ]
     enable_args = [
         "--enable-torch-compile-debug-mode",
-        "--enforce-piecewise-cuda-graph",
-        "--piecewise-cuda-graph-max-tokens",
+        "--cuda-graph-backend-prefill=tc_piecewise",
+        "--cuda-graph-max-bs-prefill",
         "64",
     ]
 
@@ -86,7 +90,7 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
-            host="http://127.0.0.1",
+            host="127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
         avg_time1, all_times1 = self.benchmark_gsm8k(args, num_runs=5)

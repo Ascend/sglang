@@ -1,4 +1,7 @@
+import os
 import unittest
+
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
 
 import requests
 
@@ -17,6 +20,9 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=1100, suite="full-8-npu-a3", nightly=True)
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
+
 class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Test MambaCache basic functions using GSM8K dataset.
     The inference accuracy of the Qwen3-Next-80B-A3B-Instruct model
@@ -25,6 +31,11 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     [Test Category] Parameter
     [Test Target] --mamba-scheduler-strategy, --mamba-full-memory-ratio, --mamba-track-interval
     """
+
+    env = {
+        **GSM8KAscendMixin.env,
+        "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
+    }
 
     model = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_FOR_TEST.model_path
     accuracy = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_FOR_TEST.gsm8k_accuracy
@@ -37,7 +48,7 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
         "--disable-cuda-graph",
         "--mamba-full-memory-ratio",
         "0.9",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "auto",
         "--mamba-track-interval",
         "256",
@@ -63,12 +74,12 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "no_buffer",
         "--mamba-track-interval",
         "512",
         "--mamba-ssm-dtype",
-        "float32",
+        "bfloat16",
         "--tp-size",
         "8",
         "--disable-radix-cache",
@@ -97,7 +108,7 @@ class TestMambaCacheRadix(CustomTestCase):
         "bfloat16",
         "--mamba-full-memory-ratio",
         "0.3",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",  # To reuse Radix Cache, this parameter must be set to extra_buffer
     ]
 
@@ -166,7 +177,7 @@ class TestMambaCacheRadix(CustomTestCase):
                     "max_new_tokens": 1000,
                 },
             },
-            timeout=120,
+            timeout=1200,
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.text), 0)

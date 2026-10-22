@@ -21,6 +21,7 @@ from sglang.utils import wait_for_http_ready
 register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
+SHAREGPT_DATASET_PATH = "/tmp/ShareGPT_V3_unfiltered_cleaned_split.json"
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
 _DECODE_RE = re.compile(r"Capture target decode.*begin.*bs=\[([^\]]+)\]")
@@ -63,6 +64,7 @@ def _run_bench(base_url):
         random_input_len=256,
         random_output_len=32,
         request_rate=float("inf"),
+        dataset_path=SHAREGPT_DATASET_PATH,
     )
     bench_args.warmup_requests = 0
     return run_benchmark(bench_args)
