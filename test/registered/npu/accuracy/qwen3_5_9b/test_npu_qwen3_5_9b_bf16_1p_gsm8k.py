@@ -31,7 +31,6 @@ QWEN3_5_9B_OTHER_ARGS = [
     "ascend",
     "--device",
     "npu",
-    "--enable-dp-attention",
     "--chunked-prefill-size",
     4096,
     "--max-prefill-tokens",
@@ -51,6 +50,7 @@ QWEN3_5_9B_OTHER_ARGS = [
 
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 
 class TestNPUQwen3_5_9B_GSM8K(TestNpuAccuracyTestCaseBase):
     model = QWEN3_5_9B_MODEL_PATH
