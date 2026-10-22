@@ -69,6 +69,24 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
     && update-ca-certificates \
     && locale-gen en_US.UTF-8
 
+RUN set -eux; \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            libnl-3-dev libnl-genl-3-dev rsyslog && \
+        wget --quiet \
+            https://mirrors.huaweicloud.com/ascend/archive/deb/unifiedbus/common/umdk-urma-26.06.0-B016.glibc217.aarch64.deb.tar.gz \
+            -O /tmp/umdk-urma.tar.gz && \
+        mkdir -p /tmp/umdk_pkgs && \
+        tar -mzxf /tmp/umdk-urma.tar.gz -C /tmp/umdk_pkgs && \
+        dpkg -i /tmp/umdk_pkgs/*.deb && \
+        ldconfig && \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/* /tmp/umdk-urma.tar.gz /tmp/umdk_pkgs; \
+    else \
+        echo "Skipping URMA installation: TARGETARCH=$TARGETARCH"; \
+    fi
+
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
