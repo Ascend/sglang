@@ -41,9 +41,9 @@ BASE_SERVER_ARGS = [
     "--mm-attention-backend",
     "ascend_attn",
     "--mm-io-worker-num",
-    "16",
+    "6",
     "--mm-processor-worker-num",
-    "2",
+    "3",
 ]
 
 BENCHMARK_ARGS = [
@@ -68,8 +68,8 @@ BENCHMARK_ARGS = [
     "128",
 ]
 
-EXPECTED_MM_IO_WORKER_NUM = 16
-EXPECTED_MM_PROCESSOR_WORKER_NUM = 2
+EXPECTED_MM_IO_WORKER_NUM = 6
+EXPECTED_MM_PROCESSOR_WORKER_NUM = 3
 MMMU_ACCURACY_THRESHOLD = 0.40
 
 
@@ -140,7 +140,7 @@ class TestNpuMmWorkerNumAndMmmu(CustomTestCase):
     and MMMU accuracy for Qwen2.5-VL-3B-Instruct on Ascend NPU.
 
     Server: tp=2, ascend backend, mm-attention-backend=ascend_attn,
-    mm-io-worker-num=16, mm-processor-worker-num=2.
+    mm-io-worker-num=6, mm-processor-worker-num=3.
 
     [Test Category] VLM
     [Test Target] --mm-io-worker-num; --mm-processor-worker-num; MMMU
@@ -258,10 +258,7 @@ class TestNpuMmWorkerNumAndMmmu(CustomTestCase):
                     parts = stripped.split()
                     if parts:
                         completed = int(parts[-1])
-                if "Mean TTFT" in stripped:
-                    parts = stripped.split()
-                    if len(parts) >= 4:
-                        mean_ttft = float(parts[3])
+
         finally:
             if benchmark_process.stdout and not benchmark_process.stdout.closed:
                 benchmark_process.stdout.close()
@@ -279,8 +276,7 @@ class TestNpuMmWorkerNumAndMmmu(CustomTestCase):
             50,
             f"Expected 50 successful requests, got {completed}",
         )
-        if mean_ttft is not None:
-            print(f"\n[Image Benchmark] Mean TTFT: {mean_ttft:.2f} ms")
+
 
         # --- Verify thread counts ---
         pyspy_output = monitor_result.get("output", "")
@@ -305,17 +301,21 @@ class TestNpuMmWorkerNumAndMmmu(CustomTestCase):
         print(f"mm-io threads found: {mm_io_count}")
         print(f"mm-processor threads found: {mm_processor_count}")
 
-        self.assertGreaterEqual(
+        self.assertEqual(
             mm_io_count,
             EXPECTED_MM_IO_WORKER_NUM,
-            f"Expected at least {EXPECTED_MM_IO_WORKER_NUM} mm-io threads, "
-            f"found {mm_io_count}",
+            f"Expected exactly {EXPECTED_MM_IO_WORKER_NUM} mm-io threads "
+            f"(peak), found {mm_io_count}. Undershoot means the pool never "
+            f"saturated; overshoot means --mm-io-worker-num was ignored and "
+            f"the default 6-thread pool is running",
         )
-        self.assertGreaterEqual(
+        self.assertEqual(
             mm_processor_count,
             EXPECTED_MM_PROCESSOR_WORKER_NUM,
-            f"Expected at least {EXPECTED_MM_PROCESSOR_WORKER_NUM} "
-            f"mm-processor threads, found {mm_processor_count}",
+            f"Expected exactly {EXPECTED_MM_PROCESSOR_WORKER_NUM} "
+            f"mm-processor threads (peak), found {mm_processor_count}. "
+            f"Undershoot means the pool never saturated; overshoot means "
+            f"--mm-processor-worker-num was ignored",
         )
 
     def test_mmmu_accuracy(self):
