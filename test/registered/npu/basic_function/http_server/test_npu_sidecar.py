@@ -167,6 +167,7 @@ class TestSidecar(CustomTestCase):
         print(f"#### {marker=}")
         self.assertEqual(marker["argv"], ["--flag", "value"])
         self.assertEqual(marker["endpoint"], f"http://127.0.0.1:{GRPC_PORT}")
+        self.assertNotIn("--sidecar-shutdown-timeout", marker["argv"])
 
     def test_sidecar_startup_logged(self):
         # SGLang's Python logging goes to stderr while Rust tracing and
