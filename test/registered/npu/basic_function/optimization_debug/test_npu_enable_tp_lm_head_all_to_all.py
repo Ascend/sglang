@@ -26,7 +26,6 @@ class TestGsm8k(GSM8KAscendMixin, CustomTestCase):
         32,
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
         "--cuda-graph-max-bs-decode",
         32,
         "--enable-dp-attention",
