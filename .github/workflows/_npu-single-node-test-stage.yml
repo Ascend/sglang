@@ -75,10 +75,14 @@ on:
         description: 'If true, delegate test execution to scripts/ci/npu/precise-test/run_tests_with_coverage.sh instead of running via run_suite.py directly'
         type: boolean
         default: false
-      upload_test_logs:
-        description: 'If true, upload the test logs as a GitHub Actions artifact (only enabled by pr-test-npu)'
+      upload_coverage_artifact:
+        description: 'With use_coverage_runner: stage coverage data in a job-private dir and ship it as a covdata-* artifact instead of relying on the shared disk (for pools without a common shared disk)'
         type: boolean
         default: false
+      only_tests:
+        description: 'Coverage-recommended test files for this suite (one repo-relative path per line, from recommend-tests-from-coverage). Empty = run the full suite.'
+        type: string
+        default: ''
 
 env:
   SKIP_PR_TEST_HEALTH_CHECK: ${{ inputs.skip_pr_test_health_check }}
@@ -86,7 +90,7 @@ env:
 
 jobs:
   e2e:
-    name: ${{ inputs.test_suite }}
+    name: ${{ inputs.test_suite }}${{ inputs.use_coverage_runner && format(' ({0})', matrix.partition) || '' }}
     concurrency:
       group: ascend-nightly-e2e-singlenode-${{ github.workflow_ref }}-${{ github.ref }}-${{ inputs.test_suite }}-${{ matrix.partition }}
       cancel-in-progress: true
@@ -98,6 +102,13 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.image }}
+    # Job cap must exceed the run-step timeout so the STEP timeout fires first:
+    # a step timeout still lets the !cancelled() covdata upload run, a job
+    # timeout cancels the job outright and loses the data. The implicit 360
+    # default would preemptively kill e.g. full-acc-2's 480-minute run step,
+    # so pin an explicit cap: 540 for non-coverage callers, raised for
+    # coverage runs (full-test-npu passes step timeouts up to 960).
+    timeout-minutes: ${{ inputs.use_coverage_runner && 1020 || 540 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -245,6 +256,7 @@ jobs:
           TRANSFORMERS_VERBOSITY: "error"
           GDN_ATTN_BACKEND_TRITON: 1
           NPU_PR_SMOKE: ${{ inputs.is_nightly_pipeline_job == true && 'false' || 'true' }}
+          ONLY_TESTS: ${{ inputs.only_tests }}
         shell: bash
         run: |
           # Fail fast on any command error, undefined variable, or pipe failure.
@@ -408,6 +420,18 @@ jobs:
             PARTITION_ARGS="--auto-partition-id ${PARTITION_ID} --auto-partition-size ${PARTITION_SIZE}"
           fi
 
+          # Precision-test mode: run only the coverage-recommended files for
+          # this suite. The bucketed list comes from recommend-tests-from-
+          # coverage; empty input keeps the full-suite behavior.
+          ONLY_FILE_ARGS=""
+          if [ -n "${ONLY_TESTS}" ]; then
+            printf '%s\n' "${ONLY_TESTS}" > /tmp/precision_tests.txt
+            ONLY_FILE_ARGS="--only-file-list /tmp/precision_tests.txt"
+            echo "Precision mode: running $(wc -l < /tmp/precision_tests.txt) recommended file(s)"
+          fi
+
+          # Append `--timeout-from-est‑time` when the job belongs to the nightly pipeline.
+          # per‑case timeout is derived from each case's est_time.
           TIMEOUT_FLAG=""
           if [ "${{ inputs.is_nightly_pipeline_job }}" = "true" ]; then
             TIMEOUT_FLAG="--timeout-from-est-time"
@@ -428,10 +452,24 @@ jobs:
           # unchanged for the default (false) path.
           if [[ "${{ inputs.use_coverage_runner }}" == "true" ]]; then
             pip install coverage==7.8.*
-            ${PYTHON_FOR_SGLANG} -u ../scripts/ci/npu/precise-test/list_tests.py --hw npu --suite ${test_suite} ${PARTITION_ARGS} -o /tmp/selected_tests.txt
+            # Nightly/full suites register their tests with nightly=True;
+            # list_tests.py needs --nightly to enumerate them (mirrors the
+            # --nightly flag run_suite.py gets for the same jobs).
+            NIGHTLY_LIST_FLAG=""
+            if [ "${{ inputs.is_nightly_pipeline_job }}" = "true" ]; then
+              NIGHTLY_LIST_FLAG="--nightly"
+            fi
+            ${PYTHON_FOR_SGLANG} -u ../scripts/ci/npu/precise-test/list_tests.py --hw npu --suite ${test_suite} ${PARTITION_ARGS} ${NIGHTLY_LIST_FLAG} -o /tmp/selected_tests.txt
             echo "Selected test files:"
             cat /tmp/selected_tests.txt
             if [ -s /tmp/selected_tests.txt ]; then
+              # Artifact transport: stage in a job-private root so the
+              # artifact carries exactly this job's tests. The default
+              # (shared-disk) RUN_DIR would also sweep sibling jobs' data
+              # whenever several partitions land on the same disk.
+              if [ "${{ inputs.upload_coverage_artifact }}" = "true" ]; then
+                export PRECISE_TEST_CACHE_ROOT="/tmp/precise-test-covdata"
+              fi
               bash ../scripts/ci/npu/precise-test/run_tests_with_coverage.sh $(cat /tmp/selected_tests.txt)
             fi
             exit 0
@@ -440,7 +478,7 @@ jobs:
           # Run NPU test suite with run_suite.py.
           # Capture mode (--enable-retry --max-attempts 1) keeps test subprocesses off the
           # tee pipe, so leftover server processes cannot block the pipeline on exit.
-          ${PYTHON_FOR_SGLANG} -u run_suite.py --hw npu --suite ${test_suite} ${NIGHTLY_FLAG} ${PARTITION_ARGS} ${TIMEOUT_FLAG} --enable-retry --max-attempts 1 --timeout-per-file 10800 2>&1 | tee "${LOG_TEE_TARGETS[@]}" || test_exit_code=$?
+          ${PYTHON_FOR_SGLANG} -u run_suite.py --hw npu --suite ${test_suite} ${NIGHTLY_FLAG} ${PARTITION_ARGS} ${ONLY_FILE_ARGS} ${TIMEOUT_FLAG} --enable-retry --max-attempts 1 --timeout-per-file 10800 2>&1 | tee "${LOG_TEE_TARGETS[@]}" || test_exit_code=$?
 
           echo "Finished test: ${tc_name}"
 
@@ -473,11 +511,18 @@ jobs:
           fi
           exit ${test_exit_code}
 
-      - name: Upload test logs
-        if: always() && inputs.use_coverage_runner != true && inputs.upload_test_logs == true
-        uses: actions/upload-artifact@v7
+      - name: Upload coverage data (artifact transport)
+        # Runs even when tests fail: failed tests' coverage counts too (their
+        # dirs carry a FAILED marker). Shared-disk callers (pr-test-npu) leave
+        # upload_coverage_artifact false and never take this step.
+        if: ${{ !cancelled() && inputs.use_coverage_runner && inputs.upload_coverage_artifact }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
-          name: selected-test-logs-${{ inputs.test_suite }}-part${{ matrix.partition }}
-          path: /tmp/test-logs/
+          name: covdata-${{ inputs.test_suite }}-p${{ matrix.partition }}
+          # Trailing slash -> zip root is outputs/ contents (sglang@<tag>/...);
+          # the download side restores the RUN_DIR/outputs layers via its path.
+          path: /tmp/precise-test-covdata/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
+          # Absent for empty partitions or when the run step died before tests.
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
