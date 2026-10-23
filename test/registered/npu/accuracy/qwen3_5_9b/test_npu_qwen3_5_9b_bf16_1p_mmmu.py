@@ -57,10 +57,9 @@ class TestNPUQwen3_5_9B_mmmu(TestNpuAccuracyTestCaseBase):
     other_args = OTHER_ARGS
     accuracy = 0.723
     datasets = ["mmmu"]
-    limit = 198
     generation_config = {
         "max_tokens": 64000,
-        "temperature": 0.0,
+        # "temperature": 0.0,
     }
     eval_batch_size = 64
 

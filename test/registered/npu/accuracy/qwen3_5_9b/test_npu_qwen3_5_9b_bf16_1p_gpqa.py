@@ -60,7 +60,7 @@ class TestNPUQwen3_5_9B_gpqa(TestNpuAccuracyTestCaseBase):
     eval_batch_size = 64
     generation_config = {
         "max_tokens": 64000,
-        "temperature": 0.0,
+        # "temperature": 0.0,
     }
 
     def test_gpqa(self):
