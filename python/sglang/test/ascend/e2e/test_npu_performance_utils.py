@@ -63,6 +63,9 @@ GSM8K_DATASET_TEST_FILE = (
 GSM8K_DATASET_TRAIN_FILE = (
     "/root/.cache/modelscope/hub/datasets/grade_school_math/train.jsonl"
 )
+HLE_DATASET_PATH = (
+    "/root/.cache/modelscope/hub/datasets/run_file/mimo-v2.5-pro/data/hle_dataset"
+)
 
 PYTHON_FOR_TEST_TOOL = "python_venv_for_test_tool/bin/python"
 if not os.path.exists(PYTHON_FOR_TEST_TOOL) or not os.access(

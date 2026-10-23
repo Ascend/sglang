@@ -6,6 +6,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     MIMO_V2_5_PRO_DFLASH_MODEL_PATH,
     MIMO_V2_5_PRO_FP4_MODEL_PATH,
+    HLE_DATASET_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -15,9 +16,6 @@ register_npu_ci(
     nightly=True,
     disabled="A5 test case",
 )
-
-# Update HLE dataset path for CI environment
-HLE_DATASET_PATH = "/mnt/share/w00937173/run_file/mimo-v2.5-pro/data/hle_dataset"
 
 MIMO_V2_5_PRO_FP4_8P_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
