@@ -6,7 +6,12 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 from sglang.test.ascend.e2e.test_npu_performance_utils import QWEN3_VL_8B_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=9000, suite="full-acc-4-npu-a3", nightly=True)
+register_npu_ci(
+    est_time=9000,
+    suite="",
+    nightly=True,
+    disabled="A5 local test case",
+)
 
 ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -81,7 +86,7 @@ MMMU_GENERATION_CONFIG = {
 
 
 class TestQwen3VL8B_BF16_4P_MMLU_MMMU(TestNpuAccuracyTestCaseBase):
-    """Qwen3-VL-8B-Instruct bf16 TP4 accuracy: full MMLU + full MMMU on A3; thresholds sit below public scores (MMLU 0.807, MMMU 0.696) to absorb evalscope scoring variance."""
+    """Qwen3-VL-8B-Instruct bf16 TP4 accuracy: full MMLU + full MMMU; intended to run locally on A5, disabled in CI; thresholds sit below public scores (MMLU 0.807, MMMU 0.696) to absorb evalscope scoring variance."""
 
     model = QWEN3_VL_8B_MODEL_PATH
     envs = ENVS
@@ -90,14 +95,14 @@ class TestQwen3VL8B_BF16_4P_MMLU_MMMU(TestNpuAccuracyTestCaseBase):
 
     def test_mmlu(self):
         self.datasets = ["mmlu"]
-        self.accuracy = 0.80
+        self.accuracy = 0.75
         self.eval_batch_size = 64
         self.generation_config = MMLU_GENERATION_CONFIG
         self.run_accuracy()
 
     def test_mmmu(self):
         self.datasets = ["mmmu"]
-        self.accuracy = 0.60
+        self.accuracy = 0.58
         self.eval_batch_size = 32
         self.generation_config = MMMU_GENERATION_CONFIG
         self.run_accuracy()

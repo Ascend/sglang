@@ -6,7 +6,12 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 from sglang.test.ascend.e2e.test_npu_performance_utils import QWEN3_VL_30B_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=6500, suite="full-acc-16-npu-a3", nightly=True)
+register_npu_ci(
+    est_time=6500,
+    suite="",
+    nightly=True,
+    disabled="A5 local test case",
+)
 
 ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -62,7 +67,7 @@ MMMU_GENERATION_CONFIG = {
 
 
 class TestQwen3VL30BA3B_BF16_DP8_AIME26_MMMU(TestNpuAccuracyTestCaseBase):
-    """Qwen3-VL-30B-A3B-Instruct bf16 TP8+DP8 accuracy: AIME26 + full MMMU on A3; MMMU threshold sits below the public score (0.742) for evalscope scoring variance, AIME26 0.7 anchored to the first NPU run (pending GPU re-anchor)."""
+    """Qwen3-VL-30B-A3B-Instruct bf16 TP8+DP8 accuracy: AIME26 + full MMMU; intended to run locally on A5, disabled in CI; MMMU threshold sits below the public score (0.742) for evalscope scoring variance, AIME26 0.7 anchored to the first NPU run."""
 
     model = QWEN3_VL_30B_MODEL_PATH
     envs = ENVS
