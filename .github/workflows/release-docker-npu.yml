@@ -7,7 +7,7 @@ on:
         description: 'tag后缀，如 B021, release20260810'
         required: false
         type: string
-        default: 'main'
+        default: 'nightly'
 
 jobs:
   build:
@@ -44,7 +44,7 @@ jobs:
 
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}-${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "FULL_TAG=cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}-${{ matrix.platform }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -101,7 +101,7 @@ jobs:
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
@@ -127,12 +127,12 @@ jobs:
           - device_type: a3
           - device_type: 950
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
       # 与 build job 用同一份合并后的 Dockerfile
       dockerfile: docker/npu_cann9.2.0.Dockerfile
       build_args: |
         SGLANG_KERNEL_NPU_TAG=2026.10.20.post3
         CANN_VERSION=9.2.0
         DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-${{ github.event.inputs.tag_suffix || 'main' }}-cann9.2.0-${{ matrix.device_type }}
+      artifact_name: image-manifest-cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
       deploy_pages: 'true'
