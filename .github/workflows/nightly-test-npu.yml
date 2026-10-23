@@ -61,8 +61,13 @@ on:
         required: false
         type: string
         default: ''
+      coverage_mode:
+        description: 'Run in coverage collection mode: basic-function and accuracy suites run with coverage instrumentation and ship covdata artifacts; perf and multi-node jobs are skipped'
+        required: false
+        type: boolean
+        default: false
 concurrency:
-  group: nightly-test-npu-${{ inputs.ref || github.ref }}
+  group: nightly-test-npu-${{ inputs.coverage_mode == true && 'coverage-' || '' }}${{ inputs.ref || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 jobs:
   set-image-config:
@@ -131,10 +136,13 @@ jobs:
       self_name: nightly-1-npu-a3
       runner_config: linux-aarch64-a3-2-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      run_timeout_minutes: '90'
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      run_timeout_minutes: ${{ inputs.coverage_mode == true && '180' || '90' }}
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   nightly-2-npu-a3:
@@ -146,10 +154,13 @@ jobs:
       self_name: nightly-2-npu-a3
       runner_config: linux-aarch64-a3-2-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      run_timeout_minutes: '90'
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      run_timeout_minutes: ${{ inputs.coverage_mode == true && '180' || '90' }}
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   # The nightly-4-npu-a3 suite is split across 2 parallel partition jobs, mirroring base-b-test-4-npu-a3 in the PR pipeline.
@@ -162,11 +173,14 @@ jobs:
       self_name: nightly-4-npu-a3
       runner_config: linux-aarch64-a3-4-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      run_timeout_minutes: '120'
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      run_timeout_minutes: ${{ inputs.coverage_mode == true && '240' || '120' }}
       timeout_per_file: '3600'
       partitions: '{"size":2,"arr":[0,1]}'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   nightly-8-npu-a3:
@@ -178,10 +192,13 @@ jobs:
       self_name: nightly-8-npu-a3
       runner_config: linux-aarch64-a3-8-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      run_timeout_minutes: '60'
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      run_timeout_minutes: ${{ inputs.coverage_mode == true && '120' || '60' }}
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   nightly-16-npu-a3:
@@ -193,15 +210,20 @@ jobs:
       self_name: nightly-16-npu-a3
       runner_config: linux-aarch64-a3-16-
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      run_timeout_minutes: '120'
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      run_timeout_minutes: ${{ inputs.coverage_mode == true && '240' || '120' }}
       timeout_per_file: '3600'
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   nightly-perf-2-npu-a3:
     name: nightly-perf-2-npu-a3
-    if: ${{ !cancelled() }}
+    # Coverage mode: skipped — perf runs without coverage by requirement, and
+    # the caller (full-test) runs its own perf jobs in the same coverage run.
+    if: ${{ !cancelled() && inputs.coverage_mode != true }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -217,7 +239,9 @@ jobs:
 
   nightly-perf-4-npu-a3:
     name: nightly-perf-4-npu-a3
-    if: ${{ !cancelled() }}
+    # Coverage mode: skipped — perf runs without coverage by requirement, and
+    # the caller (full-test) runs its own perf jobs in the same coverage run.
+    if: ${{ !cancelled() && inputs.coverage_mode != true }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -233,7 +257,9 @@ jobs:
 
   nightly-perf-8-npu-a3:
     name: nightly-perf-8-npu-a3
-    if: ${{ !cancelled() }}
+    # Coverage mode: skipped — perf runs without coverage by requirement, and
+    # the caller (full-test) runs its own perf jobs in the same coverage run.
+    if: ${{ !cancelled() && inputs.coverage_mode != true }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -249,7 +275,9 @@ jobs:
 
   nightly-perf-16-npu-a3:
     name: nightly-perf-16-npu-a3
-    if: ${{ !cancelled() }}
+    # Coverage mode: skipped — perf runs without coverage by requirement, and
+    # the caller (full-test) runs its own perf jobs in the same coverage run.
+    if: ${{ !cancelled() && inputs.coverage_mode != true }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -281,6 +309,10 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      test_timeout_minutes: ${{ inputs.coverage_mode == true && '600' || '300' }}
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
 
   nightly-acc-4-npu-a3:
     name: nightly-acc-4-npu-a3
@@ -297,6 +329,10 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      test_timeout_minutes: ${{ inputs.coverage_mode == true && '600' || '300' }}
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
 
   nightly-acc-16-npu-a3:
     name: nightly-acc-16-npu-a3
@@ -313,6 +349,10 @@ jobs:
       install_sglang_deps: false
       device_type_for_deps: 'a3'
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      test_timeout_minutes: ${{ inputs.coverage_mode == true && '600' || '300' }}
+      use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
 
 #   nightly-acc-4-npu-a5:
 #     name: nightly-acc-4-npu-a5
@@ -332,7 +372,8 @@ jobs:
 
   nightly-poc-multi-node-tests:
     name: multi-node-poc
-    if: ${{ !cancelled() }}
+    # Coverage mode: skipped — multi-node runs without coverage by requirement.
+    if: ${{ !cancelled() && inputs.coverage_mode != true }}
     needs: [set-image-config, nightly-perf-2-npu-a3, nightly-perf-4-npu-a3, nightly-perf-16-npu-a3, nightly-acc-2-npu-a3, nightly-acc-4-npu-a3, nightly-acc-16-npu-a3]
     strategy:
       fail-fast: false
