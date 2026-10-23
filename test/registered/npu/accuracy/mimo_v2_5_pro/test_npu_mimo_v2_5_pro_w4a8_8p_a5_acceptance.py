@@ -1,23 +1,12 @@
-import re
-import subprocess
-import sys
 import unittest
-from urllib.parse import urlparse
 
-import requests
-
-from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    BENCHMARK_TOOL_DEFAULT,
     MIMO_V2_5_PRO_DFLASH_MODEL_PATH,
     MIMO_V2_5_PRO_FP4_MODEL_PATH,
-    SHAREGPT_DATASET_TEST_FILE,
+    TestNpuPerformanceTestCaseBase,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import (
-    DEFAULT_URL_FOR_TEST,
-    CustomTestCase,
-    popen_launch_server,
-)
 
 register_npu_ci(
     est_time=3600,
@@ -85,101 +74,32 @@ MIMO_V2_5_PRO_FP4_8P_OTHER_ARGS = [
     "--enable-metrics",
 ]
 
-# Bench serving params from run_mimo.sh Part 3
-NUM_PROMPTS = 128
-RANDOM_INPUT_LEN = 16000
-RANDOM_OUTPUT_LEN = 1000
-MAX_CONCURRENCY = 32
-NUM_DRAFT_TOKENS = 8
-ACCEPT_RATE_THRESHOLD = 0.25
 
+class TestNPUMiMoV2_5_Pro_W4A8_8P_A5_Acceptance(TestNpuPerformanceTestCaseBase):
+    """Test NPU acceptance rate for MiMo-V2.5-Pro-FP4 8p A5 single node with DFLASH.
 
-class TestNPUMiMoV2_5_Pro_W4A8_8P_A5_Acceptance(CustomTestCase):
-    """Test NPU acceptance rate and acceptance length for MiMo-V2.5-Pro-FP4 8p A5 single node with DFLASH.
-
-    Runs bench_serving with random dataset to measure speculative decoding acceptance rate.
-    Acceptance rate = avg_spec_accept_length / speculative_num_draft_tokens.
+    Runs bench_serving with random dataset to measure speculative decoding
+    acceptance rate. The base class computes
+    accept_rate = accept_length / --speculative-num-draft-tokens (8)
+    and asserts it against the ``accept_rate`` baseline.
     """
 
-    @classmethod
-    def setUpClass(cls):
-        cls.model_path = MIMO_V2_5_PRO_FP4_MODEL_PATH
-        cls.base_url = DEFAULT_URL_FOR_TEST
-        cls.process = popen_launch_server(
-            cls.model_path,
-            cls.base_url,
-            timeout=3600,
-            other_args=MIMO_V2_5_PRO_FP4_8P_OTHER_ARGS,
-            env=MIMO_V2_5_PRO_FP4_8P_ENVS,
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        kill_process_tree(cls.process.pid)
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    model = MIMO_V2_5_PRO_FP4_MODEL_PATH
+    other_args = MIMO_V2_5_PRO_FP4_8P_OTHER_ARGS
+    envs = MIMO_V2_5_PRO_FP4_8P_ENVS
+    dataset_name = "random"
+    input_len = 16000
+    output_len = 1000
+    num_prompts = 128
+    max_concurrency = 32
+    random_range_ratio = 1
+    request_rate = float("inf")
+    accept_rate = 0.25
 
     def test_acceptance(self):
-        """Run bench_serving and verify acceptance rate > 0.25."""
-        parsed = urlparse(self.base_url)
-
-        cmd = [
-            sys.executable,
-            "-m",
-            "sglang.bench_serving",
-            "--backend",
-            "sglang",
-            "--host",
-            parsed.hostname,
-            "--port",
-            str(parsed.port),
-            "--model",
-            self.model_path,
-            "--dataset-path",
-            SHAREGPT_DATASET_TEST_FILE,
-            "--dataset-name",
-            "random",
-            "--tokenize-prompt",
-            "--random-input-len",
-            str(RANDOM_INPUT_LEN),
-            "--random-output-len",
-            str(RANDOM_OUTPUT_LEN),
-            "--request-rate",
-            "inf",
-            "--random-range-ratio",
-            "1",
-            "--num-prompts",
-            str(NUM_PROMPTS),
-            "--max-concurrency",
-            str(MAX_CONCURRENCY),
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
-        print(result.stdout)
-        if result.returncode != 0:
-            print(f"STDERR:\n{result.stderr}")
-        self.assertEqual(result.returncode, 0, f"bench_serving failed: {result.stderr}")
-
-        # Parse accept_length from bench_serving CLI output
-        match = re.search(r"Accept length:\s+([\d.]+)", result.stdout)
-        if match:
-            accept_length = float(match.group(1))
-        else:
-            # Fallback: query /server_info endpoint
-            server_info = requests.get(self.base_url + "/server_info").json()
-            accept_length = server_info["internal_states"][0].get(
-                "avg_spec_accept_length", 0.0
-            )
-
-        accept_rate = accept_length / NUM_DRAFT_TOKENS
-
-        print(f"Accept length: {accept_length}")
-        print(f"Accept rate: {accept_rate} (threshold: {ACCEPT_RATE_THRESHOLD})")
-
-        self.assertGreater(
-            accept_rate,
-            ACCEPT_RATE_THRESHOLD,
-            f"Acceptance rate {accept_rate:.4f} <= {ACCEPT_RATE_THRESHOLD}, "
-            f"accept_length={accept_length}",
-        )
+        """Run bench_serving; the base class asserts accept_rate >= 0.25."""
+        self.run_throughput()
 
 
 if __name__ == "__main__":
