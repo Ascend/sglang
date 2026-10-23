@@ -8,7 +8,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3600, suite="nightly-perf-8-npu-a3", nightly=True)
+register_npu_ci(est_time=3600, suite="full-perf-8-npu-a3", nightly=True)
 
 QWEN3_5_35B_A3B_2K_32K_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -84,7 +84,6 @@ class TestNPUQwen3_5_35BA3B_4P_In2k_Out32k_50ms(TestNpuPerformanceTestCaseBase):
     random_range_ratio = 1
     seed = 1234
     request_rate = float("inf")
-    # tpot = 50
     output_token_throughput = 4459
 
     def test_npu_qwen3_5_35b_a3b_4p_in2k_out32k_50ms(self):
