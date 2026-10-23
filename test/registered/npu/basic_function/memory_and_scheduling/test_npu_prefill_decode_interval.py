@@ -71,10 +71,11 @@ class TestPrefillDecodeInterval(CustomTestCase):
 
         stderr_fh = open(self.stderr_file, "w")
 
-        # Set environment variables
-        env = os.environ.copy()
-        env["SGLANG_LOG_FORWARD_ITERS"] = "1"
-        env["ASCEND_USE_FIA"] = "1"
+        # Set environment variables (merged on top of os.environ by popen_launch_server)
+        env = {
+            "SGLANG_LOG_FORWARD_ITERS": "1",
+            "ASCEND_USE_FIA": "1",
+        }
 
         other_args = [
             "--attention-backend",

@@ -316,8 +316,8 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
 
     def test_env_io_workers_suppressed_by_explicit_param(self):
         """Case 4: SGLANG_IO_WORKERS env var is suppressed when --mm-io-worker-num is explicit."""
-        env = os.environ.copy()
-        env["SGLANG_IO_WORKERS"] = "8"
+        # Incremental env only; popen_launch_server merges it on top of os.environ
+        env = {"SGLANG_IO_WORKERS": "8"}
 
         other_args = [
             "--attention-backend",

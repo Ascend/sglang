@@ -16,11 +16,15 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=50, suite="full-1-npu-a3", nightly=True)
 
+# Constant value of the --http2-max-concurrent-streams parameter used in this test
+HTTP2_MAX_CONCURRENT_STREAMS = 2
+
 
 class TestHttp2MaxConcurrentStreams(CustomTestCase):
     """
     Testcase：Verify that --http2-max-concurrent-streams parameter takes effect
-              by checking MAX_CONCURRENT_STREAMS == 2 in HTTP/2 SETTINGS frame.
+              by checking MAX_CONCURRENT_STREAMS == {HTTP2_MAX_CONCURRENT_STREAMS}
+              in HTTP/2 SETTINGS frame.
 
     [Test Category] Parameter
     [Test Target] --http2-max-concurrent-streams
@@ -30,11 +34,10 @@ class TestHttp2MaxConcurrentStreams(CustomTestCase):
     def setUpClass(cls):
         cls.model_path = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
-        cls.port = cls.base_url.split(":")[-1]
         other_args = [
             "--enable-http2",
             "--http2-max-concurrent-streams",
-            "2",
+            str(HTTP2_MAX_CONCURRENT_STREAMS),
             "--attention-backend",
             "ascend",
             "--disable-cuda-graph",
@@ -64,7 +67,7 @@ class TestHttp2MaxConcurrentStreams(CustomTestCase):
                 "curl",
                 "-v",
                 "--http2-prior-knowledge",
-                f"http://127.0.0.1:{self.port}/get_model_info",
+                f"{self.base_url}/get_model_info",
             ],
             capture_output=True,
             text=True,
@@ -72,7 +75,9 @@ class TestHttp2MaxConcurrentStreams(CustomTestCase):
         )
 
         # curl outputs verbose info to stderr, including HTTP/2 SETTINGS frames
-        self.assertIn("MAX_CONCURRENT_STREAMS == 2", result.stderr)
+        self.assertIn(
+            f"MAX_CONCURRENT_STREAMS == {HTTP2_MAX_CONCURRENT_STREAMS}", result.stderr
+        )
 
 
 if __name__ == "__main__":
