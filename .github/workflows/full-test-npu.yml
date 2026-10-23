@@ -490,13 +490,6 @@ jobs:
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # Pin to the event SHA (not the branch name) so every job in this run
-          # checks out the same commit even if the branch advances mid-run.
-          ref: ${{ inputs.ref || github.sha }}
-
       - name: Collect coverage data from partition jobs
         # covdata-* zip root is outputs/ contents (sglang@<tag>/...); pointing
         # the download at RUN_DIR/outputs restores the shared-disk layout.
@@ -512,23 +505,22 @@ jobs:
 
       - name: Unpack image source to covstub
         # The traced code is the image's preinstalled sglang, so the covstub
-        # baseline is that exact source (not the ref checkout).
+        # baseline must be that exact source. The ref checkout does NOT
+        # qualify: full-test pairs an arbitrary ref with an arbitrary image,
+        # and a mismatched baseline silently misattributes line data. No
+        # fallback — fail loudly and recover from the covdata artifacts.
         run: |
           set -euo pipefail
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
           COVSTUB="${RUN_DIR}/outputs/covstub"
           mkdir -p "${COVSTUB}"
           # full-1-p0's covdata upload is continue-on-error, so the source
-          # tarball can be silently absent. Fall back to the ref checkout
-          # (the same commit this run tests) instead of failing the job:
-          # line data may drift from the image build, but the map/report
-          # built from it stay usable.
-          if [ -f "${RUN_DIR}/outputs/sglang-image-src.tar.gz" ]; then
-            tar -xzf "${RUN_DIR}/outputs/sglang-image-src.tar.gz" -C "${COVSTUB}"
-          else
-            echo "::warning::sglang-image-src.tar.gz missing from covdata artifacts; falling back to the ref checkout as covstub"
-            cp -r python/sglang "${COVSTUB}/"
+          # tarball can be silently absent.
+          if [ ! -f "${RUN_DIR}/outputs/sglang-image-src.tar.gz" ]; then
+            echo "::error::sglang-image-src.tar.gz missing from covdata artifacts (full-1-npu-a3 p0 upload failed?). The covdata-* artifacts remain on the run page; re-stage the image source and rebuild the report manually."
+            exit 1
           fi
+          tar -xzf "${RUN_DIR}/outputs/sglang-image-src.tar.gz" -C "${COVSTUB}"
           # The image may lack _version.py (build-generated); the placeholder
           # keeps coverage html from failing on a missing recorded source file.
           [ -f "${COVSTUB}/sglang/_version.py" ] \
