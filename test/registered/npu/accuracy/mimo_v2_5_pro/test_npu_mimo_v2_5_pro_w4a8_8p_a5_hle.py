@@ -11,8 +11,9 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
     est_time=10000,
-    suite="nightly-acc-8-npu-a5",
+    suite="full-acc-8-npu-a5",
     nightly=True,
+    disabled="A5 test case",
 )
 
 # Update HLE dataset path for CI environment

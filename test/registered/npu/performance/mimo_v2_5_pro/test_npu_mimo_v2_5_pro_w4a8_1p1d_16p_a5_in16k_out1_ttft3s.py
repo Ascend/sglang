@@ -13,7 +13,7 @@ register_npu_ci(
     est_time=3600,
     suite="",
     nightly=True,
-    disabled="performance testcase",
+    disabled="A5 test case",
 )
 
 MIMO_V2_5_PRO_PD_SEP_PREFILL_ENVS = {

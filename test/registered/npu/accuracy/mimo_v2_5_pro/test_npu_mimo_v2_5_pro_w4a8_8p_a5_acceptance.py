@@ -21,8 +21,9 @@ from sglang.test.test_utils import (
 
 register_npu_ci(
     est_time=3600,
-    suite="nightly-acc-8-npu-a5",
+    suite="full-acc-8-npu-a5",
     nightly=True,
+    disabled="A5 test case",
 )
 
 MIMO_V2_5_PRO_FP4_8P_ENVS = {
