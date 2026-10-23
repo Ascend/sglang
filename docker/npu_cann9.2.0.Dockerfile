@@ -20,6 +20,10 @@ ARG TORCH_NPU_WHEEL_URL_AARCH64="https://gitcode.com/Ascend/pytorch/releases/dow
 ARG TORCH_NPU_WHEEL_URL_X86_64="https://gitcode.com/Ascend/pytorch/releases/download/v26.2.0-pytorch2.13.0/torch_npu-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"   #这个源是用来下载torch_npu的包的，和前面的pytorch使用的不是同一个源
 
+#triton版本
+ARG TRITON_AARCH64="https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl"
+ARG TRITON_X86_64="https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+
 #sglang对应分支
 ARG SGLANG_TAG=main
 
@@ -134,9 +138,9 @@ RUN ${PIP_INSTALL} modelscope evalscope
 ## Install triton-ascend
 RUN ${PIP_INSTALL} pybind11 && \
     if [ "$TARGETARCH" = "arm64" ]; then \
-        ${PIP_INSTALL} https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl; \
+        ${PIP_INSTALL} "${TRITON_AARCH64}"; \
     elif [ "$TARGETARCH" = "amd64" ]; then \
-        ${PIP_INSTALL} https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl; \
+        ${PIP_INSTALL} "${TRITON_X86_64}"; \
     else \
         echo "Unsupported architecture: $TARGETARCH"; \
         exit 1; \
