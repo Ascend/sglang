@@ -16,6 +16,7 @@ from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_8B_DFLASH_B16_WEIGHTS_PATH,
     QWEN3_8B_WEIGHTS_PATH,
+    is_npu_a5,
     logger,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -40,7 +41,7 @@ NPU_ENV = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_OP_EXPANSION_MODE": "AIV",
-    "ASCEND_USE_FIA": "0",
+    "ASCEND_USE_FIA": "1" if is_npu_a5() else "0",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
 }

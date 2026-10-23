@@ -29,6 +29,9 @@ BASE_URL = DEFAULT_URL_FOR_TEST
 HOST = urlparse(BASE_URL).hostname
 PORT = urlparse(BASE_URL).port
 
+# Local ShareGPT copy (see run_npu_testcase.sh); avoids HF hub download
+SHAREGPT_DATASET_PATH = "/tmp/ShareGPT_V3_unfiltered_cleaned_split.json"
+
 
 class TestPreWarmNccl(CustomTestCase):
     """Testcase: verify --pre-warm-nccl server starts and serves correctly
@@ -169,10 +172,13 @@ class TestPreWarmNccl(CustomTestCase):
 
     def _run_benchmark(self) -> dict:
         """Run the standard serving benchmark and return metrics."""
+        # 'random' dataset samples tokens from ShareGPT; point to the local copy
+        # to avoid downloading from HF hub in offline CI environments.
         args = get_benchmark_args(
             base_url=BASE_URL,
             backend="sglang",
             dataset_name="random",
+            dataset_path=SHAREGPT_DATASET_PATH,
             tokenizer=self.model,
             num_prompts=100,
             random_input_len=3500,

@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from sglang.test.ascend.npu_eval_accuracy_kit import _is_pr_pipeline, run_npu_pr_smoke
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.few_shot_gsm8k import run_eval as run_eval_few_shot_gsm8k
+from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -57,17 +57,18 @@ class TestAscendMhaHicache(CustomTestCase):
                     else:
                         print(f"##=== Testing accuracy: {model} ===##")
                         args = SimpleNamespace(
+                            max_tokens=512,
+                            base_url=self.base_url,
+                            model=model,
+                            eval_name="gsm8k",
+                            api="completion",
+                            num_examples=1319,
+                            num_threads=128,
                             num_shots=5,
-                            data_path=None,
-                            num_questions=1319,
-                            max_new_tokens=512,
-                            parallel=128,
-                            host=self.url.hostname,
-                            port=int(self.url.port),
                         )
-                        metrics = run_eval_few_shot_gsm8k(args)
+                        metrics = run_eval(args)
                         self.assertGreaterEqual(
-                            metrics["accuracy"],
+                            metrics["score"],
                             TEST_MODEL_MATRIX[model]["accuracy"],
                         )
                 finally:
