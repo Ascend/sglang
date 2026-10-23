@@ -63,15 +63,15 @@ class TestQwen330Bw8a8FuseEPTestQwen330Bw8a8FuseModeWithOne(
         "--tp-size",
         8,
         "--ep-size",
-        "8",
+        8,
         "--moe-a2a-backend",
         "ascend_fuseep",
         "--fuseep-mode",
         1,
         "--max-prefill-tokens",
-        "256",
+        256,
         "--chunked-prefill-size",
-        "256",
+        256,
     ]
 
     env = {
