@@ -6,8 +6,7 @@ from sglang.test.ascend.test_ascend_utils import QWEN3_30B_A3B_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=400, suite="per-commit-8-npu-a3")
-register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="nightly-8-npu-a3", nightly=True)
 
 class TestQwen330Bw8a8FuseEP(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Verify that the inference accuracy of the Qwen/Qwen3-30B-A3B-w8a8 model on the GSM8K dataset is no less than 0.90.
