@@ -25,6 +25,8 @@ PROMPTS = [
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestLoRARadixCache(CustomTestCase):
 
     def test_lora_radix_cache(self):
