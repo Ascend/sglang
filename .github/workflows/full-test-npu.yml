@@ -1,11 +1,11 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - testcases-261015
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -22,12 +22,12 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-a3'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:20261022-cann9.2.0-a3'
       coverage_mode:
         description: 'Run in coverage collection mode: full + nightly basic-function and accuracy suites run with coverage instrumentation (data ships via per-job artifacts); perf and multi-node suites run normally (nightly perf/multi-node jobs are skipped).'
         required: false
         type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: full-test-npu-${{ inputs.coverage_mode == true && 'coverage-' || '' }}${{ inputs.ref || github.ref }}
@@ -59,13 +59,13 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-a3" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:20261022-cann9.2.0-a3" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.coverage_mode }}" ]; then
-            echo "coverage_mode=false" >> $GITHUB_OUTPUT
+            echo "coverage_mode=true" >> $GITHUB_OUTPUT
           else
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
@@ -364,11 +364,11 @@ jobs:
             test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
-            prefill_size: 2
-            decode_size: 2
+          - name: glm5_1_w4a8_3p1d_32p_in16k_out1k_50ms
+            prefill_size: 3
+            decode_size: 1
             router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_3p1d_32p_in16k_out1k_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
