@@ -200,8 +200,17 @@ class TestNPUGLM5_2_W8A8_2P2D_GPQA(TestNpuAccuracyMultiNodePdSepTestCaseBase):
     # TODO: smoke test only runs 20% of the dataset, remove after validation
     limit = 0.2
     datasets = ["gpqa_diamond"]
-    eval_batch_size = 64
-    generation_config = {"max_tokens": 65536, "temperature": 1.0}
+    dataset_args = {
+        "gpqa_diamond": {
+            "filters": {"remove_until": "</think>"},
+        }
+    }
+    eval_batch_size = 32
+    generation_config = {
+        "max_tokens": 131072,
+        "temperature": 1.0,
+        "top_p": 0.95,
+    }
 
     def test_npu_glm_5_2_w8a8_2p2d_gpqa(self):
         """Run NPU accuracy test for GLM-5.2-w8a8 PD separation 2p2d on gpqa_diamond"""
