@@ -92,12 +92,16 @@ def get_accuracy_threshold(datasets, baseline_accuracy):
     return baseline_accuracy * ACCURACY_TOLERANCE
 
 
-def get_max_retries(datasets):
+def get_max_retries(datasets, max_retries=None):
     """Return max retry count for accuracy tests.
 
     gpqa and aime datasets support up to MAX_RETRY_COUNT retries.
     mmmu and others use 1 attempt (no retry).
+    Test cases can override with the max_retries class attribute
+    (e.g. max_retries = 1 to run evalscope only once).
     """
+    if max_retries is not None:
+        return max_retries
     dataset = datasets[0] if datasets else None
     if dataset in DATASET_FLUCTUATION:
         return MAX_RETRY_COUNT
@@ -458,7 +462,9 @@ class TestNpuAccuracyTestCaseBase(CustomTestCase):
         port = parsed_url.port
         if self.benchmark_tool == EVALSCOPE:
             model_name = os.path.basename(self.model)
-            max_retries = get_max_retries(self.datasets)
+            max_retries = get_max_retries(
+                self.datasets, getattr(self, "max_retries", None)
+            )
             best_metrics = None
             for attempt in range(max_retries):
                 metrics = run_evalscope(
@@ -621,7 +627,9 @@ class TestNpuAccuracyMultiNodePdMixTestCaseBase(CustomTestCase):
         port = parsed_url.port
         if self.benchmark_tool == EVALSCOPE:
             model_name = os.path.basename(self.model_config.get("model_path"))
-            max_retries = get_max_retries(self.datasets)
+            max_retries = get_max_retries(
+                self.datasets, getattr(self, "max_retries", None)
+            )
             best_metrics = None
             for attempt in range(max_retries):
                 metrics = run_evalscope(
@@ -736,7 +744,9 @@ class TestNpuAccuracyMultiNodePdSepTestCaseBase(CustomTestCase):
         port = parsed_url.port
         if self.benchmark_tool == EVALSCOPE:
             model_name = os.path.basename(self.model_config.get("model_path"))
-            max_retries = get_max_retries(self.datasets)
+            max_retries = get_max_retries(
+                self.datasets, getattr(self, "max_retries", None)
+            )
             best_metrics = None
             for attempt in range(max_retries):
                 metrics = run_evalscope(
