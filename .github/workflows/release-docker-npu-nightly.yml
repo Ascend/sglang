@@ -79,6 +79,8 @@ jobs:
             SGLANG_KERNEL_NPU_TAG=2026.9.0.post11
             CANN_VERSION=9.1.0
             DEVICE_TYPE=${{ matrix.device_type }}
+            secrets: |
+            gitcode_token=${{ secrets.GITCODE_TOKEN }}
 
   merge:
     name: merge multi-arch manifest
