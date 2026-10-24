@@ -219,7 +219,8 @@ class TestNPUGLM5_2_W8A8_2P2D_PCP_GPQA(TestNpuAccuracyMultiNodePdSepTestCaseBase
     eval_batch_size = 32
     generation_config = {
         "max_tokens": 65536,
-        "temperature": 0,
+        "temperature": 1.0,
+        "top_p": 0.95,
     }
 
     def test_npu_glm_5_2_w8a8_2p2d_pcp_gpqa(self):
