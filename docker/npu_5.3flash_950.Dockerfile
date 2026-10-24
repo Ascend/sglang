@@ -3,35 +3,43 @@ ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
 ARG arch
+
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
-# Update pip & apt sources
+SHELL ["/bin/bash", "-c"]
+
 ARG TARGETARCH
 ARG CANN_VERSION
 ARG DEVICE_TYPE
 ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
+# torch_npu 2.10.0.post6 requires torch==2.10.0, so PYTORCH_VERSION stays at 2.10.0
 ARG PYTORCH_VERSION="2.10.0"
 ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
-ARG PTA_URL_ARM64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_aarch64.whl"
-ARG PTA_URL_AMD64="https://gitcode.com/Ascend/pytorch/releases/download/v26.1.0-pytorch2.10.0/torch_npu-2.10.0.post4-cp312-cp312-manylinux_2_28_x86_64.whl"
-ARG SGLANG_TAG=glmx-main-a3-a5-merge
+ARG TORCH_NPU_VERSION="2.10.0.post6"
+ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
+ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post11
+ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post10
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
+ARG MODELSCOPE_VERSION=""
+ARG EVALSCOPE_VERSION=""
 
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      echo "Using x86_64 dependencies"; \
-      echo "export PTA_URL=$PTA_URL_AMD64" >> /etc/environment_new; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-      echo "Using aarch64 dependencies"; \
-      echo "export PTA_URL=$PTA_URL_ARM64" >> /etc/environment_new; \
-    else \
-      echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1; \
-    fi
+# memfabric-hybrid / memcache-hybrid version, installed from the pip index (no OBS bucket download)
+ARG MF_VERSION="1.2.1"
+
+# memfabric-zbal: 950 与 a3 使用不同版本
+ARG ZBAL_VERSION_950="1.2.21004.post1"
+ARG ZBAL_VERSION_A3="1.1.3"
+
+
+ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
+ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
+
+RUN touch /etc/environment_new
 
 WORKDIR /workspace
 
@@ -70,25 +78,45 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-### Install MemFabric
-RUN ${PIP_INSTALL} memfabric-hybrid==1.2.0
+### Install MemFabric and MemCache
+RUN set -eux; \
+    case "$DEVICE_TYPE" in \
+      950) MF_SOC_VERSION="A5" ;; \
+      a3)  MF_SOC_VERSION="A3" ;; \
+      *)   echo "Unsupported DEVICE_TYPE for mfcli kernel install: $DEVICE_TYPE" >&2; \
+           exit 1 ;; \
+    esac; \
+    ${PIP_INSTALL} memfabric-hybrid==${MF_VERSION}; \
+    mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
+    ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
 
 ### Install memfabric-zbal
-RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
-
+RUN if [ "$DEVICE_TYPE" = "950" ]; then ZBAL_PKG="memfabric-zbal==${ZBAL_VERSION_950}"; \
+    else ZBAL_PKG="memfabric-zbal==${ZBAL_VERSION_A3}"; fi; \
+    ${PIP_INSTALL} "$ZBAL_PKG" -i https://pypi.org/simple/
 ### Install SGLang Model Gateway
 RUN ${PIP_INSTALL} sglang-router
 
+
 ### Install PyTorch and PTA
-RUN . /etc/environment_new && \
-    (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
-    && (${PIP_INSTALL} ${PTA_URL})
+RUN (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
+    && (${PIP_INSTALL} torch-npu==${TORCH_NPU_VERSION} --extra-index-url ${TORCH_NPU_INDEX_URL})
+
+
+### Install ModelScope & EvalScope
+# Installed right after torch/torch-npu so their dependencies resolve against the pinned torch.
+# MODELSCOPE_VERSION / EVALSCOPE_VERSION are empty by default -> latest release.
+RUN MS_PKG="modelscope" && \
+    ES_PKG="evalscope" && \
+    if [ -n "${MODELSCOPE_VERSION}" ]; then MS_PKG="modelscope==${MODELSCOPE_VERSION}"; fi && \
+    if [ -n "${EVALSCOPE_VERSION}" ]; then ES_PKG="evalscope==${EVALSCOPE_VERSION}"; fi && \
+    ${PIP_INSTALL} "${MS_PKG}" "${ES_PKG}"
+
 
 ## Install triton-ascend
-RUN . /etc/environment_new && \
-    ${PIP_INSTALL} pybind11 && \
+RUN ${PIP_INSTALL} pybind11 && \
     if [ "$TARGETARCH" = "arm64" ]; then \
-        ${PIP_INSTALL} https://github.com/triton-lang/triton-ascend/releases/download/v3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl; \
+        ${PIP_INSTALL} "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/Triton-ascend/3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1806290330&Signature=eRq3VKjwgP/tTkObtsho%2BzIsmJM%3D"; \
     elif [ "$TARGETARCH" = "amd64" ]; then \
         ${PIP_INSTALL} https://github.com/triton-lang/triton-ascend/releases/download/v3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl; \
     else \
@@ -106,12 +134,6 @@ RUN --mount=type=secret,id=gitcode_token \
     sed -i 's/"transformers==[^"]*"/"transformers==5.16.1"/' pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
-ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
-
-ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
-
-RUN ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device/libascend_hal.so \
-    /usr/local/Ascend/cann-${CANN_VERSION}/lib64/libascend_hal.so
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
@@ -130,6 +152,17 @@ RUN mkdir cann-custom-ops && \
     ${PIP_INSTALL} custom_ops-1.0-cp312-cp312-linux_$(arch).whl && \
     cd .. && rm -rf cann-custom-ops
 
+ENV ASCEND_CUSTOM_OPP_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/opp/vendors/custom_transformer:/usr/local/Ascend/cann-${CANN_VERSION}/opp/vendors/customize
+
+RUN printf '%s\n' \
+    '. /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash' \
+    '. /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash' \
+    '. /usr/local/Ascend/ascend-toolkit/latest/set_env.sh' \
+    '. /usr/local/Ascend/nnal/atb/set_env.sh' \
+    > /etc/profile.d/ascend.sh \
+ && chmod 644 /etc/profile.d/ascend.sh \
+ && printf '%s\n' '. /etc/profile.d/ascend.sh' >> /etc/bash.bashrc
+
 # Install Deep-ep
 # pin wheel to 0.45.1 ref: https://github.com/pypa/wheel/issues/662
 RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
@@ -139,6 +172,8 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && unzip sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.10.0-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
     && ${PIP_INSTALL} deep_ep*.whl sgl_kernel_npu*.whl torch_memory_saver*.whl \
     && cd .. && rm -rf sgl-kernel-npu \
-    && cd "$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" && ln -sf deep_ep/deep_ep_cpp*.so
+    && PIPDIR="$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" \
+    && [ -n "$PIPDIR" ] \
+    && cd "$PIPDIR" && ln -sf deep_ep/deep_ep_cpp*.so
 
 CMD ["/bin/bash"]
