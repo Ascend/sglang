@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.4
-
 ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=a3
 ARG OS=ubuntu22.04
