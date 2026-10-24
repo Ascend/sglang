@@ -16,7 +16,7 @@ register_npu_ci(
     disabled="accuracy testcase",
 )
 
-GLM_5_2_PD_SEP_PREFILL_ENVS = {
+GLM_5_2_PCP_PD_SEP_PREFILL_ENVS = {
     "ASCEND_MF_TRANSFER_PROTOCOL": "sdma",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "TRANSFORMERS_VERBOSITY": "error",
@@ -39,7 +39,7 @@ GLM_5_2_PD_SEP_PREFILL_ENVS = {
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
-GLM_5_2_PD_SEP_DECODE_ENVS = {
+GLM_5_2_PCP_PD_SEP_DECODE_ENVS = {
     "ASCEND_MF_TRANSFER_PROTOCOL": "sdma",
     "SGLANG_SET_CPU_AFFINITY": "1",
     "TRANSFORMERS_VERBOSITY": "error",
@@ -59,7 +59,7 @@ GLM_5_2_PD_SEP_DECODE_ENVS = {
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
-GLM_5_2_PD_SEP_PREFILL_ARGS = [
+GLM_5_2_PCP_PD_SEP_PREFILL_ARGS = [
     "--disaggregation-mode",
     "prefill",
     "--nnodes",
@@ -118,7 +118,7 @@ GLM_5_2_PD_SEP_PREFILL_ARGS = [
     80,
 ]
 
-GLM_5_2_PD_SEP_DECODE_ARGS = [
+GLM_5_2_PCP_PD_SEP_DECODE_ARGS = [
     "--disaggregation-mode",
     "decode",
     "--nnodes",
@@ -179,12 +179,12 @@ GLM_5_2_PD_SEP_DECODE_ARGS = [
     "--enable-cache-report",
 ]
 
-GLM_5_2_PD_SEP_MODEL_CONFIG = {
+GLM_5_2_PCP_PD_SEP_MODEL_CONFIG = {
     "model_path": GLM_5_2_W8A8_MODEL_PATH,
-    "prefill_args": GLM_5_2_PD_SEP_PREFILL_ARGS,
-    "decode_args": GLM_5_2_PD_SEP_DECODE_ARGS,
-    "prefill_envs": GLM_5_2_PD_SEP_PREFILL_ENVS,
-    "decode_envs": GLM_5_2_PD_SEP_DECODE_ENVS,
+    "prefill_args": GLM_5_2_PCP_PD_SEP_PREFILL_ARGS,
+    "decode_args": GLM_5_2_PCP_PD_SEP_DECODE_ARGS,
+    "prefill_envs": GLM_5_2_PCP_PD_SEP_PREFILL_ENVS,
+    "decode_envs": GLM_5_2_PCP_PD_SEP_DECODE_ENVS,
     "router_args": [
         "--policy",
         "round_robin",
@@ -197,10 +197,14 @@ GLM_5_2_PD_SEP_MODEL_CONFIG = {
 }
 
 
-class TestNPUGLM5_2_W8A8_2P2D_GPQA(TestNpuAccuracyMultiNodePdSepTestCaseBase):
-    """Test NPU accuracy for GLM-5.2-w8a8 PD separation 2p2d on gpqa_diamond"""
+# PCP variant (wiki: GLM5.2-A3-四机2P2D，开启cpp-pcp-L2HiCache):
+# prefill tp8 + attn-cp8 (interleave) + pp4, decode tp32/dp32/ep32
+class TestNPUGLM5_2_W8A8_2P2D_PCP_GPQA(TestNpuAccuracyMultiNodePdSepTestCaseBase):
+    """Test NPU accuracy for GLM-5.2-w8a8 PD separation 2p2d with PCP on gpqa_diamond"""
 
-    model_config = GLM_5_2_PD_SEP_MODEL_CONFIG
+    model_config = GLM_5_2_PCP_PD_SEP_MODEL_CONFIG
+    # Run evalscope only once (no retry on accuracy miss)
+    max_retries = 1
     # TODO: update accuracy threshold after baseline run; temporarily lowered
     # to 0.5 during smoke test to avoid retries on the small sample
     accuracy = 0.5
@@ -214,13 +218,12 @@ class TestNPUGLM5_2_W8A8_2P2D_GPQA(TestNpuAccuracyMultiNodePdSepTestCaseBase):
     }
     eval_batch_size = 32
     generation_config = {
-        "max_tokens": 131072,
-        "temperature": 1.0,
-        "top_p": 0.95,
+        "max_tokens": 65536,
+        "temperature": 0,
     }
 
-    def test_npu_glm_5_2_w8a8_2p2d_gpqa(self):
-        """Run NPU accuracy test for GLM-5.2-w8a8 PD separation 2p2d on gpqa_diamond"""
+    def test_npu_glm_5_2_w8a8_2p2d_pcp_gpqa(self):
+        """Run NPU accuracy test for GLM-5.2-w8a8 PD separation 2p2d with PCP on gpqa_diamond"""
         self.run_accuracy()
 
 
