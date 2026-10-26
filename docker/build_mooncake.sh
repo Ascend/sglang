@@ -50,7 +50,7 @@ if [[ "$BUILD_MEMFABRIC" == 1 ]]; then
     export PATH="$PYTHON_HOME/bin:$PATH"
     export MF_BUILD_JOBS="${BUILD_JOBS:-16}"
     bash "$MEMFABRIC_DIR/script/build_and_pack_run.sh" \
-      --build_open_abi OFF --build_python ON --xpu_type NPU \
+      --build_mode RELEASE --build_python ON --xpu_type NPU \
       --build_hcom OFF --build_hcom_rdma ON --build_etcd_backend OFF
   )
   cp "$MEMFABRIC_DIR"/output/memfabric_hybrid/wheel/memfabric_hybrid-*.whl "$WHEEL_DIR/"
