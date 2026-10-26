@@ -69,6 +69,27 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
     ca-certificates \
+    git \
+    ninja-build \
+    patchelf \
+    libyaml-cpp-dev \
+    libgflags-dev \
+    libgoogle-glog-dev \
+    libjsoncpp-dev \
+    libunwind-dev \
+    libnuma-dev \
+    libasio-dev \
+    libboost-dev \
+    libcurl4-openssl-dev \
+    libgrpc++-dev \
+    libprotobuf-dev \
+    protobuf-compiler-grpc \
+    liburing-dev \
+    libmsgpack-dev \
+    libzstd-dev \
+    libxxhash-dev \
+    libcli11-dev \
+    libibverbs-dev \
     && rm -rf /var/cache/apt/* \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates \
@@ -170,5 +191,16 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && PIPDIR="$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" \
     && [ -n "$PIPDIR" ] \
     && cd "$PIPDIR" && ln -sf deep_ep/deep_ep_cpp*.so
+
+COPY docker/build_mooncake.sh /mnt/share/c00985000/code/build_mooncake1.sh
+RUN chmod 755 /mnt/share/c00985000/code/build_mooncake1.sh && \
+    cd /mnt/share/c00985000/code && \
+    git clone https://github.com/kvcache-ai/Mooncake.git && \
+    git clone https://gitcode.com/Ascend/memfabric_hybrid.git && \
+    bash /mnt/share/c00985000/code/build_mooncake1.sh && \
+    pip install /mnt/share/c00985000/code/Mooncake/dist/mooncake_transfer_engine-0.3.12.post1-cp312-cp312-linux_aarch64.whl --force --no-deps
+    rm -rf Mooncake && \
+    rm -rf memfabric_hybrid && \
+    rm -rf /mnt/share/c00985000/code/build_mooncake1.sh
 
 CMD ["/bin/bash"]
