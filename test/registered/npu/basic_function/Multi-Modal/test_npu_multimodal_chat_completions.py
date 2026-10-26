@@ -77,7 +77,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         "ascend_attn",
         "--mem-fraction-static",
         "0.75",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         1,
         2,
         4,
