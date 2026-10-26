@@ -27,7 +27,12 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=1500, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(
+    est_time=1500,
+    suite="full-1-npu-a3",
+    nightly=True,
+    disabled="Manually execute use cases, relevant use cases already exist on CI",
+)
 
 _MODEL_NAME = QWEN3_0_6B_WEIGHTS_PATH
 # We address the up half via the HF-style unfused name "up_proj.weight". sglang's
