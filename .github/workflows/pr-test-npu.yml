@@ -187,8 +187,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Pin to the event SHA so this job tests the same commit as the rest of the run.
-          ref: ${{ inputs.ref || github.sha }}
+          # Coverage mode measures upstream code: always test the latest
+          # community main, same as the upstream coverage run.
+          repository: sgl-project/sglang
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -258,6 +260,7 @@ jobs:
       timeout_per_file: '3600'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_b_test_1_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   base-b-test-2-npu-a3:
@@ -275,6 +278,7 @@ jobs:
       timeout_per_file: '3600'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_b_test_2_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   base-b-test-4-npu-a3:
@@ -293,6 +297,7 @@ jobs:
       partitions: '{"size":2,"arr":[0, 1]}'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_b_test_4_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   base-b-test-8-npu-a3:
@@ -310,6 +315,7 @@ jobs:
       timeout_per_file: '3600'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_b_test_8_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   base-b-test-16-npu-a3:
@@ -327,6 +333,7 @@ jobs:
       timeout_per_file: '3600'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_b_test_16_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
     secrets: inherit
 
   multimodal-gen-test-1-npu-a3:
@@ -353,6 +360,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Coverage mode measures upstream code (latest community main), like
+          # the upstream coverage run. PR runs keep the event commit.
+          repository: ${{ inputs.coverage_mode == true && 'sgl-project/sglang' || github.repository }}
+          ref: ${{ inputs.coverage_mode == true && 'main' || github.sha }}
 
       - name: Mark repository safe
         run: |
@@ -503,6 +515,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Coverage mode measures upstream code (latest community main), like
+          # the upstream coverage run. PR runs keep the event commit.
+          repository: ${{ inputs.coverage_mode == true && 'sgl-project/sglang' || github.repository }}
+          ref: ${{ inputs.coverage_mode == true && 'main' || github.sha }}
 
       - name: Mark repository safe
         run: |
@@ -642,6 +659,7 @@ jobs:
       partitions: '{"size":2,"arr":[0,1]}'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_c_test_acc_2_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
 
   base-c-test-acc-16-npu-a3:
     name: base-c-test-acc-16-npu-a3
@@ -660,6 +678,7 @@ jobs:
       device_type_for_deps: 'a3'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_c_test_acc_16_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
 
   base-c-test-perf-2-npu-a3:
     name: base-c-test-perf-2-npu-a3
@@ -678,6 +697,7 @@ jobs:
       device_type_for_deps: 'a3'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_c_test_perf_2_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
 
   base-c-test-perf-16-npu-a3:
     name: base-c-test-perf-16-npu-a3
@@ -697,6 +717,7 @@ jobs:
       test_timeout_minutes: '180'
       only_tests: ${{ needs.recommend-tests-from-coverage.outputs.only_tests_base_c_test_perf_16_npu_a3 }}
       use_coverage_runner: ${{ inputs.coverage_mode == true }}
+      use_upstream_source: ${{ inputs.coverage_mode == true }}
 
 
   # ==================== Recommend Tests from Coverage ==================== #
@@ -875,9 +896,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Pin to the event SHA (not the branch name) so every job in this run
-          # checks out the same commit even if the branch advances mid-run.
-          ref: ${{ inputs.ref || github.sha }}
+          # Baseline must be built from the same upstream code the coverage
+          # jobs measured, so pin to community main here too.
+          repository: sgl-project/sglang
+          ref: main
 
       - name: Collect base-a coverage artifact
         # Runs on ubuntu-latest (no shared disk) — hence the artifact relay.
@@ -1135,6 +1157,80 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Upload baseline to OBS
+        # Refreshes the baseline the recommend job downloads at the top of this
+        # workflow. Best-effort like the artifact uploads, and must run before
+        # publish mv's the files to the fixed PUBLISH_DIR (races with
+        # concurrent runs).
+        continue-on-error: true
+        env:
+          # Ascend repo's OBS writer credentials (precision baseline bucket).
+          OBS_ACCESS_KEY_ID: ${{ secrets.OBS_ACCESS_KEY_PRECISION }}
+          OBS_SECRET_ACCESS_KEY: ${{ secrets.OBS_SECRET_ACCESS_KEY_PRECISION }}
+        run: |
+          set -euo pipefail
+
+          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+          OBS_ENDPOINT="${OBS_ENDPOINT:-obs.cn-southwest-2.myhuaweicloud.com}"
+          OBS_BUCKET="${OBS_BUCKET:-sglang-npu}"
+          OBS_PREFIX="${OBS_PREFIX:-coverage}"
+
+          # Same skip rule as publish: no map -> incomplete baseline, never
+          # overwrite the good one in OBS.
+          if [ ! -s "${RUN_DIR}/test_case_map.json" ] || [ ! -s "${RUN_DIR}/outputs.tar.gz" ]; then
+            echo "::warning::test_case_map.json or outputs.tar.gz missing (no coverage data this run), skip OBS upload"
+            exit 0
+          fi
+
+          if [ -z "${OBS_ACCESS_KEY_ID:-}" ] || [ -z "${OBS_SECRET_ACCESS_KEY:-}" ]; then
+            echo "::warning::OBS_ACCESS_KEY_PRECISION/OBS_SECRET_ACCESS_KEY_PRECISION secrets not set, skip OBS upload"
+            exit 0
+          fi
+
+          if ! command -v obsutil >/dev/null 2>&1; then
+            curl -fsSL \
+              --retry 3 \
+              --retry-delay 5 \
+              --retry-all-errors \
+              "https://obs-community.obs.cn-north-1.myhuaweicloud.com/obsutil/current/obsutil_linux_amd64.tar.gz" \
+              -o /tmp/obsutil.tar.gz
+            tar xzf /tmp/obsutil.tar.gz -C /tmp
+            OBSUTIL="$(find /tmp -maxdepth 2 -path '/tmp/obsutil_linux_amd64_*/obsutil' -type f -print -quit)"
+            chmod +x "${OBSUTIL}"
+            install -m 0755 "${OBSUTIL}" /usr/local/bin/obsutil 2>/dev/null \
+              || { mkdir -p /tmp/bin && cp "${OBSUTIL}" /tmp/bin/obsutil && export PATH="/tmp/bin:${PATH}"; }
+          fi
+
+          obsutil config \
+            -i="${OBS_ACCESS_KEY_ID}" \
+            -k="${OBS_SECRET_ACCESS_KEY}" \
+            -e="${OBS_ENDPOINT}"
+
+          # ACL lives on the object, not on the key: overwriting uploads a new
+          # object that inherits the bucket default (private), while the
+          # recommend job fetches these over anonymous HTTPS. Pass ACL in the
+          # upload request itself so an interruption cannot leave behind an
+          # object that exists but is private.
+          for f in outputs.tar.gz test_case_map.json; do
+            obj="obs://${OBS_BUCKET}/${OBS_PREFIX}/${f}"
+            obsutil cp "${RUN_DIR}/${f}" "${obj}" -f -acl=public-read
+          done
+
+          # Anonymous-read check: a stale private ACL here would only surface
+          # as a confusing failure in the next run's download steps.
+          for f in outputs.tar.gz test_case_map.json; do
+            code="$(curl -s -o /dev/null -w '%{http_code}' -I -L \
+              "https://${OBS_BUCKET}.${OBS_ENDPOINT}/${OBS_PREFIX}/${f}")"
+            echo "${f}: anonymous HEAD -> HTTP ${code}"
+            if [ "${code}" != "200" ]; then
+              echo "::error::${f} not publicly readable (HTTP ${code}); check its ACL"
+              exit 1
+            fi
+          done
+
+          echo "Uploaded baseline to obs://${OBS_BUCKET}/${OBS_PREFIX}/"
+          ls -lh "${RUN_DIR}/outputs.tar.gz" "${RUN_DIR}/test_case_map.json"
+
       - name: Publish outputs and map to shared disk
         shell: bash
         run: |
@@ -1142,9 +1238,9 @@ jobs:
 
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
           # Fixed-name copy for manual use; the recommend job's baseline lives
-          # in OBS (upload outputs.tar.gz + test_case_map.json manually after
-          # each run). coverage-data.tar.gz has no automatic consumer — no OBS
-          # copy, only this dir and the precise-test-coverage-data artifact.
+          # in OBS, refreshed by the "Upload baseline to OBS" step above.
+          # coverage-data.tar.gz has no automatic consumer — no OBS copy, only
+          # this dir and the precise-test-coverage-data artifact.
           PUBLISH_DIR="/root/.cache/tests/precise-test/coverage"
 
           # Skip publish when no coverage data this run — never overwrite

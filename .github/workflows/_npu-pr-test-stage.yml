@@ -38,6 +38,10 @@ on:
         description: 'Git ref (branch, tag, or SHA) to test. If not provided, uses the event commit SHA.'
         type: string
         default: ''
+      use_upstream_source:
+        description: 'If true, check out the latest sgl-project/sglang main instead of this repository (coverage runs measure upstream code)'
+        type: boolean
+        default: false
       skip_pr_test_health_check:
         description: 'Set to true to skip the PR test health check (fast-fail gate).'
         type: string
@@ -97,9 +101,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          repository: ${{ inputs.use_upstream_source && 'sgl-project/sglang' || github.repository }}
           # Pin to the event SHA (not the branch name) so every job in this run
           # checks out the same commit even if the branch advances mid-run.
-          ref: ${{ inputs.ref || github.sha }}
+          # Coverage runs pin to upstream main instead.
+          ref: ${{ inputs.use_upstream_source && 'main' || inputs.ref || github.sha }}
 
       - name: Mark repository safe
         run: |
