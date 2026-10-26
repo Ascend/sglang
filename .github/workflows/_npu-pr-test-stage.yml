@@ -384,6 +384,12 @@ jobs:
             # whenever several partitions land on the same disk.
             if [ "${{ inputs.upload_coverage_artifact }}" = "true" ]; then
               export PRECISE_TEST_CACHE_ROOT="/tmp/precise-test-covdata"
+              # Presence marker: written even when this partition selected no
+              # tests, so the aggregator can tell "arrived empty" from "never
+              # uploaded" (the upload step ignores missing files).
+              COV_STAGE_OUT="${PRECISE_TEST_CACHE_ROOT}/${GITHUB_RUN_ID:-local}-attempt-${GITHUB_RUN_ATTEMPT:-1}/outputs"
+              mkdir -p "${COV_STAGE_OUT}"
+              touch "${COV_STAGE_OUT}/.covdone-${{ inputs.self_name }}-p${{ matrix.partition }}"
             fi
             # Exactly one partition ships the image's sglang source (the very
             # tree the tests import, post overlay) so the report is built
@@ -425,4 +431,6 @@ jobs:
           path: /tmp/precise-test-covdata/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
           # Absent for empty partitions or when the run step died before tests.
           if-no-files-found: ignore
-          retention-days: 7
+          # Consumed by setup-covstub within the same run; the aggregated
+          # precise-test-coverage-data package covers later rebuilds.
+          retention-days: 3
