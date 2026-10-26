@@ -104,26 +104,6 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-### Install MemFabric and MemCache
-RUN set -eux; \
-    case "$TARGETARCH" in \
-      arm64) \
-        MF_URL="$MF_WHEEL_URL_AARCH64"; \
-        MC_URL="$MC_WHEEL_URL_AARCH64"; \
-        ;; \
-      amd64) \
-        MF_URL="$MF_WHEEL_URL_X86_64"; \
-        MC_URL="$MC_WHEEL_URL_X86_64"; \
-        ;; \
-      *) \
-        echo "Unsupported architecture: $TARGETARCH" >&2; \
-        exit 1; \
-        ;; \
-    esac; \
-    ${PIP_INSTALL} "$MF_URL" --force-reinstall; \
-    mfcli kernel install --soc-version A5; \
-    ${PIP_INSTALL} "$MC_URL" --force-reinstall --no-deps
-
 ### Install memfabric-zbal
 RUN if [ "$DEVICE_TYPE" = "950" ]; then ZBAL_PKG="memfabric-zbal==${ZBAL_VERSION_950}"; \
     else ZBAL_PKG="memfabric-zbal==${ZBAL_VERSION_A3}"; fi; \
@@ -209,9 +189,11 @@ COPY ./build_mooncake.sh /mnt/share/build_mooncake1.sh
 RUN chmod 755 /mnt/share/build_mooncake1.sh && \
     cd /mnt/share && \
     git clone https://github.com/kvcache-ai/Mooncake.git && \
+    git clone https://github.com/Ascend/memfabric_hybrid.git && \
     bash /mnt/share/build_mooncake1.sh && \
     pip install /mnt/share/Mooncake/dist/mooncake_transfer_engine-0.3.12.post1-cp312-cp312-linux_aarch64.whl --force --no-deps && \
     rm -rf Mooncake && \
+    rm -rf memfabric_hybrid && \
     cd /mnt && \
     rm -rf /mnt/share
 
