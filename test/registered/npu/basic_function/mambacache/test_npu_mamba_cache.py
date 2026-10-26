@@ -23,7 +23,7 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
     on the GSM8K dataset is no less than 0.92.
 
     [Test Category] Parameter
-    [Test Target] --mamba-scheduler-strategy, --mamba-full-memory-ratio, --mamba-track-interval
+    [Test Target] --mamba-radix-cache-strategy, --mamba-full-memory-ratio, --mamba-track-interval
     """
 
     model = QWEN3_NEXT_80B_A3B_INSTRUCT_WEIGHTS_FOR_TEST.model_path
@@ -37,7 +37,7 @@ class TestMambaCacheWithMemoryRatio(GSM8KAscendMixin, CustomTestCase):
         "--disable-cuda-graph",
         "--mamba-full-memory-ratio",
         "0.9",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "auto",
         "--mamba-track-interval",
         "256",
@@ -53,7 +53,7 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
     on the GSM8K dataset is no less than 0.92.
 
     [Test Category] Parameter
-    [Test Target] --mamba-scheduler-strategy, --mamba-ssm-dtype, --max-mamba-cache-size, --mamba-track-interval
+    [Test Target] --mamba-radix-cache-strategy, --mamba-ssm-dtype, --max-mamba-cache-size, --mamba-track-interval
     """
 
     other_args = [
@@ -63,7 +63,7 @@ class TestMambaCacheWithMambaCacheSize(TestMambaCacheWithMemoryRatio):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "no_buffer",
         "--mamba-track-interval",
         "512",
@@ -97,7 +97,7 @@ class TestMambaCacheRadix(CustomTestCase):
         "bfloat16",
         "--mamba-full-memory-ratio",
         "0.3",
-        "--mamba-scheduler-strategy",
+        "--mamba-radix-cache-strategy",
         "extra_buffer",  # To reuse Radix Cache, this parameter must be set to extra_buffer
     ]
 
