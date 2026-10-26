@@ -1173,7 +1173,8 @@ jobs:
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
           OBS_ENDPOINT="${OBS_ENDPOINT:-obs.cn-southwest-2.myhuaweicloud.com}"
           OBS_BUCKET="${OBS_BUCKET:-sglang-npu}"
-          OBS_PREFIX="${OBS_PREFIX:-coverage}"
+          # TEMP: debug prefix, revert to "coverage" once verified.
+          OBS_PREFIX="${OBS_PREFIX:-coverage/pr}"
 
           # Same skip rule as publish: no map -> incomplete baseline, never
           # overwrite the good one in OBS.
