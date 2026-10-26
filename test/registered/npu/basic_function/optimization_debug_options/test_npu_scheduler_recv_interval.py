@@ -8,6 +8,7 @@ from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
+    is_in_ci,
     popen_launch_server,
 )
 
@@ -54,7 +55,7 @@ class TestSchedulerRecvIntervalConsistency(unittest.TestCase):
             model=self.model,
             eval_name="gsm8k",
             api="completion",
-            num_examples=200,
+            num_examples=200 if is_in_ci() else 1319,
             num_threads=10,
         )
         metrics = run_eval(args)

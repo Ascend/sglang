@@ -99,7 +99,7 @@ class MMMUVLMEval(Eval):
         # Local MMMU snapshot from ModelScope: one dir per subject with parquet
         # files inside. Load parquet directly — the mirror's README lacks the
         # HF `configs:` metadata, so name-based config resolution fails.
-        data_dir = "/mnt/share/c30044170/datasets/AI-ModelScope/MMMU"
+        data_dir = "/root/.cache/modelscope/hub/datasets/AI-ModelScope/MMMU"
 
         # Load validation split of each subject
         datasets = []
