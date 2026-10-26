@@ -3,9 +3,9 @@ set -eo pipefail
 
 # 在 sglang_ljx 容器中执行，只生成 whl；BUILD_MEMFABRIC=1 时先编译 MemFabric。
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-MOONCAKE_DIR="${MOONCAKE_DIR:-/mnt/share/c00985000/code/Mooncake}"
+MOONCAKE_DIR="${MOONCAKE_DIR:-/mnt/share/Mooncake}"
 MOONCAKE_DIR="$(cd -- "$MOONCAKE_DIR" && pwd)"
-MEMFABRIC_DIR="${MEMFABRIC_DIR:-/mnt/share/c00985000/code/memfabric_hybrid}"
+MEMFABRIC_DIR="${MEMFABRIC_DIR:-/mnt/share/memfabric_hybrid}"
 BUILD_MEMFABRIC="${BUILD_MEMFABRIC:-0}"
 BUILD_DIR="${BUILD_DIR:-$MOONCAKE_DIR/build/memfabric-wheel}"
 WHEEL_DIR="${WHEEL_DIR:-$MOONCAKE_DIR/dist}"
