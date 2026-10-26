@@ -70,21 +70,21 @@ jobs:
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
 
-#  nighly-test-npu:
-#    needs: [set-image-config]
-#    name: nightly-test-npu
-#    # Coverage mode: the nested nightly workflow runs too — its basic-function
-#    # and accuracy suites collect coverage via covdata artifacts (its perf and
-#    # multi-node jobs are skipped; this workflow's own perf/multi-node jobs
-#    # already run those scenarios in the same run).
-#    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-#    uses: ./.github/workflows/nightly-test-npu.yml
-#    with:
-#      ref:  ${{ needs.set-image-config.outputs.ref }}
-#      job_filter: ${{ needs.set-image-config.outputs.job_filter }}
-#      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
-#      coverage_mode: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-#    secrets: inherit
+  nighly-test-npu:
+    needs: [set-image-config]
+    name: nightly-test-npu
+    # Coverage mode: the nested nightly workflow runs too — its basic-function
+    # and accuracy suites collect coverage via covdata artifacts (its perf and
+    # multi-node jobs are skipped; this workflow's own perf/multi-node jobs
+    # already run those scenarios in the same run).
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    uses: ./.github/workflows/nightly-test-npu.yml
+    with:
+      ref:  ${{ needs.set-image-config.outputs.ref }}
+      job_filter: ${{ needs.set-image-config.outputs.job_filter }}
+      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
+      coverage_mode: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
+    secrets: inherit
 
   full-1-npu-a3:
     name: full-1-npu-a3
