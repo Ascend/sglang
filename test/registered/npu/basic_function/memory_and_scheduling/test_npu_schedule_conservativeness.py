@@ -7,7 +7,7 @@ import requests
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_32B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.few_shot_gsm8k import run_eval as run_eval_few_shot_gsm8k
+from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -39,7 +39,7 @@ class TestScheduleConservativeness(CustomTestCase):
             "--tp-size",
             2,
             "--mem-fraction-static",
-            "0.52",
+            "0.35",
         ]
         cls.out_log_file = open("./cache_out_log.txt", "w+", encoding="utf-8")
         cls.err_log_file = open("./cache_err_log.txt", "w+", encoding="utf-8")
@@ -75,16 +75,17 @@ class TestScheduleConservativeness(CustomTestCase):
 
     def test_gsm8k(self):
         args = SimpleNamespace(
+            max_tokens=512,
+            base_url=self.base_url,
+            model=QWEN3_32B_WEIGHTS_PATH,
+            eval_name="gsm8k",
+            api="completion",
+            num_examples=100,
+            num_threads=512,
             num_shots=5,
-            data_path=None,
-            num_questions=100,
-            parallel=512,
-            max_new_tokens=512,
-            host="http://127.0.0.1",
-            port=int(self.base_url.split(":")[-1]),
         )
-        metrics = run_eval_few_shot_gsm8k(args)
-        self.assertGreaterEqual(metrics["accuracy"], 0.86 * (1 - 0.02))
+        metrics = run_eval(args)
+        self.assertGreaterEqual(metrics["score"], 0.86 * (1 - 0.02))
         self.err_log_file.seek(0)
         content = self.err_log_file.read()
         # error_message information is recorded in the log

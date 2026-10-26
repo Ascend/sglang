@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -17,6 +18,8 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=200, suite="full-4-npu-a3", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestEnableDeepepWaterFill(CustomTestCase):
     """Testcase: Verify set --enable-waterfill the inference accuracy of the model on the
@@ -54,11 +57,14 @@ class TestEnableDeepepWaterFill(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
                 "--enable-waterfill",
+                "--mamba-ssm-dtype",
+                "bfloat16",
             ],
             return_stdout_stderr=(cls.out_log_file, cls.err_log_file),
             env={
                 "HCCL_BUFFSIZE": "2048",
                 "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",  # Quantize activations to INT8 before dispatch
+                "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
             },
         )
 

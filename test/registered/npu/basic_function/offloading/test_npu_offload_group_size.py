@@ -121,7 +121,7 @@ class TestOffloadShardedGpu(TestOffloadGroupSize):
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
-        "--dp",  # When --offload-mode = sharded_gpu, must set --dp > 1 and --tp = 1.
+        "--dp-size",  # When --offload-mode = sharded_gpu, must set --dp > 1 and --tp = 1.
         "2",
         "--offload-group-size",
         "4",
