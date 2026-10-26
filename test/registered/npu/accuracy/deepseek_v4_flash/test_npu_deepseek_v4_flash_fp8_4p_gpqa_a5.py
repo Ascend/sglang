@@ -15,6 +15,7 @@ register_npu_ci(
     nightly=True,
 )
 
+
 DEEPSEEK_V4_FLASH_FP8_4P_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
