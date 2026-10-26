@@ -106,15 +106,23 @@ ENV LC_ALL=en_US.UTF-8
 
 ### Install MemFabric and MemCache
 RUN set -eux; \
-    case "$DEVICE_TYPE" in \
-      950) MF_SOC_VERSION="A5" ;; \
-      a3)  MF_SOC_VERSION="A3" ;; \
-      *)   echo "Unsupported DEVICE_TYPE for mfcli kernel install: $DEVICE_TYPE" >&2; \
-           exit 1 ;; \
+    case "$TARGETARCH" in \
+      arm64) \
+        MF_URL="$MF_WHEEL_URL_AARCH64"; \
+        MC_URL="$MC_WHEEL_URL_AARCH64"; \
+        ;; \
+      amd64) \
+        MF_URL="$MF_WHEEL_URL_X86_64"; \
+        MC_URL="$MC_WHEEL_URL_X86_64"; \
+        ;; \
+      *) \
+        echo "Unsupported architecture: $TARGETARCH" >&2; \
+        exit 1; \
+        ;; \
     esac; \
-    ${PIP_INSTALL} memfabric-hybrid==${MF_VERSION}; \
-    mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
-    ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
+    ${PIP_INSTALL} "$MF_URL" --force-reinstall; \
+    mfcli kernel install --soc-version A5; \
+    ${PIP_INSTALL} "$MC_URL" --force-reinstall --no-deps
 
 ### Install memfabric-zbal
 RUN if [ "$DEVICE_TYPE" = "950" ]; then ZBAL_PKG="memfabric-zbal==${ZBAL_VERSION_950}"; \
