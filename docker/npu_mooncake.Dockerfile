@@ -199,6 +199,7 @@ RUN chmod 755 /mnt/share/build_mooncake1.sh && \
     bash /mnt/share/build_mooncake1.sh && \
     pip install /mnt/share/Mooncake/dist/mooncake_transfer_engine-0.3.12.post1-cp312-cp312-linux_aarch64.whl --force --no-deps && \
     rm -rf Mooncake && \
+    cd /mnt && \
     rm -rf /mnt/share
 
 CMD ["/bin/bash"]
