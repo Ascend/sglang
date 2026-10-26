@@ -88,7 +88,7 @@ jobs:
 
   full-1-npu-a3:
     name: full-1-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -109,7 +109,7 @@ jobs:
 
   full-2-npu-a3:
     name: full-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -129,7 +129,7 @@ jobs:
 
   full-4-npu-a3:
     name: full-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -149,7 +149,7 @@ jobs:
 
   full-8-npu-a3:
     name: full-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -169,7 +169,7 @@ jobs:
 
   full-16-npu-a3:
     name: full-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ !cancelled() }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
