@@ -192,7 +192,7 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && [ -n "$PIPDIR" ] \
     && cd "$PIPDIR" && ln -sf deep_ep/deep_ep_cpp*.so
 
-COPY docker/build_mooncake.sh /mnt/share/c00985000/code/build_mooncake1.sh
+COPY ./build_mooncake.sh /mnt/share/c00985000/code/build_mooncake1.sh
 RUN chmod 755 /mnt/share/c00985000/code/build_mooncake1.sh && \
     cd /mnt/share/c00985000/code && \
     git clone https://github.com/kvcache-ai/Mooncake.git && \
