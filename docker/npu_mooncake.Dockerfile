@@ -189,7 +189,7 @@ COPY ./build_mooncake.sh /mnt/share/build_mooncake1.sh
 RUN chmod 755 /mnt/share/build_mooncake1.sh && \
     cd /mnt/share && \
     git clone https://github.com/kvcache-ai/Mooncake.git && \
-    git clone https://github.com/Ascend/memfabric_hybrid.git && \
+    git clone https://gitcode.com/Ascend/memfabric_hybrid.git && \
     bash /mnt/share/build_mooncake1.sh && \
     pip install /mnt/share/Mooncake/dist/mooncake_transfer_engine-0.3.12.post1-cp312-cp312-linux_aarch64.whl --force --no-deps && \
     rm -rf Mooncake && \
