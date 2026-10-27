@@ -11,8 +11,10 @@ import requests
 
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    MOONLIGHT_16B_A3B_MODEL_PATH,
+)
 from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
-from sglang.test.ascend.e2e.test_npu_performance_utils import MOONLIGHT_16B_A3B_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
