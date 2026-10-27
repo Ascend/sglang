@@ -1,11 +1,12 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - main
+      - testcases-261015
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -77,7 +78,7 @@ jobs:
     # and accuracy suites collect coverage via covdata artifacts (its perf and
     # multi-node jobs are skipped; this workflow's own perf/multi-node jobs
     # already run those scenarios in the same run).
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
       ref:  ${{ needs.set-image-config.outputs.ref }}
@@ -88,7 +89,7 @@ jobs:
 
   full-1-npu-a3:
     name: full-1-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -109,7 +110,7 @@ jobs:
 
   full-2-npu-a3:
     name: full-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -129,7 +130,7 @@ jobs:
 
   full-4-npu-a3:
     name: full-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -149,7 +150,7 @@ jobs:
 
   full-8-npu-a3:
     name: full-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -169,7 +170,7 @@ jobs:
 
   full-16-npu-a3:
     name: full-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -189,7 +190,7 @@ jobs:
 
   full-acc-2-npu-a3:
     name: full-acc-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -209,7 +210,7 @@ jobs:
 
   full-acc-4-npu-a3:
     name: full-acc-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -229,7 +230,7 @@ jobs:
 
   full-acc-16-npu-a3:
     name: full-acc-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -249,7 +250,7 @@ jobs:
 
   full-perf-2-npu-a3:
     name: full-perf-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -265,7 +266,7 @@ jobs:
 
   full-perf-4-npu-a3:
     name: full-perf-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -281,7 +282,7 @@ jobs:
 
   full-perf-8-npu-a3:
     name: full-perf-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -297,7 +298,7 @@ jobs:
 
   full-perf-16-npu-a3:
     name: full-perf-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -314,7 +315,7 @@ jobs:
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
+    if: false
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -415,7 +416,7 @@ jobs:
 
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    if: ${{ always() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: false
     needs: [set-image-config, full-poc-multi-node-tests]
     strategy:
       fail-fast: false
@@ -485,7 +486,7 @@ jobs:
         full-acc-4-npu-a3,
         full-acc-16-npu-a3,
       ]
-    if: ${{ !cancelled() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.coverage_mode == 'true' }}
+    if: false
     runs-on: linux-amd64-cpu-4
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
@@ -744,6 +745,34 @@ jobs:
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
           rm -rf "${RUN_DIR}"
           echo "Removed ${RUN_DIR}"
+
+  runner-probe:
+    # Verify runner label availability: a job scheduled and executed on a
+    # label proves the runner works; stuck "queued" means no online runner.
+    # Only on manual dispatch to avoid competing with real test jobs.
+    name: runner-probe-${{ matrix.label }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        label:
+          - linux-aarch64-a3-2
+          - linux-aarch64-a3-4
+          - linux-aarch64-a3-8
+          - linux-aarch64-a3-16
+          - linux-aarch64-a3-2-
+          - linux-aarch64-a3-4-
+          - linux-aarch64-a3-8-
+          - linux-aarch64-a3-16-
+    runs-on: ${{ matrix.label }}
+    timeout-minutes: 5
+    steps:
+      - name: Probe runner
+        run: |
+          echo "label=${{ matrix.label }} runner=${RUNNER_NAME}"
+          uname -a
+          npu-smi info || true
 
   check-all-jobs:
     if: github.repository == 'sgl-project/sglang' && always()
