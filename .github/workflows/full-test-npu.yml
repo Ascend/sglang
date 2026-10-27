@@ -746,34 +746,6 @@ jobs:
           rm -rf "${RUN_DIR}"
           echo "Removed ${RUN_DIR}"
 
-  runner-probe:
-    # Verify runner label availability: a job scheduled and executed on a
-    # label proves the runner works; stuck "queued" means no online runner.
-    # Runs on PR and manual dispatch only (all other jobs are disabled).
-    name: runner-probe-${{ matrix.label }}
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        label:
-          - linux-aarch64-a3-2
-          - linux-aarch64-a3-4
-          - linux-aarch64-a3-8
-          - linux-aarch64-a3-16
-          - linux-aarch64-a3-800t-2
-          - linux-aarch64-a3-800t-4
-          - linux-aarch64-a3-800t-8
-          - linux-aarch64-a3-800t-16
-    runs-on: ${{ matrix.label }}
-    timeout-minutes: 5
-    steps:
-      - name: Probe runner
-        run: |
-          echo "label=${{ matrix.label }} runner=${RUNNER_NAME}"
-          uname -a
-          npu-smi info || true
-
   check-all-jobs:
     if: github.repository == 'sgl-project/sglang' && always()
     needs:
