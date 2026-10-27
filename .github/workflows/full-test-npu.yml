@@ -749,9 +749,9 @@ jobs:
   runner-probe:
     # Verify runner label availability: a job scheduled and executed on a
     # label proves the runner works; stuck "queued" means no online runner.
-    # Only on manual dispatch to avoid competing with real test jobs.
+    # Runs on PR and manual dispatch only (all other jobs are disabled).
     name: runner-probe-${{ matrix.label }}
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
     continue-on-error: true
     strategy:
       fail-fast: false
