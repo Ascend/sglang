@@ -11,7 +11,7 @@
 #     at /root/.cache/tests/precise-test/coverage
 # pr-test-npu-finish is the final gate in the called workflow. Manually
 # triggered only (workflow_dispatch): PRs run the standard pr-test-npu.yml
-# instead; this pipeline builds the full coverage baseline on demand.
+# instead; this pipeline builds the full coverage baseline on demand
 name: Coverage Collection (NPU)
 
 on:
