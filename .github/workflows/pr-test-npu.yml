@@ -252,7 +252,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: base-b-test-1-npu-a3
-      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-2' || 'linux-aarch64-a3-800i-2' }}
+      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-2' || 'linux-aarch64-a3-2' }}
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '60'
       timeout_per_file: '3600'
@@ -269,7 +269,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: base-b-test-2-npu-a3
-      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-2' || 'linux-aarch64-a3-800i-2' }}
+      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-2' || 'linux-aarch64-a3-2' }}
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '60'
       timeout_per_file: '3600'
@@ -286,7 +286,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: base-b-test-4-npu-a3
-      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-4' || 'linux-aarch64-a3-800i-4' }}
+      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-4' || 'linux-aarch64-a3-4' }}
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '120'
       timeout_per_file: '3600'
@@ -304,7 +304,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: base-b-test-8-npu-a3
-      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-8' || 'linux-aarch64-a3-800i-8' }}
+      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-8' || 'linux-aarch64-a3-8' }}
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '60'
       timeout_per_file: '3600'
@@ -321,7 +321,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: base-b-test-16-npu-a3
-      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-16' || 'linux-aarch64-a3-800i-16' }}
+      runner_config: ${{ inputs.coverage_mode == true && 'linux-aarch64-a3-800t-16' || 'linux-aarch64-a3-16' }}
       image: ${{ needs.set-image-config.outputs.CANN_image_a3 }}
       run_timeout_minutes: '120'
       timeout_per_file: '3600'
