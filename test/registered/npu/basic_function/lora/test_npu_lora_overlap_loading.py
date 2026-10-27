@@ -16,8 +16,8 @@ register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
-class TestLoRAOverlapLoading(CustomTestCase):
 
+class TestLoRAOverlapLoading(CustomTestCase):
     def test_ci_lora_models_batch_splitting(self):
         run_lora_batch_splitting_equivalence_test(
             CI_MULTI_LORA_MODELS,

@@ -121,9 +121,9 @@ class TestApiRelatedToolCallParserLlama(CustomTestCase):
         )
 
         tool_calls = response.choices[0].message.tool_calls
-        assert (
-            isinstance(tool_calls, list) and len(tool_calls) > 0
-        ), "tool_calls should be a non-empty list"
+        assert isinstance(tool_calls, list) and len(tool_calls) > 0, (
+            "tool_calls should be a non-empty list"
+        )
 
         function_name = tool_calls[0].function.name
         assert function_name == "add", "Function name should be 'add'"
