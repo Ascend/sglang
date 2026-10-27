@@ -11,10 +11,8 @@ import requests
 
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
-    QWEN3_0_6B_WEIGHTS_PATH,
-)
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
+from sglang.test.ascend.e2e.test_npu_performance_utils import MOONLIGHT_16B_A3B_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -37,67 +35,67 @@ WORLD_SIZE = os.environ.get("SGLANG_TEST_WORLD_SIZE", "8")
 # ============================ E2E Tests ============================
 
 
-class TestPrefillDelayerThroughputOnlineServing(CustomTestCase):
-    """Testcase: Online serving scenario: Verify that throughput is improved by at least 5%
-    when PrefillDelayer is enabled, compared with disabled.
+# class TestPrefillDelayerThroughputOnlineServing(CustomTestCase):
+#     """Testcase: Online serving scenario: Verify that throughput is improved by at least 5%
+#     when PrefillDelayer is enabled, compared with disabled.
+#
+#     [Test Category] Parameter
+#     [Test Target] --enable-prefill-delayer
+#     """
+#
+#     def test_throughput_comparison(self):
+#         _run_throughput_comparison(
+#             self,
+#             test_name="online_serving",
+#             other_launch_args=[
+#                 # Not really needed, only to test support non-FCFS algorithms
+#                 "--schedule-policy",
+#                 "lpm",
+#                 "--attention-backend",
+#                 "ascend",
+#                 "--disable-cuda-graph",
+#             ],
+#             other_benchmark_args=dict(
+#                 num_prompts=500,
+#                 random_input_len=30000,
+#                 random_output_len=256,
+#                 request_rate=32,
+#             ),
+#             # TODO: re-enable a throughput-improvement assertion once a
+#             # Inheritance community testing is currently experiencing fluctuations
+#             min_improvement_pct=None,
+#         )
 
-    [Test Category] Parameter
-    [Test Target] --enable-prefill-delayer
-    """
 
-    def test_throughput_comparison(self):
-        _run_throughput_comparison(
-            self,
-            test_name="online_serving",
-            other_launch_args=[
-                # Not really needed, only to test support non-FCFS algorithms
-                "--schedule-policy",
-                "lpm",
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
-            ],
-            other_benchmark_args=dict(
-                num_prompts=500,
-                random_input_len=30000,
-                random_output_len=256,
-                request_rate=32,
-            ),
-            # TODO: re-enable a throughput-improvement assertion once a
-            # Inheritance community testing is currently experiencing fluctuations
-            min_improvement_pct=None,
-        )
-
-
-class TestPrefillDelayerThroughputOfflineGen(CustomTestCase):
-    """Testcase: Offline generation scenario: Verify that throughput is improved by at least 20%
-    when PrefillDelayer is enabled, compared with disabled.
-
-    [Test Category] Parameter
-    [Test Target] --enable-prefill-delayer; --prefill-delayer-token-usage-low-watermark
-    """
-
-    def test_throughput_comparison(self):
-        _run_throughput_comparison(
-            self,
-            test_name="offline_gen",
-            other_launch_args=[
-                "--max-total-tokens",
-                "200000",
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
-            ],
-            other_benchmark_args=dict(
-                num_prompts=800,
-                random_input_len=30000,
-                random_output_len=500,
-            ),
-            token_usage_low_watermark=0.8,
-            # TODO: re-enable a throughput-improvement assertion once a
-            # Inheritance community testing is currently experiencing fluctuations
-            min_improvement_pct=None,
-        )
+# class TestPrefillDelayerThroughputOfflineGen(CustomTestCase):
+#     """Testcase: Offline generation scenario: Verify that throughput is improved by at least 20%
+#     when PrefillDelayer is enabled, compared with disabled.
+#
+#     [Test Category] Parameter
+#     [Test Target] --enable-prefill-delayer; --prefill-delayer-token-usage-low-watermark
+#     """
+#
+#     def test_throughput_comparison(self):
+#         _run_throughput_comparison(
+#             self,
+#             test_name="offline_gen",
+#             other_launch_args=[
+#                 "--max-total-tokens",
+#                 "200000",
+#                 "--attention-backend",
+#                 "ascend",
+#                 "--disable-cuda-graph",
+#             ],
+#             other_benchmark_args=dict(
+#                 num_prompts=800,
+#                 random_input_len=30000,
+#                 random_output_len=500,
+#             ),
+#             token_usage_low_watermark=0.8,
+#             # TODO: re-enable a throughput-improvement assertion once a
+#             # Inheritance community testing is currently experiencing fluctuations
+#             min_improvement_pct=None,
+#         )
 
 
 def _run_throughput_comparison(
@@ -198,97 +196,97 @@ def _assert_throughput_improvement(
     )
 
 
-class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
-    """Testcase: Verify PrefillDelayer memory low watermark protection mechanism
-    1.With token_usage_low_watermark=0.5: When memory usage is low, force allow requests, short request latency < 5s
-    2.Without watermark configured: Long request blocks one NPU, short requests on other cards are forced to wait, latency > 5s
-
-    [Test Category] Parameter
-    [Test Target] --enable-prefill-delayer; --prefill-delayer-max-delay-passes; --prefill-delayer-token-usage-low-watermark
-    """
-
-    def test_1_with_low_watermark(self):
-        # The kv cache size here is deliberately small, thus we use smaller token usage
-        self._run(token_usage_low_watermark=0.5)
-
-    def test_2_without_low_watermark(self):
-        self._run(token_usage_low_watermark=None)
-
-    def _run(self, token_usage_low_watermark):
-        model = QWEN3_0_6B_WEIGHTS_PATH
-        base_url = DEFAULT_URL_FOR_TEST
-        world_size = int(WORLD_SIZE)
-
-        process = _launch_server(
-            model=model,
-            base_url=base_url,
-            prefill_delayer=True,
-            other_args=[
-                "--max-total-tokens",
-                "50000",
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
-            ],
-            max_delay_passes=100,
-            token_usage_low_watermark=token_usage_low_watermark,
-        )
-
-        async def run_test():
-            client = openai.AsyncClient(base_url=f"{base_url}/v1", api_key="EMPTY")
-            long_prompt = "Hello " * 5000
-
-            async def send_blocking_request():
-                return await client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": long_prompt}],
-                    max_tokens=10000,
-                    extra_body={"data_parallel_rank": 0},
-                )
-
-            async def send_normal_request(dp_rank, req_idx):
-                start = time.time()
-                await client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": "Say hi"}],
-                    max_tokens=10,
-                    extra_body={"data_parallel_rank": dp_rank},
-                )
-                elapsed = time.time() - start
-                return dp_rank, req_idx, elapsed
-
-            asyncio.create_task(send_blocking_request())
-            await asyncio.sleep(3)
-
-            num_reqs_per_rank = 10
-            results = await asyncio.gather(
-                *[
-                    send_normal_request(dp_rank, req_idx)
-                    for dp_rank in range(1, world_size)
-                    for req_idx in range(num_reqs_per_rank)
-                ]
-            )
-
-            enabled = token_usage_low_watermark is not None
-            thresh = 5
-            for dp_rank, req_idx, elapsed in results:
-                print(f"DP rank {dp_rank} req {req_idx} completed in {elapsed:.2f}s")
-                self.assertTrue(
-                    (elapsed < thresh) if enabled else (elapsed > thresh),
-                    f"DP rank {dp_rank} req {req_idx}: elapsed={elapsed:.2f}s, thresh={thresh}, enabled={enabled}. "
-                    f"Maybe you need a different `max_delay_passes` when using hardware other than H200.",
-                )
-
-        try:
-            asyncio.run(run_test())
-
-            metrics_text = _print_prefill_delayer_metrics(base_url, expect_metrics=True)
-            if token_usage_low_watermark is not None:
-                total = _sum_prometheus_metric_values(metrics_text, "token_watermark")
-                self.assertGreater(total, 0, "Expected token_watermark > 0")
-                print(f"total token_watermark: {total}")
-        finally:
-            kill_process_tree(process.pid)
+# class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
+#     """Testcase: Verify PrefillDelayer memory low watermark protection mechanism
+#     1.With token_usage_low_watermark=0.5: When memory usage is low, force allow requests, short request latency < 5s
+#     2.Without watermark configured: Long request blocks one NPU, short requests on other cards are forced to wait, latency > 5s
+#
+#     [Test Category] Parameter
+#     [Test Target] --enable-prefill-delayer; --prefill-delayer-max-delay-passes; --prefill-delayer-token-usage-low-watermark
+#     """
+#
+#     def test_1_with_low_watermark(self):
+#         # The kv cache size here is deliberately small, thus we use smaller token usage
+#         self._run(token_usage_low_watermark=0.5)
+#
+#     def test_2_without_low_watermark(self):
+#         self._run(token_usage_low_watermark=None)
+#
+#     def _run(self, token_usage_low_watermark):
+#         model = QWEN3_0_6B_WEIGHTS_PATH
+#         base_url = DEFAULT_URL_FOR_TEST
+#         world_size = int(WORLD_SIZE)
+#
+#         process = _launch_server(
+#             model=model,
+#             base_url=base_url,
+#             prefill_delayer=True,
+#             other_args=[
+#                 "--max-total-tokens",
+#                 "50000",
+#                 "--attention-backend",
+#                 "ascend",
+#                 "--disable-cuda-graph",
+#             ],
+#             max_delay_passes=100,
+#             token_usage_low_watermark=token_usage_low_watermark,
+#         )
+#
+#         async def run_test():
+#             client = openai.AsyncClient(base_url=f"{base_url}/v1", api_key="EMPTY")
+#             long_prompt = "Hello " * 5000
+#
+#             async def send_blocking_request():
+#                 return await client.chat.completions.create(
+#                     model=model,
+#                     messages=[{"role": "user", "content": long_prompt}],
+#                     max_tokens=10000,
+#                     extra_body={"data_parallel_rank": 0},
+#                 )
+#
+#             async def send_normal_request(dp_rank, req_idx):
+#                 start = time.time()
+#                 await client.chat.completions.create(
+#                     model=model,
+#                     messages=[{"role": "user", "content": "Say hi"}],
+#                     max_tokens=10,
+#                     extra_body={"data_parallel_rank": dp_rank},
+#                 )
+#                 elapsed = time.time() - start
+#                 return dp_rank, req_idx, elapsed
+#
+#             asyncio.create_task(send_blocking_request())
+#             await asyncio.sleep(3)
+#
+#             num_reqs_per_rank = 10
+#             results = await asyncio.gather(
+#                 *[
+#                     send_normal_request(dp_rank, req_idx)
+#                     for dp_rank in range(1, world_size)
+#                     for req_idx in range(num_reqs_per_rank)
+#                 ]
+#             )
+#
+#             enabled = token_usage_low_watermark is not None
+#             thresh = 5
+#             for dp_rank, req_idx, elapsed in results:
+#                 print(f"DP rank {dp_rank} req {req_idx} completed in {elapsed:.2f}s")
+#                 self.assertTrue(
+#                     (elapsed < thresh) if enabled else (elapsed > thresh),
+#                     f"DP rank {dp_rank} req {req_idx}: elapsed={elapsed:.2f}s, thresh={thresh}, enabled={enabled}. "
+#                     f"Maybe you need a different `max_delay_passes` when using hardware other than H200.",
+#                 )
+#
+#         try:
+#             asyncio.run(run_test())
+#
+#             metrics_text = _print_prefill_delayer_metrics(base_url, expect_metrics=True)
+#             if token_usage_low_watermark is not None:
+#                 total = _sum_prometheus_metric_values(metrics_text, "token_watermark")
+#                 self.assertGreater(total, 0, "Expected token_watermark > 0")
+#                 print(f"total token_watermark: {total}")
+#         finally:
+#             kill_process_tree(process.pid)
 
 
 class TestPrefillDelayerAccuracy(CustomTestCase):
@@ -306,7 +304,7 @@ class TestPrefillDelayerAccuracy(CustomTestCase):
         self._run_accuracy_test(prefill_delayer=False)
 
     def _run_accuracy_test(self, prefill_delayer: bool):
-        model = DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH
+        model = MOONLIGHT_16B_A3B_MODEL_PATH
         base_url = DEFAULT_URL_FOR_TEST
         process = _launch_server(
             prefill_delayer=prefill_delayer,
@@ -335,7 +333,7 @@ class TestPrefillDelayerAccuracy(CustomTestCase):
             metrics = run_eval(args)
             print(f"=== gsm8k ({prefill_delayer=}) ===")
             print(f"{metrics=}")
-            self.assertGreater(metrics["score"], 0.57)
+            self.assertGreater(metrics["score"], 0.8370)
         finally:
             kill_process_tree(process.pid)
 

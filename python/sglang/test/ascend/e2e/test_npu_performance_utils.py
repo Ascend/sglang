@@ -158,7 +158,7 @@ KIMI_K2_5_EAGLE3_MODEL_PATH = (
 GLM_4_7_FLASH_MODEL_PATH = "/root/.cache/modelscope/hub/models/ZhipuAI/GLM-4.7-Flash"
 QWEN3_5_9B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-9B"
 MOONLIGHT_16B_A3B_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/moonshotai/Moonlight-16B-A3B-Instruct"
+    "moonshotai/Moonlight-16B-A3B-Instruct"
 )
 GLM5_TOP64_PRUNED_GSM8K_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/yzgjhdxf/GLM-5-top64-pruned-gsm8k"
