@@ -528,15 +528,16 @@ jobs:
         # dirs carry a FAILED marker). Shared-disk callers (pr-test-npu) leave
         # upload_coverage_artifact false and never take this step.
         if: ${{ !cancelled() && inputs.use_coverage_runner && inputs.upload_coverage_artifact }}
-        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: covdata-${{ inputs.test_suite }}-p${{ matrix.partition }}
           # Trailing slash -> zip root is outputs/ contents (sglang@<tag>/...);
           # the download side restores the RUN_DIR/outputs layers via its path.
           path: /tmp/precise-test-covdata/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
-          # Absent for empty partitions or when the run step died before tests.
-          if-no-files-found: ignore
+          # The presence marker is written before tests run, so absent files
+          # mean this job died earlier: fail here too rather than only at the
+          # aggregator's EXPECTED count check.
+          if-no-files-found: error
           # Consumed by setup-covstub within the same run; the aggregated
           # precise-test-coverage-data package covers later rebuilds.
           retention-days: 3

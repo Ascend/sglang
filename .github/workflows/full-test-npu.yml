@@ -102,7 +102,6 @@ jobs:
       skip_pr_test_health_check: 'true'
       use_coverage_runner: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
       upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-      upload_image_source: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
     secrets: inherit
 
   full-2-npu-a3:
@@ -452,15 +451,60 @@ jobs:
       prefill_decode_deployment: 'mix'
       transformers_version: ''
 
+  # ==================== Image source staging (coverage mode) ==================== #
+  # Standalone so covstub no longer depends on a test partition (p0 failing or
+  # selecting no tests used to lose the baseline). Packs the traced tree:
+  # image source + the same test-utility overlay the test jobs apply.
+  stage-image-source:
+    name: stage-image-source
+    needs: [set-image-config]
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.coverage_mode == 'true' }}
+    runs-on: linux-aarch64-a3-2
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.sha }}
+      - name: Pack image source
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Mirrors the overlay in _npu-pr-test-stage.yml's install step.
+          pkg=/sgl-workspace/sglang/python
+          test_dir=${pkg}/sglang/test
+          mkdir -p ${test_dir}/ascend
+          mv ${test_dir}/ascend ${test_dir}/ascend_bak
+          cp -r python/sglang/test/ascend ${test_dir}/ascend
+          cp python/sglang/test/sgl_eval_utils.py ${test_dir}/
+          rm -rf ${test_dir}/kits
+          cp -r python/sglang/test/kits ${test_dir}/
+          cp python/sglang/test/test_programs.py ${test_dir}/
+          out=/tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs
+          mkdir -p ${out}
+          tar -czf ${out}/sglang-image-src.tar.gz \
+            --exclude 'sglang/test/ascend_bak' -C ${pkg} sglang
+      - name: Upload image source
+        uses: actions/upload-artifact@v4
+        with:
+          name: covdata-image-src  # covdata-* keeps setup-covstub's download pattern
+          path: /tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
+          if-no-files-found: error
+          retention-days: 3
+
   # ==================== Coverage Assembly & Publish (coverage mode) ==================== #
-  # Assembles coverage from the partition jobs. covstub is the image's
-  # preinstalled sglang (staged by full-1-npu-a3 p0); every partition ships a
-  # covdata-* artifact, merged below into RUN_DIR/outputs.
+  # Assembles coverage from the partition jobs. covstub is the traced tree
+  # (image-preinstalled sglang + test-utility overlay, staged by
+  # stage-image-source); every partition ships a covdata-* artifact, merged
+  # below into RUN_DIR/outputs.
   # !cancelled(): failed test jobs must not block the report.
   setup-covstub:
     needs:
       [
         set-image-config,
+        stage-image-source,
         nighly-test-npu,
         full-1-npu-a3,
         full-2-npu-a3,
@@ -487,14 +531,20 @@ jobs:
           merge-multiple: true
           path: /root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
 
-      - name: Check coverage artifacts arrived
+      - name: Validate and unpack coverage artifacts
+        # covstub must be the traced code (image source + test-utility
+        # overlay), not the ref checkout — a mismatched baseline misattributes
+        # lines.
+        # Container jobs default to `sh` (dash), which rejects `pipefail`.
         shell: bash
         env:
           # `outcome` ignores continue-on-error on the download step.
           COVDATA_OUTCOME: ${{ steps.covdata.outcome }}
+          JOB_FILTER: ${{ needs.set-image-config.outputs.job_filter }}
         run: |
           set -euo pipefail
-          OUTPUTS_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs"
+          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+          OUTPUTS_DIR="${RUN_DIR}/outputs"
           # Download is continue-on-error; a missing or partial set is handled
           # here (a failed download must not hide the likelier cause).
           if [ "${COVDATA_OUTCOME:-}" != "success" ] \
@@ -504,39 +554,56 @@ jobs:
           fi
           echo "Restored $(find "${OUTPUTS_DIR}" -mindepth 1 -maxdepth 1 | wc -l) top-level entries into ${OUTPUTS_DIR}"
           # Every partition drops a .covdone-<suite>-p<n> marker even with no
-          # tests selected, so a missing marker means it never uploaded. A
-          # stale EXPECTED only warns, never fails.
-          #   full 26 = full-1:5 + full-2/4/8/16:2x4 + full-acc-2:5 + full-acc-4:5 + full-acc-16:3
-          #   nightly 12 = nightly-4:2 + nightly-acc-2:4 + the other six at 1 each
-          EXPECTED=38
-          ARRIVED=$(find "${OUTPUTS_DIR}" -maxdepth 1 -name '.covdone-*' -type f | wc -l)
-          echo "Coverage partitions arrived: ${ARRIVED}/${EXPECTED}"
-          find "${OUTPUTS_DIR}" -maxdepth 1 -name '.covdone-*' -type f -exec basename {} \; | sort | sed 's/^/  /'
-          if [ "${ARRIVED}" -lt "${EXPECTED}" ]; then
-            echo "::warning::Only ${ARRIVED}/${EXPECTED} coverage partitions arrived; the report below is incomplete."
+          # tests selected, so a missing marker means it never uploaded.
+          # EXPECTED_SPEC mirrors the partition configs in this file and
+          # nightly-test-npu.yml; it is only used to name what is missing (a
+          # stale entry warns, never fails). Only meaningful for a full run:
+          # a filtered run intentionally has fewer partitions.
+          EXPECTED_SPEC="full-1-npu-a3:5 full-2-npu-a3:2 full-4-npu-a3:2 full-8-npu-a3:2 \
+            full-16-npu-a3:2 full-acc-2-npu-a3:5 full-acc-4-npu-a3:5 full-acc-16-npu-a3:3 \
+            nightly-1-npu-a3:1 nightly-2-npu-a3:1 nightly-4-npu-a3:2 nightly-8-npu-a3:1 \
+            nightly-16-npu-a3:1 nightly-acc-2-npu-a3:4 nightly-acc-4-npu-a3:1 \
+            nightly-acc-16-npu-a3:1"
+          EXPECTED_FILES=()
+          for spec in ${EXPECTED_SPEC}; do
+            suite=${spec%:*}
+            size=${spec#*:}
+            i=0
+            while [ "${i}" -lt "${size}" ]; do
+              EXPECTED_FILES+=(".covdone-${suite}-p${i}")
+              i=$((i + 1))
+            done
+          done
+          EXPECTED=${#EXPECTED_FILES[@]}
+          MISSING=()
+          for f in "${EXPECTED_FILES[@]}"; do
+            [ -f "${OUTPUTS_DIR}/${f}" ] || MISSING+=("${f}")
+          done
+          echo "Coverage partitions arrived: $((EXPECTED - ${#MISSING[@]}))/${EXPECTED}"
+          if [ "${JOB_FILTER:-all}" != "all" ]; then
+            echo "job_filter=${JOB_FILTER}: completeness check skipped"
+          elif [ "${#MISSING[@]}" -gt 0 ]; then
+            echo "Missing partitions:"
+            printf '  %s\n' "${MISSING[@]}"
+            echo "::warning::$((${#MISSING[@]})) of ${EXPECTED} coverage partitions missing; the report below is incomplete."
+            NAMES=$(printf '%s ' "${MISSING[@]}")
+            NAMES=${NAMES//.covdone-/}
             if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
               {
-                echo "### Coverage partitions incomplete: ${ARRIVED}/${EXPECTED}"
+                echo "### Coverage partitions incomplete: $((EXPECTED - ${#MISSING[@]}))/${EXPECTED}"
+                echo ""
+                echo "Missing: \`${NAMES% }\`"
                 echo ""
                 echo "The report was built from the partitions that arrived; totals are lower than a complete run."
-                echo "Expected ${EXPECTED} (full 26 + nightly 12)."
               } >> "${GITHUB_STEP_SUMMARY}"
             fi
           fi
 
-      - name: Unpack image source to covstub
-        # covstub must be the image's preinstalled sglang (the traced code),
-        # not the ref checkout — a mismatched baseline misattributes lines.
-        # Container jobs default to `sh` (dash), which rejects `pipefail`.
-        shell: bash
-        run: |
-          set -euo pipefail
-          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
-          COVSTUB="${RUN_DIR}/outputs/covstub"
+          COVSTUB="${OUTPUTS_DIR}/covstub"
           mkdir -p "${COVSTUB}"
-          # full-1-p0's upload is continue-on-error: the tarball may be absent.
+          # stage-image-source may have failed: the tarball can still be absent.
           if [ ! -f "${RUN_DIR}/outputs/sglang-image-src.tar.gz" ]; then
-            echo "::error::sglang-image-src.tar.gz missing from covdata artifacts (full-1-npu-a3 p0 upload failed?). The covdata-* artifacts remain on the run page; re-stage the image source and rebuild the report manually."
+            echo "::error::sglang-image-src.tar.gz missing from covdata artifacts (stage-image-source failed?). The covdata-* artifacts remain on the run page; re-stage the image source and rebuild the report manually."
             exit 1
           fi
           tar -xzf "${RUN_DIR}/outputs/sglang-image-src.tar.gz" -C "${COVSTUB}"
@@ -546,8 +613,8 @@ jobs:
             || echo '__version__ = "0.0.0"' > "${COVSTUB}/sglang/_version.py"
 
       - name: Generate HTML coverage report
-        id: htmlcov
-        # Best-effort: continues on error (red ✗ in the UI) so later steps run.
+        # continue-on-error: a failed render must not skip the archive/publish
+        # steps below, so raw data stays recoverable.
         continue-on-error: true
         shell: bash
         run: |
@@ -662,25 +729,6 @@ jobs:
             /root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}/htmlcov-npu
           if-no-files-found: ignore
           retention-days: 14
-
-      - name: Flag missing coverage report
-        # Generation is continue-on-error, so flag a missing report here by
-        # checking the file ("no data" also exits 0 without a report).
-        if: always()
-        shell: bash
-        env:
-          # `outcome` ignores continue-on-error, so it shows the real result.
-          HTMLCOV_OUTCOME: ${{ steps.htmlcov.outcome }}
-        run: |
-          # GITHUB_STEP_SUMMARY may be unset on the k8s runner pool.
-          [ -n "${GITHUB_STEP_SUMMARY:-}" ] || exit 0
-          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
-
-          [ -f "${RUN_DIR}/htmlcov/index.html" ] && exit 0
-          {
-            echo "### Coverage report NOT generated"
-            echo "Generate step outcome: \`${HTMLCOV_OUTCOME:-skipped}\` — check its log. Raw data is still in \`covdata-*\` / \`precise-test-coverage-data\`."
-          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Archive outputs
         # Container jobs default to `sh`; shopt/arrays are bash-only.
