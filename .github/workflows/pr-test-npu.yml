@@ -1076,8 +1076,18 @@ jobs:
             --include='*/sglang/srt/hardware_backend/npu/*' \
             --directory="${REPORT_DIR}-npu"
 
+          # Compute the NPU-only TOTAL once: it feeds both the run-page summary
+          # and the OBS coverage gate (${RUN_DIR}/npu_coverage.txt), so the
+          # gated number and the displayed number cannot diverge. Written
+          # unconditionally because GITHUB_STEP_SUMMARY may be unset on the
+          # k8s runner pool while the gate still needs the value.
+          NPU_TOTAL_LINE="$(COVERAGE_FILE=/tmp/.coverage-npu \
+            python3 -m coverage report --rcfile=/tmp/report-rc \
+            --include='*/sglang/srt/hardware_backend/npu/*' | tail -n 1)"
+          printf '%s\n' "${NPU_TOTAL_LINE}" | awk '{print $NF}' | tr -d '%' \
+            > "${RUN_DIR}/npu_coverage.txt"
+
           # Surface the totals directly on the run page.
-          # GITHUB_STEP_SUMMARY may be unset on the k8s runner pool.
           if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             {
               echo "### Coverage"
@@ -1086,9 +1096,7 @@ jobs:
               COVERAGE_FILE=/tmp/.coverage-all \
                 python3 -m coverage report --rcfile=/tmp/report-rc | tail -n 1
               echo "python/sglang/srt/hardware_backend/npu (full-tree denominator):"
-              COVERAGE_FILE=/tmp/.coverage-npu \
-                python3 -m coverage report --rcfile=/tmp/report-rc \
-                --include='*/sglang/srt/hardware_backend/npu/*' | tail -n 1
+              echo "${NPU_TOTAL_LINE}"
               echo '```'
               echo "Full line-by-line report: download the \`coverage-html-report\` artifact and open \`htmlcov/index.html\` (NPU-only view: \`htmlcov-npu/index.html\`)."
             } >> "${GITHUB_STEP_SUMMARY}"
@@ -1180,10 +1188,27 @@ jobs:
             exit 0
           fi
 
-          # if [ -z "${OBS_ACCESS_KEY_ID:-}" ] || [ -z "${OBS_SECRET_ACCESS_KEY:-}" ]; then
-          #  echo "::warning::OBS_ACCESS_KEY_PRECISION/OBS_SECRET_ACCESS_KEY_PRECISION secrets not set, skip OBS upload"
-          #  exit 0
-          # fi
+          # NPU-only coverage gate: only the threshold comparison lives here.
+          # The percentage is computed once by the "Generate HTML coverage
+          # report" step above (same container). Fail closed when the value is
+          # missing, e.g. that step died before writing it.
+          MIN_NPU_COVERAGE=40
+          NPU_PCT_FILE="${RUN_DIR}/npu_coverage.txt"
+          if [ ! -s "${NPU_PCT_FILE}" ]; then
+            echo "::error::NPU-only coverage value missing (${NPU_PCT_FILE}); refusing to upload the baseline to OBS"
+            exit 1
+          fi
+          NPU_PCT="$(<"${NPU_PCT_FILE}")"
+          echo "NPU-only coverage: ${NPU_PCT}% (threshold: ${MIN_NPU_COVERAGE}%)"
+          if ! awk "BEGIN {exit !(${NPU_PCT} >= ${MIN_NPU_COVERAGE})}"; then
+            echo "::error::NPU-only coverage ${NPU_PCT}% is below ${MIN_NPU_COVERAGE}%, skip OBS upload"
+            exit 1
+          fi
+
+          if [ -z "${OBS_ACCESS_KEY_ID:-}" ] || [ -z "${OBS_SECRET_ACCESS_KEY:-}" ]; then
+            echo "::warning::OBS_ACCESS_KEY_PRECISION/OBS_SECRET_ACCESS_KEY_PRECISION secrets not set, skip OBS upload"
+            exit 0
+          fi
 
           if ! command -v obsutil >/dev/null 2>&1; then
             curl -fsSL \
