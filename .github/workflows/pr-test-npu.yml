@@ -1180,10 +1180,10 @@ jobs:
             exit 0
           fi
 
-          if [ -z "${OBS_ACCESS_KEY_ID:-}" ] || [ -z "${OBS_SECRET_ACCESS_KEY:-}" ]; then
-            echo "::warning::OBS_ACCESS_KEY_PRECISION/OBS_SECRET_ACCESS_KEY_PRECISION secrets not set, skip OBS upload"
-            exit 0
-          fi
+          # if [ -z "${OBS_ACCESS_KEY_ID:-}" ] || [ -z "${OBS_SECRET_ACCESS_KEY:-}" ]; then
+          #  echo "::warning::OBS_ACCESS_KEY_PRECISION/OBS_SECRET_ACCESS_KEY_PRECISION secrets not set, skip OBS upload"
+          #  exit 0
+          # fi
 
           if ! command -v obsutil >/dev/null 2>&1; then
             curl -fsSL \
