@@ -1,12 +1,12 @@
 name: Full Test (NPU)
 
 on:
-  pull_request:
-    branches:
-      - main
-      - testcases-261015
-    paths:
-      - ".github/workflows/full-test-npu.yml"
+#  pull_request:
+#    branches:
+#      - main
+#      - testcases-261015
+#    paths:
+#      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -78,7 +78,7 @@ jobs:
     # and accuracy suites collect coverage via covdata artifacts (its perf and
     # multi-node jobs are skipped; this workflow's own perf/multi-node jobs
     # already run those scenarios in the same run).
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
       ref:  ${{ needs.set-image-config.outputs.ref }}
@@ -89,7 +89,7 @@ jobs:
 
   full-1-npu-a3:
     name: full-1-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -110,7 +110,7 @@ jobs:
 
   full-2-npu-a3:
     name: full-2-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -130,7 +130,7 @@ jobs:
 
   full-4-npu-a3:
     name: full-4-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -150,7 +150,7 @@ jobs:
 
   full-8-npu-a3:
     name: full-8-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -170,7 +170,7 @@ jobs:
 
   full-16-npu-a3:
     name: full-16-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -190,7 +190,7 @@ jobs:
 
   full-acc-2-npu-a3:
     name: full-acc-2-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -210,7 +210,7 @@ jobs:
 
   full-acc-4-npu-a3:
     name: full-acc-4-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -230,7 +230,7 @@ jobs:
 
   full-acc-16-npu-a3:
     name: full-acc-16-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -250,7 +250,7 @@ jobs:
 
   full-perf-2-npu-a3:
     name: full-perf-2-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -266,7 +266,7 @@ jobs:
 
   full-perf-4-npu-a3:
     name: full-perf-4-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -282,7 +282,7 @@ jobs:
 
   full-perf-8-npu-a3:
     name: full-perf-8-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -298,7 +298,7 @@ jobs:
 
   full-perf-16-npu-a3:
     name: full-perf-16-npu-a3
-    if: false
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -315,7 +315,7 @@ jobs:
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: false
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -416,7 +416,7 @@ jobs:
 
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    if: false
+    if: ${{ always() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config, full-poc-multi-node-tests]
     strategy:
       fail-fast: false
@@ -486,7 +486,7 @@ jobs:
         full-acc-4-npu-a3,
         full-acc-16-npu-a3,
       ]
-    if: false
+    if: ${{ !cancelled() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.coverage_mode == 'true' }}
     runs-on: linux-amd64-cpu-4
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
