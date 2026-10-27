@@ -134,7 +134,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-1-npu-a3
-      runner_config: linux-aarch64-a3-2-
+      runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
       run_timeout_minutes: ${{ inputs.coverage_mode == true && '180' || '90' }}
@@ -152,7 +152,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-2-npu-a3
-      runner_config: linux-aarch64-a3-2-
+      runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
       run_timeout_minutes: ${{ inputs.coverage_mode == true && '180' || '90' }}
@@ -171,7 +171,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-4-npu-a3
-      runner_config: linux-aarch64-a3-4-
+      runner_config: linux-aarch64-a3-4
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
       run_timeout_minutes: ${{ inputs.coverage_mode == true && '240' || '120' }}
@@ -190,7 +190,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-8-npu-a3
-      runner_config: linux-aarch64-a3-8-
+      runner_config: linux-aarch64-a3-8
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
       run_timeout_minutes: ${{ inputs.coverage_mode == true && '120' || '60' }}
@@ -208,7 +208,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: nightly-16-npu-a3
-      runner_config: linux-aarch64-a3-16-
+      runner_config: linux-aarch64-a3-16
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
       run_timeout_minutes: ${{ inputs.coverage_mode == true && '240' || '120' }}
@@ -299,7 +299,7 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-2-
+      runner: linux-aarch64-a3-800i-2
       test_type: 'accuracy'
       test_suite: nightly-acc-2-npu-a3
       is_nightly_pipeline_job: true
@@ -320,7 +320,7 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-4-
+      runner: linux-aarch64-a3-800i-4
       test_type: 'accuracy'
       test_suite: nightly-acc-4-npu-a3
       is_nightly_pipeline_job: true
@@ -340,7 +340,7 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-16-
+      runner: linux-aarch64-a3-800i-16
       test_type: 'accuracy'
       test_suite: nightly-acc-16-npu-a3
       is_nightly_pipeline_job: true

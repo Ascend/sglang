@@ -16,6 +16,7 @@ Test cases:
   - TC-MM-OPENAI-CHAT-012: max_completion_tokens + multimodal
 """
 
+import os
 import runpy
 import unittest
 from pathlib import Path
@@ -44,6 +45,10 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
 
 
 # ---------------------------------------------------------------------------

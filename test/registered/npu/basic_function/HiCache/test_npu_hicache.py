@@ -1,4 +1,5 @@
 import logging
+import os
 import unittest
 from types import SimpleNamespace
 
@@ -19,6 +20,10 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
 
 
 class TestHiCache(CustomTestCase):

@@ -81,6 +81,7 @@ class TestHiCacheEagle(CustomTestCase):
                 "128",
             ],
             env={
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
                 "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
                 "TRANSFORMERS_VERBOSITY": "error",
             },
