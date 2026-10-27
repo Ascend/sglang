@@ -41,7 +41,7 @@ jobs:
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/basic_function/memory_and_scheduling/test_npu_prefill_delayer.py"
+#            "test/registered/npu/basic_function/memory_and_scheduling/test_npu_prefill_delayer.py"
             "test/registered/npu/basic_function/dp_attn/test_npu_dp_attention.py"
             "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_moe_dense_tp_size.py"
           )
