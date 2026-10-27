@@ -62,6 +62,10 @@ on:
         description: 'Git ref (branch, tag, or SHA) to test. If not provided, uses the event SHA.'
         type: string
         default: ''
+      use_upstream_source:
+        description: 'If true, check out the latest sgl-project/sglang main instead of this repository (coverage runs measure upstream code)'
+        type: boolean
+        default: false
       github-token:
         description: 'GitHub token for API calls'
         type: string
@@ -113,9 +117,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          repository: ${{ inputs.use_upstream_source && 'sgl-project/sglang' || github.repository }}
           # Pin to the event SHA (not the branch name) so every job in this run
           # checks out the same commit even if the branch advances mid-run.
-          ref: ${{ inputs.ref || github.sha }}
+          # Coverage runs pin to upstream main instead.
+          ref: ${{ inputs.use_upstream_source && 'main' || inputs.ref || github.sha }}
 
       - name: Check PR test health
         uses: actions/github-script@v8
@@ -469,14 +475,20 @@ jobs:
             ${PYTHON_FOR_SGLANG} -u ../scripts/ci/npu/precise-test/list_tests.py --hw npu --suite ${test_suite} ${PARTITION_ARGS} ${NIGHTLY_LIST_FLAG} -o /tmp/selected_tests.txt
             echo "Selected test files:"
             cat /tmp/selected_tests.txt
+            # Artifact transport: stage in a job-private root so the
+            # artifact carries exactly this job's tests. The default
+            # (shared-disk) RUN_DIR would also sweep sibling jobs' data
+            # whenever several partitions land on the same disk.
+            # Outside the selected-tests guard: the presence marker must be
+            # written even when this partition has no tests, so the aggregator
+            # can tell "arrived empty" from "never uploaded".
+            if [ "${{ inputs.upload_coverage_artifact }}" = "true" ]; then
+              export PRECISE_TEST_CACHE_ROOT="/tmp/precise-test-covdata"
+              COV_STAGE_OUT="${PRECISE_TEST_CACHE_ROOT}/${GITHUB_RUN_ID:-local}-attempt-${GITHUB_RUN_ATTEMPT:-1}/outputs"
+              mkdir -p "${COV_STAGE_OUT}"
+              touch "${COV_STAGE_OUT}/.covdone-${{ inputs.test_suite }}-p${{ matrix.partition }}"
+            fi
             if [ -s /tmp/selected_tests.txt ]; then
-              # Artifact transport: stage in a job-private root so the
-              # artifact carries exactly this job's tests. The default
-              # (shared-disk) RUN_DIR would also sweep sibling jobs' data
-              # whenever several partitions land on the same disk.
-              if [ "${{ inputs.upload_coverage_artifact }}" = "true" ]; then
-                export PRECISE_TEST_CACHE_ROOT="/tmp/precise-test-covdata"
-              fi
               bash ../scripts/ci/npu/precise-test/run_tests_with_coverage.sh $(cat /tmp/selected_tests.txt)
             fi
             exit 0
@@ -523,13 +535,16 @@ jobs:
         # dirs carry a FAILED marker). Shared-disk callers (pr-test-npu) leave
         # upload_coverage_artifact false and never take this step.
         if: ${{ !cancelled() && inputs.use_coverage_runner && inputs.upload_coverage_artifact }}
-        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: covdata-${{ inputs.test_suite }}-p${{ matrix.partition }}
           # Trailing slash -> zip root is outputs/ contents (sglang@<tag>/...);
           # the download side restores the RUN_DIR/outputs layers via its path.
           path: /tmp/precise-test-covdata/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
-          # Absent for empty partitions or when the run step died before tests.
-          if-no-files-found: ignore
-          retention-days: 7
+          # The presence marker is written before tests run, so absent files
+          # mean this job died earlier: fail here too rather than only at the
+          # aggregator's EXPECTED count check.
+          if-no-files-found: error
+          # Consumed by setup-covstub within the same run; the aggregated
+          # precise-test-coverage-data package covers later rebuilds.
+          retention-days: 3
