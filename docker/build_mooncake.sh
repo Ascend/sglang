@@ -54,6 +54,7 @@ if [[ "$BUILD_MEMFABRIC" == 1 ]]; then
       --build_hcom OFF --build_hcom_rdma ON --build_etcd_backend OFF
   )
   cp "$MEMFABRIC_DIR"/output/memfabric_hybrid/wheel/memfabric_hybrid-*.whl "$WHEEL_DIR/"
+  "$PYTHON_BIN" -m pip install --no-deps --force-reinstall "$MEMFABRIC_DIR"/output/memfabric_hybrid/wheel/memfabric_hybrid-*.whl
 elif [[ "$BUILD_MEMFABRIC" != 0 ]]; then
   echo "BUILD_MEMFABRIC must be 0 or 1" >&2
   exit 2
