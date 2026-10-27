@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, testcases-261015]
   pull_request:
-    branches: [main, testcases-260813]
+    branches: [main, testcases-261015]
 jobs:
   lint:
     runs-on: ubuntu-latest
