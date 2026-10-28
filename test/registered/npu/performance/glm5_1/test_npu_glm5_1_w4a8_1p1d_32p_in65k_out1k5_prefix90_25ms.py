@@ -12,7 +12,7 @@ register_npu_ci(
     est_time=3600,
     suite="",
     nightly=True,
-    disabled="performance testcase",
+    disabled="no longer maintained",
 )
 
 GLM_5_1_PD_SEP_PREFILL_ENVS = {
@@ -38,6 +38,7 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",
     "SGLANG_SPEC_ENABLE_OVERLAP_REFLOW": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_ENABLE_SPEC_V2": "1",
     "DEEPEP_HCCL_BUFFSIZE": "650",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "64",
     "TASK_QUEUE_ENABLE": "0",
