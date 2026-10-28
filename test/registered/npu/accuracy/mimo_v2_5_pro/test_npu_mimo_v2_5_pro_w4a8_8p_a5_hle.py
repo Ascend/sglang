@@ -4,9 +4,9 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    HLE_DATASET_PATH,
     MIMO_V2_5_PRO_DFLASH_MODEL_PATH,
     MIMO_V2_5_PRO_FP4_MODEL_PATH,
-    HLE_DATASET_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
