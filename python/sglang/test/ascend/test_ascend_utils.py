@@ -1,6 +1,14 @@
-"""Common utilities for testing and benchmarking on NPU.
+"""
+Common utilities for testing and benchmarking on NPU.
 
-Keep the weight-path constants sorted by variable name within each section.
+This file contains the following weight path categories:
+- LLM model weights path
+- VLM model weights path
+- Embedding model weights path
+- Rerank model weights path
+- Reward model weights path
+
+Please remember to sort by variable name within each section.
 """
 
 import asyncio
@@ -8,7 +16,9 @@ import copy
 import logging
 import os
 import random
+import shlex
 import subprocess
+import sys
 import threading
 import time
 from types import SimpleNamespace
@@ -31,11 +41,35 @@ from sglang.test.test_utils import (
 STDERR_FILENAME = "/tmp/stderr.txt"
 STDOUT_FILENAME = "/tmp/stdout.txt"
 
+
+def is_npu_a5() -> bool:
+    """Whether the tests run on the A5 (950) NPU; otherwise A3.
+
+    In CI the stage workflows export the container image name as
+    SGLANG_TEST_IMAGE; A5 images contain "950" (e.g. ...:cann9.1.0-950-xxx).
+
+    For local runs (no SGLANG_TEST_IMAGE), fall back to the NPU device name
+    containing "Ascend950". Any detection failure falls back to False (A3).
+    """
+    image = os.environ.get("SGLANG_TEST_IMAGE", "")
+    if "950" in image:
+        return True
+    try:
+        import torch
+
+        return "Ascend950" in torch.npu.get_device_name(0)
+    except Exception:
+        return False
+
+
 # Model weights storage directory
 MODEL_WEIGHTS_DIR = "/root/.cache/modelscope/hub/models/"
 HF_MODEL_WEIGHTS_DIR = "/root/.cache/huggingface/hub/"
 IMAGES_DIR = "/root/.cache/modelscope/hub/datasets/images/"
 VIDEO_DIR = "/root/.cache/modelscope/hub/datasets/video/"
+WAV_PATH = "/root/.cache/modelscope/hub/datasets/wav/asr_en.wav"
+AUDIOS_DIR = "/root/.cache/modelscope/hub/datasets/audios/"
+DATASETS_DIR = "/root/.cache/modelscope/hub/datasets/"
 
 # LLM model weights path
 AFM_4_5B_BASE_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "arcee-ai/AFM-4.5B-Base")
@@ -89,8 +123,9 @@ GEMMA_4_26B_A4B_IT_WEIGHTS_PATH = os.path.join(
 )
 GEMMA_4_31B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "google/gemma-4-31B-it")
 GLM_4_9B_CHAT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/glm-4-9b-chat")
-GLM_5_1_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/GLM-5.1-w4a8")
 GLM_5_2_BF16_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/GLM-5.2")
+GLM_5_1_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/GLM-5.1-w4a8")
+GPT_J_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "EleutherAI/gpt-j-6b")
 GPT_OSS_120B_BF16_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "eigen-ai-labs/gpt-oss-120b-bf16"
 )
@@ -125,6 +160,21 @@ LLAMA_3_2_1B_INSTRUCT_TOOL_CALLING_LORA_WEIGHTS_PATH = os.path.join(
 )
 LLAMA_3_2_1B_INSTRUCT_TOOL_FAST_LORA_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "suayptalha/FastLlama-3.2-LoRA"
+)
+VALADAPT_LLAMA_3_1_8B_CHINESE_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "faridlazuarda/valadapt-llama-3.1-8B-it-chinese"
+)
+CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "philschmid/code-llama-3-1-8b-text-to-sql-lora"
+)
+LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "nvidia/llama-3.1-nemoguard-8b-topic-control"
+)
+LLAMA_3_1_8B_INSTRUCT_OCR_CORRECTION_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "pbevan11/llama-3.1-8b-ocr-correction"
+)
+LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "algoprog/fact-generation-llama-3.1-8b-instruct-lora"
 )
 LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "LLM-Research/Llama-3.2-1B-Instruct"
@@ -165,17 +215,29 @@ OLMO_2_1124_7B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 OLMOE_1B_7B_0924_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "allenai/OLMoE-1B-7B-0924"
 )
+ORION_14B_BASE_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "OrionStarAI/Orion-14B-Base"
+)
 PERSIMMON_8B_CHAT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Howeee/persimmon-8b-chat"
 )
 PHI_4_MULTIMODAL_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "microsoft/Phi-4-multimodal-instruct"
 )
+QWEN2_VL_2B_INSTRUCT_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen2-VL-2B-Instruct"
+)
 QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen2.5-7B-Instruct"
 )
 QWEN3_0_6B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-0.6B")
+QWEN3_0_6B_ASR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-0.6B")
 QWEN3_5_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-27B")
+QWEN3_6_27B_MODEL_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-27B")
+QWEN3_6_27B_CYBERSECURITY_LORA_MODEL_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "hotdogs/qwen3.6-27b-cybersecurity-lora"
+)
+QWEN3_6_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-35B-A3B")
 QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-1.7B-GPTQ-Int8"
 )
@@ -197,6 +259,14 @@ QWEN3_30B_A3B_INSTRUCT_2507_INT4_AUTOROUND_WEIGHTS_PATH = os.path.join(
 QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B-Instruct-2507"
 )
+QWEN3_30B_A3B_INSTRUCT_2507_THEO_STYLE_LORA_PATH = os.path.join(
+    HF_MODEL_WEIGHTS_DIR, "Qwen3-30B-A3B-Instruct-2507-theo-style-lora"
+)
+QWEN3_4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-4B")
+QWEN3_4B_LORA_V2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-4B-lora-v2")
+QWEN3_4B_LORA_ZH_WEBNOVELTY_V0_0_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-4B-LoRA-ZH-WebNovelty-v0.0"
+)
 QWEN3_4B_GGUF_Q4_K_M_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-4B-GGUF/Qwen3-4B-Q4_K_M.gguf"
 )
@@ -206,6 +276,9 @@ QWEN3_8B_INT4_AUTOROUND_WEIGHTS_PATH = os.path.join(
 QWEN3_8B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-8B")
 QWEN3_8B_EAGLE3_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-8B_eagle3")
 QWEN3_8B_DECRYPTED_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "YZY/Qwen3-8B")
+QWEN3_8B_DFLASH_B16_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "z-lab/Qwen3-8B-DFlash-b16"
+)
 QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "YZY/Qwen3-8B_eagle3"
 )
@@ -222,6 +295,9 @@ QWEN3_32B_EAGLE3_WEIGHTS_PATH = os.path.join(
 QWEN3_32B_W8A8_MINDIE_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "aleoyang/Qwen3-32B-w8a8-MindIE"
 )
+QWEN2_1_5B_INSTRUCT_GTE_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/gte-Qwen2-1.5B-instruct"
+)
 QWQ_32B_W8A8_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "vllm-ascend/QWQ-32B-W8A8")
 SMOLLM_1_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "HuggingFaceTB/SmolLM-1.7B")
 SOLAR_10_7B_INSTRUCT_V1_0_WEIGHTS_PATH = os.path.join(
@@ -231,6 +307,7 @@ STABLELM_2_1_6B_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "stabilityai/stablelm-2-1_6b"
 )
 STARCODER2_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "bigcode/starcoder2-7b")
+TELE_FLM_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "FLM/Tele-FLM")
 TRINITY_MINI_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "arcee-ai/Trinity-Mini")
 XVERSE_MOE_A36B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "xverse/XVERSE-MoE-A36B")
 MINIMAX_M2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "cyankiwi/MiniMax-M2-BF16")
@@ -292,6 +369,11 @@ QWEN3_VL_235B_A22B_INSTRUCT_WEIGHTS_PATH = os.path.join(
 QWEN2_0_5B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen2-0.5B-Instruct"
 )
+STEP3_VL_10B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "stepfun-ai/Step3-VL-10B")
+
+OPENAI_WHISPER_LARGE_V3_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "openai/whisper-large-v3"
+)
 
 QWEN3_30B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-30B-A3B")
 QWEN3_30B_A3B_W8A8_WEIGHTS_PATH = os.path.join(
@@ -310,11 +392,41 @@ DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH = os.path.join(
 DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-R1-0528-W8A8"
 )
+QWEN3_30B_MODELSLIM_INT4_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3-30B-A3B-w4a4-LAOS"
+)
 QWEN3_5_397B_W4A8_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
 )
 QWEN3_5_397B_W8A8_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-397B-A17B-w8a8-mtp"
+)
+QWEN3_5_35B_W8A8_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-35B-A3B-w8a8-mtp"
+)
+QWEN3_5_4B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-4B")
+QWEN3_5_4B_MCAT_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "jamezoon/qwen3.5-4b-mcat-lora"
+)
+QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Aswinkv07/qwen3.5-4b-neo4j-text2cypher-lora"
+)
+QWEN3_5_9B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-9B")
+QWEN3_5_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.5-35B-A3B")
+QWEN3_5_35B_A3B_W8A8_MTP_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Eco-Tech/Qwen3.5-35B-A3B-w8a8-mtp"
+)
+QWEN3_VL_8B_EAGLE3_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-8B-Instruct-Eagle3"
+)
+
+# DLM model weights path
+LLADA2_0_FLASH_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "inclusionAI/LLaDA2.0-flash"
+)
+SDAR_8B_CHAT_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "JetLM/SDAR-8B-Chat")
+SDAR_30B_A3B_CHAT_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "JetLM/SDAR-30B-A3B-Chat"
 )
 
 # Embedding model weights path
@@ -371,27 +483,60 @@ QWEN3_VL_30B_A3B_THINKING_MODEL_PATH = os.path.join(
 QWEN3_OMNI_30B_A3B_THINKING_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Thinking"
 )
+
+GLM_4_6V_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "ZhipuAI/GLM-4.6V")
+QWEN3_RERANKER_8B_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Reranker-8B"
+)
+QWEN3_VL_RERANKER_2B_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-VL-Reranker-2B"
+)
+QWEN3_ASR_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3-ASR-1.7B")
+QWEN3_OMNI_30B_A3B_INSTRUCT_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct"
+)
+
 # Images path
 IMAGES_EXAMPLE_PATH = os.path.join(IMAGES_DIR, "example_image.png")
+IMAGE_MAN_IRONING_PATH = os.path.join(IMAGES_DIR, "man_ironing_on_back_of_suv.png")
+IMAGE_SGL_LOGO_PATH = os.path.join(IMAGES_DIR, "sgl_logo.png")
 IMAGES_023_PATH = os.path.join(IMAGES_DIR, "023.jpg")
 IMAGES_MAN_PATH = os.path.join(IMAGES_DIR, "man.png")
 IMAGES_LOGO_PATH = os.path.join(IMAGES_DIR, "logo.png")
+IMAGES_1_1_PATH = os.path.join(IMAGES_DIR, "1x1.png")
 VIDEO_JOBS_PATH = os.path.join(VIDEO_DIR, "jobs.mp4")
+AUDIO_TRUMP_WEF_PATH = os.path.join(VIDEO_DIR, "audios_Trump_WEF_2018_10s.mp3")
+VIDEO_JOBS_PRESENTING_IPOD_PATH = os.path.join(VIDEO_DIR, "jobs_presenting_ipod.mp4")
+AUDIO_BIRD_SONG_PATH = os.path.join(VIDEO_DIR, "audios_bird_song.mp3")
+AUDIOS_BIRD_PATH = os.path.join(AUDIOS_DIR, "bird.mp3")
+AUDIOS_TRUMP_PATH = os.path.join(AUDIOS_DIR, "trump.mp3")
 INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH = os.path.join(
     IMAGES_DIR, "invoice_with_barcode_logo.jpeg"
 )
 # fmt: on
 
-# Other
-DEEPSEEK_CODER_JSON_PATH = "/__w/sglang/sglang/test/registered/npu/basic_function/parameter/deepseek_coder.json"
-FR_SPEC_TOKEN_MAP_PATH = "/root/.cache/sglang/FR-Spec/freq_32768.pt"
-CONFIG_YAML_PATH = (
-    "/__w/sglang/sglang/test/registered/npu/basic_function/config/config.yaml"
+# audio datasets
+AUDIO_DATASETS_LIBRISPEECH_ASR_PATH = os.path.join(
+    DATASETS_DIR, "openslr/librispeech_asr"
 )
+
+# Other
+FR_SPEC_TOKEN_MAP_PATH = "/root/.cache/sglang/FR-Spec/freq_32768.pt"
+HOT_MAP_PT = "/root/.cache/sglang/hot_map/expert_distribution_recorder.pt"
+HOT_MAP_JSON = "/root/.cache/sglang/hot_map/expert_distribution_recorder.json"
+HOT_MAP_STRING = "/root/.cache/sglang/hot_map/qwen3_30b_a3b_random_no_redundant.json"
 
 
 class ModelTestConfig(NamedTuple):
-    """Model weights path and the expected MMLU / GSM8K / MMMU scores."""
+    """
+    Configuration for model testing.
+
+    Attributes:
+        model_path: Path to the model weights directory
+        mmlu_score: Weight for MMLU benchmark score
+        gsm8k_accuracy: Weight for GSM8K benchmark score
+        mmmu_accuracy: Weight for MMMU benchmark score
+    """
 
     model_path: str
     mmlu_score: Optional[float] = None
@@ -424,7 +569,16 @@ DEFAULT_WEIGHTS_FOR_TEST = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_FOR_TEST
 
 
 def run_command(cmd, shell=True):
-    """Run ``cmd`` and return its stdout."""
+    """Execute system command and return stdout
+
+    parameter:
+        cmd: command to execute
+        shell:
+        True, Execute command in shell
+        False, Commands are invoked directly without shell parsing
+    return:
+        The result of executing the command
+    """
     try:
         result = subprocess.run(
             cmd, shell=shell, capture_output=True, text=True, check=True
@@ -535,7 +689,37 @@ def run_bench_serving(
     lora_name: Optional[str] = None,
     timeout_for_server_launch=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
 ):
-    """Launch the server, run bench_serving against it, and return the result."""
+    """Start the service and obtain the inference results.
+
+    Parameters:
+        model: Model name
+        num_prompts: Total number of test requests
+        request_rate: Request rate
+        other_server_args: Additional configuration when starting the service
+        dataset_name: Data set name
+        dataset_path: Dataset path
+        tokenizer: tokenizer
+        random_input_len: The length of the randomly generated input prompt
+        random_output_len: The length of the randomly generated output prompt
+        sharegpt_context_len: Sharegpt dataset context length
+        disable_stream: Disable streaming output
+        disable_ignore_eos: Should eos_token be ignored?
+        need_warmup: Preheating required
+        seed: random seed
+        device: Device type
+        gsp_num_groups: Grouped Sequence Parallelism
+        gsp_prompts_per_group: Number of parallel prompts within each group
+        gsp_system_prompt_len: GSP system prompts length
+        gsp_question_len: GSP question length
+        gsp_output_len: GSP output length
+        max_concurrency: Maximum number of concurrent requests
+        background_task: Background tasks
+        lora_name: LoRA fine-tuning model path
+        timeout_for_server_launch: Raise the service timeout period
+    Returns:
+        res: Number of requests successfully completed
+
+    """
 
     if device == "auto":
         device = auto_config_device()
@@ -607,7 +791,17 @@ def run_bench_serving(
 
 # hook factory
 def create_attention_monitor_hook_factory(config):
-    """Return a forward hook that logs self-attention states of ``config["layer_index"]``."""
+    """
+    Factory function to create a forward hook for monitoring self-attention layer states.
+    This hook records input/output statistics during model forward propagation.
+
+    Args:
+        config (dict): Configuration dictionary containing hook parameters
+            layer_index (int): Index of the target attention layer to monitor
+
+    Returns:
+        function: Forward hook function to be registered on the target module
+    """
     # Get target layer index from config, default to 0 if not specified
     layer_index = config.get("layer_index", 0)
 
@@ -620,7 +814,18 @@ def create_attention_monitor_hook_factory(config):
         )
 
     def attention_monitor_hook(module, inputs, output):
-        """Log the attention layer's input/output statistics; returns ``output`` unchanged."""
+        """
+        Forward hook function that monitors and logs the internal states of a self-attention layer.
+        Executed automatically during the forward pass of the module it is registered to.
+
+        Args:
+            module (torch.nn.Module): The module this hook is attached to
+            inputs (tuple): Input tensors passed to the module's forward method
+            output (torch.Tensor): Output tensor returned by the module's forward method
+
+        Returns:
+            torch.Tensor: Unmodified output tensor to preserve model computation flow
+        """
         # Record current timestamp for time-series tracking
         timestamp = time.time()
 
@@ -784,10 +989,26 @@ def send_concurrent_requests(
     temperature: float = 0.0,
     request_timeout: int = 60,
 ) -> list:
-    """Send ``num_requests`` concurrent POSTs to /generate; returns one result dict per request.
+    """Send multiple concurrent HTTP POST requests to the /generate endpoint.
 
-    Uses threads: asyncio.gather() over synchronous requests.post() gives no real
-    parallelism for blocking I/O.
+    Uses threading (NOT asyncio + blocking calls) to achieve true concurrency.
+    asyncio.gather() combined with synchronous requests.post() does not produce
+    real parallelism; threading is required for concurrent blocking I/O.
+
+    Parameters:
+        base_url: Server base URL, e.g. "http://127.0.0.1:30000"
+        num_requests: Total number of requests to send
+        num_concurrent: Maximum in-flight requests at any given time (semaphore)
+        input_text: Text prompt sent to every request
+        max_new_tokens: Maximum new tokens to generate per request
+        temperature: Sampling temperature (0 = greedy / deterministic)
+        request_timeout: Per-request HTTP timeout in seconds; raises on exceed
+
+    Returns:
+        Unsorted list of result dicts, one per request, each with:
+          task_id (int)    -- zero-based request index
+          status_code (int)-- HTTP status code, or -1 on exception
+          text (str)       -- response body, or exception message on failure
     """
 
     results: list = []
@@ -880,3 +1101,77 @@ def write_github_step_summary_once(summary: str):
         return
     write_github_step_summary_once.has_written = True
     write_github_step_summary(summary)
+
+
+def popen_with_error_check(
+    command: List[str],
+    return_stdout_stderr: Optional[tuple],
+) -> subprocess.Popen:
+    """Start an external process and optionally tee its stdout/stderr while checking the exit code.
+
+    Parameters:
+        command: Command to execute, provided as a list of strings.
+        return_stdout_stderr: Optional tuple of two writable file-like objects
+            (stdout_sink, stderr_sink). If given, the subprocess's stdout and stderr
+            will be streamed simultaneously to these sinks as well as to the
+            parent process's sys.stdout and sys.stderr. If None, the subprocess
+            inherits the parent's stdio.
+
+    Returns:
+        process: A subprocess.Popen instance. The caller may use it to interact
+            further with the running process. A background thread monitors the
+            process and raises an exception if it exits with a non-zero return
+            code (exit code -9 is silently ignored).
+    """
+
+    if return_stdout_stderr:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+
+        def _dump(src, sinks):
+            for line in iter(src.readline, ""):
+                for sink in sinks:
+                    sink.write(line)
+                    sink.flush()
+            src.close()
+
+        threading.Thread(
+            target=_dump,
+            args=(process.stdout, [return_stdout_stderr[0], sys.stdout]),
+            daemon=True,
+        ).start()
+        threading.Thread(
+            target=_dump,
+            args=(process.stderr, [return_stdout_stderr[1], sys.stderr]),
+            daemon=True,
+        ).start()
+    else:
+        process = subprocess.Popen(command, stdout=None, stderr=None)
+
+    def _run_and_check():
+        process.wait()
+
+        if process.returncode == -9:
+            return
+
+        if process.returncode != 0:
+            raise Exception(
+                f"{shlex.join(command)} exited with code {process.returncode}"
+            )
+
+    t = threading.Thread(target=_run_and_check, daemon=True)
+    t.start()
+    return process
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger(__name__)

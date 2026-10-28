@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
@@ -47,6 +48,9 @@ QWEN3_5_9B_OTHER_ARGS = [
     "--dtype",
     "bfloat16",
 ]
+
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 
 class TestNPUQwen3_5_9B_GSM8K(TestNpuAccuracyTestCaseBase):
