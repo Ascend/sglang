@@ -159,8 +159,7 @@ class TestMultimodalContextParallelism(CustomTestCase):
                         image_content(self._image1_b64),
                         image_content(self._image2_b64),
                         text_content(
-                            "Describe both images. "
-                            "What colors and shapes do you see?"
+                            "Describe both images. What colors and shapes do you see?"
                         ),
                     ],
                 }
@@ -176,13 +175,12 @@ class TestMultimodalContextParallelism(CustomTestCase):
         self.assertIn(
             "red",
             text_lower,
-            "First image (red ellipse) not described — " "CP may have lost its tokens",
+            "First image (red ellipse) not described — CP may have lost its tokens",
         )
         self.assertIn(
             "blue",
             text_lower,
-            "Second image (blue rectangle) not described — "
-            "CP may have lost its tokens",
+            "Second image (blue rectangle) not described — CP may have lost its tokens",
         )
         self.assertIn(
             "ellipse",

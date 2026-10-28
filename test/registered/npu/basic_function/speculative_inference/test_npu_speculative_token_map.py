@@ -3,7 +3,6 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.npu_eval_accuracy_kit import run_npu_pr_smoke
 from sglang.test.ascend.test_ascend_utils import (
     FR_SPEC_TOKEN_MAP_PATH,
     LLAMA_3_8B_EAGLE_WEIGHTS_PATH,

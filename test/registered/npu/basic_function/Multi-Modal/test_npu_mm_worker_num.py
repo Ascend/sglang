@@ -277,7 +277,6 @@ class TestNpuMmWorkerNumAndMmmu(CustomTestCase):
             f"Expected 50 successful requests, got {completed}",
         )
 
-
         # --- Verify thread counts ---
         pyspy_output = monitor_result.get("output", "")
         self.assertTrue(

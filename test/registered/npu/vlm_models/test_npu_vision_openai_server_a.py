@@ -29,7 +29,12 @@ from sglang.test.ascend.vlm_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3200, suite="full-4-npu-a3", nightly=True, disabled="The environment cleanup failed, causing the ports for the later test cases to be occupied.")
+register_npu_ci(
+    est_time=3200,
+    suite="full-4-npu-a3",
+    nightly=True,
+    disabled="The environment cleanup failed, causing the ports for the later test cases to be occupied.",
+)
 
 
 class TestLlavaServer(ImageOpenAITestMixin):

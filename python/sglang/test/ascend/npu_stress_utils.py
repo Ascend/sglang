@@ -152,12 +152,12 @@ class NpuStressTestRunner:
         Returns:
             True if successful, False otherwise
         """
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Starting stress test for: {model_path}")
         print(f"Input length: {random_input_len}")
         print(f"Output length: {random_output_len}")
         print(f"Num prompts: {self.num_prompts}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         merged_env = {
             **os.environ,
