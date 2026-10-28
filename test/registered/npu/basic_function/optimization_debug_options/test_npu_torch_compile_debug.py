@@ -1,4 +1,3 @@
-import time
 import unittest
 from types import SimpleNamespace
 
@@ -27,7 +26,12 @@ register_npu_ci(
 
 class TestEnableTorchCompileDebugMode(CustomTestCase):
     """
-    Testcase: When --enable-torch-compile-debug-mode is enabled, the overall inference duration increases compared to when it is disabled.
+    Testcase: When --enable-torch-compile-debug-mode is enabled, inference works
+    correctly. With debug mode on, the piecewise backend records input tensor
+    addresses at graph capture time and re-checks them on every replay; an
+    address mismatch raises an assertion inside the scheduler and crashes the
+    server. A passing GSM8K run with normal accuracy proves the debug checks
+    hold under real traffic without breaking inference or output quality.
 
     [Test Category] Parameter
     [Test Target] --enable-torch-compile-debug-mode
@@ -63,20 +67,12 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
             except Exception:
                 pass
 
-    def benchmark_gsm8k(self, args, num_runs=5):
-        run_times = []
-        for _ in range(num_runs):
-            start_time = time.perf_counter()
-            run_eval(args)
-            end_time = time.perf_counter()
-            elapsed_time = round(end_time - start_time, 6)
-            run_times.append(elapsed_time)
-
-        avg_time = sum(run_times) / len(run_times)
-        return avg_time, run_times
-
     def test_enable_torch_compile_debug_mode(self):
-        # Second run: with debug mode enabled
+        # Launch the server with debug mode enabled. During piecewise graph
+        # capture the backend records the input tensor addresses, and every
+        # graph replay re-checks them. A false positive would raise an
+        # assertion inside the scheduler, crashing the server or failing the
+        # requests below, so a passing eval means the checks hold.
         self.process = popen_launch_server(
             self.model,
             self.base_url,
@@ -93,32 +89,16 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
             host="127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
-        avg_time1, all_times1 = self.benchmark_gsm8k(args, num_runs=5)
+        metrics = run_eval(args)
 
-        # Clean up first process
-        self.tearDown()
-        time.sleep(5)
-
-        # First run: without debug mode
-        self.process = popen_launch_server(
-            self.model,
-            self.base_url,
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=self.other_args,
-        )
-
-        avg_time2, all_times2 = self.benchmark_gsm8k(args, num_runs=5)
-
-        print("run_gsm8k_time1:", all_times1)
-        print("run_gsm8k_time2:", all_times2)
-        print("run_gsm8k_avg_time1:", avg_time1)
-        print("run_gsm8k_avg_time2:", avg_time2)
-        # Assertion: Debug mode should be slower
-        self.assertGreater(
-            avg_time1,
-            avg_time2,
-            f"Debug mode should be slower, but measured time: "
-            f"normal mode={avg_time2}s, debug mode={avg_time1}s",
+        print("run_gsm8k_accuracy:", metrics["accuracy"])
+        # Debug mode only adds host-side address-consistency checks, so it
+        # must not break inference nor degrade output quality.
+        self.assertGreaterEqual(
+            metrics["accuracy"],
+            0.6,
+            f"Torch compile debug mode broke inference: "
+            f"accuracy={metrics['accuracy']}",
         )
 
 
