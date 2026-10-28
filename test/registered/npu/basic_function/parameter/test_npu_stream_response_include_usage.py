@@ -199,7 +199,7 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             self.assertGreater(len(chunks), 0, "Expected at least one data chunk")
             self.assertTrue(
                 has_usage,
-                "Server default=True must override " "client include_usage=False",
+                "Server default=True must override client include_usage=False",
             )
             self._assert_usage_chunk_valid(chunks)
         finally:
@@ -235,7 +235,7 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             )
             self.assertFalse(
                 has_usage,
-                "Expected NO usage chunk when both " "server and client disable it",
+                "Expected NO usage chunk when both server and client disable it",
             )
             self._assert_content_chunks_valid(chunks)
 

@@ -21,6 +21,7 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
+
 class TestLoraBackend(CustomTestCase):
     """Testcase: Test configuration of lora-backend parameters, and inference request successful.
 

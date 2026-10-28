@@ -153,9 +153,9 @@ class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):
         assert response.choices[0].message.role == "assistant"
         text = response.choices[0].message.content
         assert isinstance(text, str)
-        assert (
-            "man" in text or "cab" in text
-        ), f"text: {text}, should contain man or cab"
+        assert "man" in text or "cab" in text, (
+            f"text: {text}, should contain man or cab"
+        )
         assert response.id
         assert response.created
         assert response.usage.prompt_tokens > 0
@@ -205,9 +205,9 @@ class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):
             or "taxi" in text
             or "car" in text
         ), f"text: {text}, should contain man, cab, SUV, taxi or car"
-        assert (
-            "logo" in text or '"S"' in text or "SG" in text or "graphic" in text
-        ), f"text: {text}, should contain logo, S or SG or graphic"
+        assert "logo" in text or '"S"' in text or "SG" in text or "graphic" in text, (
+            f"text: {text}, should contain logo, S or SG or graphic"
+        )
         assert response.id
         assert response.created
         assert response.usage.prompt_tokens > 0
@@ -306,16 +306,20 @@ class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):
             or "speaker" in video_response
             or "presenter" in video_response
             or "hand" in video_response
-        ), f"video_response: {video_response}, should either have 'man' in video_response, or 'person' in video_response, or 'individual' in video_response or 'speaker' in video_response or 'presenter' or 'hand' in video_response"
+        ), (
+            f"video_response: {video_response}, should either have 'man' in video_response, or 'person' in video_response, or 'individual' in video_response or 'speaker' in video_response or 'presenter' or 'hand' in video_response"
+        )
         assert (
             "present" in video_response
             or "examine" in video_response
             or "display" in video_response
             or "hold" in video_response
-        ), f"video_response: {video_response}, should contain 'present', 'examine', 'display', or 'hold'"
-        assert (
-            "black" in video_response or "dark" in video_response
-        ), f"video_response: {video_response}, should contain 'black' or 'dark'"
+        ), (
+            f"video_response: {video_response}, should contain 'present', 'examine', 'display', or 'hold'"
+        )
+        assert "black" in video_response or "dark" in video_response, (
+            f"video_response: {video_response}, should contain 'black' or 'dark'"
+        )
         self.assertIsNotNone(video_response)
         self.assertGreater(len(video_response), 0)
 

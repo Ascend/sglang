@@ -6,13 +6,12 @@ from typing import Optional
 import requests
 
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    QWEN3_A3B_EAGLE_MODEL_PATH,
+)
 from sglang.test.ascend.npu_eval_accuracy_kit import _is_pr_pipeline, run_npu_pr_smoke
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_30B_A3B_WEIGHTS_PATH,
-    
-)
-from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    QWEN3_A3B_EAGLE_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
@@ -26,6 +25,7 @@ register_npu_ci(est_time=400, suite="base-b-test-16-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-16-npu-a3", nightly=True)
 
 MODEL_PATH = QWEN3_30B_A3B_WEIGHTS_PATH
+
 
 def get_server_info(base_url: str) -> dict:
     response = requests.get(base_url + "/server_info", timeout=10)

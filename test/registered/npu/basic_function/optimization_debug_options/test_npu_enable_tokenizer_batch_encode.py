@@ -47,10 +47,18 @@ class TestTokenizerBatchEncode(CustomTestCase):
     def _launch_server(self, enable_tokenizer_batch_encode):
         # a3-2 CI runners expose only 2 visible devices, so cap dp at 2
         other_args = [
-            "--attention-backend", "ascend", "--dp", "2",
-            "--disable-radix-cache", "--disable-cuda-graph",
-            "--max-prefill-tokens", "131072", "--chunked-prefill-size", "131072",
-            "--mem-fraction-static", "0.9",
+            "--attention-backend",
+            "ascend",
+            "--dp",
+            "2",
+            "--disable-radix-cache",
+            "--disable-cuda-graph",
+            "--max-prefill-tokens",
+            "131072",
+            "--chunked-prefill-size",
+            "131072",
+            "--mem-fraction-static",
+            "0.9",
         ]
         if enable_tokenizer_batch_encode:
             other_args.append("--enable-tokenizer-batch-encode")

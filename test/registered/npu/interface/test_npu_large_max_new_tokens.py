@@ -122,9 +122,9 @@ class TestLargeMaxNewTokens(CustomTestCase):
                                 break
                     pt += 1
 
-        assert (
-            all_requests_running
-        ), f"At least {min_concurrent} requests should be running concurrently, but max was {max_running_reqs}"
+        assert all_requests_running, (
+            f"At least {min_concurrent} requests should be running concurrently, but max was {max_running_reqs}"
+        )
 
 
 if __name__ == "__main__":
