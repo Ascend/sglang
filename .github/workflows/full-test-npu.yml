@@ -190,7 +190,7 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-2-
+      runner: linux-aarch64-a3-800i-2
       test_type: 'accuracy'
       test_suite: full-acc-2-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
@@ -210,7 +210,7 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-4-
+      runner: linux-aarch64-a3-800i-4
       test_type: 'accuracy'
       test_suite: full-acc-4-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
@@ -230,7 +230,7 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      runner: linux-aarch64-a3-16-
+      runner: linux-aarch64-a3-800i-16
       test_type: 'accuracy'
       test_suite: full-acc-16-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
