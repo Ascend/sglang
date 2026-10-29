@@ -7,12 +7,16 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
+# register_npu_ci(
+#     est_time=3600,
+#     suite="nightly-perf-4-npu-a3",
+#     nightly=True,
+# )
 register_npu_ci(
     est_time=3600,
-    suite="nightly-perf-4-npu-a3",
+    suite="nightly-perf-2-npu-a3-tmp",
     nightly=True,
 )
-
 QWEN3_6_27B_64K_PREFIX_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "SGLANG_SET_CPU_AFFINITY": "1",
@@ -38,7 +42,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     32768,
     "--max-prefill-tokens",
     32768,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
@@ -47,7 +51,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     160,
     "--mem-fraction-static",
     0.82,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     5,
