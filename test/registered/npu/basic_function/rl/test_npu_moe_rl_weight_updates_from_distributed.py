@@ -443,11 +443,11 @@ def _inference_process(
         return names, dtypes, shapes
 
     def _do_update(label):
-        """Call /update_weights_from_distributed (wrapped in a weight-update session). """
+        """Call /update_weights_from_distributed (wrapped in a weight-update session)."""
         resp = requests.post(f"{base_url}/begin_weight_update", json={}, timeout=60)
-        assert resp.json()[
-            "success"
-        ],f"begin_weight_update [{label}] failed: {resp.json()}"
+        assert resp.json()["success"], (
+            f"begin_weight_update [{label}] failed: {resp.json()}"
+        )
         t0 = time.perf_counter()
         payload = {
             "names": names,
@@ -464,13 +464,13 @@ def _inference_process(
             timeout=600,
         )
         elapsed = time.perf_counter() - t0
-        assert resp.json()[
-            "success"
-        ], f"update_weights_from_distributed [{label}] failed: {resp.json()}"
+        assert resp.json()["success"], (
+            f"update_weights_from_distributed [{label}] failed: {resp.json()}"
+        )
         resp = requests.post(f"{base_url}/end_weight_update", json={}, timeout=60)
-        assert resp.json()[
-            "success"
-        ],f"end_weight_update [{label}] failed: {resp.json()}"
+        assert resp.json()["success"], (
+            f"end_weight_update [{label}] failed: {resp.json()}"
+        )
         logger.info(
             "[inference] update_weights_from_distributed [%s]: OK (%.1fs)",
             label,
@@ -506,9 +506,9 @@ def _inference_process(
             },
             timeout=60,
         )
-        assert resp.json()[
-            "success"
-        ], f"init_weights_update_group failed: {resp.json()}"
+        assert resp.json()["success"], (
+            f"init_weights_update_group failed: {resp.json()}"
+        )
         logger.info("[inference] init_weights_update_group: OK")
 
         barrier.wait()
@@ -650,9 +650,9 @@ class TestNPUMoEUpdateWeightsDistributedE2E(CustomTestCase):
             alt_model_path: if set, perform instruct→base roundtrip verification
             load_format: "flattened_bucket" or None (standard broadcast path)
         """
-        assert torch.npu.device_count() >= (
-            tp_size + 1
-        ), f"At least {tp_size + 1} NPU devices required"
+        assert torch.npu.device_count() >= (tp_size + 1), (
+            f"At least {tp_size + 1} NPU devices required"
+        )
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("", 0))

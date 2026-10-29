@@ -43,6 +43,7 @@ _EXTRA_SERVER_ARGS = [
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
+
 class TestMultimodalReasoningParser(CustomTestCase):
     """Verify reasoning parser with image input.
 

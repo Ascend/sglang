@@ -63,6 +63,9 @@ GSM8K_DATASET_TEST_FILE = (
 GSM8K_DATASET_TRAIN_FILE = (
     "/root/.cache/modelscope/hub/datasets/grade_school_math/train.jsonl"
 )
+HLE_DATASET_PATH = (
+    "/root/.cache/modelscope/hub/datasets/run_file/mimo-v2.5-pro/data/hle_dataset"
+)
 
 PYTHON_FOR_TEST_TOOL = "python_venv_for_test_tool/bin/python"
 if not os.path.exists(PYTHON_FOR_TEST_TOOL) or not os.access(
@@ -178,6 +181,12 @@ MINIMAX_M2_5_W8A8_MODEL_PATH = (
 MIMO_V2_FLASH_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/iridiumine/MiMo-V2-Flash-W8A8"
 )
+MIMO_V2_5_PRO_FP4_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/XiaomiMiMo/MiMo-V2.5-Pro-FP4-DFlash"
+)
+MIMO_V2_5_PRO_DFLASH_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/XiaomiMiMo/MiMo-V2.5-Pro-FP4-DFlash/dflash"
+)
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )
@@ -198,9 +207,7 @@ DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = (
 QWEN3_5_397B_W4A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
 )
-QWEN3_5_35B_A3B_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-35B-A3B"
-)
+QWEN3_5_35B_A3B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-35B-A3B"
 KIMI_K2_6_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/Kimi-K2.6-w4a8"
 KIMI_K2_6_EAGLE3_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/lightseekorg/kimi-k2.6-eagle3"

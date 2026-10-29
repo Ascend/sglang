@@ -24,7 +24,7 @@ on:
         type: string
         default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-a3'
       coverage_mode:
-        description: 'Run in coverage collection mode: full + nightly basic-function and accuracy suites run with coverage instrumentation (data ships via per-job artifacts); perf and multi-node suites run normally (nightly perf/multi-node jobs are skipped).'
+        description: 'Run in coverage mode: full and nightly basic-function/accuracy suites collect coverage (per-job artifacts); perf and multi-node suites run normally.'
         required: false
         type: boolean
         default: false
@@ -73,10 +73,8 @@ jobs:
   nighly-test-npu:
     needs: [set-image-config]
     name: nightly-test-npu
-    # Coverage mode: the nested nightly workflow runs too — its basic-function
-    # and accuracy suites collect coverage via covdata artifacts (its perf and
-    # multi-node jobs are skipped; this workflow's own perf/multi-node jobs
-    # already run those scenarios in the same run).
+    # Coverage mode: nested nightly collects coverage for its basic-function
+    # and accuracy suites only.
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
@@ -95,7 +93,7 @@ jobs:
       self_name: full-1-npu-a3
       runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
       partitions: '{"size":5,"arr":[0,1,2,3,4]}'
@@ -104,7 +102,6 @@ jobs:
       skip_pr_test_health_check: 'true'
       use_coverage_runner: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
       upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-      upload_image_source: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
     secrets: inherit
 
   full-2-npu-a3:
@@ -116,7 +113,7 @@ jobs:
       self_name: full-2-npu-a3
       runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
       partitions: '{"size":2,"arr":[0,1]}'
@@ -136,7 +133,7 @@ jobs:
       self_name: full-4-npu-a3
       runner_config: linux-aarch64-a3-4
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
       partitions: '{"size":2,"arr":[0,1]}'
@@ -156,7 +153,7 @@ jobs:
       self_name: full-8-npu-a3
       runner_config: linux-aarch64-a3-8
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
       partitions: '{"size":2,"arr":[0,1]}'
@@ -176,7 +173,7 @@ jobs:
       self_name: full-16-npu-a3
       runner_config: linux-aarch64-a3-16
       image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
       partitions: '{"size":2,"arr":[0,1]}'
@@ -198,7 +195,7 @@ jobs:
       test_suite: full-acc-2-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       test_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       partitions: '{"size":5,"arr":[0,1,2,3,4]}'
       device_type_for_deps: 'a3'
@@ -218,7 +215,7 @@ jobs:
       test_suite: full-acc-4-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       test_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       partitions: '{"size":5,"arr":[0,1,2,3,4]}'
       device_type_for_deps: 'a3'
@@ -238,7 +235,7 @@ jobs:
       test_suite: full-acc-16-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       is_nightly_pipeline_job: true
-      # Coverage mode: 2x budget (tracing overhead, no per-file timeout backstop).
+      # Coverage mode: 2x timeout budget.
       test_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '600' || '300' }}
       partitions: '{"size":3,"arr":[0,1,2]}'
       device_type_for_deps: 'a3'
@@ -364,11 +361,11 @@ jobs:
             test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms
-            prefill_size: 2
-            decode_size: 2
+          - name: glm5_1_w4a8_3p1d_32p_in16k_out1k_50ms
+            prefill_size: 3
+            decode_size: 1
             router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in16k_out1k_50ms.py
+            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_3p1d_32p_in16k_out1k_50ms.py
             test_type: 'perf'
             prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_20ms
@@ -454,27 +451,60 @@ jobs:
       prefill_decode_deployment: 'mix'
       transformers_version: ''
 
+  # ==================== Image source staging (coverage mode) ==================== #
+  # Standalone so covstub no longer depends on a test partition (p0 failing or
+  # selecting no tests used to lose the baseline). Packs the traced tree:
+  # image source + the same test-utility overlay the test jobs apply.
+  stage-image-source:
+    name: stage-image-source
+    needs: [set-image-config]
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.coverage_mode == 'true' }}
+    runs-on: linux-aarch64-a3-2
+    container:
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.sha }}
+      - name: Pack image source
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Mirrors the overlay in _npu-pr-test-stage.yml's install step.
+          pkg=/sgl-workspace/sglang/python
+          test_dir=${pkg}/sglang/test
+          mkdir -p ${test_dir}/ascend
+          mv ${test_dir}/ascend ${test_dir}/ascend_bak
+          cp -r python/sglang/test/ascend ${test_dir}/ascend
+          cp python/sglang/test/sgl_eval_utils.py ${test_dir}/
+          rm -rf ${test_dir}/kits
+          cp -r python/sglang/test/kits ${test_dir}/
+          cp python/sglang/test/test_programs.py ${test_dir}/
+          out=/tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs
+          mkdir -p ${out}
+          tar -czf ${out}/sglang-image-src.tar.gz \
+            --exclude 'sglang/test/ascend_bak' -C ${pkg} sglang
+      - name: Upload image source
+        uses: actions/upload-artifact@v4
+        with:
+          name: covdata-image-src  # covdata-* keeps setup-covstub's download pattern
+          path: /tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
+          if-no-files-found: error
+          retention-days: 3
+
   # ==================== Coverage Assembly & Publish (coverage mode) ==================== #
-  # Assembles the full-suite coverage data collected by the coverage jobs.
-  # The traced code is the image's preinstalled sglang, so the covstub
-  # baseline is that source too: full-1-npu-a3 partition 0 stages
-  # /sgl-workspace/sglang/python/sglang as a tarball inside its covdata
-  # artifact (upload_image_source), and the steps below unpack it.
-  # Transport: the runner pool mixes 800t and 560t machines (two separate
-  # shared disks), so each partition job stages its data in a job-private
-  # dir and ships a covdata-* artifact; the download step below merges
-  # everything back into the canonical RUN_DIR/outputs layout, keeping the
-  # assembly steps transport-agnostic. This workflow's perf/multi-node
-  # suites run without coverage (per requirement) and are not in needs; the
-  # nested nightly workflow IS in needs — in coverage mode it skips its own
-  # perf/multi-node jobs, so waiting on it waits only on coverage producers.
-  # !cancelled() (not success(), not !failure()): a failed test job must not
-  # block the report — failed tests' coverage still counts (their per-test
-  # dirs carry FAILED markers).
+  # Assembles coverage from the partition jobs. covstub is the traced tree
+  # (image-preinstalled sglang + test-utility overlay, staged by
+  # stage-image-source); every partition ships a covdata-* artifact, merged
+  # below into RUN_DIR/outputs.
+  # !cancelled(): failed test jobs must not block the report.
   setup-covstub:
     needs:
       [
         set-image-config,
+        stage-image-source,
         nighly-test-npu,
         full-1-npu-a3,
         full-2-npu-a3,
@@ -491,71 +521,124 @@ jobs:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
     steps:
       - name: Collect coverage data from partition jobs
-        # covdata-* zip root is outputs/ contents (sglang@<tag>/...); pointing
-        # the download at RUN_DIR/outputs restores the shared-disk layout.
-        # Per-test dirs from the partitions coalesce; coverage files never
-        # collide (host.pid.random suffixes). The full-1-p0 artifact also
-        # carries sglang-image-src.tar.gz (the traced source, staged via
-        # upload_image_source) at the outputs/ root.
+        id: covdata
+        # Artifact root is outputs/; merge into RUN_DIR/outputs to restore the
+        # shared-disk layout. continue-on-error pairs with the check below.
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: covdata-*
           merge-multiple: true
           path: /root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
 
-      - name: Unpack image source to covstub
-        # The traced code is the image's preinstalled sglang, so the covstub
-        # baseline must be that exact source. The ref checkout does NOT
-        # qualify: full-test pairs an arbitrary ref with an arbitrary image,
-        # and a mismatched baseline silently misattributes line data. No
-        # fallback — fail loudly and recover from the covdata artifacts.
+      - name: Validate and unpack coverage artifacts
+        # covstub must be the traced code (image source + test-utility
+        # overlay), not the ref checkout — a mismatched baseline misattributes
+        # lines.
+        # Container jobs default to `sh` (dash), which rejects `pipefail`.
+        shell: bash
+        env:
+          # `outcome` ignores continue-on-error on the download step.
+          COVDATA_OUTCOME: ${{ steps.covdata.outcome }}
+          JOB_FILTER: ${{ needs.set-image-config.outputs.job_filter }}
         run: |
           set -euo pipefail
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
-          COVSTUB="${RUN_DIR}/outputs/covstub"
+          OUTPUTS_DIR="${RUN_DIR}/outputs"
+          # Download is continue-on-error; a missing or partial set is handled
+          # here (a failed download must not hide the likelier cause).
+          if [ "${COVDATA_OUTCOME:-}" != "success" ] \
+            || [ ! -d "${OUTPUTS_DIR}" ] || [ -z "$(ls -A "${OUTPUTS_DIR}")" ]; then
+            echo "::error::No usable covdata-* artifacts (download outcome: ${COVDATA_OUTCOME:-unknown}). Either the coverage test jobs were skipped (job_filter) / uploaded nothing, or the download failed."
+            exit 1
+          fi
+          echo "Restored $(find "${OUTPUTS_DIR}" -mindepth 1 -maxdepth 1 | wc -l) top-level entries into ${OUTPUTS_DIR}"
+          # Every partition drops a .covdone-<suite>-p<n> marker even with no
+          # tests selected, so a missing marker means it never uploaded.
+          # EXPECTED_SPEC mirrors the partition configs in this file and
+          # nightly-test-npu.yml; it is only used to name what is missing (a
+          # stale entry warns, never fails). Only meaningful for a full run:
+          # a filtered run intentionally has fewer partitions.
+          EXPECTED_SPEC="full-1-npu-a3:5 full-2-npu-a3:2 full-4-npu-a3:2 full-8-npu-a3:2 \
+            full-16-npu-a3:2 full-acc-2-npu-a3:5 full-acc-4-npu-a3:5 full-acc-16-npu-a3:3 \
+            nightly-1-npu-a3:1 nightly-2-npu-a3:1 nightly-4-npu-a3:2 nightly-8-npu-a3:1 \
+            nightly-16-npu-a3:1 nightly-acc-2-npu-a3:4 nightly-acc-4-npu-a3:1 \
+            nightly-acc-16-npu-a3:1"
+          EXPECTED_FILES=()
+          for spec in ${EXPECTED_SPEC}; do
+            suite=${spec%:*}
+            size=${spec#*:}
+            i=0
+            while [ "${i}" -lt "${size}" ]; do
+              EXPECTED_FILES+=(".covdone-${suite}-p${i}")
+              i=$((i + 1))
+            done
+          done
+          EXPECTED=${#EXPECTED_FILES[@]}
+          MISSING=()
+          for f in "${EXPECTED_FILES[@]}"; do
+            [ -f "${OUTPUTS_DIR}/${f}" ] || MISSING+=("${f}")
+          done
+          echo "Coverage partitions arrived: $((EXPECTED - ${#MISSING[@]}))/${EXPECTED}"
+          if [ "${JOB_FILTER:-all}" != "all" ]; then
+            echo "job_filter=${JOB_FILTER}: completeness check skipped"
+          elif [ "${#MISSING[@]}" -gt 0 ]; then
+            echo "Missing partitions:"
+            printf '  %s\n' "${MISSING[@]}"
+            echo "::warning::$((${#MISSING[@]})) of ${EXPECTED} coverage partitions missing; the report below is incomplete."
+            NAMES=$(printf '%s ' "${MISSING[@]}")
+            NAMES=${NAMES//.covdone-/}
+            if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+              {
+                echo "### Coverage partitions incomplete: $((EXPECTED - ${#MISSING[@]}))/${EXPECTED}"
+                echo ""
+                echo "Missing: \`${NAMES% }\`"
+                echo ""
+                echo "The report was built from the partitions that arrived; totals are lower than a complete run."
+              } >> "${GITHUB_STEP_SUMMARY}"
+            fi
+          fi
+
+          COVSTUB="${OUTPUTS_DIR}/covstub"
           mkdir -p "${COVSTUB}"
-          # full-1-p0's covdata upload is continue-on-error, so the source
-          # tarball can be silently absent.
+          # stage-image-source may have failed: the tarball can still be absent.
           if [ ! -f "${RUN_DIR}/outputs/sglang-image-src.tar.gz" ]; then
-            echo "::error::sglang-image-src.tar.gz missing from covdata artifacts (full-1-npu-a3 p0 upload failed?). The covdata-* artifacts remain on the run page; re-stage the image source and rebuild the report manually."
+            echo "::error::sglang-image-src.tar.gz missing from covdata artifacts (stage-image-source failed?). The covdata-* artifacts remain on the run page; re-stage the image source and rebuild the report manually."
             exit 1
           fi
           tar -xzf "${RUN_DIR}/outputs/sglang-image-src.tar.gz" -C "${COVSTUB}"
-          # The image may lack _version.py (build-generated); the placeholder
-          # keeps coverage html from failing on a missing recorded source file.
+          # Image may lack build-generated _version.py; placeholder keeps
+          # coverage html from failing on a missing recorded file.
           [ -f "${COVSTUB}/sglang/_version.py" ] \
             || echo '__version__ = "0.0.0"' > "${COVSTUB}/sglang/_version.py"
 
       - name: Generate HTML coverage report
-        # Best-effort add-on: continue-on-error keeps the job green and later
-        # steps running, while a failed generation still shows a red ✗ in the UI.
+        # continue-on-error: a failed render must not skip the archive/publish
+        # steps below, so raw data stays recoverable.
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
 
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
-          # Date tag derivation must match run_tests_with_coverage.sh.
-          if [ -n "${GITHUB_RUN_STARTED_AT:-}" ]; then
-            COV_DATE_TAG="${GITHUB_RUN_STARTED_AT:0:10}"
-            COV_DATE_TAG="${COV_DATE_TAG//-/}"
-          else
-            COV_DATE_TAG="$(date +%Y%m%d)"
-          fi
-          COV_ROOT="${RUN_DIR}/outputs/sglang@${COV_DATE_TAG}"
           COVSTUB="${RUN_DIR}/outputs/covstub"
           # Standalone top-level dir, packaged into htmlcov.tar.gz at publish.
           REPORT_DIR="${RUN_DIR}/htmlcov"
 
+          # Glob the tag the test jobs wrote instead of re-deriving the date
+          # logic (see run_tests_with_coverage.sh).
+          shopt -s nullglob
+          COV_DIRS=("${RUN_DIR}/outputs/"sglang@*)
+          shopt -u nullglob
+
           # No data -> nothing to report.
-          if [ ! -d "${COV_ROOT}" ] \
-            || [ "$(find "${COV_ROOT}" -name 'coverage.*' -type f | wc -l)" -eq 0 ]; then
+          if [ "${#COV_DIRS[@]}" -eq 0 ] \
+            || [ "$(find "${COV_DIRS[@]}" -name 'coverage.*' -type f | wc -l)" -eq 0 ]; then
             echo "::warning::No coverage data found, skip HTML report"
             exit 0
           fi
 
-          # Pin matches the test jobs' coverage==7.8.* so combine can read
-          # their SQLite data.
+          # Pin matches the test jobs' coverage==7.8.*.
           if ! python3 -c "import coverage" 2>/dev/null; then
             python3 -m pip install coverage==7.8.* \
               -i http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple \
@@ -564,8 +647,7 @@ jobs:
               || python3 -m pip install coverage==7.8.* -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
           fi
 
-          # Alias runner-specific source paths onto covstub; first entry must
-          # be a real local path (no wildcards).
+          # Alias runner source paths onto covstub (first entry must be real).
           {
             echo "[run]"
             echo "branch = True"
@@ -575,21 +657,19 @@ jobs:
             echo "    */python/sglang/"
           } > /tmp/report-rc
 
-          # --keep preserves the per-test raw coverage files: coverage-data.tar.gz
-          # archives them after this step for manual report rebuilds.
+          # --keep keeps raw per-test files for coverage-data.tar.gz (manual
+          # rebuilds).
           COVERAGE_FILE=/tmp/.coverage-all \
             python3 -m coverage combine --rcfile=/tmp/report-rc --keep \
-            $(find "${COV_ROOT}" -name 'coverage.*' -type f)
+            $(find "${COV_DIRS[@]}" -name 'coverage.*' -type f)
 
           rm -rf "${REPORT_DIR}"
           COVERAGE_FILE=/tmp/.coverage-all \
             python3 -m coverage html --rcfile=/tmp/report-rc \
             --directory="${REPORT_DIR}"
 
-          # NPU-only view: [run] source does not filter at report time (a
-          # source-based rcfile yields the full report), so instead touch the
-          # unexecuted npu .py files into a data copy (os.walk, so the PEP 420
-          # namespace tree counts) and filter with --include, which works.
+          # NPU-only view: [run] source does not filter at report time, so
+          # touch unexecuted npu files into a data copy and use --include.
           cp /tmp/.coverage-all /tmp/.coverage-npu
           python3 - "${COVSTUB}" <<'PYEOF'
           import os
@@ -617,8 +697,7 @@ jobs:
             --include='*/sglang/srt/hardware_backend/npu/*' \
             --directory="${REPORT_DIR}-npu"
 
-          # Surface the totals directly on the run page.
-          # GITHUB_STEP_SUMMARY may be unset on the k8s runner pool.
+          # Totals on the run page (GITHUB_STEP_SUMMARY may be unset on k8s).
           if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             {
               echo "### Full-Test Coverage"
@@ -644,8 +723,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-html-report
-          # Two paths -> artifact root becomes the run dir, so the archive
-          # holds htmlcov/ and htmlcov-npu/ side by side.
+          # Two paths -> archive holds htmlcov/ and htmlcov-npu/ side by side.
           path: |
             /root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}/htmlcov
             /root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}/htmlcov-npu
@@ -653,22 +731,23 @@ jobs:
           retention-days: 14
 
       - name: Archive outputs
+        # Container jobs default to `sh`; shopt/arrays are bash-only.
+        shell: bash
         run: |
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
-          # Source-only package: report rebuilds need covstub only, and it
-          # shrinks the bulk from ~300MB to a few MB.
+          # Source-only package: rebuilds need covstub only, a few MB instead
+          # of ~300MB.
           tar -czf "${RUN_DIR}/outputs.tar.gz" -C "${RUN_DIR}" outputs/covstub
-          # Raw coverage data for manual report rebuilds: extract both archives
-          # under one root to reconstruct outputs/. Absent when no data.
-          # Date tag derivation must match run_tests_with_coverage.sh.
-          if [ -n "${GITHUB_RUN_STARTED_AT:-}" ]; then
-            COV_DATE_TAG="${GITHUB_RUN_STARTED_AT:0:10}"
-            COV_DATE_TAG="${COV_DATE_TAG//-/}"
-          else
-            COV_DATE_TAG="$(date +%Y%m%d)"
-          fi
-          if [ -d "${RUN_DIR}/outputs/sglang@${COV_DATE_TAG}" ]; then
-            tar -czf "${RUN_DIR}/coverage-data.tar.gz" -C "${RUN_DIR}" "outputs/sglang@${COV_DATE_TAG}"
+          # Raw data for manual rebuilds: extract both archives under one root
+          # to reconstruct outputs/. Absent when no data. Glob the tag rather
+          # than re-deriving it (same hazard as above).
+          shopt -s nullglob
+          COV_DIRS=("${RUN_DIR}/outputs/"sglang@*)
+          shopt -u nullglob
+          COV_REL=()
+          for d in "${COV_DIRS[@]}"; do COV_REL+=("${d#"${RUN_DIR}/"}"); done
+          if [ "${#COV_REL[@]}" -gt 0 ]; then
+            tar -czf "${RUN_DIR}/coverage-data.tar.gz" -C "${RUN_DIR}" "${COV_REL[@]}"
           fi
 
       - name: Upload outputs
@@ -684,7 +763,7 @@ jobs:
 
       - name: Upload raw coverage data
         # Separate artifact keeps the ~300MB bulk out of the baseline package;
-        # must run before publish mv's the file to the fixed PUBLISH_DIR.
+        # runs before publish mv's the file to PUBLISH_DIR.
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -700,14 +779,12 @@ jobs:
           set -euo pipefail
 
           RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
-          # Fixed-name copy for manual use. Distinct from pr-test-npu.yml's
-          # "coverage" dir on purpose: the full-suite data must NOT overwrite
-          # the PR recommendation baseline.
+          # Fixed-name copy for manual use; distinct from pr-test-npu.yml's
+          # "coverage" baseline on purpose.
           PUBLISH_DIR="/root/.cache/tests/precise-test/coverage-full"
 
-          # Skip publish when no coverage data this run — never publish an
-          # incomplete package. coverage-data.tar.gz (raw data) and htmlcov
-          # (report) are both absent only when nothing was collected.
+          # Skip publish when no coverage data — never publish an incomplete
+          # package (both raw data and htmlcov are absent only then).
           if [ ! -f "${RUN_DIR}/coverage-data.tar.gz" ] && [ ! -d "${RUN_DIR}/htmlcov" ]; then
             echo "::warning::no coverage data this run, skip publish"
             exit 0
@@ -722,10 +799,8 @@ jobs:
             mv "${RUN_DIR}/coverage-data.tar.gz" "${PUBLISH_DIR}/coverage-data.tar.gz"
           fi
 
-          # HTML reports too, fixed names — latest wins, like the baseline.
-          # [ -d ] guards the continue-on-error generation step. A tar failure
-          # aborts red after the baseline mv completed; Cleanup stays skipped,
-          # keeping RUN_DIR for recovery.
+          # HTML reports too, fixed names, latest wins. tar failure aborts red
+          # after the mv; Cleanup stays skipped, keeping RUN_DIR for recovery.
           if [ -d "${RUN_DIR}/htmlcov" ]; then
             tar -czf "${PUBLISH_DIR}/htmlcov.tar.gz" -C "${RUN_DIR}" htmlcov
           fi
@@ -769,6 +844,9 @@ jobs:
       image: docker.m.daocloud.io/ubuntu:22.04
     steps:
       - name: Check if any job failed
+        # `[[ ]]` is bash-only; the ubuntu container's default `sh` is dash,
+        # which would treat the test as a missing command and silently pass.
+        shell: bash
         run: |
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
             echo "One or more nightly test jobs failed"
