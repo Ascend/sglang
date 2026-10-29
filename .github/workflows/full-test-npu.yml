@@ -1,12 +1,12 @@
 name: Full Test (NPU)
 
 on:
-  pull_request:
-    branches:
-      - main
-      - testcases-261015
-    paths:
-      - ".github/workflows/full-test-npu.yml"
+  # pull_request:
+  #   branches:
+  #     - main
+  #     - testcases-261015
+  #   paths:
+  #     - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -319,18 +319,18 @@ jobs:
       matrix:
         test_config:
           # glm5.2 accuracy test
-          - name: glm_5_2_w8a8_2p2d_pcp_32p_gpqa
+          - name: glm_5_2_w8a8_2p2d_32p_pcp_gpqa
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w8a8_2p2d_pcp_32p_gpqa.py
+            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w8a8_2p2d_32p_pcp_gpqa.py
             test_type: 'accuracy'
             prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w8a8_2p2d_dcp_32p_gpqa
+          - name: glm_5_2_w8a8_2p2d_32p_dcp_gpqa
             prefill_size: 2
             decode_size: 2
             router_size: 1
-            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w8a8_2p2d_dcp_32p_gpqa.py
+            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w8a8_2p2d_32p_dcp_gpqa.py
             test_type: 'accuracy'
             prefill_decode_deployment: 'separation'
           # glm5.1 performance tests
