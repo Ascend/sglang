@@ -88,12 +88,12 @@ class TestDefaultPriorityValue(CustomTestCase):
             first_thread.join(timeout=120)
             assert not first_thread.is_alive(), "Explicit request timed out"
 
-        assert (
-            no_pri_result.get("status") == 200
-        ), f"No-priority failed: {no_pri_result.get('status')}"
-        assert (
-            expl_result.get("status") == 200
-        ), f"Explicit failed: {expl_result.get('status')}"
+        assert no_pri_result.get("status") == 200, (
+            f"No-priority failed: {no_pri_result.get('status')}"
+        )
+        assert expl_result.get("status") == 200, (
+            f"Explicit failed: {expl_result.get('status')}"
+        )
 
         return no_pri_result["finished_at"], expl_result["finished_at"]
 
@@ -226,15 +226,15 @@ class TestDisablePriorityPreemption(CustomTestCase):
             timeout=120,
         )
         high_finished_at = time.time()
-        assert (
-            resp.status_code == 200
-        ), f"High-priority request failed: {resp.status_code}"
+        assert resp.status_code == 200, (
+            f"High-priority request failed: {resp.status_code}"
+        )
 
         t.join(timeout=120)
         assert not t.is_alive(), "Low-priority request timed out"
-        assert (
-            low_result.get("status") == 200
-        ), f"Low-priority request failed: {low_result.get('status')}"
+        assert low_result.get("status") == 200, (
+            f"Low-priority request failed: {low_result.get('status')}"
+        )
 
         return low_result["finished_at"], high_finished_at
 

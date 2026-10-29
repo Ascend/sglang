@@ -75,8 +75,8 @@ def get_prompt_logprobs(engine, input_ids, lora_path):
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
-class TestLoRAQwen3_6_27BLogprobDiff(CustomTestCase):
 
+class TestLoRAQwen3_6_27BLogprobDiff(CustomTestCase):
     def test_lora_qwen3_6_27b_logprob_accuracy(self):
         # If LORA_HF_REPO is already a local path (e.g. modelscope cache on
         # NPU CI), skip snapshot_download which would reject local paths.

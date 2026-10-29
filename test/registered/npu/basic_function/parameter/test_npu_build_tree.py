@@ -204,9 +204,9 @@ def build_tree_kernel_efficient(
         logger.info(f"Performance speedup ratio: {speedup_ratio}")
 
         # Assert the speedup meets the requirement
-        assert (
-            speedup_ratio >= performance_threshold
-        ), f"Performance requirement not met! Speedup ratio {speedup_ratio:.4f} < {performance_threshold}"
+        assert speedup_ratio >= performance_threshold, (
+            f"Performance requirement not met! Speedup ratio {speedup_ratio:.4f} < {performance_threshold}"
+        )
 
     return (
         tree_mask,

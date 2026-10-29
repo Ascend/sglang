@@ -2,6 +2,7 @@ import unittest
 
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
     GLM_5_1_W4A8_MODEL_PATH,
     TestNpuPerfMultiNodePdSepTestCaseBase,
@@ -20,7 +21,6 @@ GLM_5_1_PD_SEP_PREFILL_ENVS = {
     "TRANSFORMERS_VERBOSITY": "error",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "1200",
     "SGLANG_DISAGGREGATION_WAITING_TIMEOUT": "1200",
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
@@ -57,66 +57,115 @@ GLM_5_1_PD_SEP_DECODE_ENVS = {
 }
 
 GLM_5_1_PD_SEP_PREFILL_ARGS = [
-    "--disaggregation-mode", "prefill",
+    "--disaggregation-mode",
+    "prefill",
     "--trust-remote-code",
-    "--nnodes", 1,
-    "--tp-size", 4,
-    "--pp-size", 4,
-    "--mem-fraction-static", 0.72,
-    "--attention-backend", "ascend",
-    "--device", "npu",
-    "--quantization", "modelslim",
-    "--disaggregation-transfer-backend", "ascend",
-    "--max-running-requests", 16,
-    "--served-model-name", "glm-5",
-    "--chunked-prefill-size", 4096,
-    "--max-prefill-tokens", 180000,
-    "--moe-a2a-backend", "deepep",
-    "--deepep-mode", "normal",
+    "--tp-size",
+    4,
+    "--nnodes",
+    1,
+    "--mem-fraction-static",
+    0.72,
+    "--attention-backend",
+    "ascend",
+    "--device",
+    "npu",
+    "--quantization",
+    "modelslim",
+    "--disaggregation-transfer-backend",
+    "ascend",
+    "--max-running-requests",
+    16,
+    "--served-model-name",
+    "glm-5",
+    "--chunked-prefill-size",
+    4096,
+    "--max-prefill-tokens",
+    180000,
+    "--moe-a2a-backend",
+    "deepep",
+    "--deepep-mode",
+    "normal",
     "--disable-shared-experts-fusion",
     "--disable-cuda-graph",
-    "--dtype", "bfloat16",
+    "--dtype",
+    "bfloat16",
+    "--speculative-draft-model-quantization",
+    "unquant",
     "--enable-prefill-cp",
-    "--cp-strategy", "zigzag",
-    "--attn-cp-size", 4,
+    "--cp-strategy",
+    "zigzag",
+    "--attn-cp-size",
+    4,
     "--enable-dp-lm-head",
-    "--moe-dense-tp", 1,
-    "--speculative-draft-model-quantization", "unquant",
-    "--speculative-algorithm", "NEXTN",
-    "--speculative-num-steps", 1,
-    "--speculative-eagle-topk", 1,
-    "--speculative-num-draft-tokens", 2,
+    "--moe-dense-tp",
+    1,
+    "--pp-size",
+    4,
+    "--speculative-algorithm",
+    "NEXTN",
+    "--speculative-num-steps",
+    1,
+    "--speculative-eagle-topk",
+    1,
+    "--speculative-num-draft-tokens",
+    2,
 ]
 
 GLM_5_1_PD_SEP_DECODE_ARGS = [
-    "--disaggregation-mode", "decode",
+    "--disaggregation-mode",
+    "decode",
     "--trust-remote-code",
-    "--nnodes", 1,
-    "--tp-size", 16,
-    "--dp-size", 16,
+    "--tp-size",
+    16,
+    "--nnodes",
+    1,
+    "--dp-size",
+    16,
     "--enable-dp-attention",
-    "--ep-size", 16,
-    "--mem-fraction-static", 0.97,
-    "--max-running-requests", 128,
-    "--attention-backend", "ascend",
-    "--device", "npu",
-    "--quantization", "modelslim",
-    "--served-model-name", "glm-5",
-    "--moe-a2a-backend", "deepep",
-    "--deepep-mode", "low_latency",
-    "--cuda-graph-max-bs-decode", 8,
-    "--disaggregation-transfer-backend", "ascend",
-    "--watchdog-timeout", 9000,
-    "--context-length", 180000,
-    "--tokenizer-worker-num", 8,
+    "--ep-size",
+    16,
+    "--mem-fraction-static",
+    0.97,
+    "--max-running-requests",
+    128,
+    "--attention-backend",
+    "ascend",
+    "--device",
+    "npu",
+    "--quantization",
+    "modelslim",
+    "--served-model-name",
+    "glm-5",
+    "--moe-a2a-backend",
+    "deepep",
+    "--deepep-mode",
+    "low_latency",
+    "--cuda-graph-max-bs-decode",
+    8,
+    "--disaggregation-transfer-backend",
+    "ascend",
+    "--watchdog-timeout",
+    9000,
+    "--context-length",
+    180000,
+    "--tokenizer-worker-num",
+    8,
     "--disable-shared-experts-fusion",
-    "--dtype", "bfloat16",
-    "--load-balance-method", "round_robin",
-    "--speculative-draft-model-quantization", "unquant",
-    "--speculative-algorithm", "NEXTN",
-    "--speculative-num-steps", 3,
-    "--speculative-eagle-topk", 1,
-    "--speculative-num-draft-tokens", 4,
+    "--dtype",
+    "bfloat16",
+    "--load-balance-method",
+    "round_robin",
+    "--speculative-draft-model-quantization",
+    "unquant",
+    "--speculative-algorithm",
+    "NEXTN",
+    "--speculative-num-steps",
+    3,
+    "--speculative-eagle-topk",
+    1,
+    "--speculative-num-draft-tokens",
+    4,
 ]
 
 GLM_5_1_PD_SEP_MODEL_CONFIG = {
@@ -126,8 +175,10 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
     "prefill_envs": GLM_5_1_PD_SEP_PREFILL_ENVS,
     "decode_envs": GLM_5_1_PD_SEP_DECODE_ENVS,
     "router_args": [
-        "--policy", "round_robin",
-        "--request-timeout-secs", 7200,
+        "--policy",
+        "round_robin",
+        "--request-timeout-secs",
+        7200,
         "--disable-health-check",
         "--disable-circuit-breaker",
     ],
@@ -135,23 +186,24 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
 }
 
 
-class TestNPUGLM5_1_W4A8_3P1D_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBase):
-    """GLM-5.1 W4A8 3P1D, exact 16384/1024 tokens, 512 requests, concurrency 128."""
+class TestNPUGLM5_1_W4A8_PD_SEP_In16k_Out1k(TestNpuPerfMultiNodePdSepTestCaseBase):
+    """Test NPU performance for GLM-5.1-w4a8 PD separation 3p1d in16k out1k"""
 
     model_config = GLM_5_1_PD_SEP_MODEL_CONFIG
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    dataset_type = AISBENCHMARK_DATASET_DEFAULT
     dataset_name = "random"
     max_concurrency = 128
     num_prompts = 512
     input_len = 16384
     output_len = 1024
     random_range_ratio = 1
-    warmup_requests = 1
     seed = 1
     tpot = 50
-    output_token_throughput = 1202  # Keep the existing target, not the new result.
+    output_token_throughput = 1202
 
-    def test_npu_glm5_1_w4a8_3p1d_in16k_out1k(self):
+    def test_npu_glm5_1_w4a8_pd_sep_in16k_out1k(self):
+        """Run NPU performance test for GLM-5.1-w4a8 PD separation 3p1d"""
         self.run_throughput()
 
 

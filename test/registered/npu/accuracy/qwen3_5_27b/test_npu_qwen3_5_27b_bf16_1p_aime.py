@@ -52,7 +52,6 @@ OTHER_ARGS = [
 
 
 class TestNPUQwen_3_5_27B_aime(TestNpuAccuracyTestCaseBase):
-
     model = QWEN3_5_27B_MODEL_PATH
     envs = ENVS
     other_args = OTHER_ARGS

@@ -31,8 +31,8 @@ os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
-class TestLoRARadixCache(CustomTestCase):
 
+class TestLoRARadixCache(CustomTestCase):
     def test_lora_radix_cache(self):
         # Here we need a model case with multiple adaptors for testing correctness of radix cache
         model_case = CI_MULTI_LORA_MODELS[0]
