@@ -123,9 +123,9 @@ GLM_5_2_PCP_PD_SEP_PREFILL_ARGS = [
     "--enable-hierarchical-cache",
     "--hicache-io-backend",
     "kernel_ascend",
-    "--enable-cache-report",
     "--hicache-size",
     80,
+    "--enable-cache-report",
 ]
 
 GLM_5_2_PCP_PD_SEP_DECODE_ARGS = [
