@@ -292,7 +292,7 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
 
 
 class TestPrefillDelayerAccuracy(CustomTestCase):
-    """Testcase: Verify that model accuracy on mgsm_en dataset > 0.57
+    """Testcase: Verify that model accuracy on mgsm_en dataset > 0.8370
     both when PrefillDelayer is enabled and disabled.
 
     [Test Category] Parameter
