@@ -36,7 +36,7 @@ class TestPiecewise(GSM8KAscendMixin, CustomTestCase):
         "--cuda-graph-bs-prefill",
         "64",
         "128",
-        "--cuda-graph-backend-prefill=tc_piecewise",
+        "--cuda-graph-backend-prefill=breakable",
         "--tp",
         "1",
         "--cuda-graph-tc-compiler",

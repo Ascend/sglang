@@ -15,11 +15,11 @@ from typing import Optional
 import openai
 import requests
 
-from sglang.srt.sampling.custom_logit_processor import CustomLogitProcessor
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import (
     BGE_RERANKER_V2_M3_WEIGHTS_PATH,
+    DeterministicLogitProcessor,
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -912,22 +912,6 @@ class TestOpenAIServerCustomLogitProcessor(CustomTestCase):
 
         If target_token_id is None, the custom logit processor won't be passed in.
         """
-
-        class DeterministicLogitProcessor(CustomLogitProcessor):
-            """A dummy logit processor that changes the logits to always sample the given token id."""
-
-            CUSTOM_PARAM_KEY = "token_id"
-
-            def __call__(self, logits, custom_param_list):
-                assert logits.shape[0] == len(custom_param_list)
-
-                for i, param_dict in enumerate(custom_param_list):
-                    # Mask all other tokens
-                    logits[i, :] = -float("inf")
-                    # Assign highest probability to the specified token
-                    logits[i, param_dict[self.CUSTOM_PARAM_KEY]] = 0.0
-
-                return logits
 
         extra_body = {}
 
