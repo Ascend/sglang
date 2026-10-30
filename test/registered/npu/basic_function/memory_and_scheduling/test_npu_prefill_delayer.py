@@ -11,10 +11,10 @@ import requests
 
 from sglang.bench_serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH,
-    QWEN3_0_6B_WEIGHTS_PATH,
+from sglang.test.ascend.e2e.test_npu_performance_utils import (
+    MOONLIGHT_16B_A3B_MODEL_PATH,
 )
+from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -292,7 +292,7 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
 
 
 class TestPrefillDelayerAccuracy(CustomTestCase):
-    """Testcase: Verify that model accuracy on mgsm_en dataset > 0.57
+    """Testcase: Verify that model accuracy on mgsm_en dataset > 0.8370
     both when PrefillDelayer is enabled and disabled.
 
     [Test Category] Parameter
@@ -306,7 +306,7 @@ class TestPrefillDelayerAccuracy(CustomTestCase):
         self._run_accuracy_test(prefill_delayer=False)
 
     def _run_accuracy_test(self, prefill_delayer: bool):
-        model = DEEPSEEK_CODER_V2_LITE_WEIGHTS_PATH
+        model = MOONLIGHT_16B_A3B_MODEL_PATH
         base_url = DEFAULT_URL_FOR_TEST
         process = _launch_server(
             prefill_delayer=prefill_delayer,
@@ -335,7 +335,7 @@ class TestPrefillDelayerAccuracy(CustomTestCase):
             metrics = run_eval(args)
             print(f"=== gsm8k ({prefill_delayer=}) ===")
             print(f"{metrics=}")
-            self.assertGreater(metrics["score"], 0.57)
+            self.assertGreater(metrics["score"], 0.8370)
         finally:
             kill_process_tree(process.pid)
 
