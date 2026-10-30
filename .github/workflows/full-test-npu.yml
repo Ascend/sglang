@@ -492,6 +492,8 @@ jobs:
           name: covdata-image-src  # covdata-* keeps setup-covstub's download pattern
           path: /tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
           if-no-files-found: error
+          # Re-running this job would otherwise hit a duplicate-name conflict.
+          overwrite: true
           retention-days: 3
 
   # ==================== Coverage Assembly & Publish (coverage mode) ==================== #
@@ -520,6 +522,16 @@ jobs:
     container:
       image: swr.ap-southeast-1.myhuaweicloud.com/base_image/ascend-ci/sglang:main-x86
     steps:
+      - name: Checkout workflow configs
+        # Only needed to derive the expected partition list; the report itself
+        # is built from the artifacts, never from this checkout.
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-image-config.outputs.ref || github.sha }}
+          sparse-checkout: .github/workflows
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Collect coverage data from partition jobs
         id: covdata
         # Artifact root is outputs/; merge into RUN_DIR/outputs to restore the
@@ -553,27 +565,63 @@ jobs:
             exit 1
           fi
           echo "Restored $(find "${OUTPUTS_DIR}" -mindepth 1 -maxdepth 1 | wc -l) top-level entries into ${OUTPUTS_DIR}"
-          # Every partition drops a .covdone-<suite>-p<n> marker even with no
-          # tests selected, so a missing marker means it never uploaded.
-          # EXPECTED_SPEC mirrors the partition configs in this file and
-          # nightly-test-npu.yml; it is only used to name what is missing (a
-          # stale entry warns, never fails). Only meaningful for a full run:
-          # a filtered run intentionally has fewer partitions.
-          EXPECTED_SPEC="full-1-npu-a3:5 full-2-npu-a3:2 full-4-npu-a3:2 full-8-npu-a3:2 \
-            full-16-npu-a3:2 full-acc-2-npu-a3:5 full-acc-4-npu-a3:5 full-acc-16-npu-a3:3 \
-            nightly-1-npu-a3:1 nightly-2-npu-a3:1 nightly-4-npu-a3:2 nightly-8-npu-a3:1 \
-            nightly-16-npu-a3:1 nightly-acc-2-npu-a3:4 nightly-acc-4-npu-a3:1 \
-            nightly-acc-16-npu-a3:1"
+          # Every partition drops a .covdone-<suite>-p<n> marker before running
+          # tests (even with none selected), so a missing marker means it never
+          # uploaded. The expected markers are derived from the workflow configs
+          # -- every job setting upload_coverage_artifact must report -- instead
+          # of a hand-maintained list that drifts from the real partitions.
+          if ! python3 -c "import yaml" 2>/dev/null; then
+            python3 -m pip install pyyaml \
+              -i https://repo.huaweicloud.com/repository/pypi/simple \
+              --retries 3 --timeout 60 \
+              || python3 -m pip install pyyaml -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+          fi
+          python3 - <<'PYEOF'
+          import json
+          import os
+          import sys
+
+          import yaml
+
+          specs = []
+          for name in ("full-test-npu.yml", "nightly-test-npu.yml"):
+              path = os.path.join(".github/workflows", name)
+              if not os.path.exists(path):
+                  print(f"::error::{path} missing; cannot derive the expected partitions")
+                  sys.exit(1)
+              doc = yaml.safe_load(open(path, encoding="utf-8")) or {}
+              for job_id, job in (doc.get("jobs") or {}).items():
+                  job_with = (job or {}).get("with") or {}
+                  if "upload_coverage_artifact" not in job_with:
+                      continue
+                  suite = job_with.get("self_name") or job_with.get("test_suite")
+                  if not isinstance(suite, str) or "${{" in suite:
+                      print(f"::error::{name}:{job_id} needs a literal self_name/test_suite")
+                      sys.exit(1)
+                  parts = job_with.get("partitions")
+                  if parts is None:
+                      size = 1
+                  elif not isinstance(parts, str) or "${{" in parts:
+                      print(f"::error::{name}:{job_id} partitions must be a literal JSON string")
+                      sys.exit(1)
+                  else:
+                      size = int(json.loads(parts)["size"])
+                  specs.append((suite, size))
+
+          if not specs:
+              print("::error::no coverage partitions found in the workflow configs")
+              sys.exit(1)
+          with open("/tmp/expected-covdone.txt", "w", encoding="utf-8") as fh:
+              for suite, size in specs:
+                  for i in range(size):
+                      fh.write(f".covdone-{suite}-p{i}\n")
+          print("Derived " + str(len(specs)) + " suites: "
+                + " ".join(f"{s}:{n}" for s, n in specs))
+          PYEOF
           EXPECTED_FILES=()
-          for spec in ${EXPECTED_SPEC}; do
-            suite=${spec%:*}
-            size=${spec#*:}
-            i=0
-            while [ "${i}" -lt "${size}" ]; do
-              EXPECTED_FILES+=(".covdone-${suite}-p${i}")
-              i=$((i + 1))
-            done
-          done
+          while IFS= read -r marker; do
+            EXPECTED_FILES+=("${marker}")
+          done < /tmp/expected-covdone.txt
           EXPECTED=${#EXPECTED_FILES[@]}
           MISSING=()
           for f in "${EXPECTED_FILES[@]}"; do
@@ -586,13 +634,14 @@ jobs:
             echo "Missing partitions:"
             printf '  %s\n' "${MISSING[@]}"
             echo "::warning::$((${#MISSING[@]})) of ${EXPECTED} coverage partitions missing; the report below is incomplete."
-            NAMES=$(printf '%s ' "${MISSING[@]}")
-            NAMES=${NAMES//.covdone-/}
             if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
               {
                 echo "### Coverage partitions incomplete: $((EXPECTED - ${#MISSING[@]}))/${EXPECTED}"
                 echo ""
-                echo "Missing: \`${NAMES% }\`"
+                echo "Missing:"
+                for f in "${MISSING[@]}"; do
+                  echo "- \`${f#.covdone-}\`"
+                done
                 echo ""
                 echo "The report was built from the partitions that arrived; totals are lower than a complete run."
               } >> "${GITHUB_STEP_SUMMARY}"
@@ -641,8 +690,7 @@ jobs:
           # Pin matches the test jobs' coverage==7.8.*.
           if ! python3 -c "import coverage" 2>/dev/null; then
             python3 -m pip install coverage==7.8.* \
-              -i http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple \
-              --trusted-host cache-service.nginx-pypi-cache.svc.cluster.local \
+              -i https://repo.huaweicloud.com/repository/pypi/simple \
               --retries 3 --timeout 60 \
               || python3 -m pip install coverage==7.8.* -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
           fi

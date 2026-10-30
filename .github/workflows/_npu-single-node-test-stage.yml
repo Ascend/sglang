@@ -538,6 +538,12 @@ jobs:
           # mean this job died earlier: fail here too rather than only at the
           # aggregator's EXPECTED count check.
           if-no-files-found: error
+          # .covdone-* markers are dotfiles, which upload-artifact drops by
+          # default; without them the aggregator reports every partition missing.
+          include-hidden-files: true
+          # upload-artifact refuses a duplicate name within one run, so a
+          # re-run of a failed partition would fail here without this.
+          overwrite: true
           # Consumed by setup-covstub within the same run; the aggregated
           # precise-test-coverage-data package covers later rebuilds.
           retention-days: 3
