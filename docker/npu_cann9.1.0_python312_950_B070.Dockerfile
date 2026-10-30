@@ -21,22 +21,14 @@ ARG TORCH_NPU_VERSION="2.10.0.post6"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post11
+ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post12
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 # modelscope / evalscope versions (leave empty to install the latest release)
 ARG MODELSCOPE_VERSION=""
 ARG EVALSCOPE_VERSION=""
 
-# MemFabric / MemCache 1.2.1 wheels.
-# 1.2.1 is not published on PyPI (PyPI stops at 1.2.0), so the wheels are pulled from the
-# sglang-npu OBS bucket. These links are presigned and expire on 2027-09-12; when they expire,
-# regenerate them from the bucket and pass the new values with --build-arg, no Dockerfile edit needed.
 ARG MF_VERSION="1.3.0"
-ARG MF_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/release/1.3.0/20261026.4/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MF_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/release/1.3.0/20261026.4/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-ARG MC_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/release/1.3.0/20261026.4/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MC_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/release/1.3.0/20261026.4/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 
 # Later RUN steps source /etc/environment_new, so make sure it exists
 RUN touch /etc/environment_new
@@ -80,29 +72,16 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric and MemCache
-# Download both wheels from the OBS bucket first, verify their sha256, then install locally.
-# The saved file name has to stay a valid wheel name (distribution-version-python-abi-platform),
-# otherwise pip rejects it with "Invalid wheel filename" before it even reads the archive.
-# The two wheels must be installed in this order: memcache_hybrid depends on memfabric_hybrid,
-# and `mfcli` (provided by memfabric_hybrid) has to exist before `mfcli kernel install` runs.
 RUN set -eux; \
-    case "$TARGETARCH" in \
-      arm64) \
-        MF_URL="$MF_WHEEL_URL_AARCH64"; \
-        MC_URL="$MC_WHEEL_URL_AARCH64"; \
-        ;; \
-      amd64) \
-        MF_URL="$MF_WHEEL_URL_X86_64"; \
-        MC_URL="$MC_WHEEL_URL_X86_64"; \
-        ;; \
-      *) \
-        echo "Unsupported architecture: $TARGETARCH" >&2; \
-        exit 1; \
-        ;; \
+    case "$DEVICE_TYPE" in \
+      950) MF_SOC_VERSION="A5" ;; \
+      a3)  MF_SOC_VERSION="A3" ;; \
+      *)   echo "Unsupported DEVICE_TYPE for mfcli kernel install: $DEVICE_TYPE" >&2; \
+           exit 1 ;; \
     esac; \
-    ${PIP_INSTALL} "$MF_URL" --force-reinstall; \
-    mfcli kernel install --soc-version A5; \
-    ${PIP_INSTALL} "$MC_URL" --force-reinstall --no-deps
+    ${PIP_INSTALL} memfabric-hybrid==${MF_VERSION}; \
+    mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
+    ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
 
 ### Install memfabric-zbal
 RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
@@ -140,10 +119,8 @@ RUN . /etc/environment_new && \
     fi
 
 # Install SGLang
-RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
-    sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
-    SETUPTOOLS_SCM_PRETEND_VERSION=0.5.21+npu \
     ${PIP_INSTALL} -v -e .[all_npu]
 
 RUN git clone --recurse-submodules https://github.com/randgun/vllm-ascend.git -b ops/sfa_v2 && \
