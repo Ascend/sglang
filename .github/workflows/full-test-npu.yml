@@ -572,8 +572,7 @@ jobs:
           # of a hand-maintained list that drifts from the real partitions.
           if ! python3 -c "import yaml" 2>/dev/null; then
             python3 -m pip install pyyaml \
-              -i http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple \
-              --trusted-host cache-service.nginx-pypi-cache.svc.cluster.local \
+              -i https://repo.huaweicloud.com/repository/pypi/simple \
               --retries 3 --timeout 60 \
               || python3 -m pip install pyyaml -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
           fi
@@ -691,8 +690,7 @@ jobs:
           # Pin matches the test jobs' coverage==7.8.*.
           if ! python3 -c "import coverage" 2>/dev/null; then
             python3 -m pip install coverage==7.8.* \
-              -i http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple \
-              --trusted-host cache-service.nginx-pypi-cache.svc.cluster.local \
+              -i https://repo.huaweicloud.com/repository/pypi/simple \
               --retries 3 --timeout 60 \
               || python3 -m pip install coverage==7.8.* -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
           fi
