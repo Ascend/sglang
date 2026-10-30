@@ -136,9 +136,8 @@ RUN . /etc/environment_new && \
 
 # Install SGLang
 ### Install SGLang（固定 anyio 版本，避免 fastapi/starlette 的传递依赖漂移）
-RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
-    sed -i '/"memfabric-hybrid==1.1.4"/d; /"memfabric-zbal==1.1.2"/d' pyproject.toml && \
     SETUPTOOLS_SCM_PRETEND_VERSION=0.5.21+npu \
     ${PIP_INSTALL} -v -e .[all_npu]
 
