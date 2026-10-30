@@ -18,21 +18,16 @@ ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
 ARG TORCH_NPU_VERSION="2.10.0.post6"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
-ARG SGLANG_TAG=release/2026930
+ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post11
+ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post12
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 # modelscope / evalscope versions (leave empty to install the latest release)
 ARG MODELSCOPE_VERSION=""
 ARG EVALSCOPE_VERSION=""
 
-# MemFabric / MemCache 1.2.1 wheels.
-# 1.2.1 is not published on PyPI (PyPI stops at 1.2.0), so the wheels are pulled from the
-# sglang-npu OBS bucket. These links are presigned and expire on 2027-09-12; when they expire,
-# regenerate them from the bucket and pass the new values with --build-arg, no Dockerfile edit needed.
 ARG MF_VERSION="1.3.0"
-
 
 # Later RUN steps source /etc/environment_new, so make sure it exists
 RUN touch /etc/environment_new
