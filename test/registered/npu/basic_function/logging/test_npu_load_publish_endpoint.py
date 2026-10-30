@@ -32,7 +32,7 @@ class TestNPULoadPublishEndpoint(CustomTestCase):
     ZMQ subscriber can discover every rank without extra configuration.
 
     [Test Category] Logging
-    [Test Target] --load-publish-endpoint; --kv-events-config; --dp-size 2
+    [Test Target] --load-publish-endpoint
     """
 
     @classmethod
