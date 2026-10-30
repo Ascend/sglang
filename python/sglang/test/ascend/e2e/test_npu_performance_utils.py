@@ -199,7 +199,7 @@ DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = (
 )
 # DeepSeek-V4-Flash default model for a5 testcase
 DEEPSEEK_V4_FLASH_DEFAULT_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/deepseek-ai/DeepSeek-V4-Flash"
+    "/root/.cache/modelscope/hub/models/deepseek-ai/DeepSeek-V4-Flash-0731"
 )
 DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
