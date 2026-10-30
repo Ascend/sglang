@@ -2,6 +2,7 @@
 
 import logging
 import os
+import shutil
 import tempfile
 import time
 import unittest
@@ -24,7 +25,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(
-    est_time=600,
+    est_time=900,
     suite="stage-b-test-4-npu-a3",
     nightly=False,
 )
@@ -39,13 +40,18 @@ class HiCacheStorageBaseMixin:
 
     Mirrors `HiCacheStorageBaseMixin` from the GPU test
     `test_hicache_storage_file_backend.py`. Each concrete test class
-    selects its own model and server arguments by overriding
-    `_get_model_name()` / `_get_extra_server_args()`.
+    selects its own model, server arguments and storage-dir routing by
+    overriding `_get_model_name()` / `_get_extra_server_args()` /
+    `_prepare_storage()` or setting `server_creates_storage_dir`.
     """
 
     # Number of tokens used for the backup/prefetch probe. Kept identical to
     # the GPU test so the `cached_tokens > 700` threshold stays meaningful.
     probe_prompt_tokens = 768
+
+    # When True, the storage dir is removed before launch so the server must
+    # recreate it (covers the server-side os.makedirs in HiCacheFile).
+    server_creates_storage_dir = False
 
     @classmethod
     def _get_model_name(cls) -> str:
@@ -57,10 +63,24 @@ class HiCacheStorageBaseMixin:
         return []
 
     @classmethod
-    def _launch_server_with_hicache(cls):
-        temp_dir = tempfile.mkdtemp(prefix="hicache_file_backend_")
-        os.environ["SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR"] = temp_dir
+    def _prepare_storage(cls) -> list:
+        """Pick the storage dir (cls.storage_dir, where the .bin cache files
+        must land) and return the server args routing the file backend to it.
 
+        Default routing: --file-storage-path. The higher-priority env var
+        SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR is cleared (leftover from
+        other variants or a developer shell) so the arg is effective. When
+        server_creates_storage_dir is True the dir is removed before launch,
+        so the server must recreate it itself.
+        """
+        cls.storage_dir = tempfile.mkdtemp(prefix="hicache_file_backend_")
+        if cls.server_creates_storage_dir:
+            os.rmdir(cls.storage_dir)
+        os.environ.pop("SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR", None)
+        return [f"--file-storage-path={cls.storage_dir}"]
+
+    @classmethod
+    def _launch_server_with_hicache(cls):
         common_args = [
             "--trust-remote-code",
             "--mem-fraction-static",
@@ -76,7 +96,7 @@ class HiCacheStorageBaseMixin:
             "--enable-cache-report",
             "--hicache-storage-backend",
             "file",
-        ]
+        ] + cls._prepare_storage()
 
         process = popen_launch_server(
             cls._get_model_name(),
@@ -95,8 +115,18 @@ class HiCacheStorageBaseMixin:
 
     @classmethod
     def tearDownClass(cls):
+        # kill_process_tree blocks until the server is reaped, so cache
+        # files are closed before the rmtree below.
         if cls.process:
             kill_process_tree(cls.process.pid)
+        # Remove the storage dirs and unset the env var so nothing leaks
+        # into later test modules of the same pytest process (mirrors the
+        # GPU test, which rmtrees its temp dir).
+        os.environ.pop("SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR", None)
+        for attr in ("storage_dir", "arg_decoy_dir"):
+            path = getattr(cls, attr, None)
+            if path:
+                shutil.rmtree(path, ignore_errors=True)
 
     # ---------- helpers ----------
 
@@ -200,9 +230,61 @@ class HiCacheStorageBaseMixin:
             "Remote (file backend) cache miss: cached_tokens=%d" % cached_tokens,
         )
 
+    def test_storage_files_in_configured_dir(self):
+        """Cache files must land in the dir this variant routed the file
+        backend to: --file-storage-path by default (mixin), the env var in
+        TestHiCacheStorageEnvVar. Also checks the non-MLA naming rule
+        ({key}_{model}_{tp_rank}_{tp_size}.bin). Without this, a broken
+        --file-storage-path route silently falls back to /tmp/hicache and
+        the remote-hit assertions still pass."""
+        logging.warning(
+            "\n=== test_storage_files_in_configured_dir [%s] ===",
+            self.__class__.__name__,
+        )
+        self.assertTrue(
+            os.path.isdir(self.storage_dir),
+            f"Storage dir does not exist: {self.storage_dir}",
+        )
+
+        # Files from an earlier test (e.g. test_basic_backup_and_prefetch)
+        # may already be there; otherwise trigger an offload ourselves and
+        # poll (the device->storage write-through is asynchronous).
+        files = [f for f in os.listdir(self.storage_dir) if f.endswith(".bin")]
+        if not files:
+            prompt = self.gen_prompt(self.probe_prompt_tokens)
+            self.send_request(prompt, max_tokens=1)
+            self.trigger_offloading_and_flush()
+            deadline = time.time() + 30
+            while time.time() < deadline:
+                files = [f for f in os.listdir(self.storage_dir) if f.endswith(".bin")]
+                if files:
+                    break
+                time.sleep(2)
+        logging.warning(
+            "storage dir %s contains %d .bin files", self.storage_dir, len(files)
+        )
+        self.assertTrue(files, f"No .bin cache files written to {self.storage_dir}")
+
+        # Non-MLA files carry the _{tp_rank}_{tp_size} suffix: with tp=2
+        # both ranks must have written their slices.
+        self.assertTrue(
+            any(f.endswith("_0_2.bin") for f in files),
+            f"No rank-0 cache file (suffix _0_2) in {self.storage_dir}: {files}",
+        )
+        self.assertTrue(
+            any(f.endswith("_1_2.bin") for f in files),
+            f"No rank-1 cache file (suffix _1_2) in {self.storage_dir}: {files}",
+        )
+
 
 class TestHiCacheStoragePageFirstDirectIO(HiCacheStorageBaseMixin, CustomTestCase):
-    """Variant: page_first_direct mem-layout + direct IO backend (single NPU)."""
+    """Variant: page_first_direct mem-layout + direct IO backend (tp=2).
+
+    Also covers the server-side directory creation via the --file-storage-path
+    route (server_creates_storage_dir=True; the env-var route's creation is
+    covered by TestHiCacheStorageEnvVar)."""
+
+    server_creates_storage_dir = True
 
     @classmethod
     def _get_extra_server_args(cls) -> list:
@@ -216,13 +298,71 @@ class TestHiCacheStoragePageFirstDirectIO(HiCacheStorageBaseMixin, CustomTestCas
         ]
 
 
+class TestHiCacheStorageEnvVar(HiCacheStorageBaseMixin, CustomTestCase):
+    """Variant: SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR routes the storage dir
+    and takes priority over --file-storage-path.
+
+    The default (mixin) routing is --file-storage-path; this variant instead
+    sets the env var and passes a decoy dir via the arg, so the priority rule
+    (env var > arg) is asserted, not just the env var route alone.
+    """
+
+    @classmethod
+    def _prepare_storage(cls) -> list:
+        # Env-var dir: does not exist yet, so the server-side creation
+        # ("Created HiCacheFile storage directory at ...") is also covered.
+        cls.storage_dir = tempfile.mkdtemp(prefix="hicache_file_backend_env_")
+        os.rmdir(cls.storage_dir)
+        os.environ["SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR"] = cls.storage_dir
+        # Decoy passed via --file-storage-path: the env var has priority, so
+        # this dir must stay empty.
+        cls.arg_decoy_dir = tempfile.mkdtemp(prefix="hicache_file_backend_decoy_")
+        return [f"--file-storage-path={cls.arg_decoy_dir}"]
+
+    @classmethod
+    def _get_extra_server_args(cls) -> list:
+        return [
+            "--hicache-mem-layout",
+            "page_first_direct",
+            "--hicache-io-backend",
+            "direct",
+            "--tp-size",
+            "2",
+        ]
+
+    def test_env_var_overrides_file_storage_path(self):
+        """The env var must win over --file-storage-path: the server creates
+        the env-var dir (it did not exist at launch) and the decoy dir passed
+        via the arg stays empty. File landing in the env-var dir itself is
+        asserted by the inherited test_storage_files_in_configured_dir."""
+        logging.warning(
+            "\n=== test_env_var_overrides_file_storage_path [%s] ===",
+            self.__class__.__name__,
+        )
+        # 1) The server created the env-var dir (it did not exist at launch).
+        self.assertTrue(
+            os.path.isdir(self.storage_dir),
+            f"env-var storage dir was not created: {self.storage_dir}",
+        )
+
+        # 2) The decoy --file-storage-path dir must stay empty: the env var
+        #    overrode the arg. If the env-var route were broken, the files
+        #    would land here and this assertion (plus the inherited
+        #    storage-files test on the empty env-var dir) would catch it.
+        decoy_leftovers = os.listdir(self.arg_decoy_dir)
+        self.assertFalse(
+            decoy_leftovers,
+            f"--file-storage-path was not overridden by the env var, "
+            f"files found in decoy dir: {decoy_leftovers}",
+        )
+
+
 class TestHiCacheStorageAccuracy(HiCacheStorageBaseMixin, CustomTestCase):
     """Variant: GSM8K accuracy must be consistent before / after flushing cache.
 
-    Ported from the GPU `TestHiCacheStorageAccuracy.test_eval_accuracy`. The
-    GPU version asserts two GSM8K runs (before / after flush) differ by < 0.03
-    and both > 0.6. We reuse `run_eval` (NPU convention) instead of
-    `MGSMEnMixin`.
+    Ported from the GPU file-backend test's `run_eval_accuracy_test` helper
+    (two GSM8K runs before / after flush must both score > 0.6 and differ by
+    < 0.03), restructured as a test class using `run_eval` (NPU convention).
     """
 
     accuracy_threshold = 0.6
