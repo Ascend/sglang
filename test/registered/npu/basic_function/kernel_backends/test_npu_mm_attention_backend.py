@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.output_capturer import OutputCapturer
@@ -35,12 +36,15 @@ class TestAscendMMAttentionBackend(TestVLMModels):
         "--mm-attention-backend",
         mm_attention_backend,
     ]
+    os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
 
     @classmethod
     def setUpClass(cls):
-        super().setUpClass()
+        # Capture must start BEFORE server launch: the asserted backend
+        # message is printed during model load, before health check passes.
         cls.output = OutputCapturer()
         cls.output.start()
+        super().setUpClass()
 
     def test_mmmu(self):
         self._run_vlm_mmmu_test()

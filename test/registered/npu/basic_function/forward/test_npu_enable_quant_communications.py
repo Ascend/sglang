@@ -31,6 +31,10 @@ class TestEnableQuantCommunications(CustomTestCase):
     def setUpClass(cls):
         cls.model = QWEN3_5_35B_W8A8_MODEL_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.env = {
+            **os.environ,
+            "SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM": "1",
+        }
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -47,7 +51,10 @@ class TestEnableQuantCommunications(CustomTestCase):
                 "--enable-quant-communications",
                 "--log-level",
                 "info",
+                "--mamba-ssm-dtype",
+                "bfloat16",
             ],
+            env=cls.env,
         )
 
     @classmethod
