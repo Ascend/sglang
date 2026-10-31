@@ -18,7 +18,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-amd64-a5-4
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-950-B103
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-950-B106
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
