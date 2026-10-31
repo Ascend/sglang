@@ -1,11 +1,12 @@
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    BENCHMARK_TOOL_DEFAULT,
+    EVALSCOPE,
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     DEEPSEEK_V4_FLASH_DEFAULT_MODEL_PATH, TestNpuPerformanceTestCaseBase, AISBENCHMARK_DATASET_DEFAULT,
+    BENCHMARK_TOOL_DEFAULT,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
@@ -129,7 +130,7 @@ DEEPSEEK_V4_FLASH_FP8_4P_GENERATION_CONFIG_MAX = {
 class TestNPUDeepSeekV4FlashFP84PGPQA(TestNpuAccuracyTestCaseBase):
     """Test NPU accuracy for DeepSeek-V4-Flash FP8 4p DSPARK GPQA."""
 
-    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    benchmark_tool = EVALSCOPE
     model = DEEPSEEK_V4_FLASH_DEFAULT_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_FP8_4P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_FP8_4P_ENVS
