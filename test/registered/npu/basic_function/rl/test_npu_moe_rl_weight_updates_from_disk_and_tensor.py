@@ -171,7 +171,13 @@ class _BaseNPUMoEWeightUpdateTest(CustomTestCase):
             self.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
-            env={**os.environ, "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1"},
+            env={
+                **os.environ,
+                "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
+                "PYTORCH_NPU_ALLOC_CONF": (
+                    "expandable_segments:True,pin_memory_expandable_segments:True"
+                ),
+            },
         )
 
     def tearDown(self):
@@ -298,7 +304,13 @@ class TestNPUMoEWeightUpdateFromDiskTP1(_BaseNPUMoEWeightUpdateTest):
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=args,
-            env={**os.environ, "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1"},
+            env={
+                **os.environ,
+                "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
+                "PYTORCH_NPU_ALLOC_CONF": (
+                    "expandable_segments:True,pin_memory_expandable_segments:True"
+                ),
+            },
         )
 
     @classmethod
