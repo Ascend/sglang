@@ -583,6 +583,9 @@ jobs:
 
           import yaml
 
+          # Built at runtime so this file never contains the GitHub expression
+          # opener followed by no closing braces, which breaks the parser.
+          EXPR_OPEN = "$" + "{{"
           specs = []
           for name in ("full-test-npu.yml", "nightly-test-npu.yml"):
               path = os.path.join(".github/workflows", name)
@@ -595,13 +598,13 @@ jobs:
                   if "upload_coverage_artifact" not in job_with:
                       continue
                   suite = job_with.get("self_name") or job_with.get("test_suite")
-                  if not isinstance(suite, str) or "${{" in suite:
+                  if not isinstance(suite, str) or EXPR_OPEN in suite:
                       print(f"::error::{name}:{job_id} needs a literal self_name/test_suite")
                       sys.exit(1)
                   parts = job_with.get("partitions")
                   if parts is None:
                       size = 1
-                  elif not isinstance(parts, str) or "${{" in parts:
+                  elif not isinstance(parts, str) or EXPR_OPEN in parts:
                       print(f"::error::{name}:{job_id} partitions must be a literal JSON string")
                       sys.exit(1)
                   else:
