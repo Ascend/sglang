@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import unittest
 
 import requests
@@ -29,6 +30,11 @@ register_npu_ci(
     suite="nightly-4-npu-a3",
     nightly=True,
 )
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
+
 
 ADMIN_API_KEY = "admin-hicache-test-key"
 

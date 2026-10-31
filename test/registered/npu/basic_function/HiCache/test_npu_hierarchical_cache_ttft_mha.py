@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.test_ascend_utils import (
@@ -11,6 +12,10 @@ register_npu_ci(
     est_time=400,
     suite="full-2-npu-a3",
     nightly=True,
+)
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
 )
 
 

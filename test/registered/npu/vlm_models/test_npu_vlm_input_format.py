@@ -45,6 +45,11 @@ from sglang.srt.utils.hf_transformers_utils import _fix_added_tokens_encoding
 
 register_npu_ci(est_time=747, suite="full-2-npu-a3", nightly=True)
 
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
+
+
 # NPU devices on CI runners may have slight memory imbalance across cards
 # (e.g. residual memory from prior process or kernel-level allocations).
 # Disable the strict TP memory balance check so the engine can still start

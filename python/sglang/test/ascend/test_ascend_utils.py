@@ -27,6 +27,7 @@ from typing import Awaitable, Callable, List, NamedTuple, Optional
 import requests
 
 from sglang.benchmark.serving import run_benchmark
+from sglang.srt.sampling.custom_logit_processor import CustomLogitProcessor
 from sglang.srt.utils import kill_process_tree
 from sglang.test.sgl_eval_utils import run_sgl_eval
 from sglang.test.test_utils import (
@@ -40,6 +41,29 @@ from sglang.test.test_utils import (
 
 STDERR_FILENAME = "/tmp/stderr.txt"
 STDOUT_FILENAME = "/tmp/stdout.txt"
+
+
+class DeterministicLogitProcessor(CustomLogitProcessor):
+    """A dummy logit processor that always assigns the highest probability to
+    the token id given in custom_params.
+
+    It lives in an importable module on purpose: the processor is serialized
+    with dill and deserialized inside the scheduler process, which can only
+    import classes defined in importable modules.
+    """
+
+    CUSTOM_PARAM_KEY = "token_id"
+
+    def __call__(self, logits, custom_param_list):
+        assert logits.shape[0] == len(custom_param_list)
+
+        for i, param_dict in enumerate(custom_param_list):
+            # Mask all other tokens
+            logits[i, :] = -float("inf")
+            # Assign highest probability to the specified token
+            logits[i, param_dict[self.CUSTOM_PARAM_KEY]] = 0.0
+
+        return logits
 
 
 def is_npu_a5() -> bool:

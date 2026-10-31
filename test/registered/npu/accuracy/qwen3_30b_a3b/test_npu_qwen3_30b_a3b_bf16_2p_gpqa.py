@@ -12,7 +12,9 @@ register_npu_ci(est_time=3600, suite="full-acc-4-npu-a3", nightly=True)
 
 QWEN3_30B_A3B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": (
+        "expandable_segments:True,pin_memory_expandable_segments:True"
+    ),
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
@@ -54,6 +56,7 @@ class TestNPUQwen3_30B_A3B_gpqa(TestNpuAccuracyTestCaseBase):
     generation_config = {
         "max_tokens": 40000,
         "temperature": 0.0,
+        "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
     }
 
     def test_gpqa(self):

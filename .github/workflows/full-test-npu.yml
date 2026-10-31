@@ -1,11 +1,11 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  pull_request:
+    branches:
+      - testcases-261015
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -22,12 +22,12 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-a3'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B010'
       coverage_mode:
         description: 'Run in coverage mode: full and nightly basic-function/accuracy suites collect coverage (per-job artifacts); perf and multi-node suites run normally.'
         required: false
         type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: full-test-npu-${{ inputs.coverage_mode == true && 'coverage-' || '' }}${{ inputs.ref || github.ref }}
@@ -59,13 +59,13 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-a3" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B010" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.coverage_mode }}" ]; then
-            echo "coverage_mode=false" >> $GITHUB_OUTPUT
+            echo "coverage_mode=true" >> $GITHUB_OUTPUT
           else
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
@@ -104,6 +104,7 @@ jobs:
       upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
     secrets: inherit
 
+
   full-2-npu-a3:
     name: full-2-npu-a3
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
@@ -116,7 +117,7 @@ jobs:
       # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
-      partitions: '{"size":2,"arr":[0,1]}'
+      partitions: '{"size":4,"arr":[0,1,2,3]}'
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
@@ -156,7 +157,7 @@ jobs:
       # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
-      partitions: '{"size":2,"arr":[0,1]}'
+      partitions: '{"size":4,"arr":[0,1,2,3]}'
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
@@ -176,7 +177,7 @@ jobs:
       # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
-      partitions: '{"size":2,"arr":[0,1]}'
+      partitions: '{"size":4,"arr":[0,1,2,3]}'
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
@@ -583,6 +584,9 @@ jobs:
 
           import yaml
 
+          # Built at runtime so this file never contains the GitHub expression
+          # opener followed by no closing braces, which breaks the parser.
+          EXPR_OPEN = "$" + "{{"
           specs = []
           for name in ("full-test-npu.yml", "nightly-test-npu.yml"):
               path = os.path.join(".github/workflows", name)
@@ -595,13 +599,13 @@ jobs:
                   if "upload_coverage_artifact" not in job_with:
                       continue
                   suite = job_with.get("self_name") or job_with.get("test_suite")
-                  if not isinstance(suite, str) or "${{" in suite:
+                  if not isinstance(suite, str) or EXPR_OPEN in suite:
                       print(f"::error::{name}:{job_id} needs a literal self_name/test_suite")
                       sys.exit(1)
                   parts = job_with.get("partitions")
                   if parts is None:
                       size = 1
-                  elif not isinstance(parts, str) or "${{" in parts:
+                  elif not isinstance(parts, str) or EXPR_OPEN in parts:
                       print(f"::error::{name}:{job_id} partitions must be a literal JSON string")
                       sys.exit(1)
                   else:

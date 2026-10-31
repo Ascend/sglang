@@ -9,7 +9,7 @@ from sglang.test.ascend.test_ascend_utils import (
     QWEN3_8B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.run_eval import run_eval
+from sglang.test.sgl_eval_utils import run_sgl_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -81,6 +81,7 @@ class TestHiCacheEagle(CustomTestCase):
                 "128",
             ],
             env={
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
                 "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
                 "TRANSFORMERS_VERBOSITY": "error",
             },
@@ -100,7 +101,7 @@ class TestHiCacheEagle(CustomTestCase):
             num_examples=64,
             num_threads=32,
         )
-        metrics = run_eval(args)
+        metrics = run_sgl_eval(args)
         score = float(metrics["score"])
         self.assertGreaterEqual(
             score,

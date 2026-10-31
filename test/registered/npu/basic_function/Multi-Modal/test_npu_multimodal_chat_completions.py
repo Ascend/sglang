@@ -16,7 +16,10 @@ Test cases:
   - TC-MM-OPENAI-CHAT-012: max_completion_tokens + multimodal
 """
 
+import os
+import runpy
 import unittest
+from pathlib import Path
 
 import openai
 
@@ -37,10 +40,15 @@ from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    is_in_ci,
     popen_launch_server,
 )
 
 register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +99,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         "bfloat16",
         "--tool-call-parser",
         "qwen",
+        "--enable-deterministic-inference",
     ]
     _spec_args = [
         "--speculative-algorithm",
@@ -107,6 +116,14 @@ class TestMultimodalParameterInteractions(CustomTestCase):
     @classmethod
     def setUpClass(cls):
         """Start the SGLang server for VLM inference on Qwen3.5-9B."""
+        if is_in_ci():
+            # Install only when CI executes this file, never during discovery.
+            installer = (
+                Path(__file__).resolve().parents[5]
+                / "scripts/ci/npu/install_batch_invariant_ops.py"
+            )
+            runpy.run_path(str(installer))["install"]()
+
         cls.api_key = "sk-123456"
         cls.base_url = DEFAULT_URL_FOR_TEST
 
@@ -177,6 +194,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
                 text = self._request_text(
                     self._build_msg(image_b64),
                     temperature=temp,
+                    extra_body={"top_k": 20},
                 )
                 outputs[temp] = text  # store before asserts for safe access below
                 self.assertTrue(
