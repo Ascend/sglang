@@ -91,7 +91,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-1-npu-a3
-      runner_config: linux-aarch64-a3-800i-2
+      runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
