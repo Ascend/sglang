@@ -3,14 +3,7 @@ from __future__ import annotations
 import logging
 from collections import deque
 from dataclasses import dataclass, field
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    Deque,
-    List,
-    Optional,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Callable, Deque, List, Optional, Tuple
 
 from sglang.srt.disaggregation.utils import DisaggregationMode
 from sglang.srt.environ import envs
@@ -22,10 +15,7 @@ from sglang.srt.mem_cache.allocator import BaseTokenToKVPoolAllocator
 from sglang.srt.mem_cache.base_prefix_cache import BasePrefixCache
 from sglang.srt.mem_cache.memory_pool import ReqToTokenPool
 from sglang.srt.server_args import ServerArgs
-from sglang.srt.utils.common import (
-    ceil_align,
-    raise_error_or_warn,
-)
+from sglang.srt.utils.common import ceil_align, raise_error_or_warn
 from sglang.srt.utils.watchdog import WatchdogRaw
 
 if TYPE_CHECKING:
@@ -114,6 +104,25 @@ class SchedulerInvariantChecker:
         )
 
     def _check_mamba_pool(self, ps: PoolStats) -> Tuple[bool, str]:
+        ckpt_pool = getattr(self.req_to_token_pool, "mamba_ckpt_pool", None)
+        if ckpt_pool is not None:
+            active = self._check_pool_invariant(
+                "mamba-active",
+                ps.mamba_available_size,
+                0,
+                0,
+                self.pool_stats_observer.session_held_mamba_slots(),
+                self.req_to_token_pool.mamba_pool.size,
+            )
+            cached = self._check_pool_invariant(
+                "mamba-int8",
+                ckpt_pool.available_size(),
+                self.tree_cache.mamba_evictable_size(),
+                self.tree_cache.mamba_protected_size(),
+                0,
+                ckpt_pool.num_slots,
+            )
+            return active[0] or cached[0], active[1] + "\n" + cached[1]
         leak, msg = self._check_pool_invariant(
             "mamba",
             ps.mamba_available_size,
