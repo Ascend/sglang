@@ -2,14 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    List,
-    Optional,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from sglang.srt.mem_cache.allocator import BaseTokenToKVPoolAllocator
@@ -247,8 +240,13 @@ class SchedulerPoolStatsObserver:
             self.tree_cache.full_evictable_size() if is_mamba_radix_cache else 0
         )
         mamba_available_size = self.req_to_token_pool.mamba_allocator.available_size()
+        int8_ckpt_enabled = (
+            getattr(self.req_to_token_pool, "mamba_ckpt_pool", None) is not None
+        )
         mamba_evictable_size = (
-            self.tree_cache.mamba_evictable_size() if is_mamba_radix_cache else 0
+            self.tree_cache.mamba_evictable_size()
+            if is_mamba_radix_cache and not int8_ckpt_enabled
+            else 0
         )
         full_num_used = self.token_to_kv_pool_allocator.size - (
             full_available_size + full_evictable_size

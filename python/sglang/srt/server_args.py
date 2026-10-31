@@ -38,9 +38,7 @@ from sglang.srt.arg_groups.argparse_actions import (
     DeprecatedStoreTrueAction,
     LoRAPathAction,
 )
-from sglang.srt.configs.linear_attn_model_registry import (
-    get_linear_attn_spec_by_arch,
-)
+from sglang.srt.configs.linear_attn_model_registry import get_linear_attn_spec_by_arch
 from sglang.srt.connector import ConnectorType
 from sglang.srt.distributed.device_communicators.mooncake_transfer_engine import (
     parse_ib_device_config,
@@ -691,6 +689,8 @@ class ServerArgs:
     mamba_full_memory_ratio: float = 0.9
     mamba_scheduler_strategy: str = "auto"
     mamba_track_interval: int = 256
+    enable_int8_mamba_checkpoint: bool = False
+    int8_mamba_ckpt_size: Optional[int] = None
     linear_attn_backend: str = "triton"
     linear_attn_decode_backend: Optional[str] = None
     linear_attn_prefill_backend: Optional[str] = None
@@ -1006,6 +1006,7 @@ class ServerArgs:
         self._handle_deterministic_inference()
         self._handle_attention_backend_compatibility()
         self._handle_mamba_backend()
+        self._handle_int8_mamba_checkpoint()
         self._handle_linear_attn_backend()
         self._handle_kv4_compatibility()
         self._handle_page_size()
@@ -2619,9 +2620,7 @@ class ServerArgs:
                 support_mamba_cache_extra_buffer=True,
             )
         elif model_arch in ["NemotronHForCausalLM", "NemotronHPuzzleForCausalLM"]:
-            from sglang.srt.arg_groups.nemotron_h_hook import (
-                apply_nemotron_h_defaults,
-            )
+            from sglang.srt.arg_groups.nemotron_h_hook import apply_nemotron_h_defaults
 
             apply_nemotron_h_defaults(self, model_arch)
         elif model_arch in [
@@ -3374,6 +3373,27 @@ class ServerArgs:
                 raise ValueError(
                     "FlashInfer mamba module not available, please check flashinfer installation."
                 )
+
+    def _handle_int8_mamba_checkpoint(self):
+        if not self.enable_int8_mamba_checkpoint:
+            return
+        if self.enable_hierarchical_cache:
+            raise ValueError(
+                "--enable-int8-mamba-checkpoint is not supported with "
+                "--enable-hierarchical-cache."
+            )
+        if self.radix_cache_backend is not None:
+            raise ValueError(
+                "--enable-int8-mamba-checkpoint only supports the built-in "
+                "MambaRadixCache; omit --radix-cache-backend."
+            )
+        if envs.SGLANG_ENABLE_UNIFIED_RADIX_TREE.get() or use_mlx():
+            raise ValueError(
+                "--enable-int8-mamba-checkpoint does not support the unified "
+                "radix cache."
+            )
+        if self.int8_mamba_ckpt_size is not None and self.int8_mamba_ckpt_size <= 0:
+            raise ValueError("--int8-mamba-ckpt-size must be positive.")
 
     def _handle_linear_attn_backend(self):
         import torch
@@ -6451,6 +6471,17 @@ class ServerArgs:
             type=int,
             default=ServerArgs.max_mamba_cache_size,
             help="The maximum size of the mamba cache.",
+        )
+        parser.add_argument(
+            "--enable-int8-mamba-checkpoint",
+            action="store_true",
+            help="Store radix-cached linear-attention states in a separate int8 pool.",
+        )
+        parser.add_argument(
+            "--int8-mamba-ckpt-size",
+            type=int,
+            default=ServerArgs.int8_mamba_ckpt_size,
+            help="Int8 checkpoint slots (default: twice the active mamba pool size).",
         )
         parser.add_argument(
             "--mamba-ssm-dtype",
