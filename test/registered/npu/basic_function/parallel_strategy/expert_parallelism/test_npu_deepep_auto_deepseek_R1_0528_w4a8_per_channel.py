@@ -7,7 +7,7 @@ from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.run_eval import run_eval
+from sglang.test.sgl_eval_utils import run_sgl_eval
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
@@ -99,7 +99,7 @@ class TestDeepEpAutoDeepseekR1(GSM8KAscendMixin, CustomTestCase):
         )
 
         # Execute MMLU evaluation and get metrics
-        metrics = run_eval(args)
+        metrics = run_sgl_eval(args)
         self.assertGreater(metrics["score"], 0.5)
 
 
