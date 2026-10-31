@@ -194,7 +194,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
                 text = self._request_text(
                     self._build_msg(image_b64),
                     temperature=temp,
-                    extra_body={"top_k":20},
+                    extra_body={"top_k": 20},
                 )
                 outputs[temp] = text  # store before asserts for safe access below
                 self.assertTrue(

@@ -5,8 +5,8 @@ from transformers import AutoTokenizer
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    DeterministicLogitProcessor,
     QWEN3_32B_WEIGHTS_PATH,
+    DeterministicLogitProcessor,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
