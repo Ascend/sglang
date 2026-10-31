@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.gen_dataset_fixed_len import (
     generate_gsm8k_dataset,
+    generate_gsm8k_shared_prefix_dataset,
     generate_mm_dataset,
     generate_random_dataset,
     save_jsonl,
@@ -63,9 +64,6 @@ GSM8K_DATASET_TEST_FILE = (
 GSM8K_DATASET_TRAIN_FILE = (
     "/root/.cache/modelscope/hub/datasets/grade_school_math/train.jsonl"
 )
-HLE_DATASET_PATH = (
-    "/root/.cache/modelscope/hub/datasets/run_file/mimo-v2.5-pro/data/hle_dataset"
-)
 
 PYTHON_FOR_TEST_TOOL = "python_venv_for_test_tool/bin/python"
 if not os.path.exists(PYTHON_FOR_TEST_TOOL) or not os.access(
@@ -99,8 +97,6 @@ QWEN3_5_27B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-27B"
 QWEN3_5_27B_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-27B-W8A8"
 )
-QWEN3_5_35B_A3B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-35B-A3B"
-QWEN3_5_122B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-122B-A10B"
 QWEN3_30B_A3B_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-Instruct-2507"
 )
@@ -114,9 +110,6 @@ QWEN3_30B_A3B_W8A8_MODEL_PATH = (
 )
 QWEN3_30B_A3B_W8A8_VLLM_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/vllm-ascend/Qwen3-30B-A3B-W8A8"
-)
-QWEN3_30B_A3B_HUB_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/Qwen/Qwen3-30B-A3B-Instruct-2507"
 )
 QWEN3_A3B_EAGLE_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-a3B_eagle3"
 QWEN3_32B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-32B"
@@ -181,12 +174,6 @@ MINIMAX_M2_5_W8A8_MODEL_PATH = (
 MIMO_V2_FLASH_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/iridiumine/MiMo-V2-Flash-W8A8"
 )
-MIMO_V2_5_PRO_FP4_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/XiaomiMiMo/MiMo-V2.5-Pro-FP4-DFlash"
-)
-MIMO_V2_5_PRO_DFLASH_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/XiaomiMiMo/MiMo-V2.5-Pro-FP4-DFlash/dflash"
-)
 MINIMAX_M2_5_EAGLE3_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/sgl-npu/MiniMax-M2.5-eagel-model-0318"
 )
@@ -197,17 +184,16 @@ QWEN3_5_397B_W8A8_MODEL_PATH = (
 DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
 )
+DEEPSEEK_V4_PRO_0813_W4A8_MODEL_PATH = (
+    "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Pro-0813-w4a8"
+)
 # DeepSeek-V4-Flash default model for a5 testcase
 DEEPSEEK_V4_FLASH_DEFAULT_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/deepseek-ai/DeepSeek-V4-Flash"
-)
-DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH = (
-    "/root/.cache/modelscope/hub/models/Eco-Tech/DeepSeek-V4-Flash-0731-w8a8"
+    "/root/.cache/modelscope/hub/models/deepseek-ai/DeepSeek-V4-Flash-0731"
 )
 QWEN3_5_397B_W4A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/Qwen3.5-397B-A17B-w4a8-mtp"
 )
-QWEN3_5_35B_A3B_MODEL_PATH = "/root/.cache/modelscope/hub/models/Qwen/Qwen3.5-35B-A3B"
 KIMI_K2_6_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/Kimi-K2.6-w4a8"
 KIMI_K2_6_EAGLE3_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/lightseekorg/kimi-k2.6-eagle3"
@@ -232,7 +218,15 @@ MAX_SERVER_KEEP_ALIVE_TIME = 3600
 # Timeouts and delays
 SERVER_INITIALIZATION_DELAY = 120
 BENCHMARK_STDOUT_DRAIN_GRACE = 10  # Grace seconds to wait for the direct child to exit after it drains stdout / exits
-BENCHMARK_STDOUT_IDLE_TIMEOUT = 300  # Idle timeout: no output for this long means the benchmark is stuck, then force-kill
+# BENCHMARK_STDOUT_IDLE_TIMEOUT = 300  # Idle timeout: no output for this long means the benchmark is stuck, then force-kill
+# Idle timeout: no output for this long means the benchmark is stuck, then
+# force-kill. Long silent phases are normal here: the server may still be
+# loading weights or capturing DSPARK graphs while the bench process waits,
+# and triton JIT compilation is quiet for minutes (run 40705231433 lost
+# both attempts to the old 300s default). Override via env if needed.
+BENCHMARK_STDOUT_IDLE_TIMEOUT = int(
+    os.environ.get("SGLANG_BENCH_STDOUT_IDLE_TIMEOUT", "1800")
+)
 BENCHMARK_WATCHDOG_POLL_INTERVAL = 30  # Watchdog polling interval (seconds)
 
 # Test parameters
@@ -406,6 +400,10 @@ def run_bench_serving(
     repeat_rate=None,
     temperature=None,
     top_p=None,
+    gsp_num_groups=None,
+    gsp_prompts_per_group=None,
+    cache_report=False,
+    min_host_hit_rate_pct=None,
     env=None,
 ):
     metrics_path = os.getenv("METRICS_DATA_FILE")
@@ -417,6 +415,28 @@ def run_bench_serving(
     logger.info(f"The metrics result file: {result_file}")
 
     write_pkg_info_to_file(result_file)
+
+    if dataset_name == "gsm8k-shared-prefix":
+        # Natural-text shared-prefix dataset: bench_serving's built-in
+        # generated-shared-prefix prompts are random token ids, which the
+        # DSPARK draft cannot predict (accept len ~1.6, run 40993824705).
+        # Pad one GSM8K QA pool to 101% of input_len and emit identical
+        # rows, so random-mode truncation leaves every request
+        # byte-identical - the dev acceptance shape
+        # (sharegpt_natural_shared_131072_100cache_480.json, whose
+        # divergence points sit past the truncation length on purpose).
+        dataset_file = "/tmp/datasets/gsm8k_shared_prefix.json"
+        if not os.path.exists(dataset_file):
+            generate_gsm8k_shared_prefix_dataset(
+                model_path=model_path,
+                source_dataset_path=GSM8K_DATASET_TRAIN_FILE,
+                batch_size=num_prompts,
+                input_len=input_len,
+                output_file=dataset_file,
+            )
+        dataset_path = dataset_file
+        dataset_name = "random"
+        logger.info(f"Shared-prefix GSM8K dataset ready: {dataset_path}")
 
     if dataset_name == "generated-shared-prefix":
         cmd_args = [
@@ -434,9 +454,9 @@ def run_bench_serving(
             "--dataset-name",
             dataset_name,
             "--gsp-num-groups",
-            "1",
+            str(gsp_num_groups) if gsp_num_groups else "1",
             "--gsp-prompts-per-group",
-            str(num_prompts),
+            str(gsp_prompts_per_group) if gsp_prompts_per_group else str(num_prompts),
             "--gsp-system-prompt-len",
             (
                 str(int((repeat_rate if repeat_rate is not None else 0.9) * input_len))
@@ -463,10 +483,22 @@ def run_bench_serving(
             cmd_args.extend(["--num-prompts", str(num_prompts)])
         if request_rate:
             cmd_args.extend(["--request-rate", str(request_rate)])
+        if warmup_requests:
+            # Prime the shared prefix before the measured pass: warmup
+            # requests reuse the first GSP prompt with output capped at 32
+            # tokens, so a handful of them (one per DP rank) fills every
+            # rank's radix cache with the system prompt.
+            cmd_args.extend(["--warmup-requests", str(warmup_requests)])
         if temperature is not None:
             cmd_args.extend(["--temperature", str(temperature)])
         if top_p is not None:
             cmd_args.extend(["--top-p", str(top_p)])
+        if seed:
+            cmd_args.extend(["--seed", str(seed)])
+        if warmup_requests:
+            cmd_args.extend(["--warmup-requests", str(warmup_requests)])
+        if cache_report:
+            cmd_args.append("--cache-report")
     else:
         cmd_args = [
             PYTHON_FOR_TEST_TOOL,
@@ -607,6 +639,11 @@ def run_bench_serving(
                     parts = stripped_line.split()
                     if len(parts) >= 3:
                         metrics["accept_length"] = parts[2]
+                elif stripped_line.startswith("Host:") and stripped_line.endswith("%"):
+                    # Format: "Host:    19.7%"
+                    parts = stripped_line.split()
+                    if len(parts) >= 2:
+                        metrics["host_hit_rate_pct"] = parts[1].rstrip("%")
         reader_done.set()
         process.wait()
         if process.returncode != 0:
@@ -619,6 +656,24 @@ def run_bench_serving(
         reader_done.set()
         if process.stdout is not None and not process.stdout.closed:
             process.stdout.close()
+
+    if min_host_hit_rate_pct is not None:
+        host_hit = metrics.get("host_hit_rate_pct")
+        if host_hit is None:
+            raise Exception(
+                "No host hit rate found in bench_serving output while "
+                "min_host_hit_rate_pct is set (did the server run with "
+                "--enable-cache-report and the bench with --cache-report?)"
+            )
+        dump_metric("host_hit_rate", float(host_hit), labels={"type": "perf"})
+        dump_metric(
+            "host_hit_rate_baseline",
+            float(min_host_hit_rate_pct),
+            labels={"type": "perf"},
+        )
+        assert float(host_hit) > float(min_host_hit_rate_pct), (
+            f"L2 host hit rate {host_hit}% is below {min_host_hit_rate_pct}%"
+        )
 
     return metrics
 
@@ -676,6 +731,31 @@ def run_aisbench(
             )
         dataset_path = dataset_file
         logger.info(f"Dataset generated: {dataset_path}")
+    elif dataset_type == "gsm8k-shared-prefix" and not dataset_path:
+        # aisbench retry of the pure-decode case (user-requested): identical
+        # natural-text rows (one GSM8K QA pool padded past input_len) through
+        # the PLAIN aisbench perf path - no prefix-tool chain involved. The
+        # known risk is dataset dedup of identical rows (run 40431214784 saw
+        # 12 rows collapse to 4 there): watch "Total data num" in the log -
+        # 12 means no dedup, fewer means collapse. The sh wrapper is fed
+        # dataset-type gsm8k; the file layout is a plain gsm8k jsonl.
+        dataset_file = "/tmp/datasets/gsm8k_shared_prefix.jsonl"
+        if not os.path.exists(dataset_file):
+            generate_gsm8k_shared_prefix_dataset(
+                model_path=model_path,
+                source_dataset_path=GSM8K_DATASET_TRAIN_FILE,
+                batch_size=num_prompts,
+                input_len=input_len,
+                output_file=dataset_file,
+                output_format="aisbench",
+            )
+        # run_aisbench.sh's gsm8k branch resolves the dataset as
+        # <dataset_dir>/test.jsonl and ignores the file name, so publish the
+        # generated rows under that name.
+        dataset_path = "/tmp/datasets/test.jsonl"
+        shutil.copyfile(dataset_file, dataset_path)
+        dataset_type = AISBENCHMARK_DATASET_GSM8K
+        logger.info(f"Shared-prefix GSM8K dataset ready: {dataset_path}")
 
     elif dataset_type == AISBENCHMARK_DATASET_MM_CUSTOM_GEN and not dataset_path:
         dataset_file = f"/tmp/datasets/mm.jsonl"
@@ -944,6 +1024,18 @@ def assert_metrics(self, metrics):
             float(self.ttft),
             labels={"test_case": tc_name, "type": "perf"},
         )
+    host_hit_rate = getattr(self, "host_hit_rate", None)
+    if host_hit_rate and metrics.get("host_hit_rate_pct"):
+        dump_metric(
+            "host_hit_rate",
+            float(metrics["host_hit_rate_pct"]),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
+        dump_metric(
+            "host_hit_rate_baseline",
+            float(host_hit_rate),
+            labels={"test_case": tc_name, "type": "perf"},
+        )
     if self.mean_e2e_latency and metrics.get("mean_e2e_latency"):
         dump_metric(
             "e2e_latency",
@@ -999,6 +1091,11 @@ def assert_metrics(self, metrics):
         self.assertLessEqual(
             float(metrics["mean_ttft"]),
             self.ttft * TTFT_TOLERANCE,
+        )
+    if host_hit_rate:
+        self.assertGreater(
+            float(metrics["host_hit_rate_pct"]),
+            host_hit_rate,
         )
     if self.mean_e2e_latency:
         self.assertLessEqual(
@@ -1267,7 +1364,8 @@ class TestNpuPerformanceTestCaseBase(CustomTestCase):
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
             if (
-                self.dataset_name == "generated-shared-prefix"
+                self.dataset_name
+                in ("generated-shared-prefix", "gsm8k-shared-prefix")
                 and self.pop_sglang_is_in_ci_for_gsp
             ):
                 bench_env = os.environ.copy()
@@ -1333,7 +1431,9 @@ class TestNpuPerfMultiNodePdMixTestCaseBase(CustomTestCase):
         )
         sglang_thread.start()
 
-        wait_server_ready(f"{cls.base_url}/health")
+        wait_server_ready(
+            f"{cls.base_url}/health", deep_url=f"{cls.base_url}/model_info"
+        )
 
         logger.info(
             f"Wait {SERVER_INITIALIZATION_DELAY}s, starting run benchmark ......"
@@ -1400,7 +1500,8 @@ class TestNpuPerfMultiNodePdMixTestCaseBase(CustomTestCase):
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
             if (
-                self.dataset_name == "generated-shared-prefix"
+                self.dataset_name
+                in ("generated-shared-prefix", "gsm8k-shared-prefix")
                 and self.pop_sglang_is_in_ci_for_gsp
             ):
                 bench_env = os.environ.copy()
@@ -1436,6 +1537,7 @@ class TestNpuPerfMultiNodePdSepTestCaseBase(CustomTestCase):
     tpot = None
     mean_e2e_latency = None
     output_token_throughput = None
+    host_hit_rate = None
 
     dp = None
     generation_kwargs = None
@@ -1566,6 +1668,262 @@ class TestNpuPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 "seed": self.seed,
                 "temperature": self.temperature,
                 "top_p": self.top_p,
+                "cache_report": self.host_hit_rate is not None,
+            }
+            logger.info(f"Starting benchmark with parameters: {bench_params}")
+            if (
+                self.dataset_name
+                in ("generated-shared-prefix", "gsm8k-shared-prefix")
+                and self.pop_sglang_is_in_ci_for_gsp
+            ):
+                bench_env = os.environ.copy()
+                bench_env.pop("SGLANG_IS_IN_CI", None)
+            else:
+                bench_env = None
+            metrics = run_bench_serving(**bench_params, env=bench_env)
+            assert_metrics(self, metrics)
+
+
+class TestNpuPerformanceTestCaseBaseV2(CustomTestCase):
+    model = None
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
+    backend = "sglang"
+    dataset_name = "random"
+    dataset_path = SHAREGPT_DATASET_TEST_FILE
+    dataset_type = "gsm8k"  # gsm8k | mm-custom-gen
+    other_args = None
+    timeout = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
+    envs = None
+    max_attempts = 2
+    request_rate = None
+    repeat_rate = None
+    max_concurrency = None
+    num_prompts = None
+    input_len = None
+    output_len = None
+    random_range_ratio = 1
+    image_resolution = None
+    image_count = None
+    warmup_requests = None
+    seed = None
+    temperature = None
+    top_p = None
+    ttft = None
+    tpot = None
+    mean_e2e_latency = None
+    output_token_throughput = None
+    host_hit_rate = None
+    # Baseline for accept_length / speculative-num-draft-tokens; None disables
+    # the assertion.
+    accept_rate = None
+
+    dp = None
+    generation_kwargs = None
+    pop_sglang_is_in_ci_for_gsp = False
+
+    @classmethod
+    def _get_tc_name(cls):
+        """Derive the test case name from the test file (filename without
+        extension). Mirrors the workflow's ``tc_name=${test_case##*/}`` logic
+        so each case in a suite writes to its own output path."""
+        try:
+            tc_file = inspect.getfile(cls)
+        except (TypeError, OSError):
+            tc_file = getattr(sys.modules.get(cls.__module__), "__file__", "")
+        return os.path.splitext(os.path.basename(tc_file))[0]
+
+    @classmethod
+    def _setup_per_case_output(cls):
+        """Set up per-case output directories and env vars.
+
+        When the workflow sets METRICS_DATA_FILE to a suite-level directory
+        (e.g. .../output/{branch_label}-{create_date}-{run_id}-{run_attempt}/
+        {workflow_name}/{test_type}/{suite}), each case in the suite
+        writes to its own subdirectory under it, so results stay in the
+        structured layout and are keyed by the case id. Falls back to the
+        legacy per-case layout when the env var is not set.
+        """
+        cls.tc_name = cls._get_tc_name()
+        suite_output = os.environ.get("METRICS_DATA_FILE")
+        if suite_output:
+            # Append the case id under the suite output prefix.
+            cls.metrics_data_file = os.path.join(suite_output, cls.tc_name)
+            # Mirror the output prefix to the plog location (drop the test_type/suite tail).
+            suite_plog = suite_output.replace("/output/", "/logs/plog/", 1)
+            cls.plog_base = os.path.dirname(os.path.dirname(suite_plog))
+        else:
+            current_date = datetime.now().strftime("%Y%m%d")
+            test_type = getattr(cls, "test_type", "perf")
+            base_output = f"/root/.cache/tests/output/{test_type}/{current_date}"
+            cls.metrics_data_file = os.path.join(base_output, cls.tc_name)
+            cls.plog_base = f"/root/.cache/tests/logs/plog"
+        os.makedirs(cls.metrics_data_file, exist_ok=True)
+        # Override env vars so evalscope/dump_metric write to per-case paths.
+        os.environ["METRICS_DATA_FILE"] = cls.metrics_data_file
+        os.environ["SGLANG_TEST_METRICS_OUTPUT"] = os.path.join(
+            cls.metrics_data_file, "metrics"
+        )
+        logger.info(
+            "Per-case output: tc_name=%s metrics_data_file=%s",
+            cls.tc_name,
+            cls.metrics_data_file,
+        )
+
+    @classmethod
+    def _save_metrics_json(cls):
+        """Write per-case ``metrics.json`` from ``dump_metric`` JSONL files.
+
+        Replaces the workflow's stdout-parsing + ``dump_metrics.py`` logic so
+        each case in a suite persists its own metrics snapshot.
+        """
+        if not getattr(cls, "metrics_data_file", None):
+            return
+        metrics = {}
+        baselines = {}
+        pattern = os.path.join(cls.metrics_data_file, "metrics.*.jsonl")
+        for jsonl_path in glob.glob(pattern):
+            try:
+                with open(jsonl_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        record = json.loads(line)
+                        name = record.get("metric_name")
+                        value = record.get("value")
+                        if name is None:
+                            continue
+                        if name.endswith("_baseline"):
+                            baselines[name[: -len("_baseline")]] = value
+                        else:
+                            metrics[name] = value
+            except Exception as e:
+                logger.warning("Failed to read %s: %s", jsonl_path, e)
+        out_path = os.path.join(cls.metrics_data_file, "metrics.json")
+        payload = {
+            "test_case": cls.tc_name,
+            "test_type": getattr(cls, "test_type", "perf"),
+            "metrics": metrics,
+            "baselines": baselines,
+        }
+        try:
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False)
+            logger.info("Saved per-case metrics to %s", out_path)
+        except Exception as e:
+            logger.warning("Failed to write metrics.json: %s", e)
+        # Remove the intermediate JSONL records, keeping only the final metrics.json.
+        for jsonl_path in glob.glob(pattern):
+            try:
+                os.remove(jsonl_path)
+            except Exception as e:
+                logger.warning("Failed to remove %s: %s", jsonl_path, e)
+
+    @classmethod
+    def _backup_plog(cls):
+        """Backup Ascend plog files to a per-case path.
+
+        Replaces the workflow's ``Backup plog`` step so each case in a suite
+        gets its own plog snapshot instead of all cases sharing the suite name.
+        """
+        plog_path = "/root/ascend/log/debug/plog"
+        if not os.path.isdir(plog_path):
+            return
+        tc_name = getattr(cls, "tc_name", None)
+        if not tc_name:
+            return
+        hostname = os.getenv("HOSTNAME", "unknown")
+        plog_base = getattr(cls, "plog_base", "/root/.cache/tests/logs/plog")
+        target = os.path.join(plog_base, tc_name, hostname)
+        os.makedirs(target, exist_ok=True)
+        for name in os.listdir(plog_path):
+            src = os.path.join(plog_path, name)
+            if os.path.isfile(src):
+                try:
+                    shutil.copy2(src, os.path.join(target, name))
+                except Exception as e:
+                    logger.warning("Failed to copy plog %s: %s", name, e)
+        logger.info("Backed up plog to %s", target)
+
+    @classmethod
+    def setUpClass(cls):
+        cls._setup_per_case_output()
+        cls.base_url = DEFAULT_URL_FOR_TEST
+        env = os.environ.copy()
+        for key, value in env.items():
+            logger.info(f"ENV_VAR_SYS {key}:{value}")
+        if cls.envs:
+            for key, value in cls.envs.items():
+                logger.info(f"ENV_VAR_CASE {key}:{value}")
+                env[key] = value
+
+        other_args = list(cls.other_args)
+
+        cls.process = popen_launch_server(
+            cls.model,
+            cls.base_url,
+            timeout=cls.timeout,
+            other_args=other_args,
+            env=env,
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, "process") and cls.process:
+            try:
+                kill_process_tree(cls.process.pid)
+            except Exception as e:
+                logger.error(f"Error during tearDown: {e}")
+        cls._save_metrics_json()
+        cls._backup_plog()
+
+    @retry()
+    def run_throughput(self):
+        parsed_url = urlparse(self.base_url)
+        host = parsed_url.hostname
+        port = parsed_url.port
+        if self.benchmark_tool == AISBENCHMARK:
+            metrics = run_aisbench(
+                host=host,
+                port=port,
+                model_path=self.model,
+                dataset_type=self.dataset_type,
+                dataset_path=self.dataset_path,
+                input_len=self.input_len,
+                output_len=self.output_len,
+                max_concurrency=self.max_concurrency,
+                num_prompts=self.num_prompts,
+                image_resolution=self.image_resolution,
+                random_range_ratio=self.random_range_ratio,
+                request_rate=self.request_rate,
+                repeat_rate=self.repeat_rate,
+                dp=self.dp,
+                generation_kwargs=self.generation_kwargs,
+            )
+            assert_metrics(self, metrics)
+
+        else:
+            bench_params = {
+                "host": host,
+                "port": port,
+                "model_path": self.model,
+                "backend": self.backend,
+                "dataset_name": self.dataset_name,
+                "dataset_path": self.dataset_path,
+                "request_rate": self.request_rate,
+                "repeat_rate": self.repeat_rate,
+                "max_concurrency": self.max_concurrency,
+                "num_prompts": self.num_prompts,
+                "input_len": self.input_len,
+                "output_len": self.output_len,
+                "random_range_ratio": self.random_range_ratio,
+                "image_resolution": self.image_resolution,
+                "image_count": self.image_count,
+                "warmup_requests": self.warmup_requests,
+                "seed": self.seed,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "cache_report": self.host_hit_rate is not None,
             }
             logger.info(f"Starting benchmark with parameters: {bench_params}")
             if (
@@ -1578,3 +1936,159 @@ class TestNpuPerfMultiNodePdSepTestCaseBase(CustomTestCase):
                 bench_env = None
             metrics = run_bench_serving(**bench_params, env=bench_env)
             assert_metrics(self, metrics)
+
+
+class TestNpuPerformanceTestCaseBaseV1(TestNpuPerformanceTestCaseBase):
+    """Extensible single-node base shared by the V2 multi-node classes."""
+
+    pass
+
+
+class TestNpuPerfMultiNodePdMixTestCaseBaseV2(TestNpuPerformanceTestCaseBaseV2):
+    model_config = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.local_ip = "127.0.0.1"
+        cls.host = os.getenv("POD_IP")
+        cls.port = SERVICE_PORT
+        cls.base_url = f"http://{cls.host}:{cls.port}"
+        cls.hostname = os.getenv("HOSTNAME")
+        cls.role = "master" if cls.hostname.endswith("sglang-node-0") else "worker"
+        logger.info(f"Init {cls.host} {cls.role=}!")
+
+        cls.model = cls.model_config.get("model_path")
+        other_args = cls.model_config.get("other_args")
+        cls.other_args = list(other_args) if other_args is not None else None
+
+        cls.start_pd_mix_master_node()
+        cls.start_pd_mix_worker_node()
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    @classmethod
+    @check_role(allowed_roles=["master"])
+    def start_pd_mix_master_node(cls):
+        sglang_thread = threading.Thread(
+            target=launch_pd_mix_node, args=(cls.model_config,)
+        )
+        sglang_thread.start()
+
+        wait_server_ready(f"{cls.base_url}/health")
+
+        logger.info(
+            f"Wait {SERVER_INITIALIZATION_DELAY}s, starting run benchmark ......"
+        )
+        time.sleep(SERVER_INITIALIZATION_DELAY)
+
+    @classmethod
+    @check_role(allowed_roles=["worker"])
+    def start_pd_mix_worker_node(cls):
+        sglang_thread = threading.Thread(
+            target=launch_pd_mix_node, args=(cls.model_config,)
+        )
+        sglang_thread.start()
+
+        logger.info(
+            f"{cls.role} node started, keeping test alive for {MAX_SERVER_KEEP_ALIVE_TIME} seconds"
+        )
+        time.sleep(MAX_SERVER_KEEP_ALIVE_TIME)
+
+    @check_role(allowed_roles=["master", "worker"])
+    def run_throughput(self):
+        return super().run_throughput()
+
+
+class TestNpuPerfMultiNodePdSepTestCaseBaseV2(TestNpuPerformanceTestCaseBaseV2):
+    model_config = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.process = None
+        cls.local_ip = "127.0.0.1"
+        cls.host = os.getenv("POD_IP")
+        cls.port = SERVICE_PORT
+        cls.base_url = f"http://{cls.host}:{cls.port}"
+        cls.hostname = os.getenv("HOSTNAME")
+        cls.role = (
+            "router"
+            if "router" in cls.hostname
+            else "prefill"
+            if "prefill" in cls.hostname
+            else "decode"
+        )
+        logger.info(f"Init {cls.host} {cls.role=}!")
+
+        cls.model = cls.model_config.get("model_path")
+        decode_args = cls.model_config.get("decode_args")
+        cls.other_args = list(decode_args) if decode_args is not None else None
+
+        cls.start_pd_server()
+        cls.start_router_server()
+
+    @classmethod
+    def tearDownClass(cls):
+        logger.info("Start exec tearDownClass")
+        if cls.process:
+            try:
+                kill_process_tree(cls.process.pid)
+                for _ in range(60):
+                    if cls.process.poll() is not None:
+                        logger.info("Process fully exited")
+                        break
+                    time.sleep(1)
+                else:
+                    logger.warning("Process did NOT exit in time")
+            except Exception as e:
+                logger.error(f"Error during tearDown: {e}")
+        logger.info("tearDownClass finished")
+
+    @classmethod
+    @check_role(allowed_roles=["router"])
+    def start_router_server(cls):
+        wait_for_prefill_decode_exit(key=ACTIVE_TEST_CLASS, value=cls.__name__)
+        logger.info(f"Starting router in thread...")
+        sglang_thread = threading.Thread(target=launch_router, args=(cls.model_config,))
+        sglang_thread.daemon = True
+        sglang_thread.start()
+
+        health_check_url = f"{cls.base_url}/health"
+        logger.info(f"Waiting for router to be ready at {health_check_url}")
+        wait_server_ready(health_check_url)
+
+        logger.info(
+            f"Waiting {SERVER_INITIALIZATION_DELAY} seconds for the server to fully initialize..."
+        )
+        time.sleep(SERVER_INITIALIZATION_DELAY)
+
+    @classmethod
+    @check_role(allowed_roles=["prefill", "decode"])
+    def start_pd_server(cls):
+        logger.info(f"Starting pd separation node...")
+        cls.process = launch_pd_separation_node(cls.model_config)
+        logger.info(f"Pd separation node started with PID: {cls.process.pid}")
+
+        # Loop to check if the process is still running
+        while True:
+            configmap = query_configmap(CONFIGMAP_NAME, NAMESPACE)
+            if configmap and configmap.data:
+                executing_class = configmap.data.get(ACTIVE_TEST_CLASS)
+                if executing_class and executing_class != cls.__name__:
+                    logger.info(f"Retrieved ConfigMap data: {configmap.data}")
+                    logger.info(f"[{cls.__name__}] exec completed, exiting waiter.")
+                    return
+            if cls.process.poll() is None:
+                # Process is still running
+                time.sleep(30)
+            else:
+                # Process has exited
+                exit_code = cls.process.poll()
+                raise Exception(
+                    f"Sglang process exited on node {cls.host} {cls.hostname} with exit code: {exit_code}"
+                )
+
+    @check_role(allowed_roles=["router"])
+    def run_throughput(self):
+        return super().run_throughput()
