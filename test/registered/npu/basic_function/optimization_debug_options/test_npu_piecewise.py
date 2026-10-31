@@ -39,8 +39,6 @@ class TestPiecewise(GSM8KAscendMixin, CustomTestCase):
         "--cuda-graph-backend-prefill=breakable",
         "--tp",
         "1",
-        "--cuda-graph-tc-compiler",
-        "eager",
         "--disable-radix-cache",
         "--attention-backend",
         "ascend",
