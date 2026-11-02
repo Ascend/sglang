@@ -70,7 +70,6 @@ jobs:
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
 
-
   nighly-test-npu:
     needs: [set-image-config]
     name: nightly-test-npu
@@ -904,8 +903,8 @@ jobs:
       - full-perf-4-npu-a3
       - full-perf-8-npu-a3
       - full-perf-16-npu-a3
-      - full-poc-multi-node-tests
-      - full-poc-multi-node-mix-tests
+#      - full-poc-multi-node-tests
+#      - full-poc-multi-node-mix-tests
       - setup-covstub
     runs-on: ubuntu-latest
     container:
