@@ -710,10 +710,26 @@ jobs:
           } > /tmp/report-rc
 
           # --keep keeps raw per-test files for coverage-data.tar.gz (manual
-          # rebuilds).
-          COVERAGE_FILE=/tmp/.coverage-all \
-            python3 -m coverage combine --rcfile=/tmp/report-rc --keep \
-            $(find "${COV_DIRS[@]}" -name 'coverage.*' -type f)
+          # rebuilds). parallel=True leaves one file per process, so a full run
+          # has tens of thousands of files: pass the list through Python (argv
+          # would exceed ARG_MAX: "Argument list too long").
+          python3 - "${COV_DIRS[@]}" <<'PYEOF'
+          import os
+          import sys
+
+          from coverage import Coverage
+
+          files = []
+          for cov_dir in sys.argv[1:]:
+              for root, _, names in os.walk(cov_dir):
+                  files.extend(
+                      os.path.join(root, n) for n in names if n.startswith("coverage.")
+                  )
+          print(f"Combining {len(files)} coverage data files")
+          Coverage(config_file="/tmp/report-rc", data_file="/tmp/.coverage-all").combine(
+              files, keep=True
+          )
+          PYEOF
 
           rm -rf "${REPORT_DIR}"
           COVERAGE_FILE=/tmp/.coverage-all \
