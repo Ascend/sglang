@@ -28,7 +28,7 @@ from sglang.test.test_utils import (
     CustomTestCase,
 )
 
-register_npu_ci(est_time=90, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=90, suite="full-2-npu-a3-Verify", nightly=True)
 
 
 _REASONING_PARSER_ARGS = ["--reasoning-parser", "qwen3"]
