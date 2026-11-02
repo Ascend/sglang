@@ -1,5 +1,5 @@
 ARG CANN_VERSION=9.1.0
-ARG DEVICE_TYPE=a3
+ARG DEVICE_TYPE=910b
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
 ARG arch
@@ -133,7 +133,7 @@ RUN ln -sf /usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device/lib
 
 RUN git clone --depth 1 https://github.com/vllm-project/vllm-ascend.git && \
     cd vllm-ascend && \
-    bash csrc/build_batch_invariant_ops.sh ascend910_93 && \
+    bash csrc/build_batch_invariant_ops.sh ascend910b && \
     cd /workspace && \
     rm -rf /workspace/vllm-ascend
 
