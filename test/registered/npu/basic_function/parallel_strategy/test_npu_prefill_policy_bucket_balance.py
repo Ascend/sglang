@@ -268,13 +268,13 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
                 self.assertIn(EXPECTED_ANSWER, resp.text)
 
         logger.info(
-            f'prefill_0 processed requests: {self.count_generate_requests("prefill_0")}'
+            f"prefill_0 processed requests: {self.count_generate_requests('prefill_0')}"
         )
         logger.info(
-            f'prefill_1 processed requests: {self.count_generate_requests("prefill_1")}'
+            f"prefill_1 processed requests: {self.count_generate_requests('prefill_1')}"
         )
         logger.info(
-            f'prefill_2 processed requests: {self.count_generate_requests("prefill_2")}'
+            f"prefill_2 processed requests: {self.count_generate_requests('prefill_2')}"
         )
         self.assertGreaterEqual(self.count_generate_requests("prefill_0"), 18)
         self.assertGreaterEqual(self.count_generate_requests("prefill_1"), 18)

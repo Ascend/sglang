@@ -61,6 +61,7 @@ def is_npu_a5() -> bool:
     except Exception:
         return False
 
+
 # Model weights storage directory
 MODEL_WEIGHTS_DIR = "/root/.cache/modelscope/hub/models/"
 HF_MODEL_WEIGHTS_DIR = "/root/.cache/huggingface/hub/"

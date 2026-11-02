@@ -76,7 +76,6 @@ OTHER_ARGS = [
 
 
 class TestNPUDeepSeek_V3_2_AIME2025(TestNpuAccuracyTestCaseBase):
-
     model = DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
     envs = ENVS
     other_args = OTHER_ARGS

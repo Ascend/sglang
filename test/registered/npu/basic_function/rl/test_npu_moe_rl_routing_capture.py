@@ -110,9 +110,9 @@ def _get_decode_logprob_signature(
     ret = resp.json()
 
     output_token_logprobs = ret["meta_info"].get("output_token_logprobs")
-    assert (
-        output_token_logprobs is not None
-    ), "missing output_token_logprobs in response"
+    assert output_token_logprobs is not None, (
+        "missing output_token_logprobs in response"
+    )
     assert len(output_token_logprobs) > 0, "empty output_token_logprobs"
 
     result = {
@@ -133,12 +133,12 @@ def _get_decode_logprob_signature(
 def _assert_logprob_signature_equal(a, b, *, atol=1e-4, msg=""):
     """Assert two decode logprob signatures are identical."""
     assert a["text"] == b["text"], f"{msg}text mismatch: {a['text']!r} != {b['text']!r}"
-    assert (
-        a["token_ids"] == b["token_ids"]
-    ), f"{msg}token_ids mismatch: {a['token_ids']} != {b['token_ids']}"
-    assert len(a["logprobs"]) == len(
-        b["logprobs"]
-    ), f"{msg}logprobs length mismatch: {len(a['logprobs'])} != {len(b['logprobs'])}"
+    assert a["token_ids"] == b["token_ids"], (
+        f"{msg}token_ids mismatch: {a['token_ids']} != {b['token_ids']}"
+    )
+    assert len(a["logprobs"]) == len(b["logprobs"]), (
+        f"{msg}logprobs length mismatch: {len(a['logprobs'])} != {len(b['logprobs'])}"
+    )
     for idx, (la, lb) in enumerate(zip(a["logprobs"], b["logprobs"])):
         assert abs(la - lb) <= atol, (
             f"{msg}logprob diff at idx={idx}: {la} vs {lb} "
@@ -154,8 +154,7 @@ def _assert_experts_valid(routed, num_experts=_NUM_EXPERTS):
     assert isinstance(routed, np.ndarray), f"Expected np.ndarray, got {type(routed)}"
     assert routed.dtype == np.int32, f"Expected int32, got {routed.dtype}"
     assert (routed >= 0).all() and (routed < num_experts).all(), (
-        f"Expert IDs out of [0, {num_experts}): "
-        f"min={routed.min()}, max={routed.max()}"
+        f"Expert IDs out of [0, {num_experts}): min={routed.min()}, max={routed.max()}"
     )
     logger.info(
         f"[_assert_experts_valid] shape={routed.shape} dtype={routed.dtype} "
@@ -328,9 +327,9 @@ class TestNPURoutingCaptureBasic(_BaseNPURoutingCaptureTest):
         """
         result = self._run_decode(max_new_tokens=16)
         routed = result["routed_experts"]
-        assert (
-            routed is not None
-        ), "routed_experts must not be None when return_routed_experts=True"
+        assert routed is not None, (
+            "routed_experts must not be None when return_routed_experts=True"
+        )
 
         _assert_experts_valid(routed)
         seqlen = (
@@ -376,15 +375,15 @@ class TestNPURoutingCaptureBasic(_BaseNPURoutingCaptureTest):
         """
         # Request WITHOUT flag
         sig_without = self._run_decode(return_rr=False)
-        assert (
-            "routed_experts" not in sig_without["meta_info"]
-        ), "routed_experts should NOT appear when return_routed_experts=False"
+        assert "routed_experts" not in sig_without["meta_info"], (
+            "routed_experts should NOT appear when return_routed_experts=False"
+        )
 
         # Request WITH flag
         sig_with = self._run_decode(return_rr=True)
-        assert (
-            "routed_experts" in sig_with["meta_info"]
-        ), "routed_experts SHOULD appear when return_routed_experts=True"
+        assert "routed_experts" in sig_with["meta_info"], (
+            "routed_experts SHOULD appear when return_routed_experts=True"
+        )
 
     # ── T-CAP-05 ────────────────────────────────────────────────────
     def test_05_routing_changes_with_weights(self):
@@ -531,9 +530,9 @@ class TestNPURoutingCaptureStartLen(_BaseNPURoutingCaptureTest):
         assert seqlen_default == seqlen_zero
         assert rows_default.shape[0] == seqlen_default - 1
         assert rows_zero.shape[0] == seqlen_zero - 1
-        assert np.array_equal(
-            rows_default, rows_zero
-        ), "default and explicit 0 must produce identical routed experts"
+        assert np.array_equal(rows_default, rows_zero), (
+            "default and explicit 0 must produce identical routed experts"
+        )
 
     # ── T-SL-02 ────────────────────────────────────────────────────
     def test_02_start_len_controls_row_count(self):
@@ -553,12 +552,12 @@ class TestNPURoutingCaptureStartLen(_BaseNPURoutingCaptureTest):
 
         assert seqlen == cropped_seqlen
         expected_rows = seqlen - 1 - start_len
-        assert (
-            cropped_rows.shape[0] == expected_rows
-        ), f"expected {expected_rows} rows, got {cropped_rows.shape[0]}"
-        assert np.array_equal(
-            full_rows[start_len:], cropped_rows
-        ), "cropped routed experts must match the tail of the full sequence"
+        assert cropped_rows.shape[0] == expected_rows, (
+            f"expected {expected_rows} rows, got {cropped_rows.shape[0]}"
+        )
+        assert np.array_equal(full_rows[start_len:], cropped_rows), (
+            "cropped routed experts must match the tail of the full sequence"
+        )
 
     # ── T-SL-03 ────────────────────────────────────────────────────
     def test_03_start_len_exceeds_prompt_tokens_aborts(self):
@@ -568,9 +567,9 @@ class TestNPURoutingCaptureStartLen(_BaseNPURoutingCaptureTest):
 
         # start_len == prompt_tokens should pass
         ok = self._send(self._build_payload(routed_experts_start_len=prompt_tokens))
-        assert (
-            ok.status_code == 200
-        ), f"start_len=={prompt_tokens} should pass, got {ok.text}"
+        assert ok.status_code == 200, (
+            f"start_len=={prompt_tokens} should pass, got {ok.text}"
+        )
 
         # start_len > prompt_tokens should abort
         too_big = self._send(
@@ -590,9 +589,9 @@ class TestNPURoutingCaptureStartLen(_BaseNPURoutingCaptureTest):
         first = self._send(
             self._build_payload(text=long_text, extra_key=cache_salt)
         ).json()
-        assert (
-            first["meta_info"].get("cached_tokens", 0) == 0
-        ), "first request must be a cold miss"
+        assert first["meta_info"].get("cached_tokens", 0) == 0, (
+            "first request must be a cold miss"
+        )
 
         prompt_tokens = first["meta_info"]["prompt_tokens"]
         start_len = max(1, prompt_tokens // 2)
@@ -622,9 +621,9 @@ class TestNPURoutingCaptureStartLen(_BaseNPURoutingCaptureTest):
         logger.info(
             f"[T-SL-04] routed_experts rows={rows.shape[0]} expected={expected}"
         )
-        assert (
-            rows.shape[0] == expected
-        ), f"expected {expected} rows, got {rows.shape[0]}"
+        assert rows.shape[0] == expected, (
+            f"expected {expected} rows, got {rows.shape[0]}"
+        )
 
     def _assert_aborted(self, resp, expected_substring):
         if resp.status_code == 200:
@@ -638,9 +637,9 @@ class TestNPURoutingCaptureStartLen(_BaseNPURoutingCaptureTest):
                 + " "
                 + str(body.get("error", ""))
             )
-            assert (
-                expected_substring in message
-            ), f"expected abort with '{expected_substring}', got body={body}"
+            assert expected_substring in message, (
+                f"expected abort with '{expected_substring}', got body={body}"
+            )
         else:
             assert resp.status_code >= 400
             assert expected_substring in resp.text

@@ -89,7 +89,7 @@ class TestDeepepAutoQwen3(CustomTestCase):
         self.assertGreaterEqual(
             metrics["accuracy"],
             self.accuracy,
-            f'Accyracy of {self.model} is {str(metrics["accuracy"])}, is lower than {self.accuracy}',
+            f"Accyracy of {self.model} is {str(metrics['accuracy'])}, is lower than {self.accuracy}",
         )
 
 

@@ -423,7 +423,7 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         resp_multi = self._request(
             self._build_msg(
                 image_b64,
-                "Describe the image briefly. " "End with either STOPEND or FINISHED",
+                "Describe the image briefly. End with either STOPEND or FINISHED",
             ),
             temperature=0,
             max_tokens=512,

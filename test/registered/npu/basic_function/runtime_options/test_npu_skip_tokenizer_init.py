@@ -106,7 +106,7 @@ class TestSkipTokenizerInit(CustomTestCase):
                     self.assertEqual(
                         len(item["meta_info"]["input_token_logprobs"]),
                         num_input_logprobs,
-                        f'{len(item["meta_info"]["input_token_logprobs"])} mismatch with {len(input_ids)}',
+                        f"{len(item['meta_info']['input_token_logprobs'])} mismatch with {len(input_ids)}",
                     )
                     self.assertEqual(
                         len(item["meta_info"]["output_token_logprobs"]),

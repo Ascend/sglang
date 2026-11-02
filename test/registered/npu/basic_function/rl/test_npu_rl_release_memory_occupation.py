@@ -141,6 +141,7 @@ def _assert_mem_increased(mem_before, mem_func, min_delta, tag):
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
+
 class TestReleaseMemoryOccupationNPU(CustomTestCase):
     """Test NPU release memory occupation.
 
@@ -232,7 +233,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                     f"{tag}-release",
                 )
                 logger.info(
-                    f"[{tag}] release: {time.perf_counter()-t0:.1f}s, {mem_before:.0f}→{mem_release:.0f} MB"
+                    f"[{tag}] release: {time.perf_counter() - t0:.1f}s, {mem_before:.0f}→{mem_release:.0f} MB"
                 )
 
                 engine.resume_memory_occupation()
@@ -243,7 +244,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                     f"{tag}-resume",
                 )
                 logger.info(
-                    f"[{tag}] resume: {time.perf_counter()-t0:.1f}s, {mem_release:.0f}→{mem_resume:.0f} MB"
+                    f"[{tag}] resume: {time.perf_counter() - t0:.1f}s, {mem_release:.0f}→{mem_resume:.0f} MB"
                 )
 
                 hf = self._make_hf_model(LLAMA_3_2_1B_WEIGHTS_PATH)
@@ -335,7 +336,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                     mem0, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB, f"{tag}-kv"
                 )
                 logger.info(
-                    f"[{tag}] Stage 1 done: {mem0:.0f}→{mem1:.0f} MB, {time.perf_counter()-t1:.1f}s"
+                    f"[{tag}] Stage 1 done: {mem0:.0f}→{mem1:.0f} MB, {time.perf_counter() - t1:.1f}s"
                 )
 
                 # Stage 2: release weights
@@ -346,11 +347,11 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                     mem1, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB, f"{tag}-w"
                 )
                 logger.info(
-                    f"[{tag}] Stage 2 done: {mem1:.0f}→{mem2:.0f} MB, {time.perf_counter()-t2:.1f}s"
+                    f"[{tag}] Stage 2 done: {mem1:.0f}→{mem2:.0f} MB, {time.perf_counter() - t2:.1f}s"
                 )
 
                 logger.info(
-                    f"[{tag}] release all: {mem0:.0f}→{mem1:.0f}→{mem2:.0f} MB, {time.perf_counter()-t0:.1f}s"
+                    f"[{tag}] release all: {mem0:.0f}→{mem1:.0f}→{mem2:.0f} MB, {time.perf_counter() - t0:.1f}s"
                 )
 
                 # Stage 3: resume weights
@@ -361,7 +362,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                     mem2, _npu_smi_mem_mb, _MIN_DELTA_SMI_W_MB, f"{tag}-resume-w"
                 )
                 logger.info(
-                    f"[{tag}] Stage 3 done: {mem2:.0f}→{mem3:.0f} MB, {time.perf_counter()-t0:.1f}s"
+                    f"[{tag}] Stage 3 done: {mem2:.0f}→{mem3:.0f} MB, {time.perf_counter() - t0:.1f}s"
                 )
 
                 # Stage 4: load training model and update weights
@@ -373,7 +374,7 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                 engine.update_weights_from_tensor(list(hf.named_parameters()))
                 del hf
                 torch.npu.empty_cache()
-                logger.info(f"[{tag}] Stage 4 done: {time.perf_counter()-t4:.1f}s")
+                logger.info(f"[{tag}] Stage 4 done: {time.perf_counter() - t4:.1f}s")
 
                 # Stage 5: resume kv_cache
                 logger.info(f"[{tag}] Stage 5: resuming kv_cache...")
@@ -383,11 +384,11 @@ class TestReleaseMemoryOccupationNPU(CustomTestCase):
                     mem3, _npu_smi_mem_mb, _MIN_DELTA_SMI_KV_MB, f"{tag}-resume-kv"
                 )
                 logger.info(
-                    f"[{tag}] Stage 5 done: {mem3:.0f}→{mem4:.0f} MB, {time.perf_counter()-t5:.1f}s"
+                    f"[{tag}] Stage 5 done: {mem3:.0f}→{mem4:.0f} MB, {time.perf_counter() - t5:.1f}s"
                 )
 
                 logger.info(
-                    f"[{tag}] resume+update total: {mem2:.0f}→{mem3:.0f}→{mem4:.0f} MB, {time.perf_counter()-t0:.1f}s"
+                    f"[{tag}] resume+update total: {mem2:.0f}→{mem3:.0f}→{mem4:.0f} MB, {time.perf_counter() - t0:.1f}s"
                 )
 
                 out = engine.generate(params["prompt"], params["sampling_params"])[

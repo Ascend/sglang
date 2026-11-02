@@ -291,9 +291,9 @@ class TestNPUSessionControl(CustomTestCase):
         print(logprobs_from_session)
         print("logprobs from normal queries:")
         print(logprobs_normal)
-        assert len(logprobs_from_session) == len(
-            logprobs_normal
-        ), "logprobs must have equal length"
+        assert len(logprobs_from_session) == len(logprobs_normal), (
+            "logprobs must have equal length"
+        )
         for a, b in zip(logprobs_from_session, logprobs_normal):
             assert abs(a - b) <= 0.15, f"logprobs {a} and {b} differ by more than 0.15"
 
@@ -424,9 +424,9 @@ class TestNPUSessionControl(CustomTestCase):
             output_no_session = response["text"]
             print("second request output without session:")
             print(output_no_session)
-            assert (
-                second_output == output_no_session
-            ), f"second_output: {second_output}, output_no_session: {output_no_session}"
+            assert second_output == output_no_session, (
+                f"second_output: {second_output}, output_no_session: {output_no_session}"
+            )
 
     @unittest.skip("broken")
     def test_session_control_backtrack_with_abort(self):

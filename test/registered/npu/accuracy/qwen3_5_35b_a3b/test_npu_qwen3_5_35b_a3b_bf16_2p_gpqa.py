@@ -80,5 +80,6 @@ class TestNPUQwen_3_5_35B_A3B_gpqa(TestNpuAccuracyTestCaseBase):
     def test_gpqa(self):
         self.run_accuracy()
 
+
 if __name__ == "__main__":
     unittest.main()

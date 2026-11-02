@@ -5,7 +5,10 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V3_2_EXP_W8A8_WEIGHTS_PATH
-os.environ["PYTORCH_NPU_ALLOC_CONF"] = "expandable_segments:True,pin_memory_expandable_segments:True"
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
@@ -34,7 +37,6 @@ OTHER_ARGS = [
 
 
 class TestNPUDeepSeek_V3_2_8P_GSM8K(TestNpuAccuracyTestCaseBase):
-
     model = DEEPSEEK_V3_2_EXP_W8A8_WEIGHTS_PATH
     other_args = OTHER_ARGS
     accuracy = 0.936

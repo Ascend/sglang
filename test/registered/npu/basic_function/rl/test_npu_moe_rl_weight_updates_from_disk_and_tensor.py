@@ -66,7 +66,7 @@ def _npu_server_args(tp_size=1, **extra):
         str(tp_size),
     ]
     args.extend(
-        f"--{k.replace('_','-')}={v}" if v is not True else f"--{k.replace('_','-')}"
+        f"--{k.replace('_', '-')}={v}" if v is not True else f"--{k.replace('_', '-')}"
         for k, v in extra.items()
     )
     return args
@@ -102,9 +102,9 @@ def _get_decode_logprob_signature(base_url, *, max_new_tokens=64, temperature=0.
     resp.raise_for_status()
     ret = resp.json()
     output_token_logprobs = ret["meta_info"].get("output_token_logprobs")
-    assert (
-        output_token_logprobs is not None
-    ), "missing output_token_logprobs in response"
+    assert output_token_logprobs is not None, (
+        "missing output_token_logprobs in response"
+    )
     assert len(output_token_logprobs) > 0, "empty output_token_logprobs"
     return {
         "text": ret["text"],
@@ -116,12 +116,12 @@ def _get_decode_logprob_signature(base_url, *, max_new_tokens=64, temperature=0.
 def _assert_logprob_signature_equal(a, b, *, atol=1e-4, msg=""):
     """Assert that logprob signatures from two decodes are identical."""
     assert a["text"] == b["text"], f"{msg}text mismatch: {a['text']!r} != {b['text']!r}"
-    assert (
-        a["token_ids"] == b["token_ids"]
-    ), f"{msg}token_ids mismatch: {a['token_ids']} != {b['token_ids']}"
-    assert len(a["logprobs"]) == len(
-        b["logprobs"]
-    ), f"{msg}logprobs length mismatch: {len(a['logprobs'])} != {len(b['logprobs'])}"
+    assert a["token_ids"] == b["token_ids"], (
+        f"{msg}token_ids mismatch: {a['token_ids']} != {b['token_ids']}"
+    )
+    assert len(a["logprobs"]) == len(b["logprobs"]), (
+        f"{msg}logprobs length mismatch: {len(a['logprobs'])} != {len(b['logprobs'])}"
+    )
     for idx, (la, lb) in enumerate(zip(a["logprobs"], b["logprobs"])):
         assert abs(la - lb) <= atol, (
             f"{msg}logprob diff at idx={idx}: {la} vs {lb} "

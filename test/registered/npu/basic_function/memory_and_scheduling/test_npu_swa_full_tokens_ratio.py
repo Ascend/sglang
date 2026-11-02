@@ -177,8 +177,7 @@ class TestSwaFullTokensRatioServer(TestNpuAccuracyTestCaseBase):
         # Calculate the expected SWA value . --swa-full-tokens-ratio: 0.3  page_size: 128
         expected_swa = int(full * 0.3) // 128 * 128
         print(
-            f"\n  [SWA Pool Info] full={full}, swa={swa}, "
-            f"expected_swa={expected_swa}"
+            f"\n  [SWA Pool Info] full={full}, swa={swa}, expected_swa={expected_swa}"
         )
         self.assertEqual(
             swa,

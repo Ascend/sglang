@@ -17,7 +17,6 @@ register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 class TestNPUSRTEngine(CustomTestCase):
-
     def test_1_engine_runtime_consistency(self):
         if not torch.npu.is_available():
             self.skipTest("NPU device not available")

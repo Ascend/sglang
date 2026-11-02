@@ -56,7 +56,7 @@ class TestBatchNotifySize(CustomTestCase):
         """
         for size in ("1", "32"):
             print(
-                f"\n[TC-BN] batch_notify_size={size} — " f"16 concurrent streams",
+                f"\n[TC-BN] batch_notify_size={size} — 16 concurrent streams",
                 flush=True,
             )
 
@@ -100,7 +100,7 @@ class TestBatchNotifySize(CustomTestCase):
                 succeeded = [r for r in results if r["ok"]]
                 failed = [r for r in results if not r["ok"]]
                 print(
-                    f"[TC-BN-{size}] {len(succeeded)}/16 OK, " f"{len(failed)} failed",
+                    f"[TC-BN-{size}] {len(succeeded)}/16 OK, {len(failed)} failed",
                     flush=True,
                 )
                 for r in failed:
@@ -109,7 +109,7 @@ class TestBatchNotifySize(CustomTestCase):
                 self.assertEqual(len(results), 16)
                 self.assertTrue(
                     all(r["ok"] for r in results),
-                    f"{len(failed)} streams failed " f"(batch_notify_size={size})",
+                    f"{len(failed)} streams failed (batch_notify_size={size})",
                 )
             finally:
                 kill_process_tree(process.pid)

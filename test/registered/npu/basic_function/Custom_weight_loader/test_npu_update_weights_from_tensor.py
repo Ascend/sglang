@@ -16,9 +16,9 @@ register_npu_ci(est_time=150, suite="full-2-npu-a3", nightly=True)
 def _check_param(engine, param_name, expect_values):
     """Check if the first 5 values of the specified parameter match the expected values."""
     actual_values = torch.tensor(engine.get_weights_by_name(param_name))[0, :5]
-    assert torch.allclose(
-        actual_values, torch.tensor(expect_values), atol=0.002
-    ), f"{actual_values=}"
+    assert torch.allclose(actual_values, torch.tensor(expect_values), atol=0.002), (
+        f"{actual_values=}"
+    )
 
 
 class TestUpdateWeightsFromTensor(CustomTestCase):

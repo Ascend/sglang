@@ -142,9 +142,9 @@ class TestPrioritySchedulingPreemptionThreshold(CustomTestCase):
         latency_c = e2e_latencies[1]
         latency_b = e2e_latencies[2]
 
-        assert (
-            latency_c < latency_b < latency_a
-        ), f"expected C<B<A，actually：C={latency_c}, A={latency_a}, B={latency_b}"
+        assert latency_c < latency_b < latency_a, (
+            f"expected C<B<A，actually：C={latency_c}, A={latency_a}, B={latency_b}"
+        )
 
     def test_preemption_threshold_execution_order_exa(self):
         """Test extended preemption threshold logic (same low priority → FIFO execution order)
@@ -214,12 +214,12 @@ class TestPrioritySchedulingPreemptionThreshold(CustomTestCase):
         latency_c = e2e_latencies[1]
         latency_b = e2e_latencies[2]
 
-        assert (
-            latency_c < latency_a
-        ), f"expected C<A，accurate：C={latency_c}, A={latency_a}, B={latency_b}"
-        assert (
-            latency_c < latency_b
-        ), f"expected C<B，accurate：C={latency_c}, A={latency_a}, B={latency_b}"
+        assert latency_c < latency_a, (
+            f"expected C<A，accurate：C={latency_c}, A={latency_a}, B={latency_b}"
+        )
+        assert latency_c < latency_b, (
+            f"expected C<B，accurate：C={latency_c}, A={latency_a}, B={latency_b}"
+        )
 
 
 def _verify_generate_responses(
@@ -233,20 +233,20 @@ def _verify_generate_responses(
         got_status, got_json = got
         expected_status, expected_err = expected
 
-        assert (
-            got_status == expected_status
-        ), f"expected_status:{expected_status}，actually{got_status}，response：{got_json}"
+        assert got_status == expected_status, (
+            f"expected_status:{expected_status}，actually{got_status}，response：{got_json}"
+        )
 
         if got_status == 200:
-            assert (
-                "error" not in got_json
-            ), f"error：{got_json.get('error', 'unknown error')}"
-            assert (
-                "meta_info" in got_json
-            ), "response does not have the necessary 'meta_info'"
-            assert (
-                "e2e_latency" in got_json["meta_info"]
-            ), "response does not have the necessary 'e2e_latency'"
+            assert "error" not in got_json, (
+                f"error：{got_json.get('error', 'unknown error')}"
+            )
+            assert "meta_info" in got_json, (
+                "response does not have the necessary 'meta_info'"
+            )
+            assert "e2e_latency" in got_json["meta_info"], (
+                "response does not have the necessary 'e2e_latency'"
+            )
             e2e_latencies.append(got_json["meta_info"]["e2e_latency"])
         else:
             e2e_latencies.append(None)
@@ -267,16 +267,16 @@ def _verify_running_queued_requests(
             rr_match = rr_pattern.search(line)
             if rr_match:
                 running_req_count = int(rr_match.group(1))
-                assert (
-                    running_req_count <= max_running_requests
-                ), f"running_req_count：{running_req_count} > {max_running_requests}"
+                assert running_req_count <= max_running_requests, (
+                    f"running_req_count：{running_req_count} > {max_running_requests}"
+                )
 
             qr_match = qr_pattern.search(line)
             if qr_match:
                 queued_req_count = int(qr_match.group(1))
-                assert (
-                    queued_req_count <= max_queued_requests
-                ), f"queued_req_count：{queued_req_count} > {max_queued_requests}"
+                assert queued_req_count <= max_queued_requests, (
+                    f"queued_req_count：{queued_req_count} > {max_queued_requests}"
+                )
 
 
 if __name__ == "__main__":

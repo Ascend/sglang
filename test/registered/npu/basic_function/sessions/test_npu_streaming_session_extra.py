@@ -184,9 +184,7 @@ class TestNPUStreamingSessionEagle(
 class TestNPUStreamingSessionEagleV2(
     NPUStreamingSessionExtraServerBase, StreamingSessionKitMixin
 ):
-    """EAGLE3 spec v2 (overlap on).
-
-    """
+    """EAGLE3 spec v2 (overlap on)."""
 
     model = QWEN3_8B_WEIGHTS_PATH
     extra_args = [

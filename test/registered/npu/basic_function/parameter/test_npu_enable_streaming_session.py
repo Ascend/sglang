@@ -505,8 +505,7 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                 self.assertEqual(
                     data_2["meta_info"]["prompt_tokens"],
                     len(ids_2),
-                    "prompt_tokens must equal turn 2 input only "
-                    "(no inherited context)",
+                    "prompt_tokens must equal turn 2 input only (no inherited context)",
                 )
                 self.assertEqual(
                     data_2["meta_info"]["completion_tokens"],

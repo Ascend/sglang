@@ -286,9 +286,9 @@ def run_lora_batch_splitting_equivalence_test(
 
     def _run_test(model_case: LoRAModelCase, torch_dtype: torch.dtype):
         lora_adapter_paths = [a.name for a in model_case.adaptors]
-        assert (
-            len(lora_adapter_paths) >= max_loras_per_batch
-        ), f"Need at least {max_loras_per_batch} adapters for this test"
+        assert len(lora_adapter_paths) >= max_loras_per_batch, (
+            f"Need at least {max_loras_per_batch} adapters for this test"
+        )
 
         max_new_tokens = 64
         base_path = model_case.base

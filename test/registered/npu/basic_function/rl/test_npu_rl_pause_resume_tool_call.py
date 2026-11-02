@@ -308,7 +308,7 @@ class TestNpuToolCallWithPauseResume(CustomTestCase):
         self.assertIn(
             "sunny",
             turn2_text.lower(),
-            f"Final answer doesn't reference weather data: " f"'{turn2_text[:200]}'",
+            f"Final answer doesn't reference weather data: '{turn2_text[:200]}'",
         )
 
 

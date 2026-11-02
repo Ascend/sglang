@@ -71,9 +71,9 @@ def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
     )
 
     # Verify the model actually has tied embeddings
-    assert (
-        model.config.tie_word_embeddings
-    ), f"Expected tie_word_embeddings=True for {base_model_name}"
+    assert model.config.tie_word_embeddings, (
+        f"Expected tie_word_embeddings=True for {base_model_name}"
+    )
 
     # Only target lm_head to isolate the test to the tied-embedding scenario.
     lora_config = LoraConfig(
@@ -104,9 +104,9 @@ def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
     safetensors_path = os.path.join(output_dir, "adapter_model.safetensors")
     f = safe_open(safetensors_path, framework="pt")
     lm_head_keys = [k for k in f.keys() if "lm_head" in k]
-    assert (
-        len(lm_head_keys) > 0
-    ), f"Expected lm_head LoRA weights in adapter, got keys: {sorted(f.keys())}"
+    assert len(lm_head_keys) > 0, (
+        f"Expected lm_head LoRA weights in adapter, got keys: {sorted(f.keys())}"
+    )
 
     print(f"Created LoRA adapter at {output_dir}")
     print(f"  lm_head keys: {lm_head_keys}")
@@ -117,6 +117,7 @@ def create_lora_adapter_with_lm_head(base_model_name: str, output_dir: str):
 
 
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 
 class TestLoRATiedLMHead(CustomTestCase):
     """
