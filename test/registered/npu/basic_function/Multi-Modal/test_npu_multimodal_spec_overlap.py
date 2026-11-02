@@ -42,7 +42,7 @@ class TestMultimodalOverlapSchedule(CustomTestCase):
     _COMMON_ARGS = [
         "--mem-fraction-static",
         "0.6",
-        "--cuda-graph-bs",
+        "--cuda-graph-bs-decode",
         "1",
         "--disable-radix-cache",
         "--tp-size",

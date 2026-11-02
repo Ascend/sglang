@@ -8,7 +8,10 @@ Verify each parallel strategy works correctly with image input:
   - Full model DP + image -> multi-replica inference correct
 """
 
+import os
 import unittest
+
+os.environ["SGLANG_NPU_FORWARD_NATIVE_GEMMA_RMS_NORM"] = "1"
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (

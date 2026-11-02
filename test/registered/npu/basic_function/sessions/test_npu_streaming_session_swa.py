@@ -7,16 +7,17 @@ NPU adaptations:
 - --cuda-graph-backend-prefill=disabled -> --disable-cuda-graph
 - --page-size 256 -> 128 (NPU page_size constraint)
 - added --attention-backend ascend
+- uses the NPU kit sglang.test.ascend.npu_streaming_session_kit
 """
 
 import unittest
 
-from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_BF16_WEIGHTS_PATH
-from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.kits.streaming_session_kit import (
+from sglang.test.ascend.npu_streaming_session_kit import (
     AbortLeakReproKitMixin,
     StreamingSessionKitMixin,
 )
+from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_BF16_WEIGHTS_PATH
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.server_fixtures.streaming_session_fixture import (
     ABORT_REPRO_CHUNKED_PREFILL_SIZE,
     ABORT_REPRO_CONTEXT_LEN,
@@ -113,14 +114,19 @@ class TestStreamingSessionSWAAbortLeakRepro(
     """
 
     model = SWA_MODEL
-    # NPU adaptation: page-size 256 -> 128
+    # NPU adaptation: page-size 256 -> 16 (not 128). Ascend floors inherited
+    # session KV to the page boundary. The fixture's per-turn inputs are small
+    # (~24 tokens); with page 128 the session context at the first recovery
+    # (~56 tokens) spans 0 pages, so cached_tokens floors to 0 and the
+    # fixture's `cached_tokens > 0` assertion fails spuriously. Page 16 keeps
+    # every round's inherited prefix >= 1 page (56 -> 48, 112 -> 112, ...).
     extra_args = [
         "--chunked-prefill-size",
         str(ABORT_REPRO_CHUNKED_PREFILL_SIZE),
         "--context-length",
         str(ABORT_REPRO_CONTEXT_LEN),
         "--page-size",
-        "128",
+        "16",
         "--max-running-requests",
         "32",
         "--log-level",

@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -9,6 +10,8 @@ from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestQwen3Next80B(GSM8KAscendMixin, CustomTestCase):
     """Testcase: Verify that the inference accuracy of the Qwen/Qwen3-Next-80B-A3B-Instruct model on the GSM8K dataset is no less than 0.92.

@@ -71,7 +71,7 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
             "1",
             "--attention-backend",
             "ascend",
-            "--cuda-graph-max-bs",
+            "--cuda-graph-max-bs-decode",
             "64",
             "--mem-fraction-static",
             "0.7",

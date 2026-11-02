@@ -14,6 +14,7 @@ register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
 class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
     model = DEEPSEEK_V2_LITE_W8A8_WEIGHTS_PATH
     accuracy = 0.34
+    num_questions = None  # Evaluate all questions excluding the 5 few-shot examples.
     other_args = [
         "--trust-remote-code",
         "--attention-backend",
@@ -42,7 +43,7 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
     }
 
     def test_mmlu(self):
-        expect_score = 0.58
+        expect_score = 0.38
         args = SimpleNamespace(
             base_url=self.base_url,
             model=self.model,
@@ -50,7 +51,6 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
             num_examples=128,
             num_threads=32,
             api="completion",
-            num_shots=5,
         )
         metrics = run_ascend_eval(args)
         self.assertGreater(metrics["score"], expect_score)

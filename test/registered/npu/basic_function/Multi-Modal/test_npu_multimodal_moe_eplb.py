@@ -4,6 +4,7 @@ NPU multimodal + EPLB tests.
 Verify EPLB (Expert Parallel Load Balancing) does not disrupt image inference.
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree
@@ -30,6 +31,8 @@ register_npu_ci(est_time=150, suite="full-2-npu-a3", nightly=True)
 # EPLB + image -> elastic load balancing correct
 # ============================================
 
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 class TestMultimodalEPLB(CustomTestCase):
     """Verify EPLB does not disrupt image inference.

@@ -5,7 +5,10 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
+    is_npu_a5,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
@@ -28,6 +31,8 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
         super().setUpClass()
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
+        if is_npu_a5():
+            os.environ["ASCEND_MF_TRANSFER_PROTOCOL"] = "device_urma"
 
         # Non blocking start servers
         cls.start_prefill()
@@ -44,6 +49,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
     @classmethod
     def tearDownClass(cls):
         os.environ.pop("ASCEND_MF_STORE_URL")
+        os.environ.pop("ASCEND_MF_TRANSFER_PROTOCOL", None)
         os.environ.pop("OPENAI_API_KEY", None)
         os.environ.pop("OPENAI_API_BASE", None)
         super().tearDownClass()
@@ -92,7 +98,7 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
             "--tp-size",
             "1",
             "--base-gpu-id",
-            "8",
+            "4" if is_npu_a5() else "8",
             "--attention-backend",
             "ascend",
             "--disaggregation-transfer-backend",
@@ -145,6 +151,8 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
         super().setUpClass()
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
+        if is_npu_a5():
+            os.environ["ASCEND_MF_TRANSFER_PROTOCOL"] = "device_urma"
 
         # Non blocking start servers
         cls.start_prefill()
@@ -161,6 +169,7 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
     @classmethod
     def tearDownClass(cls):
         os.environ.pop("ASCEND_MF_STORE_URL")
+        os.environ.pop("ASCEND_MF_TRANSFER_PROTOCOL", None)
         os.environ.pop("OPENAI_API_KEY", None)
         os.environ.pop("OPENAI_API_BASE", None)
         super().tearDownClass()
@@ -172,7 +181,7 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
             "--disaggregation-mode",
             "prefill",
             "--tp-size",
-            "2",
+            "1" if is_npu_a5() else "2",
             "--pp-size",
             "4",
             "--pp-async-batch-depth",
@@ -199,12 +208,11 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
             "--trust-remote-code",
             "--disaggregation-mode",
             "decode",
-            "--tp-size",
-            "2",
+            *(["--tp-size", "2"] if not is_npu_a5() else []),
             "--pp-size",
             "4",
             "--base-gpu-id",
-            "8",
+            "4" if is_npu_a5() else "8",
             "--attention-backend",
             "ascend",
             "--disaggregation-transfer-backend",
@@ -244,6 +252,8 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
         super().setUpClass()
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
+        if is_npu_a5():
+            os.environ["ASCEND_MF_TRANSFER_PROTOCOL"] = "device_urma"
 
         # Non blocking start servers
         cls.start_prefill()
@@ -289,7 +299,7 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
             "--tp-size",
             "1",
             "--base-gpu-id",
-            "8",
+            "4" if is_npu_a5() else "8",
             "--attention-backend",
             "ascend",
             "--disaggregation-transfer-backend",

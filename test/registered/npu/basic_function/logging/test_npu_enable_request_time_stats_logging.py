@@ -31,7 +31,7 @@ class TestNPUEnableRequestTimeStatsLogging(TestNPULoggingBase):
         self.inference_once()
 
         self.assertIn(
-            "Req Time Stats",
+            "ReqTimeStats",
             self.output_capturer.get_all(),
             f"Keyword not found in server logs.",
         )

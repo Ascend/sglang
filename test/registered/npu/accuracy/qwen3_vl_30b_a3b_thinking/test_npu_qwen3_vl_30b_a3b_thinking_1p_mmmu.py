@@ -41,7 +41,7 @@ OTHER_ARGS = [
     "--tp-size",
     2,
     "--mem-fraction-static",
-    0.8,
+    0.7,
     "--dtype",
     "bfloat16",
     "--reasoning-parser",

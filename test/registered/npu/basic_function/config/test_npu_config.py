@@ -7,10 +7,11 @@ from urllib.parse import urlparse
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import (
-    CONFIG_YAML_PATH,
-)
 from sglang.test.ci.ci_register import register_npu_ci
+
+CONFIG_YAML_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "config.yaml"
+)
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
