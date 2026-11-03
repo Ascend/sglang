@@ -450,7 +450,7 @@ jobs:
 #      install_sglang_from_source: false
 #      prefill_decode_deployment: 'mix'
 #      transformers_version: ''
-
+#
   # ==================== Image source staging (coverage mode) ==================== #
   # Standalone so covstub no longer depends on a test partition (p0 failing or
   # selecting no tests used to lose the baseline). Packs the traced tree:
@@ -495,7 +495,7 @@ jobs:
 #          # Re-running this job would otherwise hit a duplicate-name conflict.
 #          overwrite: true
 #          retention-days: 3
-
+#
   # ==================== Coverage Assembly & Publish (coverage mode) ==================== #
   # Assembles coverage from the partition jobs. covstub is the traced tree
   # (image-preinstalled sglang + test-utility overlay, staged by
@@ -886,7 +886,7 @@ jobs:
 #          RUN_DIR="/root/.cache/tests/precise-test/${{ github.run_id }}-attempt-${{ github.run_attempt }}"
 #          rm -rf "${RUN_DIR}"
 #          echo "Removed ${RUN_DIR}"
-
+#
 #  check-all-jobs:
 #    if: github.repository == 'sgl-project/sglang' && always()
 #    needs:

@@ -371,7 +371,7 @@ jobs:
     name: multi-node-poc
     # Coverage mode: multi-node runs without coverage.
     if: ${{ !cancelled() }}
-    needs: [set-image-config, nightly-perf-2-npu-a3, nightly-perf-4-npu-a3, nightly-perf-16-npu-a3, nightly-acc-2-npu-a3, nightly-acc-4-npu-a3, nightly-acc-16-npu-a3]
+    needs: [set-image-config]
     strategy:
       fail-fast: false
       max-parallel: 1
