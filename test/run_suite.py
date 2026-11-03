@@ -193,6 +193,8 @@ NIGHTLY_SUITES = {
         "full-perf-4-npu-a3",
         "full-perf-8-npu-a3",
         "full-perf-16-npu-a3",
+        "tmp-4-npu-a3",
+        "tmp-16-npu-a3",
     ],
     HWBackend.XPU: [
         "nightly-xpu-1-gpu",

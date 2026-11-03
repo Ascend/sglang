@@ -18,6 +18,8 @@ register_npu_ci(
     est_time=800,
     suite="base-b-test-2-npu-a3",
 )
+# tmp
+register_npu_ci(est_time=800, suite="tmp-4-npu-a3", nightly=True)
 register_npu_ci(est_time=1400, suite="nightly-2-npu-a3", nightly=True)
 
 # The nightly pipeline is also triggered by pull requests via path filters, so the

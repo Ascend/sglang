@@ -25,6 +25,8 @@ register_npu_ci(
     suite="base-b-test-4-npu-a3",
     nightly=False,
 )
+# tmp
+register_npu_ci(est_time=500, suite="tmp-4-npu-a3", nightly=True)
 register_npu_ci(
     est_time=500,
     suite="nightly-4-npu-a3",
