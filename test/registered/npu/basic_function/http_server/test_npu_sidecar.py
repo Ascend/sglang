@@ -29,7 +29,7 @@ from sglang.test.test_utils import (
     terminate_and_kill_process_tree,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3-Verify", nightly=True)
 
 # Directory holding the prebuilt Rust extension _*.so files.
 PREBUILT_RUST_EXT_DIR = Path(

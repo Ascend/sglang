@@ -38,7 +38,7 @@ except Exception as e:  # pragma: no cover
 
 register_npu_ci(
     est_time=400,
-    suite="full-1-npu-a3",
+    suite="full-1-npu-a3-Verify",
     nightly=True,
 )
 
