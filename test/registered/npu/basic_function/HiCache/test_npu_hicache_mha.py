@@ -1,3 +1,4 @@
+import os
 import unittest
 from types import SimpleNamespace
 from urllib.parse import urlparse
@@ -39,7 +40,7 @@ class TestAscendMhaHicache(CustomTestCase):
             "ascend",
             "--enable-hierarchical-cache",
             "--hicache-size",
-            1 if os.getenv("SGLANG_IS_IN_CI") else 10,
+            1 if _is_pr_pipeline else 10,
         ]
 
     def test_a_gsm8k(self):
@@ -49,11 +50,13 @@ class TestAscendMhaHicache(CustomTestCase):
                     model,
                     self.base_url,
                     timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-                    other_args=[*self.common_args],
                     env={
                         **os.environ,
-                        "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+                        "PYTORCH_NPU_ALLOC_CONF": (
+                            "expandable_segments:True,pin_memory_expandable_segments:True"
+                        ),
                     },
+                    other_args=[*self.common_args],
                 )
                 try:
                     if _is_pr_pipeline:
