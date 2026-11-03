@@ -22,8 +22,6 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
-# tmp
-register_npu_ci(est_time=400, suite="tmp-4-npu-a3", nightly=True)
 register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
 
 

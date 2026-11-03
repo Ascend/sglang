@@ -20,8 +20,6 @@ from sglang.test.test_utils import (
     popen_launch_pd_server,
 )
 
-# tmp
-register_npu_ci(est_time=400, suite="tmp-16-npu-a3", nightly=True)
 register_npu_ci(
     est_time=400,
     suite="full-16-npu-a3",
