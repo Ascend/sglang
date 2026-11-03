@@ -76,8 +76,8 @@ class HiCacheStorageBaseMixin:
             "--page-size",
             "128",
             "--enable-hierarchical-cache",
-            "--hicache-ratio",
-            "1.2",
+            "--hicache-size",
+            2,
             "--enable-cache-report",
             "--hicache-storage-backend",
             "file",
@@ -88,6 +88,10 @@ class HiCacheStorageBaseMixin:
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=common_args + cls._get_extra_server_args(),
+            env={
+                **os.environ,
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+            },
         )
         return process
 
@@ -242,8 +246,8 @@ class TestHiCacheStorageAccuracy(HiCacheStorageBaseMixin, CustomTestCase):
             "direct",
             "--tp-size",
             "2",
-            "--hicache-ratio",
-            "1.5",
+            "--hicache-size",
+            2,
         ]
 
     def _run_gsm8k(self) -> float:

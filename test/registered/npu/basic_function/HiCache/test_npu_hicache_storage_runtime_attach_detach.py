@@ -52,7 +52,7 @@ def _common_hicache_args(port: int) -> list:
         "--hicache-ratio",
         "1.2",
         "--hicache-size",
-        "100",
+        "1",
         "--enable-cache-report",
         "--tp-size",
         "2",
@@ -135,6 +135,10 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             base_url_a,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=_common_hicache_args(port_a),
+            env={
+                **os.environ,
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+            },
         )
         try:
             wait_for_http_ready(base_url_a, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH)
@@ -170,6 +174,10 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             base_url_b,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args_b,
+            env={
+                **os.environ,
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+            },
         )
         try:
             wait_for_http_ready(base_url_b, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH)

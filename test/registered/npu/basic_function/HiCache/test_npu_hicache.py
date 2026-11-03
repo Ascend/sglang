@@ -92,6 +92,10 @@ class TestHiCache(CustomTestCase):
             self.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
+            env={
+                **os.environ,
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+            },
         )
         return process
 
@@ -173,7 +177,7 @@ class TestHiCache(CustomTestCase):
         """Test Hicache with combined parameters, hicache with long sequence"""
         logging.warning("\n=== Test 003: Combined Parameters ===")
         self.process = self._launch_server_with_hicache(
-            hicache_size=100,
+            hicache_size=2,
             hicache_write_policy="write_through_selective",
             hicache_io_backend="kernel_ascend",
             hicache_mem_layout="page_first_kv_split",

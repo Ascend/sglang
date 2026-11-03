@@ -41,7 +41,7 @@ class TestAscendMlaHicache(CustomTestCase):
             4,
             "--enable-hierarchical-cache",
             "--hicache-size",
-            30,
+            1 if os.getenv("SGLANG_IS_IN_CI") else 10,
         ]
 
     def test_a_gsm8k(self):
@@ -54,6 +54,10 @@ class TestAscendMlaHicache(CustomTestCase):
                     other_args=[
                         *self.common_args,
                     ],
+                    env={
+                        **os.environ,
+                        "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+                    },
                 )
 
                 try:
