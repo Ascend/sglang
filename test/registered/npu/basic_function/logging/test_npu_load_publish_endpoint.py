@@ -14,7 +14,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=300, suite="full-2-npu-a3-Verify", nightly=True)
+register_npu_ci(est_time=300, suite="full-2-npu-a3", nightly=True)
 
 # Fixed ZMQ port for the kv-events publisher; with --load-publish-endpoint=auto
 # the load publisher port base is placed right after the kv port range.

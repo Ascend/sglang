@@ -34,6 +34,11 @@ register_npu_ci(
     nightly=True,
 )
 
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
+
+
 # Force deterministic inference so that the cached_tokens assertion is stable
 # across runs (mirrors the GPU test's SGLANG_ENABLE_DETERMINISTIC_INFERENCE=1).
 os.environ.setdefault("SGLANG_ENABLE_DETERMINISTIC_INFERENCE", "1")

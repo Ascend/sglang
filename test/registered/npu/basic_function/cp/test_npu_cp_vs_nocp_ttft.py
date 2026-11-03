@@ -121,7 +121,7 @@ MODEL_CONFIG_CPNOMTTP = {
     + [
         "--enable-prefill-cp",
         "--cp-strategy",
-        "zigzag",
+        "interleave",
         "--attn-cp-size",
         32,
     ],

@@ -255,6 +255,12 @@ jobs:
             pip install mindstudio-probe --pre
             pip install "antlr4-python3-runtime==4.9.3" --force-reinstall --no-deps
             pip install "uvicorn[standard]"
+            # openai_harmony is a hard dependency of srt/entrypoints/openai/
+            # serving_responses.py. When the image ships a sglang build without
+            # it, OpenAIServingResponses fails to import, the /v1/responses
+            # handler is left uninitialized and answers 500 (KeyError:
+            # 'openai_serving_responses') instead of a real status code.
+            pip install "openai-harmony==0.0.4"
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
             sglang_source_path=$(pwd)

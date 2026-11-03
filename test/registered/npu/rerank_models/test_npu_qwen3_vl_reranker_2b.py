@@ -26,6 +26,11 @@ register_npu_ci(
     nightly=True,
 )
 
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
+
+
 MODELS = [
     (QWEN3_VL_RERANKER_2B_WEIGHTS_PATH, 1, 1e-2),
 ]

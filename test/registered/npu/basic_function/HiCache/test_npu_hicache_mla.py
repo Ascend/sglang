@@ -1,3 +1,4 @@
+import os
 import unittest
 from types import SimpleNamespace
 from urllib.parse import urlparse
@@ -15,6 +16,11 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=400, suite="base-b-test-4-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-4-npu-a3", nightly=True)
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
+
 
 TEST_MODEL_MATRIX = {
     "/root/.cache/modelscope/hub/models/vllm-ascend/DeepSeek-V2-Lite-W8A8": {

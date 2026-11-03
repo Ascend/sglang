@@ -96,27 +96,15 @@ class MMMUVLMEval(Eval):
         for subs in self.DOMAIN_CAT2SUB_CAT.values():
             subjects.extend(subs)
 
-        # Local MMMU snapshot from ModelScope: one dir per subject with parquet
-        # files inside. Load parquet directly — the mirror's README lacks the
-        # HF `configs:` metadata, so name-based config resolution fails.
-        data_dir = "/root/.cache/modelscope/hub/datasets/AI-ModelScope/MMMU"
-
         # Load validation split of each subject
         datasets = []
         for subj in subjects:
             try:
-                d = load_dataset(
-                    "parquet",
-                    data_files={
-                        "validation": f"{data_dir}/{subj}/validation*.parquet"
-                    },
-                    split="validation",
-                )
+                d = load_dataset("MMMU/MMMU", subj, split="validation")
                 # attach subject info via transform
                 d = d.add_column("__subject__", [subj] * len(d))
                 datasets.append(d)
-            except Exception as e:
-                print(f"[MMMU] skip subject {subj}: {e}")
+            except Exception:
                 continue
         if not datasets:
             raise RuntimeError("Failed to load MMMU datasets")

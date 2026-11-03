@@ -12,7 +12,7 @@ register_npu_ci(est_time=4800, suite="full-acc-4-npu-a3", nightly=True)
 
 QWEN3_VL_8B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_BUFFSIZE": "1536",
     "HCCL_OP_EXPANSION_MODE": "AIV",

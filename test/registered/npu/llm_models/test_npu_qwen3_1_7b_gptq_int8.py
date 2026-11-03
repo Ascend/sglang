@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
@@ -8,6 +9,10 @@ from sglang.test.test_utils import CustomTestCase
 register_npu_ci(est_time=400, suite="base-b-test-1-npu-a3", nightly=False)
 register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
 
 
 class TestQwen317BGPTQInt8(GSM8KAscendMixin, CustomTestCase):

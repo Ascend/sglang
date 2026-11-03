@@ -3,9 +3,11 @@ import unittest
 import requests
 from transformers import AutoTokenizer
 
-from sglang.srt.sampling.custom_logit_processor import CustomLogitProcessor
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_32B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_32B_WEIGHTS_PATH,
+    DeterministicLogitProcessor,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -15,24 +17,6 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
-
-
-class DeterministicLogitProcessor(CustomLogitProcessor):
-    """A dummy logit processor that changes the logits to always
-    sample the given token id.
-    """
-
-    def __call__(self, logits, custom_param_list):
-        # Check that the number of logits matches the number of custom parameters
-        assert logits.shape[0] == len(custom_param_list)
-        key = "token_id"
-
-        for i, param_dict in enumerate(custom_param_list):
-            # Mask all other tokens
-            logits[i, :] = -float("inf")
-            # Assign highest probability to the specified token
-            logits[i, param_dict[key]] = 0.0
-        return logits
 
 
 class TestEnableReturnRoutedExperts(CustomTestCase):

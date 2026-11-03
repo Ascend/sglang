@@ -26,7 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-register_npu_ci(est_time=90, suite="full-2-npu-a3-Verify", nightly=True)
+register_npu_ci(est_time=90, suite="full-2-npu-a3", nightly=True)
 
 
 class TestNpuMultiTokenizerPauseResume(CustomTestCase):

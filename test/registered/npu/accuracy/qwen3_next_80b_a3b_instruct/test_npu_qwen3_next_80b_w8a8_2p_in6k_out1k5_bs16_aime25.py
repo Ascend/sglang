@@ -16,7 +16,7 @@ register_npu_ci(
 )
 
 QWEN3_NEXT_80B_A3B_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",

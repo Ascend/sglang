@@ -80,6 +80,7 @@ class DisaggregationHiCacheBase(PDDisaggregationServerBase):
         ]
         env = {
             **os.environ,
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
         }
@@ -158,6 +159,7 @@ class TestDisaggregationDecodeDisableOffload(DisaggregationHiCacheBase):
         ]
         env = {
             **os.environ,
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
         }
@@ -226,6 +228,7 @@ class TestDisaggregationDecodeEnableOffload(DisaggregationHiCacheBase):
 
         env = {
             **os.environ,
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
         }
