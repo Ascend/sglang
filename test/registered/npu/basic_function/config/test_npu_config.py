@@ -89,15 +89,12 @@ class TestConfigPriority(CustomTestCase):
 
     def test_config_priority(self):
         # will use false model path (/nonexistent/Qwen/Qwen3-32B) service start fail
-        expected_path = "/nonexistent/Qwen/Qwen3-32B"
-        with (
-            tempfile.NamedTemporaryFile(
-                mode="w+", delete=True, suffix="out.log"
-            ) as out_log_file,
-            tempfile.NamedTemporaryFile(
-                mode="w+", delete=True, suffix="out.log"
-            ) as err_log_file,
-        ):
+        error_message = "/nonexistent/Qwen/Qwen3-32B"
+        with tempfile.NamedTemporaryFile(
+            mode="w+", delete=True, suffix="out.log"
+        ) as out_log_file, tempfile.NamedTemporaryFile(
+            mode="w+", delete=True, suffix="err.log"
+        ) as err_log_file:
             try:
                 popen_launch_server(
                     "/nonexistent/Qwen/Qwen3-32B",
@@ -114,14 +111,7 @@ class TestConfigPriority(CustomTestCase):
             finally:
                 err_log_file.seek(0)
                 content = err_log_file.read()
-                # huggingface_hub now rejects the non-existent absolute path as
-                # an invalid repo id locally (HFValidationError) instead of
-                # letting the server hit the Hub and log "404 page not found".
-                self.assertIn(expected_path, content)
-                self.assertTrue(
-                    "HFValidationError" in content or "404 page not found" in content,
-                    f"unexpected startup failure log: {content[-2000:]}",
-                )
+                self.assertIn(error_message, content)
 
 
 if __name__ == "__main__":

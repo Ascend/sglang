@@ -9,8 +9,6 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
-os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
-
 register_npu_ci(est_time=3600, suite="full-perf-8-npu-a3", nightly=True)
 
 QWEN3_5_35B_A3B_2K_32K_ENVS = {
@@ -38,6 +36,8 @@ QWEN3_5_35B_A3B_2K_32K_OTHER_ARGS = [
     "--tp-size",
     8,
     "--dtype",
+    "bfloat16",
+    "--mamba-ssm-dtype",
     "bfloat16",
     "--chunked-prefill-size",
     65536,
