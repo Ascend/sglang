@@ -60,8 +60,6 @@ class TestHiCache(CustomTestCase):
             "ascend",
             "--disable-cuda-graph",
             "--enable-hierarchical-cache",
-            "--hicache-ratio",
-            str(hicache_ratio),
             "--hicache-write-policy",
             hicache_write_policy,
             "--radix-eviction-policy",
@@ -77,6 +75,13 @@ class TestHiCache(CustomTestCase):
                 [
                     "--hicache-size",
                     str(hicache_size),
+                ]
+            )
+        else:
+            other_args.extend(
+                [
+                    "--hicache-ratio",
+                    str(hicache_ratio),
                 ]
             )
 
@@ -146,7 +151,6 @@ class TestHiCache(CustomTestCase):
         """Test Hicache with combined parameters, hicache_storage_backend is configured as a file, file storage is hosted under hicache."""
         logging.warning("\n=== Test 002: Combined Parameters ===")
         self.process = self._launch_server_with_hicache(
-            hicache_ratio=2.0,
             hicache_size=2,
             hicache_write_policy="write_through",
             radix_eviction_policy="lfu",

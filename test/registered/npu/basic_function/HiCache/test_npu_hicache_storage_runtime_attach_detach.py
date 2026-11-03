@@ -50,8 +50,6 @@ def _common_hicache_args(port: int) -> list:
         "--page-size",
         "128",
         "--enable-hierarchical-cache",
-        "--hicache-ratio",
-        "1.2",
         "--hicache-size",
         "1",
         "--enable-cache-report",
