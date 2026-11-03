@@ -19,7 +19,7 @@ from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
-register_npu_ci(est_time=120, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=120, suite="full-1-npu-a3-Verify", nightly=True)
 
 
 class _BaseTestNPUMetrics(TestNPULoggingBase):
@@ -38,7 +38,7 @@ class _BaseTestNPUMetrics(TestNPULoggingBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        if cls.metrics_args is None:
+        if not cls.metrics_args:
             cls.metrics_args = ["--enable-metrics"]
         cls.other_args.extend(cls.metrics_args)
         with (

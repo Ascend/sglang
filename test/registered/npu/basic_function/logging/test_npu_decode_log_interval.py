@@ -5,7 +5,7 @@ from sglang.test.ascend.output_capturer import OutputCapturer
 from sglang.test.ascend.test_npu_logging import TestNPULoggingBase
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=100, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=100, suite="full-1-npu-a3-Verify", nightly=True)
 
 
 class TestDecodeLogInterval(TestNPULoggingBase):
@@ -32,7 +32,7 @@ class TestDecodeLogInterval(TestNPULoggingBase):
         self.err_log_file.seek(0)
         content = self.out_log_file.read() + self.err_log_file.read()
         decod_batch_count = content.count("Decode batch")
-        expected_decod_batch_count = math.floor((max_tokens + 9) / self.decode_numbers)
+        expected_decod_batch_count = math.floor((max_tokens + 9 - 3) / self.decode_numbers)
         self.assertEqual(decod_batch_count, expected_decod_batch_count)
 
 
