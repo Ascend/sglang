@@ -149,6 +149,7 @@ class TestHiCache(CustomTestCase):
         logging.warning("\n=== Test 002: Combined Parameters ===")
         self.process = self._launch_server_with_hicache(
             hicache_ratio=2.0,
+            hicache_size=2,
             hicache_write_policy="write_through",
             radix_eviction_policy="lfu",
             hicache_io_backend="direct",
