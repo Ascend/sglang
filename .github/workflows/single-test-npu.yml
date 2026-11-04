@@ -18,6 +18,7 @@ concurrency:
 
 env:
   KERNEL_COMMIT: a5a2b6f26dc06918023278d63933abe52a7befb9
+  SGLANG_COMMIT: 9b7bb9e8a76516115355f30378ecf315e03d4276
 
 jobs:
   single-node-poc:
@@ -36,6 +37,14 @@ jobs:
           repository: ClownBin/sgl-kernel-npu
           ref: ${{ env.KERNEL_COMMIT }}
           path: kernel
+          persist-credentials: false
+
+      - name: Checkout exact SGLang integration revision
+        uses: actions/checkout@v4
+        with:
+          repository: randgun/sglang
+          ref: ${{ env.SGLANG_COMMIT }}
+          path: sglang
           persist-credentials: false
 
       - name: Prepare dependencies
@@ -77,6 +86,10 @@ jobs:
           sha256sum "${wheels[0]}" > ci-artifacts/wheel.sha256
           python3 -m pip install --force-reinstall --no-deps "${wheels[0]}"
           python3 scripts/check_cannbotdsl_ci.py installed --output ci-artifacts/installed.json
+          test "$(git -C ../sglang rev-parse HEAD)" = "$SGLANG_COMMIT"
+          printf '%s\n' "$SGLANG_COMMIT" > ci-artifacts/sglang-commit.txt
+          # Bind SGLang's actual calls to the installed wheel; no model dependencies.
+          python3 ../sglang/test/manual/dsv4/check_dsv41_kernel_ops.py 2>&1 | tee ci-artifacts/sglang-api-contract.log
           python3 -m pip freeze > ci-artifacts/pip-freeze.txt
           python3 -m pytest -v --tb=short --npu-device 0 --junitxml=ci-artifacts/junit.xml \
             tests/python/sgl_kernel_npu/dsv41_cannbot_dsl/test_indexer_prologue_k.py \
