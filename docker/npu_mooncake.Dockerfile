@@ -2,7 +2,6 @@ ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
-ARG arch
 
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
@@ -11,7 +10,6 @@ SHELL ["/bin/bash", "-c"]
 ARG TARGETARCH
 ARG CANN_VERSION
 ARG DEVICE_TYPE
-ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
 # torch_npu 2.10.0.post6 requires torch==2.10.0, so PYTORCH_VERSION stays at 2.10.0
@@ -27,14 +25,6 @@ ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 ARG MODELSCOPE_VERSION=""
 ARG EVALSCOPE_VERSION=""
-
-# memfabric-hybrid / memcache-hybrid version, installed from the pip index (no OBS bucket download)
-ARG MF_VERSION="1.3.0"
-ARG MF_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/release/1.3.0/20261026.4/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MF_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/release/1.3.0/20261026.4/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-ARG MC_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/release/1.3.0/20261026.4/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MC_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/release/1.3.0/20261026.4/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-
 
 # memfabric-zbal: 950 与 a3 使用不同版本
 ARG ZBAL_VERSION_950="1.2.21004.post1"
@@ -185,16 +175,6 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && [ -n "$PIPDIR" ] \
     && cd "$PIPDIR" && ln -sf deep_ep/deep_ep_cpp*.so
 
-COPY ./build_mooncake.sh /mnt/share/build_mooncake1.sh
-RUN chmod 755 /mnt/share/build_mooncake1.sh && \
-    cd /mnt/share && \
-    git clone https://github.com/kvcache-ai/Mooncake.git && \
-    git clone https://gitcode.com/Ascend/memfabric_hybrid.git && \
-    bash /mnt/share/build_mooncake1.sh && \
-    pip install /mnt/share/Mooncake/dist/mooncake_transfer_engine-0.3.12.post1-cp312-cp312-linux_aarch64.whl --force --no-deps && \
-    rm -rf Mooncake && \
-    rm -rf memfabric_hybrid && \
-    cd /mnt && \
-    rm -rf /mnt/share
-
+RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine-0.3.14-cp312-cp312-manylinux_2_28_$(arch).whl --force --no-deps
+    
 CMD ["/bin/bash"]
