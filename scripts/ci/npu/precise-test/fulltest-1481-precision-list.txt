@@ -1,0 +1,34 @@
+# Precision-validation list for the full-test #1481 failure set (29 files).
+# Consumed by full-test-npu.yml's TEMP PR-validation scaffold: PR-triggered
+# runs of the fix/npu-full-test-infra-testcases branch run exactly these
+# files (one repo-relative path per line, '#' comments allowed) instead of
+# the full suite. Drop both together when validation concludes.
+test/registered/npu/basic_function/speculative_inference/test_npu_basic_sanity.py
+test/registered/npu/interface/test_npu_anthropic_server.py
+test/registered/npu/basic_function/Multi-Modal/test_npu_mm_worker_num.py
+test/registered/npu/basic_function/quant/test_npu_gguf_moe.py
+test/registered/npu/basic_function/api_related/test_npu_api_related_asr_max.py
+test/registered/npu/llm_models/test_npu_qwq_32b_w8a8.py
+test/registered/npu/basic_function/Custom_weight_loader/test_npu_remote_instance_weight_loader.py
+test/registered/npu/vlm_models/test_npu_step3_vl_10b.py
+test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_quantization_chunked.py
+test/registered/npu/basic_function/Custom_weight_loader/test_npu_update_weights_from_tensor.py
+test/registered/npu/basic_function/EPD/test_npu_disaggregated_vlm.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_enable_waterfill.py
+test/registered/npu/basic_function/For_Multi-Modal/test_npu_mm_process.py
+test/registered/npu/vlm_models/test_npu_encoder_dp.py
+test/registered/npu/basic_function/forward/test_npu_enable_quant_communications.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_dispatcher_output_dtype.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_next.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_235b_a22b_w8a8.py
+test/registered/npu/llm_models/test_npu_gpt_oss_120b_bf16.py
+test/registered/npu/vlm_models/test_npu_glm_4_5v.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_qwen3_next.py
+test/registered/npu/basic_function/kernel_backends/test_npu_swa_radix_cache_kl.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_R1_0528_w4a8_per_channel.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v3_2_w8a8.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v3_2_w8a8.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_R1_0528_w4a8_per_channel.py
+test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_qwen3_480b.py

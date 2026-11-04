@@ -245,6 +245,12 @@ jobs:
             rm -rf ${sglang_pkg_path}/sglang/test/kits
             cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
             cp $(pwd)/python/sglang/test/test_programs.py ${sglang_pkg_path}/sglang/test/test_programs.py
+            # Version-match test_utils with the branch too: registered tests
+            # call run_server() from it, and the NPU launch-timeout raise
+            # (DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH, full-test #1481 EOF family)
+            # lives here — without this copy the preinstalled 600s default
+            # silently overrides the branch fix.
+            cp $(pwd)/python/sglang/test/test_utils.py ${sglang_pkg_path}/sglang/test/test_utils.py
             # Legacy MMLU scorer modules: ascend/run_eval.py's
             # ascend/simple_eval_mmlu.py imports sglang.test.simple_eval_mmlu,
             # which the preinstalled image does not ship. Copy both files so
@@ -386,6 +392,17 @@ jobs:
               -o /tmp/selected_tests.txt
             echo "Selected test files:"
             cat /tmp/selected_tests.txt
+            # Precision filtering works in coverage mode too: keep the
+            # intersection of the suite enumeration with ONLY_TESTS (mirrors
+            # --only-file-list on the run_suite path below). No match -> empty
+            # selection -> the run below is skipped cleanly.
+            if [ -n "${ONLY_TESTS}" ]; then
+              printf '%s\n' "${ONLY_TESTS}" | tr ',' '\n' | sed '/^[[:space:]]*$/d' > /tmp/precision_tests.txt
+              grep -Fxf /tmp/precision_tests.txt /tmp/selected_tests.txt > /tmp/selected_tests_filtered.txt || true
+              mv /tmp/selected_tests_filtered.txt /tmp/selected_tests.txt
+              echo "Precision mode: $(wc -l < /tmp/selected_tests.txt) selected file(s) after filter:"
+              cat /tmp/selected_tests.txt
+            fi
             # Artifact transport: stage in a job-private root so the
             # artifact carries exactly this job's tests. The default
             # (shared-disk) RUN_DIR would also sweep sibling jobs' data
