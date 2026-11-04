@@ -113,14 +113,7 @@ RUN (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION
 
 
 ### Install ModelScope & EvalScope
-# Installed right after torch/torch-npu so their dependencies resolve against the pinned torch.
-# MODELSCOPE_VERSION / EVALSCOPE_VERSION are empty by default -> latest release.
-RUN MS_PKG="modelscope" && \
-    ES_PKG="evalscope" && \
-    if [ -n "${MODELSCOPE_VERSION}" ]; then MS_PKG="modelscope==${MODELSCOPE_VERSION}"; fi && \
-    if [ -n "${EVALSCOPE_VERSION}" ]; then ES_PKG="evalscope==${EVALSCOPE_VERSION}"; fi && \
-    ${PIP_INSTALL} "${MS_PKG}" "${ES_PKG}"
-
+RUN ${PIP_INSTALL} modelscope evalscope
 
 ## Install triton-ascend
 RUN ${PIP_INSTALL} pybind11 && \
