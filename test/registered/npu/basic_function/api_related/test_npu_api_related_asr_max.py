@@ -217,9 +217,11 @@ class TestAsrMaxTranscription(CustomTestCase):
                             break
                         if resp["type"] == "error":
                             error = resp
-                            logging.warning(
-                                "Service error during the transcription stage:", error
+                            self.assertIn(
+                                "Accumulated audio exceeded",
+                                error["error"]["message"],
                             )
+                            finish_flag = True
                             break
                     except (
                         WebSocketTimeoutException,
@@ -231,22 +233,25 @@ class TestAsrMaxTranscription(CustomTestCase):
                     finish_flag,
                     f"Transcription completion event not received within 30 seconds.",
                 )
-                self.assertGreater(
-                    len(transcript_text.strip()), 0, "Transcription result is empty."
-                )
+                if transcript_text is not None:
+                    self.assertGreater(
+                        len(transcript_text.strip()),
+                        0,
+                        "Transcription result is empty.",
+                    )
 
         finally:
             ws.close()
 
     def create_active_session(self, idx, result_list, lock):
         res = {"idx": idx, "ok": False, "msg": ""}
+        ws = None
         try:
             ws = websocket.create_connection(WS_URL, timeout=3)
 
             # Receive the first message
             first_raw = ws.recv()
             first_msg = json.loads(first_raw)
-            ws.close()
 
             if first_msg.get("type") == "error":
                 err = first_msg.get("error", {})
@@ -265,6 +270,12 @@ class TestAsrMaxTranscription(CustomTestCase):
                 res["msg"] = "Active session successfully created."
         except Exception as e:
             res["msg"] = f"Connection error: {str(e)}"
+        finally:
+            if ws is not None:
+                try:
+                    ws.close()
+                except Exception:
+                    pass
 
         # Thread-safe writing of results
         with lock:

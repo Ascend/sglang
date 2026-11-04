@@ -195,6 +195,26 @@ class _BaseNPUMoEWeightUpdateTest(CustomTestCase):
         resp.raise_for_status()
         return resp.json()
 
+    def _update_tensor(self, payload, timeout=600):
+        """POST /update_weights_from_tensor is only accepted inside a
+        weight-update session opened by /begin_weight_update and closed by
+        /end_weight_update. Without the bracket the server rejects it with
+        "must run between begin_weight_update() and end_weight_update()".
+        Always close the session (even on failure) so it never stays half-open.
+        """
+        begin = self._post("/begin_weight_update", {})
+        if not begin.get("success"):
+            raise RuntimeError(f"begin_weight_update failed: {begin}")
+        try:
+            resp = self._post("/update_weights_from_tensor", payload, timeout=timeout)
+            if not resp.get("success"):
+                raise RuntimeError(f"update_weights_from_tensor failed: {resp}")
+            return resp
+        finally:
+            end = self._post("/end_weight_update", {})
+            if not end.get("success"):
+                raise RuntimeError(f"end_weight_update failed: {end}")
+
     # ── Verification ──────────────────────────────────────────────────
     def _run_decode(self):
         return _get_decode_logprob_signature(self.base_url)
@@ -471,8 +491,7 @@ class TestNPUMoEWeightUpdateFromTensorTP1(_BaseNPUMoEWeightUpdateTest):
         serialized_str = base64.b64encode(serialized_bytes).decode("utf-8")
         serialized_tensors = [serialized_str] * self.tp_size
 
-        return self._post(
-            "/update_weights_from_tensor",
+        return self._update_tensor(
             {
                 "serialized_named_tensors": serialized_tensors,
                 "load_format": "direct",
@@ -602,8 +621,7 @@ class TestNPUMoEWeightUpdateFromTensorTP2(_BaseNPUMoEWeightUpdateTest):
         serialized_str = base64.b64encode(serialized_bytes).decode("utf-8")
         serialized_tensors = [serialized_str] * self.tp_size
 
-        return self._post(
-            "/update_weights_from_tensor",
+        return self._update_tensor(
             {
                 "serialized_named_tensors": serialized_tensors,
                 "load_format": None,
@@ -645,8 +663,7 @@ class TestNPUMoEWeightUpdateFromTensorTP2(_BaseNPUMoEWeightUpdateTest):
 
         serialized_str = base64.b64encode(serialized_bytes).decode("utf-8")
 
-        return self._post(
-            "/update_weights_from_tensor",
+        return self._update_tensor(
             {
                 "serialized_named_tensors": [serialized_str] * self.tp_size,
                 "load_format": "flattened_bucket",
@@ -730,8 +747,7 @@ class TestNPUMoEWeightUpdateFromTensorTP2(_BaseNPUMoEWeightUpdateTest):
             serialized_tensors.append(serialized_str)
             del rank_tensors, q_shard, k_shard, v_shard, qkv_shard, o_shard
 
-        return self._post(
-            "/update_weights_from_tensor",
+        return self._update_tensor(
             {
                 "serialized_named_tensors": serialized_tensors,
                 "load_format": "direct",
@@ -834,8 +850,7 @@ class TestNPUMoEWeightUpdateFromTensorTP2(_BaseNPUMoEWeightUpdateTest):
             serialized_tensors.append(serialized_str)
             del rank_tensors, gate_shard, up_shard, w13_shard, w2_shard
 
-        return self._post(
-            "/update_weights_from_tensor",
+        return self._update_tensor(
             {
                 "serialized_named_tensors": serialized_tensors,
                 "load_format": "direct",
