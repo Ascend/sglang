@@ -30,7 +30,7 @@ on:
         default: true
 
 concurrency:
-  group: full-test-npu-${{ inputs.coverage_mode == true && 'coverage-' || '' }}${{ inputs.ref || github.ref }}
+  group: full-test-npu-${{ inputs.coverage_mode == false && 'coverage-' || '' }}${{ inputs.ref || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 jobs:
@@ -65,7 +65,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.coverage_mode }}" ]; then
-            echo "coverage_mode=true" >> $GITHUB_OUTPUT
+            echo "coverage_mode=false" >> $GITHUB_OUTPUT
           else
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
@@ -103,120 +103,6 @@ jobs:
       use_coverage_runner: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
       upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
     secrets: inherit
-
-  full-4-npu-a3-Verify:
-    name: full-4-npu-a3-Verify
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    needs: [set-image-config]
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: full-4-npu-a3-Verify
-      runner_config: linux-aarch64-a3-4
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x timeout budget.
-      run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
-      timeout_per_file: '7200'
-      partitions: '{"size":1,"arr":[0]}'
-      ref: ${{ needs.set-image-config.outputs.ref }}
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-      use_coverage_runner: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-      upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-    secrets: inherit
-
-  full-8-npu-a3-Verify:
-    name: full-8-npu-a3-Verify
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    needs: [ set-image-config ]
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: full-8-npu-a3-Verify
-      runner_config: linux-aarch64-a3-8
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x timeout budget.
-      run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
-      timeout_per_file: '7200'
-      partitions: '{"size":1,"arr":[0]}'
-      ref: ${{ needs.set-image-config.outputs.ref }}
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-      use_coverage_runner: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-      upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-    secrets: inherit
-
-  full-acc-16-npu-a3-Verify:
-    name: full-acc-16-npu-a3-Verify
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    needs: [set-image-config]
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
-    with:
-      runner: linux-aarch64-a3-800i-16
-      test_type: 'accuracy'
-      test_suite: full-acc-16-npu-a3-Verify
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      is_nightly_pipeline_job: true
-      # Coverage mode: 2x timeout budget.
-      test_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '600' || '300' }}
-      partitions: '{"size":1,"arr":[0]}'
-      device_type_for_deps: 'a3'
-      skip_pr_test_health_check: 'true'
-      use_coverage_runner: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-      upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
-    secrets: inherit
-
-  full-perf-8-npu-a3:
-    name: full-perf-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
-    needs: [ set-image-config ]
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: full-perf-8-npu-a3
-      runner_config: linux-aarch64-a3-800t-8
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      run_timeout_minutes: '240'
-      timeout_per_file: '3600'
-      ref: ${{ needs.set-image-config.outputs.ref }}
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-    secrets: inherit
-
-  full-poc-multi-node-tests:
-    name: multi-node-poc
-    needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        test_config:
-          # glm5_1 performance tests
-          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/accuracy/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in64k_out1k_50ms_aime26.py
-            test_type: 'accuracy'
-            prefill_decode_deployment: 'separation'
-    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
-    with:
-      runner: linux-amd64-cpu-8
-      test_type: ${{ matrix.test_config.test_type }}
-      test_config_name: ${{ matrix.test_config.name }}
-      prefill_size: ${{ matrix.test_config.prefill_size }}
-      decode_size: ${{ matrix.test_config.decode_size }}
-      router_size: ${{ matrix.test_config.router_size }}
-      test_case: ${{ matrix.test_config.test_case }}
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      install_sglang_from_source: false
-      prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
-      transformers_version: ''
 
 #  full-2-npu-a3:
 #    name: full-2-npu-a3

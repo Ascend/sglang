@@ -260,7 +260,7 @@ jobs:
             # it, OpenAIServingResponses fails to import, the /v1/responses
             # handler is left uninitialized and answers 500 (KeyError:
             # 'openai_serving_responses') instead of a real status code.
-            pip install "openai-harmony==0.0.4"
+            pip install "openai==2.8.0" "openai-harmony==0.0.4"
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
             sglang_source_path=$(pwd)
