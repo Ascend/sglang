@@ -125,9 +125,9 @@ jobs:
           - device_type: a3
           - device_type: 950
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'kimi-k3.1' }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'kimi-k3.1' }}
       # 与 build job 用同一份合并后的 Dockerfile
-      dockerfile: docker/npu_cann9.2.0.Dockerfile
+      dockerfile: docker/kimi_3.1.Dockerfile
       build_args: |
         SGLANG_KERNEL_NPU_TAG=2026.11.0.post1
         CANN_VERSION=9.1.0
