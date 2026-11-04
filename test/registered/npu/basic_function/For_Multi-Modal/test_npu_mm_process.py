@@ -49,44 +49,44 @@ _COMMON_ARGS = [
     "--disable-cuda-graph",
 ]
 
+# Phase-1 result shared across the two test classes below (they run in one
+# pytest process, in file definition order).
+_prompt_tokens_with_config = None
 
-class TestMmProcessConfigDpEncoder(CustomTestCase):
-    """Testcase: Verify video chat works with --mm-process-config (custom video
-    preprocessing) and --mm-enable-dp-encoder enabled together.
 
-    The server is launched twice with the same request:
-    1. With both parameters enabled, verify video chat completion works
-       (deterministic output) and record usage.prompt_tokens.
-    2. Without the two parameters, record usage.prompt_tokens again.
-    The video preprocessing config (448x448 resize, fps=2) compresses visual
-    tokens, so prompt_tokens with the config must be smaller than without it.
+class _TestMmProcessBase(CustomTestCase):
+    """Shared server lifecycle for the mm-process-config comparison tests.
 
-    [Test Category] Parameter
-    [Test Target] --mm-process-config; --mm-enable-dp-encoder
+    Each concrete class launches its own server in setUpClass and kills it in
+    tearDownClass. Servers must NOT be killed/restarted mid-test: the CI
+    harness's fail-fast watcher aborts the whole pytest process when a watched
+    server exits outside of class teardown.
     """
+
+    __test__ = False
+    mm_process_config = None
+    """JSON string passed via --mm-process-config; None = launch without it."""
 
     model = QWEN3_VL_30B_A3B_INSTRUCT_WEIGHTS_PATH
     base_url = DEFAULT_URL_FOR_TEST
 
     @classmethod
     def setUpClass(cls):
-        # Launch the first server WITH both params
-        cls._launch_server(
-            [
-                *_COMMON_ARGS,
+        extra_args = []
+        if cls.mm_process_config is not None:
+            extra_args = [
                 "--mm-enable-dp-encoder",
                 "--mm-process-config",
-                _MM_PROCESS_CONFIG,
+                cls.mm_process_config,
             ]
-        )
+        cls._launch_server(extra_args)
 
     @classmethod
     def tearDownClass(cls):
-        # Kill whichever server is currently running
         cls._terminate_server()
 
     @classmethod
-    def _launch_server(cls, other_args):
+    def _launch_server(cls, extra_args):
         """Launch server and store process/log files on the class."""
         cls.out_file = tempfile.NamedTemporaryFile(
             mode="w+", suffix=".txt", delete=False
@@ -98,7 +98,7 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
             cls.model,
             cls.base_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=other_args,
+            other_args=[*_COMMON_ARGS, *extra_args],
             return_stdout_stderr=(cls.out_file, cls.err_file),
         )
 
@@ -129,10 +129,7 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
                                 "url": VIDEO_JOBS_PATH,
                             },
                         },
-                        {
-                            "type": "text",
-                            "text": "What's happening in this video?",
-                        },
+                        {"type": "text", "text": "What's happening in this video?"},
                     ],
                 }
             ],
@@ -154,11 +151,17 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
         self.assertGreater(len(content), 0)
         return result["usage"]["prompt_tokens"], content
 
-    def test_video_chat_and_token_comparison(self):
-        """Phase 1: with config, verify response and record tokens.
-        Phase 2: without config, record tokens and compare."""
 
-        # ---- Phase 1: with both params (server from setUpClass) ----
+class TestMmProcessWithConfig(_TestMmProcessBase):
+    """Phase 1: video chat with --mm-process-config + --mm-enable-dp-encoder.
+
+    [Test Category] Parameter
+    [Test Target] --mm-process-config; --mm-enable-dp-encoder
+    """
+
+    mm_process_config = _MM_PROCESS_CONFIG
+
+    def test_video_chat_with_config(self):
         resp = requests.get(self.base_url + "/health", timeout=30)
         self.assertEqual(resp.status_code, 200)
 
@@ -171,8 +174,8 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
             "Expected '--mm-enable-dp-encoder is enabled across TP=4' not found in server log",
         )
 
-        prompt_tokens_with_config, content = self._send_video_request()
-        print(f"\n[with config] prompt_tokens: {prompt_tokens_with_config}")
+        prompt_tokens, content = self._send_video_request()
+        print(f"\n[with config] prompt_tokens: {prompt_tokens}")
         print(f"Video chat response: {content[:200]}...")
 
         # Deterministic output at temperature=0 with the config enabled
@@ -181,10 +184,22 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
             content,
         )
 
-        type(self)._terminate_server()
-        type(self)._launch_server([*_COMMON_ARGS])
+        global _prompt_tokens_with_config
+        _prompt_tokens_with_config = prompt_tokens
 
-        # ---- Phase 2: without config ----
+
+class TestMmProcessWithoutConfig(_TestMmProcessBase):
+    """Phase 2: the 448x448 resize + fps=2 sampling config must compress
+    visual tokens, so prompt_tokens with the config is smaller than without."""
+
+    mm_process_config = None
+
+    def test_video_chat_without_config(self):
+        self.assertIsNotNone(
+            _prompt_tokens_with_config,
+            "TestMmProcessWithConfig must run first and record prompt_tokens",
+        )
+
         resp = requests.get(self.base_url + "/health", timeout=30)
         self.assertEqual(resp.status_code, 200)
 
@@ -192,12 +207,10 @@ class TestMmProcessConfigDpEncoder(CustomTestCase):
         print(f"\n[without config] prompt_tokens: {prompt_tokens_without_config}")
         print(f"Video chat response: {content[:200]}...")
 
-        # 448x448 resize + fps=2 sampling compresses visual tokens,
-        # so prompt_tokens with the config must be smaller
         self.assertLess(
-            prompt_tokens_with_config,
+            _prompt_tokens_with_config,
             prompt_tokens_without_config,
-            f"prompt_tokens with config ({prompt_tokens_with_config}) "
+            f"prompt_tokens with config ({_prompt_tokens_with_config}) "
             f"should be smaller than without config ({prompt_tokens_without_config})",
         )
 

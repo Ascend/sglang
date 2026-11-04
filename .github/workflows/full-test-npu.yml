@@ -482,6 +482,10 @@ jobs:
           rm -rf ${test_dir}/kits
           cp -r python/sglang/test/kits ${test_dir}/
           cp python/sglang/test/test_programs.py ${test_dir}/
+          # Keep the legacy MMLU scorer modules version-matched with the
+          # overlay (ascend/simple_eval_mmlu.py imports them).
+          cp python/sglang/test/simple_eval_mmlu.py ${test_dir}/
+          cp python/sglang/test/simple_eval_common.py ${test_dir}/
           out=/tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs
           mkdir -p ${out}
           tar -czf ${out}/sglang-image-src.tar.gz \

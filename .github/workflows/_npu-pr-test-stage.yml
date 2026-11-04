@@ -245,6 +245,12 @@ jobs:
             rm -rf ${sglang_pkg_path}/sglang/test/kits
             cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
             cp $(pwd)/python/sglang/test/test_programs.py ${sglang_pkg_path}/sglang/test/test_programs.py
+            # Legacy MMLU scorer modules: ascend/run_eval.py's
+            # ascend/simple_eval_mmlu.py imports sglang.test.simple_eval_mmlu,
+            # which the preinstalled image does not ship. Copy both files so
+            # they stay version-matched.
+            cp $(pwd)/python/sglang/test/simple_eval_mmlu.py ${sglang_pkg_path}/sglang/test/simple_eval_mmlu.py
+            cp $(pwd)/python/sglang/test/simple_eval_common.py ${sglang_pkg_path}/sglang/test/simple_eval_common.py
 
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
             pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
