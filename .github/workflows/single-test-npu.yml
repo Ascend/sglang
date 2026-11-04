@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  KERNEL_COMMIT: e65249aac6b81e4c3a06c67069a0a5c9651beb38
+  KERNEL_COMMIT: 6efcb8c1e1a167b06259b603dc8b94b81ed8ee88
 
 jobs:
   single-node-poc:
@@ -33,7 +33,7 @@ jobs:
       - name: Checkout exact kernel revision
         uses: actions/checkout@v4
         with:
-          repository: AkiYangDev/sgl-kernel-npu
+          repository: ClownBin/sgl-kernel-npu
           ref: ${{ env.KERNEL_COMMIT }}
           path: kernel
           persist-credentials: false
@@ -79,11 +79,11 @@ jobs:
           python3 scripts/check_cannbotdsl_ci.py installed --output ci-artifacts/installed.json
           python3 -m pip freeze > ci-artifacts/pip-freeze.txt
           python3 -m pytest -v --tb=short --npu-device 0 --junitxml=ci-artifacts/junit.xml \
-            tests/python/operators/cannbotdsl/test_indexer_prologue_k.py \
-            tests/python/operators/cannbotdsl/test_quant_lightning_indexer.py::test_quant_lightning_indexer \
-            tests/python/operators/cannbotdsl/test_quant_sparse_lightning_indexer.py::test_quant_sparse_lightning_indexer \
-            tests/python/operators/cannbotdsl/test_mixed_quant_sparse_flash_mla.py \
-            tests/python/operators/cannbotdsl/test_metadata_graph.py \
+            tests/python/sgl_kernel_npu/dsv41_cannbot_dsl/test_indexer_prologue_k.py \
+            tests/python/sgl_kernel_npu/dsv41_cannbot_dsl/test_quant_lightning_indexer.py::test_quant_lightning_indexer \
+            tests/python/sgl_kernel_npu/dsv41_cannbot_dsl/test_quant_sparse_lightning_indexer.py::test_quant_sparse_lightning_indexer \
+            tests/python/sgl_kernel_npu/dsv41_cannbot_dsl/test_mixed_quant_sparse_flash_mla.py \
+            tests/python/sgl_kernel_npu/dsv41_cannbot_dsl/test_metadata_graph.py \
             2>&1 | tee ci-artifacts/pytest.log
           python3 scripts/check_cannbotdsl_ci.py results --junit ci-artifacts/junit.xml --output ci-artifacts/result.json
 
