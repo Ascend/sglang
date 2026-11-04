@@ -41,7 +41,7 @@ jobs:
 
           # Test cases - replace with the actual test case path when using
           test_cases=(
-#            "test/registered/npu/basic_function/optimization_debug_options/test_npu_cuda_graph_bs.py"
+            # "test/registered/npu/basic_function/optimization_debug_options/test_npu_cuda_graph_bs.py"
             "test/registered/npu/basic_function/dllm/test_npu_llada2_mini_fdfo.py"
           )
 
