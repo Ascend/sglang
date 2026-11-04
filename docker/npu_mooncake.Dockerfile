@@ -20,11 +20,8 @@ ARG TORCH_NPU_VERSION="2.10.0.post6"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post11
+ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post1
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
-ARG DEVICE_TYPE
-ARG MODELSCOPE_VERSION=""
-ARG EVALSCOPE_VERSION=""
 
 # install memfabric-hybrid
 RUN ${PIP_INSTALL} "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/Triton-ascend/3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1806290330&Signature=eRq3VKjwgP/tTkObtsho%2BzIsmJM%3D"
@@ -111,7 +108,6 @@ RUN ${PIP_INSTALL} sglang-router
 RUN (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
     && (${PIP_INSTALL} torch-npu==${TORCH_NPU_VERSION} --extra-index-url ${TORCH_NPU_INDEX_URL})
 
-
 ### Install ModelScope & EvalScope
 RUN ${PIP_INSTALL} modelscope evalscope
 
@@ -130,7 +126,6 @@ RUN ${PIP_INSTALL} pybind11 && \
 RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
-
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
