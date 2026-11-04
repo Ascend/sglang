@@ -1,100 +1,101 @@
 name: Single Test (NPU)
-# test round 1: <test case description>
+# DSv4.1 DSL 0.8.0 / CANN 9.2.0: single-card correctness, no model weights.
 
 on:
   pull_request:
     branches:
       - testcases
-      - testcases-260813
+      - testcases-261015
     paths:
       - ".github/workflows/single-test-npu.yml"
+
+permissions:
+  contents: read
 
 concurrency:
   group: single-test-npu-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  KERNEL_COMMIT: e65249aac6b81e4c3a06c67069a0a5c9651beb38
+
 jobs:
   single-node-poc:
-    name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    name: DSv4.1 DSL correctness (A5, CANN 9.2.0)
+    runs-on: linux-amd64-a5-1
+    timeout-minutes: 120
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check npu info
-        run: |
-          npu-smi info
-
-      - name: Run test
-        timeout-minutes: 120
-        env:
-          SGLANG_USE_MODELSCOPE: true
-          HF_ENDPOINT: https://hf-mirror.com
-          SGLANG_IS_IN_CI: true
+      image: quay.io/ascend/cann:9.2.0-950-ubuntu22.04-py3.12@sha256:5c4fa2bb96c678d865eda4e50c8c4310fb013c3452c7a081afcb9c86ed318730
+    defaults:
+      run:
         shell: bash
+    steps:
+      - name: Checkout exact kernel revision
+        uses: actions/checkout@v4
+        with:
+          repository: AkiYangDev/sgl-kernel-npu
+          ref: ${{ env.KERNEL_COMMIT }}
+          path: kernel
+          persist-credentials: false
+
+      - name: Prepare dependencies
+        working-directory: kernel
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sglang_source_path=$(pwd)
-          echo "Source code path: ${sglang_source_path}"
-          ln -sf ${sglang_source_path} /root/sglang
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential cmake ninja-build ca-certificates git
+          python3 -m pip install 'torch==2.13.0' --index-url https://download.pytorch.org/whl/cpu
+          python3 -m pip install 'https://gitcode.com/Ascend/pytorch/releases/download/v26.2.0-pytorch2.13.0/torch_npu-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl'
+          python3 -m pip install 'cannbot-dsl==0.8.0' 'pytest==9.2.0' setuptools wheel pybind11 pyyaml decorator scipy attrs psutil packaging numpy
 
-          # Test cases - replace with the actual test case path when using
-          test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
-          )
-
-          for test_case in "${test_cases[@]}"; do
-            if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-              echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
-              exit 1
-            fi
+      - name: Build and validate migrated wheel
+        working-directory: kernel
+        env:
+          CANNBOTDSL_RUN_SMLA_TESTS: '1'
+          CANNBOTDSL_NATIVE_BINARY_MODE: 'off'
+          NPU_DEVICE_ID: '0'
+        run: |
+          set -eo pipefail
+          sdk_env=''
+          for candidate in /usr/local/Ascend/cann/set_env.sh /usr/local/Ascend/ascend-toolkit/set_env.sh /usr/local/Ascend/ascend-toolkit/latest/set_env.sh; do
+            if [ -f "$candidate" ]; then sdk_env="$candidate"; break; fi
           done
+          test -n "$sdk_env"
+          source "$sdk_env"
+          set -u
+          unset PYTHONPATH
+          mkdir -p ci-artifacts
+          npu-smi info | tee ci-artifacts/npu-smi.txt
+          python3 scripts/check_cannbotdsl_ci.py environment --commit "$KERNEL_COMMIT" --output ci-artifacts/environment.json
+          # A minimal native op supplies the package loader; DSL executes from source JIT.
+          python3 setup.py --arch-version 3510 --ops apply_token_bitmask --without-third-party -j4 2>&1 | tee ci-artifacts/build.log
+          wheels=(output/sgl_kernel_npu-*.whl)
+          test "${#wheels[@]}" -eq 1
+          test -f "${wheels[0]}"
+          sha256sum "${wheels[0]}" > ci-artifacts/wheel.sha256
+          python3 -m pip install --force-reinstall --no-deps "${wheels[0]}"
+          python3 scripts/check_cannbotdsl_ci.py installed --output ci-artifacts/installed.json
+          python3 -m pip freeze > ci-artifacts/pip-freeze.txt
+          python3 -m pytest -v --tb=short --npu-device 0 --junitxml=ci-artifacts/junit.xml \
+            tests/python/operators/cannbotdsl/test_indexer_prologue_k.py \
+            tests/python/operators/cannbotdsl/test_quant_lightning_indexer.py::test_quant_lightning_indexer \
+            tests/python/operators/cannbotdsl/test_quant_sparse_lightning_indexer.py::test_quant_sparse_lightning_indexer \
+            tests/python/operators/cannbotdsl/test_mixed_quant_sparse_flash_mla.py \
+            tests/python/operators/cannbotdsl/test_metadata_graph.py \
+            2>&1 | tee ci-artifacts/pytest.log
+          python3 scripts/check_cannbotdsl_ci.py results --junit ci-artifacts/junit.xml --output ci-artifacts/result.json
 
-          # copy required file from our daily cache
-          cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
-          cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
-          echo "scaling_governor performance num: \
-            $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor | grep performance | wc -l)"
-          echo "swappiness: $(cat /proc/sys/vm/swappiness)"
-          echo "numa_balancing: $(cat /proc/sys/kernel/numa_balancing)"
-          echo "sched_migration_cost_ns: $(cat /proc/sys/kernel/sched_migration_cost_ns)"
-
-          export SGLANG_TEST_MAX_RETRY=0
-          export SGLANG_SET_CPU_AFFINITY=1
-          echo "SGLANG_SET_CPU_AFFINITY: $SGLANG_SET_CPU_AFFINITY"
-
-          echo "Use sglang from image"
-          sglang_pkg_path=/sgl-workspace/sglang/python
-          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-          mkdir -p ${ascend_test_util_path}
-          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-          cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
-
-          # Set environment of cann
-          source /usr/local/Ascend/cann/set_env.sh || true
-          source /usr/local/Ascend/nnal/atb/set_env.sh || true
-
-          current_date=$(date +%Y%m%d)
-          log_path="/root/.cache/tests/logs/log/${current_date}/${HOSTNAME}"
-          rm -rf ${log_path}
-          mkdir -p ${log_path}
-          echo "Log path: ${log_path}"
-
-          for test_case in "${test_cases[@]}"; do
-            tc_name=$(basename ${test_case} .py)
-            echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
-            echo "Finished test case ${test_case}"
-          done
-
-          plog_path="/root/ascend/log/debug/plog"
-          if [ -d "$plog_path" ];then
-            echo "Plog files found. Begin to backup them."
-            target_plog_path="/root/.cache/tests/logs/plog/${HOSTNAME}"
-            echo "Save path: ${target_plog_path}"
-            rm -rf ${target_plog_path}
-            mkdir -p ${target_plog_path}
-            cp ${plog_path}/* ${target_plog_path}
-          fi
+      - name: Upload evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cannbot-dsv41-a5-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            kernel/ci-artifacts/
+            kernel/build/cann/*.log
+            kernel/build/torch/*.log
+            kernel/output/*.whl
+          if-no-files-found: warn
+          retention-days: 7
