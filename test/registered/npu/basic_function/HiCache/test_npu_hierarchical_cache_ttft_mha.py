@@ -14,10 +14,6 @@ register_npu_ci(
     nightly=True,
 )
 
-os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
-    "expandable_segments:True,pin_memory_expandable_segments:True"
-)
-
 
 class TestNpuHierarchicalCacheTTFT(CustomTestCase):
     """The test used the Qwen3-32B model, with hierarchical cache enabled, and TTFT improved by 40%.
