@@ -32,7 +32,9 @@ class TestDecodeLogInterval(TestNPULoggingBase):
         self.err_log_file.seek(0)
         content = self.out_log_file.read() + self.err_log_file.read()
         decod_batch_count = content.count("Decode batch")
-        expected_decod_batch_count = math.floor((max_tokens + 9 - 3) / self.decode_numbers)
+        expected_decod_batch_count = math.floor(
+            (max_tokens + 9 - 3) / self.decode_numbers
+        )
         self.assertEqual(decod_batch_count, expected_decod_batch_count)
 
 
