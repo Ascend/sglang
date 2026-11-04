@@ -176,6 +176,15 @@ export SGLANG_KILL_PROCESS_TREE_GRACEFUL=1
 export SGLANG_KILL_PROCESS_TREE_GRACEFUL_TIMEOUT="${SGLANG_KILL_PROCESS_TREE_GRACEFUL_TIMEOUT:-5}"
 export PYTHONPATH="${SCRIPT_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 export PYTEST_PLUGINS="precise_test_coverage_plugin"
+# Pin the fastest tracer core. On Python 3.12 coverage can fall back to
+# sys.monitoring (PEP 669), which is several times slower than the C tracer
+# for line tracing. Full-test #1481 evidence: under subprocess coverage a
+# 3.5GB weight shard took ~47s (~75MB/s) vs 16s cold / 2.2s warm without
+# coverage (~3.5GB/s warm). Python-dense load paths (GGUF dequant, torch_npu
+# CPU dtype conversion before H2D copy) are hit hardest, and server launches
+# then miss the 600s health window -> EOFError timeouts on glm_4_5v /
+# gpt_oss_120b / waterfill / deepep R1-0528 / qwen3_480b / gguf_moe etc.
+export COVERAGE_CORE=ctrace
 
 targets=("$@")
 if [ "${#targets[@]}" -eq 0 ]; then
