@@ -1,5 +1,6 @@
 """NPU adaptation of the EAGLE3 variant from test_hicache_variants.py."""
 
+import os
 import unittest
 from types import SimpleNamespace
 
@@ -75,15 +76,16 @@ class TestHiCacheEagle(CustomTestCase):
                 "--dtype",
                 "bfloat16",
                 "--enable-hierarchical-cache",
-                "--hicache-ratio",
-                "1.2",
+                "--hicache-size",
+                2,
                 "--page-size",
                 "128",
             ],
             env={
-                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+                **os.environ,
                 "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
                 "TRANSFORMERS_VERBOSITY": "error",
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
             },
         )
 
