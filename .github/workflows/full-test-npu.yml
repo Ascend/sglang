@@ -41,6 +41,7 @@ jobs:
       job_filter: ${{ steps.set-vars.outputs.job_filter }}
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       coverage_mode: ${{ steps.set-vars.outputs.coverage_mode }}
+      run_start_metadata: ${{ steps.set-vars.outputs.run_start_metadata }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
@@ -69,6 +70,17 @@ jobs:
           else
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
+
+          # Package run metadata (branch/workflow/create_time) as a single JSON for reuse by all
+          # test jobs; create_time is UTC+8 date + time (minute precision) recorded once at run
+          # start, shared even across midnight.
+          BRANCH_LABEL="${{ github.event.pull_request.head.label }}"
+          if [ -z "${BRANCH_LABEL}" ]; then
+            BRANCH_LABEL="${{ github.ref_name }}"
+          fi
+          BRANCH_LABEL="$(echo "${BRANCH_LABEL}" | tr -cd 'a-zA-Z0-9._/:' | tr '/:' '--')"
+          RUN_START_METADATA="$(python3 -c "import json,sys; print(json.dumps({'branch_label':sys.argv[1],'workflow_name':sys.argv[2],'create_time':sys.argv[3]}))" "$BRANCH_LABEL" "${{ github.workflow }}" "$(date -u -d '+8 hours' +%Y%m%d-%H%M)")"
+          echo "run_start_metadata=${RUN_START_METADATA}" >> $GITHUB_OUTPUT
 
 #  full-1-npu-a3-Verify:
 #    name: full-1-npu-a3-Verify
