@@ -1,4 +1,3 @@
-import os
 import unittest
 
 from sglang.test.ascend.test_ascend_utils import (
