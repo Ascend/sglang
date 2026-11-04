@@ -7,7 +7,7 @@ on:
         description: 'tag后缀，如 B021, release20260810'
         required: false
         type: string
-        default: 'main'
+        default: 'kimi-k3.1'
 
 jobs:
   build:
@@ -44,7 +44,7 @@ jobs:
 
       - name: Generate full image tag
         run: |
-          echo "FULL_TAG=${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}-${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "FULL_TAG=cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}-${{ matrix.platform }}" >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -66,17 +66,15 @@ jobs:
         with:
           context: docker
           # 合并后的单份 Dockerfile，a3 / 950 由 DEVICE_TYPE 分支决定
-          file: docker/npu_mooncake.Dockerfile
+          file: docker/kimi_3.1.Dockerfile
           platforms: linux/${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           outputs: ${{ github.repository == 'Ascend/sglang' && 'type=registry,oci-mediatypes=false' || '' }}
           provenance: false
           sbom: false
-          # 不使用构建缓存：每轮全量构建，保证 sglang / modelscope 等上游内容一定是最新的。
-          # 代价是构建阶段从「秒级」回到约 8~9 分钟（base 镜像约 100s + apt 约 120s + 各 pip 安装）。
           build-args: |
-            SGLANG_KERNEL_NPU_TAG=2026.9.0.post11
+            SGLANG_KERNEL_NPU_TAG=2026.11.0.post1
             CANN_VERSION=9.1.0
             DEVICE_TYPE=${{ matrix.device_type }}
 
@@ -101,7 +99,7 @@ jobs:
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
+          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'kimi-k3.1' }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
@@ -119,7 +117,7 @@ jobs:
     concurrency:
       # Unique per workflow + matrix leg + tag (shared reusable manifest
       # workflow; see release-docker-dev.yml).
-      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
+      group: manifest-deploy-${{ github.workflow }}-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'kimi-k3.1' }}
       cancel-in-progress: false
     strategy:
       matrix:
@@ -127,13 +125,13 @@ jobs:
           - device_type: a3
           - device_type: 950
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'kimi-k3.1' }}
       # 与 build job 用同一份合并后的 Dockerfile
-      dockerfile: docker/npu_mooncake.Dockerfile
+      dockerfile: docker/kimi_3.1.Dockerfile
       build_args: |
-        SGLANG_KERNEL_NPU_TAG=2026.9.0.post11
+        SGLANG_KERNEL_NPU_TAG=2026.11.0.post1
         CANN_VERSION=9.1.0
         DEVICE_TYPE=${{ matrix.device_type }}
-      artifact_name: image-manifest-${{ github.event.inputs.tag_suffix || 'main' }}-cann9.1.0-${{ matrix.device_type }}
+      artifact_name: image-manifest-cann9.1.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'kimi-k3.1' }}
       deploy_pages: 'true'
 
