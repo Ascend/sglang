@@ -70,6 +70,8 @@ class DisaggregationHiCacheBase(PDDisaggregationServerBase):
             "--tp-size",
             "2",
             "--enable-hierarchical-cache",
+            "--hicache-size",
+            2,
             "--hicache-io-backend",
             "kernel_ascend",
             "--hicache-mem-layout",
@@ -86,6 +88,7 @@ class DisaggregationHiCacheBase(PDDisaggregationServerBase):
             **os.environ,
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
         }
         cls.process_prefill = popen_launch_pd_server(
             cls.model,
@@ -184,6 +187,8 @@ class TestDisaggregationDecodeWithHiCache(DisaggregationHiCacheBase):
             "--base-gpu-id",
             cls.base_gpu_id,
             "--disaggregation-decode-enable-offload-kvcache",
+            "--hicache-size",
+            2,
             "--hicache-io-backend",
             "kernel_ascend",
             "--hicache-mem-layout",
@@ -202,6 +207,7 @@ class TestDisaggregationDecodeWithHiCache(DisaggregationHiCacheBase):
             **os.environ,
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24667",
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
         }
         cls.process_decode = popen_launch_pd_server(
             cls.model,
