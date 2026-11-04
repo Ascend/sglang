@@ -1,3 +1,4 @@
+import os
 import unittest
 from types import SimpleNamespace
 
@@ -32,6 +33,8 @@ class TestHiCachePage(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
                 "--enable-hierarchical-cache",
+                "--hicache-size",
+                2,
                 "--page-size",
                 128,
                 "--hicache-write-policy",
@@ -40,6 +43,10 @@ class TestHiCachePage(CustomTestCase):
                 "ascend",
                 "--disable-cuda-graph",
             ],
+            env={
+                **os.environ,
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+            },
         )
 
     @classmethod
