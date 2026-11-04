@@ -2,7 +2,6 @@ ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
-ARG arch
 
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
@@ -11,7 +10,6 @@ SHELL ["/bin/bash", "-c"]
 ARG TARGETARCH
 ARG CANN_VERSION
 ARG DEVICE_TYPE
-ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
 # torch_npu 2.10.0.post6 requires torch==2.10.0, so PYTORCH_VERSION stays at 2.10.0
@@ -20,16 +18,16 @@ ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
 ARG TORCH_NPU_VERSION="2.10.0.post6"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
-ARG SGLANG_TAG=main
+ARG SGLANG_TAG=fix/k31-npu-dsa-path
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post10
+ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post1
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 ARG MODELSCOPE_VERSION=""
 ARG EVALSCOPE_VERSION=""
 
 # memfabric-hybrid / memcache-hybrid version, installed from the pip index (no OBS bucket download)
-ARG MF_VERSION="1.2.1"
+ARG MF_VERSION="1.3.0"
 
 # memfabric-zbal: 950 与 a3 使用不同版本
 ARG ZBAL_VERSION_950="1.2.21004.post1"
@@ -125,7 +123,7 @@ RUN ${PIP_INSTALL} pybind11 && \
     fi
 
 # Install SGLang
-RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/iridiumine/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
