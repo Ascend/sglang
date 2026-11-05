@@ -18,7 +18,7 @@ jobs:
     name: single-node-poc
     runs-on: linux-aarch64-a3-2
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B010
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B106
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
           # Test cases - replace with the actual test case path when using
           test_cases=(
             # "test/registered/npu/basic_function/optimization_debug_options/test_npu_cuda_graph_bs.py"
-            "test/registered/npu/basic_function/dllm/test_npu_llada2_mini_fdfo.py"
+            "test/registered/npu/basic_function/lora/test_npu_lora_update.py"
           )
 
           for test_case in "${test_cases[@]}"; do
