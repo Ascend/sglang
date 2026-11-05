@@ -159,6 +159,9 @@ class TestMmProcessWithConfig(_TestMmProcessBase):
     [Test Target] --mm-process-config; --mm-enable-dp-encoder
     """
 
+    # opt-in: the base sets __test__ = False and pytest inherits it
+    __test__ = True
+
     mm_process_config = _MM_PROCESS_CONFIG
 
     def test_video_chat_with_config(self):
@@ -191,6 +194,9 @@ class TestMmProcessWithConfig(_TestMmProcessBase):
 class TestMmProcessWithoutConfig(_TestMmProcessBase):
     """Phase 2: the 448x448 resize + fps=2 sampling config must compress
     visual tokens, so prompt_tokens with the config is smaller than without."""
+
+    # opt-in: the base sets __test__ = False and pytest inherits it
+    __test__ = True
 
     mm_process_config = None
 

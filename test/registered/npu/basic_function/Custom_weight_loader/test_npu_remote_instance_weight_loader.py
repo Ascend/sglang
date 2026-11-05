@@ -223,7 +223,11 @@ def init_process_dst(
     terminate_process(process)
 
 
-def test_load_weights_from_remote_instance(
+# NB: not named test_* — the arguments are supplied by
+# TestLoadWeightsFromRemoteInstance below; a parameterized test_ function at
+# module level makes pytest collect it with missing fixtures
+# ("fixture 'tp_size' not found") under the CI runner.
+def load_weights_from_remote_instance_impl(
     tp_size,
     dp_size,
     model_name,
@@ -331,7 +335,7 @@ class TestLoadWeightsFromRemoteInstance(CustomTestCase):
 
         # Run all test cases
         for tp_size, dp_size, model_name, remote_backend in test_suits:
-            test_load_weights_from_remote_instance(
+            load_weights_from_remote_instance_impl(
                 tp_size,
                 dp_size,
                 model_name,

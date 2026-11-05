@@ -3,6 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
+from sglang.test.ascend.run_eval import run_eval as run_ascend_eval
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH,
 )
@@ -111,10 +112,13 @@ class TestDeepepLowlatencyDeepseekR1(CustomTestCase):
             eval_name="mmlu",
             num_examples=8,
             num_threads=32,
+            # sgl.run_eval now refuses mmlu (scored by sgl-eval); use the
+            # ascend legacy scorer like the sibling deepep cases.
+            api="completion",
         )
 
         # Execute MMLU evaluation and retrieve performance metrics
-        metrics = run_eval(args)
+        metrics = run_ascend_eval(args)
         # Assertion: Ensure the MMLU score meets the basic performance threshold
         self.assertGreater(metrics["score"], 0.5)
 

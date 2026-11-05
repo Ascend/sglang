@@ -539,7 +539,9 @@ def test_hellaswag_select():
     import time
 
     import numpy as np
-    from sglang.test.test_utils import download_and_cache_file, read_jsonl
+    # NB: both helpers live in sglang.utils (sglang.test.test_utils does not
+    # ship download_and_cache_file, which broke the import on CI images).
+    from sglang.utils import download_and_cache_file, read_jsonl
 
     def get_one_example(lines, i, include_answer):
         ret = lines[i]["activity_label"] + ": " + lines[i]["ctx"] + " "

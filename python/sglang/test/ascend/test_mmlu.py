@@ -11,10 +11,17 @@ class TestMMLU:
     def test_mmlu(self):
         accuracy_mmlu_threshold = getattr(self, "accuracy_mmlu", 0.00)
 
+        # NB: getattr's default is evaluated eagerly, so referencing
+        # self.other_args here would raise AttributeError on mixins whose
+        # subclass never defines it. Resolve defensively instead.
+        if hasattr(self, "server_cmd"):
+            server_cmd = self.server_cmd
+        else:
+            server_cmd = subprocess.list2cmdline(
+                map(str, getattr(self, "other_args", []))
+            )
         model_metrics = {
-            "server": getattr(
-                self, "server_cmd", subprocess.list2cmdline(map(str, self.other_args))
-            ),
+            "server": server_cmd,
             "client": "sgl-eval",
             "accuracy_threshold": getattr(self, "accuracy_mmlu", "N/A"),
         }
