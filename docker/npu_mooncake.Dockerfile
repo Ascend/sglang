@@ -25,7 +25,7 @@ ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 
 # install memfabric-hybrid
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        ${PIP_INSTALL} "https://sglang-npu.obs.cn-southwest-2.myhuaweicloud.com:443/Triton-ascend/3.2.2/triton_ascend-3.2.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl?AccessKeyId=HPUAAPJN7IAXFCS2GDSQ&Expires=1806290330&Signature=eRq3VKjwgP/tTkObtsho%2BzIsmJM%3D"; \
+        ${PIP_INSTALL} "https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/sglang/memfabric_hybrid-1.3.1-cp312-cp312-linux_aarch64.whl"; \
     elif [ "$TARGETARCH" = "amd64" ]; then \
         ${PIP_INSTALL} memfabric-hybrid==1.3.0; \
     else \
