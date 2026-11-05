@@ -77,6 +77,7 @@ jobs:
           mkdir -p ${ascend_test_util_path}
           mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
           cp -r ${sglang_source_path}/python/sglang/test/ascend ${ascend_test_util_path}
+          cp ${sglang_source_path}/python/sglang/test/sgl_eval_utils.py ${sglang_pkg_path}/sglang/test/sgl_eval_utils.py
 
           # Set environment of cann
           source /usr/local/Ascend/cann/set_env.sh || true
