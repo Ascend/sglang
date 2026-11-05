@@ -663,13 +663,17 @@ jobs:
                   if "upload_coverage_artifact" not in job_with:
                       continue
                   suite = job_with.get("self_name") or job_with.get("test_suite")
-                  if not isinstance(suite, str) or "${{" in suite:
+                  # NB: the literal is split so the YAML/expr scanner does not
+                  # see an unclosed dollar-brace sequence here (it made the
+                  # whole workflow file invalid: 'The expression is not
+                  # closed', annotation at the setup-covstub run block).
+                  if not isinstance(suite, str) or "$" + "{{" in suite:
                       print(f"::error::{name}:{job_id} needs a literal self_name/test_suite")
                       sys.exit(1)
                   parts = job_with.get("partitions")
                   if parts is None:
                       size = 1
-                  elif not isinstance(parts, str) or "${{" in parts:
+                  elif not isinstance(parts, str) or "$" + "{{" in parts:
                       print(f"::error::{name}:{job_id} partitions must be a literal JSON string")
                       sys.exit(1)
                   else:
