@@ -53,13 +53,13 @@ jobs:
           images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
           tags: type=raw,value=${{ env.FULL_TAG }}
 
-      - name: Log into SWR
+      - name: Log into Quay.io
         uses: docker/login-action@v3
         if: ${{ github.repository == 'Ascend/sglang' }}
         with:
-          registry: swr.cn-southwest-2.myhuaweicloud.com
-          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
-          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+          registry: quay.io
+          username: ${{ secrets.QUAY_NAME }}
+          password: ${{ secrets.QUAY_PWD }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
