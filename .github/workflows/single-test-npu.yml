@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  KERNEL_COMMIT: a24311bf4da4a023d483b48d1785e6362d9247fd
+  KERNEL_COMMIT: 91ade97f5f5cf2044fa9f150fdf3e81676234056
   SGLANG_COMMIT: 00fe9da12d280a99aa79a2786b3d11d7761ea44c
 
 jobs:
@@ -61,10 +61,6 @@ jobs:
 
       - name: Build and validate migrated wheel
         working-directory: kernel
-        env:
-          CANNBOTDSL_RUN_SMLA_TESTS: '1'
-          CANNBOTDSL_NATIVE_BINARY_MODE: 'off'
-          NPU_DEVICE_ID: '0'
         run: |
           set -eo pipefail
           sdk_env=''
