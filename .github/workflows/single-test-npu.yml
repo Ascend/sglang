@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  KERNEL_COMMIT: ff947fecde63345f97243f065186e115c4176e2f
-  SGLANG_COMMIT: 77c61b915f5740e2c1e3108c73862b5388600d19
+  KERNEL_COMMIT: d161250780ccb6dda8ed7c75ee0c205ec56bd634
+  SGLANG_COMMIT: 00fe9da12d280a99aa79a2786b3d11d7761ea44c
 
 jobs:
   single-node-poc:
@@ -88,7 +88,7 @@ jobs:
           python3 scripts/check_cannbotdsl_ci.py installed --output ci-artifacts/installed.json
           test "$(git -C ../sglang rev-parse HEAD)" = "$SGLANG_COMMIT"
           printf '%s\n' "$SGLANG_COMMIT" > ci-artifacts/sglang-commit.txt
-          # Bind SGLang's actual calls to the installed wheel; no model dependencies.
+          # Check fixed A5 argument sets against installed signatures; no model dependencies.
           python3 ../sglang/test/manual/dsv4/check_dsv41_kernel_ops.py 2>&1 | tee ci-artifacts/sglang-api-contract.log
           python3 -m pip freeze > ci-artifacts/pip-freeze.txt
           python3 -m pytest -v --tb=short --npu-device 0 --junitxml=ci-artifacts/junit.xml \
