@@ -128,7 +128,6 @@ class TestNPUMetricsDefaultBucketBoundary(TestNPULoggingBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.other_args.extend(["--enable-metrics", "--collect-tokens-histogram"])
         cls.set_default_bucket()
         cls.launch_server()
 
@@ -268,7 +267,6 @@ class TestNPUMetricsCustomBucketBoundary(TestNPULoggingBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.other_args.extend(["--enable-metrics"])
-        cls.other_args.extend(["--collect-tokens-histogram"])
         cls.set_custom_bucket()
         cls.other_args.extend(["--bucket-time-to-first-token", *cls.my_bucket])
         cls.other_args.extend(["--bucket-inter-token-latency", *cls.my_bucket])
@@ -314,7 +312,6 @@ class TestNPUMetricsTSEBucketBoundary(TestNPULoggingBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.other_args.extend(["--enable-metrics"])
-        cls.other_args.extend(["--collect-tokens-histogram"])
         cls.set_tse_bucket()
         cls.other_args.extend(["--prompt-tokens-buckets", "tse", *cls.my_tse_set])
         cls.other_args.extend(["--generation-tokens-buckets", "tse", *cls.my_tse_set])

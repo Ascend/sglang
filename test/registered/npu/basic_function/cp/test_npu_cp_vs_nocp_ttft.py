@@ -97,7 +97,7 @@ MODEL_CONFIG_NOCPNOMTP = {
         68000,
         "--max-running-requests",
         32,
-        "--cuda-graph-max-bs",
+        "--cuda-graph-max-bs-decode",
         4,
         "--moe-a2a-backend",
         "deepep",
@@ -119,9 +119,9 @@ MODEL_CONFIG_CPNOMTTP = {
     **MODEL_CONFIG_NOCPNOMTP,
     "prefill_args": MODEL_CONFIG_NOCPNOMTP["prefill_args"]
     + [
-        "--enable-nsa-prefill-context-parallel",
-        "--nsa-prefill-cp-mode",
-        "in-seq-split",
+        "--enable-prefill-cp",
+        "--cp-strategy",
+        "zigzag",
         "--attn-cp-size",
         32,
     ],

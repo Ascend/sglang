@@ -23,6 +23,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=150, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=150, suite="validate-batch-npu", nightly=True)
+
 
 
 class TestMultimodalPDDisaggregation(CustomTestCase):
@@ -60,6 +62,8 @@ class TestMultimodalPDDisaggregation(CustomTestCase):
                 str(cls._bootstrap_port),
                 "--mamba-radix-cache-strategy",
                 "extra_buffer",
+                "--mamba-ssm-dtype",
+                "bfloat16",
                 "--mem-fraction-static",
                 "0.6",
                 "--tp-size",

@@ -34,7 +34,7 @@ class TestInputEmbeds(CustomTestCase):
         cls.ref_model = AutoModelForCausalLM.from_pretrained(cls.model)
         other_args = [
             "--disable-radix",
-            "--cuda-graph-max-bs",
+            "--cuda-graph-max-bs-decode",
             4,
             "--attention-backend",
             "ascend",

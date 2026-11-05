@@ -11,7 +11,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=6500, suite="full-acc-2-npu-a3", nightly=True)
 
-_is_pr_pipeline = os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+_is_pr_pipeline = os.environ.get("NPU_PR_SMOKE") == "true"
 
 ENVS = {
     "SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT": "600",

@@ -21,6 +21,7 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-swa-npu", nightly=True)
 
 _MIMO_BASE_ARGS = [
     "--tp-size",
