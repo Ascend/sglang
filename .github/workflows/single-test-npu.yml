@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  KERNEL_COMMIT: e4565509de487e31c02729d2dd5377fcf95637b0
+  KERNEL_COMMIT: a24311bf4da4a023d483b48d1785e6362d9247fd
   SGLANG_COMMIT: 00fe9da12d280a99aa79a2786b3d11d7761ea44c
 
 jobs:
