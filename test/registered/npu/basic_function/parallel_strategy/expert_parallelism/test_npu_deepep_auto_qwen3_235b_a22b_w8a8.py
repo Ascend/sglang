@@ -53,6 +53,16 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
                 "modelslim",
                 "--mem-fraction-static",
                 "0.75",
+                # Cold-cache CI runs died at the FIRST prefill request with
+                # aclrtMallocHost 207001 (host OOM) on all 8 ranks: the ~235GB
+                # of safetensors page cache built up during the (coverage-
+                # slowed) weight load left too little reclaimable RAM, so the
+                # pinned allocations in write_cache_indices/sampling failed.
+                # The retry attempt (warm page cache, 186s load) passed cleanly,
+                # which pins the cause on the cold-load cache peak, not the
+                # model. Dropping the shard page cache right after load keeps
+                # host RAM available for the first real request.
+                "--weight-loader-drop-cache-after-load",
             ],
             env={
                 "SGLANG_ENABLE_JIT_DEEPGEMM": "0",
