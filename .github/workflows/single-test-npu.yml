@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  KERNEL_COMMIT: 577ac71a9aa43146c71b645da3655cdcd36d9b3e
-  SGLANG_COMMIT: 03ba596d29fdeb649173684d636a1e519b16a0fe
+  KERNEL_COMMIT: ff947fecde63345f97243f065186e115c4176e2f
+  SGLANG_COMMIT: 77c61b915f5740e2c1e3108c73862b5388600d19
 
 jobs:
   single-node-poc:
