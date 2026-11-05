@@ -23,19 +23,6 @@ ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post1
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 
-# install memfabric-hybrid
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        ${PIP_INSTALL} "https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/sglang/memfabric_hybrid-1.3.1-cp312-cp312-linux_aarch64.whl"; \
-    elif [ "$TARGETARCH" = "amd64" ]; then \
-        ${PIP_INSTALL} memfabric-hybrid==1.3.0; \
-    else \
-        echo "Unsupported architecture: $TARGETARCH"; \
-        exit 1; \
-    fi
-
-# install mooncake
-RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine_memfabric-0.3.14-cp312-cp312-manylinux_2_35_$(arch).whl --force --no-deps
-
 # memfabric-zbal: 950 与 a3 使用不同版本
 ARG ZBAL_VERSION_950="1.2.21004.post1"
 ARG ZBAL_VERSION_A3="1.1.3"
@@ -94,7 +81,6 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
     libxxhash-dev \
     libcli11-dev \
     libibverbs-dev \
-    msgpack \
     && rm -rf /var/cache/apt/* \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates \
@@ -116,8 +102,20 @@ RUN ${PIP_INSTALL} sglang-router
 RUN (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
     && (${PIP_INSTALL} torch-npu==${TORCH_NPU_VERSION} --extra-index-url ${TORCH_NPU_INDEX_URL})
 
-### Install ModelScope & EvalScope
-RUN ${PIP_INSTALL} modelscope evalscope
+RUN ${PIP_INSTALL} modelscope evalscope msgpack
+
+# Install memfabric-hybrid
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        ${PIP_INSTALL} "https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/sglang/memfabric_hybrid-1.3.1-cp312-cp312-linux_aarch64.whl"; \
+    elif [ "$TARGETARCH" = "amd64" ]; then \
+        ${PIP_INSTALL} memfabric-hybrid==1.3.0; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH"; \
+        exit 1; \
+    fi
+
+# Install mooncake
+RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine_memfabric-0.3.14-cp312-cp312-manylinux_2_35_$(arch).whl --force --no-deps
 
 ## Install triton-ascend
 RUN ${PIP_INSTALL} pybind11 && \
