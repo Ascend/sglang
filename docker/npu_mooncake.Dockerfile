@@ -34,7 +34,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi
 
 # install mooncake
-RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine-0.3.14-cp312-cp312-manylinux_2_28_$(arch).whl --force --no-deps
+RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine_memfabric-0.3.14-cp312-cp312-manylinux_2_35_$(arch).whl --force --no-deps
 
 # memfabric-zbal: 950 与 a3 使用不同版本
 ARG ZBAL_VERSION_950="1.2.21004.post1"
