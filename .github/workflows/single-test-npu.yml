@@ -18,7 +18,7 @@ concurrency:
 
 env:
   KERNEL_COMMIT: 91ade97f5f5cf2044fa9f150fdf3e81676234056
-  SGLANG_COMMIT: 00fe9da12d280a99aa79a2786b3d11d7761ea44c
+  SGLANG_COMMIT: 1dca7ed2673b5cb3d29adcf78ef7c097a6efc39d
 
 jobs:
   single-node-poc:
