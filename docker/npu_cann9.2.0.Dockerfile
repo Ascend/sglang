@@ -1,4 +1,3 @@
-#关于基础镜像版本配套
 ARG CANN_VERSION=9.2.0
 ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
@@ -6,36 +5,25 @@ ARG PYTHON_VERSION=py3.12
 
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
-#重新引用对应配套
 ARG CANN_VERSION
 ARG DEVICE_TYPE
 
-#PTA版本配套，pytorch属于框架本体，用于训练模型；torch_npu属于设备后端扩展，将算子和设备资源接入 PyTorch；pta和torch_npu是同一种东西的不同叫法；
-#具体的版本配套可以到这里看 https://gitcode.com/Ascend/pytorch/blob/master/COMPATIBILITY.md
-ARG PYTORCH_VERSION="2.13.0"             #pytorch版本，框架版本
-ARG TORCHVISION_VERSION="0.28.0"         #视觉库版本，torch 的次版本号 + 15
-ARG TORCHAUDIO_VERSION="2.11.0"          #音频库版本，与pytorch版本保持一致
-ARG TORCH_NPU_VERSION="2.13.0"           #torch_npu版本
+ARG PYTORCH_VERSION="2.13.0"
+ARG TORCHVISION_VERSION="0.28.0"
+ARG TORCHAUDIO_VERSION="2.11.0"
+ARG TORCH_NPU_VERSION="2.13.0"
 ARG TORCH_NPU_WHEEL_URL_AARCH64="https://gitcode.com/Ascend/pytorch/releases/download/v26.2.0-pytorch2.13.0/torch_npu-2.13.0-cp312-cp312-manylinux_2_28_aarch64.whl"
 ARG TORCH_NPU_WHEEL_URL_X86_64="https://gitcode.com/Ascend/pytorch/releases/download/v26.2.0-pytorch2.13.0/torch_npu-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl"
-ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"   #这个源是用来下载torch_npu的包的，和前面的pytorch使用的不是同一个源
+ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 
-#triton版本
 ARG TRITON_AARCH64="https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl"
 ARG TRITON_X86_64="https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 
-#sglang对应分支
-ARG SGLANG_TAG=main
+ARG SGLANG_TAG=refactor/dsv4-cann-transformer-kernels
 
-#kernel算子包对应版本
-ARG SGLANG_KERNEL_NPU_TAG=2026.10.20.post3
+ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post4
 
-#memfabric-hybrid / memcache-hybrid的版本
 ARG MF_VERSION="1.3.0"
-ARG MF_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/release/1.3/20261019.10/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MF_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/mf/release/1.3/20261019.10/memfabric_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-ARG MC_WHEEL_URL_AARCH64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/release/1.3/20261019.10/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl"
-ARG MC_WHEEL_URL_X86_64="https://obs-memfabric-hybrid.obs.cn-north-4.myhuaweicloud.com/memcache/release/1.3/20261019.10/memcache_hybrid-1.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
@@ -147,7 +135,7 @@ RUN ${PIP_INSTALL} pybind11 && \
     fi
 
 # Install SGLang
-RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/lilDss/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
@@ -159,8 +147,8 @@ ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Asce
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
     source /usr/local/Ascend/cann-${CANN_VERSION}/set_env.sh && \
-    wget https://github.com/huangxiaojun15/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
-    wget https://github.com/huangxiaojun15/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    wget https://github.com/lilDss/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
+    wget https://github.com/lilDss/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     unzip custom-ops-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     unzip ops-transformer-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip && \
     chmod +x *.run && \
@@ -178,7 +166,7 @@ RUN mkdir cann-custom-ops && \
 RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && mkdir sgl-kernel-npu \
     && cd sgl-kernel-npu \
-    && wget https://github.com/huangxiaojun15/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
+    && wget https://github.com/lilDss/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
     && unzip sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
     && ${PIP_INSTALL} deep_ep*.whl sgl_kernel_npu*.whl torch_memory_saver*.whl \
     && cd .. && rm -rf sgl-kernel-npu \
