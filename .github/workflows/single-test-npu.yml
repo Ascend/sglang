@@ -38,7 +38,12 @@ jobs:
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
-
+          # Install sgl-eval
+          # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
+          sglang_source_path=$(pwd)
+          echo "Source code path: ${sglang_source_path}"
+          . "${sglang_source_path}/scripts/ci/utils/sgl_eval_ref.sh"
+          pip install "$SGL_EVAL_SPEC"
           # Test cases - replace with the actual test case path when using
           test_cases=(
             # "test/registered/npu/basic_function/optimization_debug_options/test_npu_cuda_graph_bs.py"
