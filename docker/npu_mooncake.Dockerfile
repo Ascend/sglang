@@ -94,6 +94,7 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
     libxxhash-dev \
     libcli11-dev \
     libibverbs-dev \
+    msgpack \
     && rm -rf /var/cache/apt/* \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates \
