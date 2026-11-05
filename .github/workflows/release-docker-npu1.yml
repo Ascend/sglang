@@ -9,6 +9,9 @@ on:
         type: string
         default: 'nightly'
 
+env:
+  IMAGE: quay.io/ascend/sglang
+
 jobs:
   build:
     name: build ${{ matrix.platform }}-${{ matrix.device_type }}
@@ -50,7 +53,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang
+          images: ${{ env.IMAGE }}
           tags: type=raw,value=${{ env.FULL_TAG }}
 
       - name: Log into Quay.io
@@ -92,22 +95,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log into SWR
+      - name: Log into Quay.io
         uses: docker/login-action@v3
         with:
-          registry: swr.cn-southwest-2.myhuaweicloud.com
-          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
-          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+          registry: quay.io
+          username: ${{ secrets.QUAY_NAME }}
+          password: ${{ secrets.QUAY_PWD }}
 
       - name: Create multi-arch manifest
         env:
-          IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
+          IMAGE: quay.io/ascend/sglang:cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
         run: |
           docker buildx imagetools create \
             -t "${IMAGE}" \
             "${IMAGE}-amd64" \
             "${IMAGE}-arm64"
-          # 如果 SWR 或下游拉取端不兼容 OCI index，改用 Docker schema2 manifest list：
+          # 如果 Quay 或下游拉取端不兼容 OCI index，改用 Docker schema2 manifest list：
           #   docker manifest create "${IMAGE}" "${IMAGE}-amd64" "${IMAGE}-arm64"
           #   docker manifest push "${IMAGE}"
 
@@ -127,7 +130,7 @@ jobs:
           - device_type: a3
           - device_type: 950
     with:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
+      image: quay.io/ascend/sglang:cann9.2.0-${{ matrix.device_type }}-${{ github.event.inputs.tag_suffix || 'main' }}
       # 与 build job 用同一份合并后的 Dockerfile
       dockerfile: docker/npu_cann9.2.0.Dockerfile
       build_args: |
