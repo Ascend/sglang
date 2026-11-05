@@ -70,6 +70,9 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
                 cls.expert_balancedness_report_mode,
             ],
             env={
+                "PYTORCH_NPU_ALLOC_CONF": (
+                    "expandable_segments:True,pin_memory_expandable_segments:True"
+                ),
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
                 "HCCL_BUFFSIZE": "1024",
                 "DEEPEP_HYBRID_DEPLOYMENT": "1",

@@ -46,6 +46,8 @@ class TestNPUMambaHiCache(CustomTestCase):
             "bfloat16",
             "--mem-fraction-static",
             "0.20",
+            "--mamba-ssm-dtype",
+            "bfloat16",
             "--chunked-prefill-size",
             "1024",
             "--page-size",

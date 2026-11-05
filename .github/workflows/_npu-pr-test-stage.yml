@@ -54,10 +54,6 @@ on:
         description: 'If true, delegate test execution to scripts/ci/npu/precise-test/run_tests_with_coverage.sh instead of running via run_suite.py directly'
         type: boolean
         default: false
-      upload_coverage_artifact:
-        description: 'With use_coverage_runner: stage coverage data in a job-private dir and ship it as a covdata-* artifact instead of relying on the shared disk (for pools without a common shared disk)'
-        type: boolean
-        default: false
       only_tests:
         description: 'Coverage-recommended test files for this suite (one repo-relative path per line, from recommend-tests-from-coverage). Empty = run the full suite.'
         type: string
@@ -216,21 +212,12 @@ jobs:
 
       - name: Install dependencies
         env:
-          TORCH_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/whl/cpu"
-          PYPI_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
-          UV_INDEX_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple"
           GITHUB_PROXY_URL: "https://gh-proxy.test.osinfra.cn/"
-          RUSTUP_CACHE_URL: "http://cache-service.nginx-pypi-cache.svc.cluster.local:8082"
         shell: bash
         run: |
           set -euo pipefail
           cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
           cp ~/.cache/modelscope/hub/datasets/tmp/test.jsonl /tmp
-
-          CACHING_URL="cache-service.nginx-pypi-cache.svc.cluster.local"
-          sed -Ei "s@(ports|archive).ubuntu.com@${CACHING_URL}:8081@g" /etc/apt/sources.list
-          pip config set global.index-url http://${CACHING_URL}/pypi/simple
-          pip config set global.trusted-host "${CACHING_URL}"
 
           if [[ "${{ inputs.is_nightly_pipeline_job }}" != "true" ]]; then
             bash scripts/ci/npu/npu_ci_install_dependency.sh ${{ inputs.npu_device_type }}
@@ -302,7 +289,6 @@ jobs:
         env:
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
           TEST_LOG_DIR: /tmp/test-logs
-          NPU_PR_SMOKE: ${{ inputs.is_nightly_pipeline_job == true && 'false' || 'true' }}
           ONLY_TESTS: ${{ inputs.only_tests }}
         shell: bash
         run: |
@@ -313,15 +299,14 @@ jobs:
 
           # Install missing python deps (skip if already importable).
           PYTHON_FOR_SGLANG="python"
-          PIP_INDEXES=("https://pypi.org/simple/" "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple" "http://cache-service.nginx-pypi-cache.svc.cluster.local/pypi/simple")
-          PIP_TRUSTED_HOST=cache-service.nginx-pypi-cache.svc.cluster.local
+          PIP_INDEXES=("https://repo.huaweicloud.com/repository/pypi/simple/" "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple")
           install_pkg() {
             local pkg="$1"
             ok=0
             for index in "${PIP_INDEXES[@]}"; do
               echo "${pkg}: try via ${index}"
               if ${PYTHON_FOR_SGLANG} -m pip install "${pkg}" --retries 3 --timeout 60 \
-                  -i "${index}" --trusted-host "${PIP_TRUSTED_HOST}"; then
+                  -i "${index}"; then
                 ok=1; break
               fi
             done
@@ -407,28 +392,3 @@ jobs:
             --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
             ${{ inputs.timeout_per_file && format('--timeout-per-file {0}', inputs.timeout_per_file) || '' }} \
             $ONLY_FILE_ARGS $NIGHTLY_FLAG $CONTINUE_ON_ERROR_FLAG 2>&1 | tee "${LOG_FILE}"
-
-      - name: Upload coverage data (artifact transport)
-        # Runs even when tests fail: failed tests' coverage counts too (their
-        # dirs carry a FAILED marker). Shared-disk callers (pr-test-npu) leave
-        # upload_coverage_artifact false and never take this step.
-        if: ${{ !cancelled() && inputs.use_coverage_runner && inputs.upload_coverage_artifact }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: covdata-${{ inputs.self_name }}-p${{ matrix.partition }}
-          # Trailing slash -> zip root is outputs/ contents (sglang@<tag>/...);
-          # the download side restores the RUN_DIR/outputs layers via its path.
-          path: /tmp/precise-test-covdata/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs/
-          # The presence marker is written before tests run, so absent files
-          # mean this job died earlier: fail here too rather than only at the
-          # aggregator's EXPECTED count check.
-          if-no-files-found: error
-          # .covdone-* markers are dotfiles, which upload-artifact drops by
-          # default; without them the aggregator reports every partition missing.
-          include-hidden-files: true
-          # upload-artifact refuses a duplicate name within one run, so a
-          # re-run of a failed partition would fail here without this.
-          overwrite: true
-          # Consumed by setup-covstub within the same run; the aggregated
-          # precise-test-coverage-data package covers later rebuilds.
-          retention-days: 3

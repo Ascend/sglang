@@ -163,6 +163,14 @@ install_aisbench() {
     echo "===== Install aisbench in virtual env - Begin ====="
     PYTHON_ENV_FOR_AISBENCH=test_env_aisbench
     PIP_FOR_AISBENCH=${PYTHON_ENV_FOR_AISBENCH}/bin/pip
+    # Reuse the venv when it already imports cleanly; this keeps benchmark
+    # retry attempts fast and surfaces broken installs immediately.
+    if [ -x "${PYTHON_ENV_FOR_AISBENCH}/bin/python" ] && \
+       "${PYTHON_ENV_FOR_AISBENCH}/bin/python" -c "import ais_bench, datasets, pyarrow" >/dev/null 2>&1; then
+        echo "aisbench venv already usable, skip installation."
+        echo "===== Install aisbench in virtual env - End ====="
+        return
+    fi
     python -m venv ${PYTHON_ENV_FOR_AISBENCH}
     AISBENCH_SOURCE_PATH=/root/.cache/.cache/benchmark
     AISBENCH_PKG_PATH=/root/.cache/.cache/aisbench-packages
@@ -185,14 +193,27 @@ install_aisbench() {
         fi
     else
         echo "Install aisbench locally."
-        ${PIP_FOR_AISBENCH} install -U pip --no-index --find-links=${AISBENCH_PKG_PATH}
-        ${PIP_FOR_AISBENCH} install -e ${AISBENCH_SOURCE_PATH} --use-pep517 --no-index --find-links=${AISBENCH_PKG_PATH}
-        ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/api.txt --no-index --find-links=${AISBENCH_PKG_PATH}
-        ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/extra.txt --no-index --find-links=${AISBENCH_PKG_PATH}
+        # Offline-first with an online fallback: the PVC package cache may
+        # lag behind the benchmark repo requirements (observed: nltk needs
+        # regex>=2021.8.3 which is not in aisbench-packages), so retry each
+        # step against the Tsinghua mirror to fill the gaps.
+        ${PIP_FOR_AISBENCH} install -U pip --no-index --find-links=${AISBENCH_PKG_PATH} || \
+            ${PIP_FOR_AISBENCH} install -U pip -i ${pip_mirror_source}
+        ${PIP_FOR_AISBENCH} install -e ${AISBENCH_SOURCE_PATH} --use-pep517 --no-index --find-links=${AISBENCH_PKG_PATH} || \
+            ${PIP_FOR_AISBENCH} install -e ${AISBENCH_SOURCE_PATH} --use-pep517 --find-links=${AISBENCH_PKG_PATH} -i ${pip_mirror_source}
+        ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/api.txt --no-index --find-links=${AISBENCH_PKG_PATH} || \
+            ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/api.txt --find-links=${AISBENCH_PKG_PATH} -i ${pip_mirror_source}
+        ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/extra.txt --no-index --find-links=${AISBENCH_PKG_PATH} || \
+            ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/extra.txt --find-links=${AISBENCH_PKG_PATH} -i ${pip_mirror_source}
         if [ "${DATASET_TYPE}" == "bfcl" ];then
             ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/datasets/bfcl_dependencies.txt --no-index --find-links=${AISBENCH_PKG_PATH}
         fi
     fi
+    # The requirements pull numpy<2 (torch-npu ecosystem) but leave pyarrow
+    # unpinned, and the latest pyarrow imports only with numpy>=2:
+    # "ImportError: pyarrow requires NumPy 2.0 or newer, found 1.26.4".
+    # Cap pyarrow to a numpy-1.x-compatible release.
+    ${PIP_FOR_AISBENCH} install "pyarrow<16" -i ${pip_mirror_source}
     echo "===== Install aisbench in virtual env - End ====="
 }
 
@@ -502,28 +523,73 @@ if [ "$MODE" == "perf" ];then
         gen_dataset_gsm8k_config_file "${dataset_dir}"
         gen_model_config_file_vllm_api_stream_chat
 
-        if (( $(echo "$REPEAT_RATE > 0" | bc -l) )); then
-            TARGET_CONFIG_FILE="${DEST_COPY_DIR}/config"
-
+        if awk "BEGIN{exit !(${REPEAT_RATE:-0} > 0)}"; then
             echo "===== [Step 2/4] Prefix Mode Detected: Updating temporary config file ====="
+            ls -la "${DEST_COPY_DIR}" | head -30
+            # The toolkit loads its settings via "from config import *", so the
+            # file must be config.py; a bare "config" file also matches the
+            # upstream layout. When neither exists (cached toolkit predates
+            # it), generate one instead of aborting.
+            TARGET_CONFIG_FILE="${DEST_COPY_DIR}/config.py"
+            if [ ! -f "$TARGET_CONFIG_FILE" ] && [ -f "${DEST_COPY_DIR}/config" ]; then
+                TARGET_CONFIG_FILE="${DEST_COPY_DIR}/config"
+            fi
+            # WORK_PATH must resolve to the parent dir of the installed
+            # ais_bench package: the toolkit symlinks its generated model
+            # config into $WORK_PATH/ais_bench/benchmark/configs/models/
+            # vllm_api/vllm_api_chat_temp.py and drops datasets into
+            # $WORK_PATH/ais_bench/datasets/gsm8k. DATASET_PATH is the scratch
+            # dir for generated prefix datasets (must exist). The values
+            # cached on the shared PVC point at the packager's machine, so
+            # force both to values valid inside this pod.
+            INTERNAL_WORK_PATH=$(${PYTHON_ENV_FOR_AISBENCH}/bin/python -c "import ais_bench, os; print(os.path.dirname(os.path.dirname(ais_bench.__file__)))")
+            INTERNAL_DATASET_PATH="/tmp/ais_prefix_dataset"
+            mkdir -p ${INTERNAL_DATASET_PATH}
+            echo "Toolkit work path: ${INTERNAL_WORK_PATH} | dataset dir: ${INTERNAL_DATASET_PATH}"
             if [ -f "$TARGET_CONFIG_FILE" ]; then
                 [ -n "$MODEL" ] && sed -i "s/^[[:space:]]*MODEL_NAME[[:space:]]*=.*/MODEL_NAME=\"$MODEL\"/" "$TARGET_CONFIG_FILE"
                 [ -n "$MODEL_PATH" ] && sed -i "s|^[[:space:]]*MODEL_PATH[[:space:]]*=.*|MODEL_PATH=\"$MODEL_PATH\"|" "$TARGET_CONFIG_FILE"
                 [ -n "$IP" ] && sed -i "s/^[[:space:]]*HOST_IP[[:space:]]*=.*/HOST_IP=\"$IP\"/" "$TARGET_CONFIG_FILE"
                 [ -n "$PORT" ] && sed -i "s/^[[:space:]]*HOST_PORT[[:space:]]*=.*/HOST_PORT=\"$PORT\"/" "$TARGET_CONFIG_FILE"
-
+                sed -i "s|^[[:space:]]*WORK_PATH[[:space:]]*=.*|WORK_PATH=\"${INTERNAL_WORK_PATH}\"|" "$TARGET_CONFIG_FILE"
+                sed -i "s|^[[:space:]]*DATASET_PATH[[:space:]]*=.*|DATASET_PATH=\"${INTERNAL_DATASET_PATH}\"|" "$TARGET_CONFIG_FILE"
                 echo "Config updated successfully in: $TARGET_CONFIG_FILE"
             else
-                echo "Error: Config file not found in temp dir: $TARGET_CONFIG_FILE"
-                exit 1
+                echo "Warning: toolkit config file missing, generating a default one."
+                cat > "${DEST_COPY_DIR}/config.py" << EOF
+DATASET_PATH = "${INTERNAL_DATASET_PATH}"
+WORK_PATH = "${INTERNAL_WORK_PATH}"
+MODEL_NAME = "${MODEL}"
+MODEL_PATH = "${MODEL_PATH}"
+HOST_IP = "${IP}"
+HOST_PORT = "${PORT}"
+DEFAULT_PERFORMANCE_TEST = "default_perf"
+EOF
+                echo "Config generated: ${DEST_COPY_DIR}/config.py"
             fi
+
+            # The toolkit tokenizes prompts client-side with the model's own
+            # tokenizer and loads it without trust_remote_code; checkpoints
+            # like Kimi-K3 carry custom code, so transformers prompts on
+            # stdin (absent in CI) and aborts. Patch the disposable copy.
+            sed -i "s/from_pretrained(tokenizer_path)/from_pretrained(tokenizer_path, trust_remote_code=True)/" "${DEST_COPY_DIR}"/*.py
 
             echo "===== [Mode] Prefix Cache Test (Hit Rate: $REPEAT_RATE) ====="
             echo "Use dataset: ${DATASET_NAME}, dataset_file: ${dataset_file}"
             echo "Input tokens: ${INPUT_LEN} | Output tokens: ${OUTPUT_LEN} | Batch size: ${BATCH_SIZE} | Prompts num: ${NUM_PROMPTS}"
             echo "Executing from temp dir: ${INTERNAL_TEMPLATE_DIR}"
 
-            PREFIX_TEST_CMD="python3 ${INTERNAL_TEMPLATE_DIR}/aisbench_test.py --input_len ${INPUT_LEN} --output_len ${OUTPUT_LEN} --data_num ${NUM_PROMPTS} --concurrency ${BATCH_SIZE} --request_rate ${REQUEST_RATE} --dataset_type prefix_cache --repeat_rate ${REPEAT_RATE} --prefix_test --dp ${DP}"
+            # The toolkit parses --repeat_rate as a ratio: "100%" or "1" mean
+            # full overlap, while a bare "100" is out of the [0,1] range.
+            # Append a percent sign when the caller passed a percentage.
+            TOOLKIT_REPEAT_RATE="${REPEAT_RATE}"
+            if awk "BEGIN{exit !(${TOOLKIT_REPEAT_RATE:-0} > 1)}"; then
+                TOOLKIT_REPEAT_RATE="${TOOLKIT_REPEAT_RATE}%"
+            fi
+
+            # The toolkit opens default_api.py relative to the cwd and writes
+            # temp artifacts there, so run from inside the copied toolkit dir.
+            PREFIX_TEST_CMD="cd ${INTERNAL_TEMPLATE_DIR} && python3 aisbench_test.py --input_len ${INPUT_LEN} --output_len ${OUTPUT_LEN} --data_num ${NUM_PROMPTS} --concurrency ${BATCH_SIZE} --request_rate ${REQUEST_RATE} --dataset_type prefix_cache --repeat_rate ${TOOLKIT_REPEAT_RATE} --prefix_test --dp ${DP}"
             echo "Executing: ${PREFIX_TEST_CMD}"
 
             source ${PYTHON_ENV_FOR_AISBENCH}/bin/activate
