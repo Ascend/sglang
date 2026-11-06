@@ -55,17 +55,23 @@ class TestAbortOnPriority(CustomTestCase):
             f"{DEFAULT_URL_FOR_TEST}/generate",
             json={
                 "text": "The capital of France is",
+                # priority is a top-level GenerateReqInput field, not a
+                # SamplingParams field; putting it under sampling_params makes
+                # the request fail validation with 400 before it reaches the
+                # scheduler.
+                "priority": 2,
                 "sampling_params": {
                     "temperature": 0,
                     "max_new_tokens": 32,
-                    "priority": 2,
                 },
             },
         )
         logger.info(response.text)
 
+        # The scheduler aborts the request with SERVICE_UNAVAILABLE when
+        # --abort-on-priority-when-disabled is set.
         self.assertEqual(
-            response.status_code, 500, "The request status code is not 500."
+            response.status_code, 503, "The request status code is not 503."
         )
 
         response = requests.get(f"{DEFAULT_URL_FOR_TEST}/get_server_info")
