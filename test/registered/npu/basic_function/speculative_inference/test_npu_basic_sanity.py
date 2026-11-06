@@ -14,9 +14,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-# hellaswag test_accuracy_floor runs 200 questions twice (generator styles),
-# which takes several minutes on top of the API-contract/decode/scheduler kits.
-register_npu_ci(est_time=900, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
 
 
 class TestBasicSanity(

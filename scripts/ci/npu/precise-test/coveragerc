@@ -10,12 +10,6 @@ concurrency = thread,multiprocessing
 sigterm = True
 disable_warnings = no-data-collected,module-not-python
 
-# Subprocess coverage slows Python-dense weight-load paths by an order of
-# magnitude and can push server launches past the health-check timeout.
-# branch=False roughly halves the per-line trace cost if launch-timeout
-# regressions persist; kept True to preserve branch-coverage semantics.
-# branch = False
-
 include =
     */python/sglang/*
 
