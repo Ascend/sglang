@@ -35,7 +35,7 @@ class TestDecodeLogInterval(TestNPULoggingBase):
         # https://github.com/sgl-project/sglang/pull/42720
         # Skip the decode for a request whose last token is already in flight
         expected_decod_batch_count = math.floor(
-            (max_tokens + 9 -3) / self.decode_numbers
+            (max_tokens + 9 - 3) / self.decode_numbers
         )
         self.assertEqual(decod_batch_count, expected_decod_batch_count)
 
