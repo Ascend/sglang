@@ -16,8 +16,8 @@ ARG TORCH_NPU_WHEEL_URL_AARCH64="https://gitcode.com/Ascend/pytorch/releases/dow
 ARG TORCH_NPU_WHEEL_URL_X86_64="https://gitcode.com/Ascend/pytorch/releases/download/v26.2.0-pytorch2.13.0/torch_npu-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 
-ARG TRITON_AARCH64="https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl"
-ARG TRITON_X86_64="https://github.com/triton-lang/triton-ascend/releases/download/v3.6.0/triton_ascend-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+ARG TRITON_AARCH64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/triton-ascend/20261105160244/triton_ascend-3.6.0%2Bdev20261105160244-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_34_aarch64.whl"
+ARG TRITON_X86_64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/triton-ascend/20261105160244/triton_ascend-3.6.0%2Bdev20261105160244-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_34_x86_64.whl"
 
 ARG SGLANG_TAG=refactor/dsv4-cann-transformer-kernels
 
