@@ -38,7 +38,7 @@ class _BaseTestNPUMetrics(TestNPULoggingBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        if cls.metrics_args is None:
+        if not cls.metrics_args:
             cls.metrics_args = ["--enable-metrics"]
         cls.other_args.extend(cls.metrics_args)
         with (
