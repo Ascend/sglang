@@ -13,7 +13,7 @@ register_npu_ci(est_time=2800, suite="full-acc-2-npu-a3", nightly=True)
 
 QWEN3_5_9B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
@@ -61,7 +61,7 @@ class TestNPUQwen3_5_9B_GSM8K(TestNpuAccuracyTestCaseBase):
     datasets = ["gsm8k"]
     few_shot_num = 5
     generation_config = {
-        "max_tokens": 8192,
+        "max_tokens": 16384,
         "temperature": 0.6,
     }
     eval_batch_size = 64

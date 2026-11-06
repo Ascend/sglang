@@ -36,6 +36,8 @@ QWEN3_5_35B_A3B_2K_32K_OTHER_ARGS = [
     8,
     "--dtype",
     "bfloat16",
+    "--mamba-ssm-dtype",
+    "bfloat16",
     "--chunked-prefill-size",
     65536,
     "--trust-remote-code",

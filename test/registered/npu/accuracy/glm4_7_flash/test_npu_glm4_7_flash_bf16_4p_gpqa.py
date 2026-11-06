@@ -10,7 +10,7 @@ register_npu_ci(est_time=3600, suite="full-acc-4-npu-a3", nightly=True)
 
 ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
     "HCCL_BUFFSIZE": "1000",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "32",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
