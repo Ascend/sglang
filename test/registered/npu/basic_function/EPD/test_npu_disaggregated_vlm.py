@@ -234,6 +234,8 @@ class TestDisaggregatedVLM(TestDisaggregationBase):
 
 
 class TestDisaggregatedVLM_ZMQ_Tokenizer(TestDisaggregatedVLM):
+    # The base sets __test__ = False; opt this real test class back in.
+    __test__ = True
     encoder_transfer_backend = "zmq_to_tokenizer"
 
 

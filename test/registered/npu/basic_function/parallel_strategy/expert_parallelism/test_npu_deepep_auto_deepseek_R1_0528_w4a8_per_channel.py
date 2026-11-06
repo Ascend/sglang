@@ -3,11 +3,11 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
+from sglang.test.ascend.run_eval import run_eval as run_ascend_eval
 from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_R1_0528_W4A8_PER_CHANNEL_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
@@ -96,10 +96,12 @@ class TestDeepEpAutoDeepseekR1(GSM8KAscendMixin, CustomTestCase):
             eval_name="mmlu",
             num_examples=64,
             num_threads=32,
+            # mmlu is scored by sgl-eval; use the ascend legacy scorer.
+            api="completion",
         )
 
         # Execute MMLU evaluation and get metrics
-        metrics = run_eval(args)
+        metrics = run_ascend_eval(args)
         self.assertGreater(metrics["score"], 0.5)
 
 
