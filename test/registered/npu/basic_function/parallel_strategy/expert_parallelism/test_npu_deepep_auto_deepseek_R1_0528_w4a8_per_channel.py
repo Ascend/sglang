@@ -96,8 +96,7 @@ class TestDeepEpAutoDeepseekR1(GSM8KAscendMixin, CustomTestCase):
             eval_name="mmlu",
             num_examples=64,
             num_threads=32,
-            # sgl.run_eval now refuses mmlu (scored by sgl-eval); use the
-            # ascend legacy scorer like the sibling deepep cases.
+            # mmlu is scored by sgl-eval; use the ascend legacy scorer.
             api="completion",
         )
 

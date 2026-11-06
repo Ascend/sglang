@@ -12,9 +12,8 @@ from sglang.test.test_utils import (
 class TestVLMModels(CustomTestCase):
     model = ""
     mmmu_accuracy = 0.00
-    # Generation cap for the MMMU benchmark. Subclasses should override this
-    # (e.g. 2048-32768) to match their model's answer length; the previous
-    # hardcoded 30 truncated long answers and crushed accuracy.
+    # Generation cap for the MMMU benchmark; subclasses should override this
+    # to match their model's answer length.
     max_tokens = 30
     other_args = [
         "--trust-remote-code",

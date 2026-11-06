@@ -164,10 +164,8 @@ class TestAsrMaxTranscription(CustomTestCase):
                 except WebSocketTimeoutException:
                     continue
                 except (WebSocketConnectionClosedException, ConnectionResetError):
-                    # NB: when the peer RSTs the TCP connection, websocket-client
-                    # raises ConnectionResetError from send_close inside recv,
-                    # NOT WebSocketConnectionClosedException — catch both or the
-                    # raw errno-104 escapes and masks the real failure point.
+                    # A peer RST surfaces as ConnectionResetError from send_close
+                    # inside recv, not WebSocketConnectionClosedException — catch both.
                     break
             self.assertTrue(
                 session_ok,
@@ -251,23 +249,19 @@ class TestAsrMaxTranscription(CustomTestCase):
                         logging.warning("Timed out waiting for transcription event.")
                         continue
                     except (WebSocketConnectionClosedException, ConnectionResetError):
-                        # NB: the 15.5s wav exceeds --asr-max-buffer-seconds=5, so
-                        # the overflow path always fires here. Current branch code
-                        # (f884231+) sends a buffer_overflow error event before
-                        # closing (close code 1009); older images' preinstalled
-                        # product code just RSTs the TCP connection with no event,
-                        # which surfaces as errno 104. Fail immediately with the
-                        # protocol semantics instead of letting the raw 104 escape
-                        # into the retry decorator.
+                        # The 15.5s wav exceeds --asr-max-buffer-seconds=5, so the
+                        # overflow path always fires here; the server must send the
+                        # buffer_overflow error event before closing. A bare close
+                        # without the event is a protocol violation (older prebuilt
+                        # images drop the TCP connection instead) — fail fast with
+                        # these semantics instead of letting errno 104 escape.
                         self.fail(
                             "Server closed the WebSocket after input_audio_buffer.commit "
                             "without sending the transcription-completed or "
                             "buffer_overflow error event; the audio (15.5s) exceeds "
                             "--asr-max-buffer-seconds=5, so the overflow path fired "
-                            "but the server closed the connection without the "
-                            "protocol-required error event (expected on B010-era "
-                            "images whose preinstalled sglang predates the "
-                            "error-event-on-overflow behavior)."
+                            "but the server dropped the connection without the "
+                            "protocol-required error event."
                         )
                 self.assertTrue(
                     finish_flag,

@@ -10,12 +10,10 @@ concurrency = thread,multiprocessing
 sigterm = True
 disable_warnings = no-data-collected,module-not-python
 
-# PERF NOTE (full-test #1481): subprocess coverage slows Python-dense
-# weight-load paths (GGUF dequant, torch_npu CPU dtype conversion) by ~10-50x
-# (75MB/s vs 3.5GB/s warm), pushing server launches past the health-check
-# timeout. Setting branch=False roughly halves the per-line trace work if
-# launch-timeout regressions persist; kept True here to preserve the
-# branch-coverage semantics the precise-test mapping relies on.
+# Subprocess coverage slows Python-dense weight-load paths by an order of
+# magnitude and can push server launches past the health-check timeout.
+# branch=False roughly halves the per-line trace cost if launch-timeout
+# regressions persist; kept True to preserve branch-coverage semantics.
 # branch = False
 
 include =

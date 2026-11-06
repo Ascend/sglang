@@ -53,15 +53,11 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
                 "modelslim",
                 "--mem-fraction-static",
                 "0.75",
-                # Cold-cache CI runs died at the FIRST prefill request with
-                # aclrtMallocHost 207001 (host OOM) on all 8 ranks: the ~235GB
-                # of safetensors page cache built up during the (coverage-
-                # slowed) weight load left too little reclaimable RAM, so the
-                # pinned allocations in write_cache_indices/sampling failed.
-                # The retry attempt (warm page cache, 186s load) passed cleanly,
-                # which pins the cause on the cold-load cache peak, not the
-                # model. Dropping the shard page cache right after load keeps
-                # host RAM available for the first real request.
+                # Cold-cache CI runs hit aclrtMallocHost 207001 (host OOM) at the
+                # first prefill request: the ~235GB safetensors page cache built
+                # during the weight load leaves too little reclaimable RAM for
+                # the pinned allocations. Dropping the shard page cache right
+                # after load keeps host RAM available for real requests.
                 "--weight-loader-drop-cache-after-load",
             ],
             env={
@@ -85,8 +81,7 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
             eval_name="mmlu",
             num_examples=8,
             num_threads=32,
-            # sgl.run_eval now refuses mmlu (scored by sgl-eval); the ascend
-            # legacy scorer is the path this suite's sibling cases use.
+            # mmlu is scored by sgl-eval; use the ascend legacy scorer.
             api="completion",
         )
 

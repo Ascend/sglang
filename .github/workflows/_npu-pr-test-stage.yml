@@ -245,16 +245,11 @@ jobs:
             rm -rf ${sglang_pkg_path}/sglang/test/kits
             cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
             cp $(pwd)/python/sglang/test/test_programs.py ${sglang_pkg_path}/sglang/test/test_programs.py
-            # Version-match test_utils with the branch too: registered tests
-            # call run_server() from it, and the NPU launch-timeout raise
-            # (DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH, full-test #1481 EOF family)
-            # lives here — without this copy the preinstalled 600s default
-            # silently overrides the branch fix.
+            # Version-match test_utils with the branch: it carries the NPU
+            # 1200s launch-timeout default; the preinstalled 600s copy would
+            # silently override it.
             cp $(pwd)/python/sglang/test/test_utils.py ${sglang_pkg_path}/sglang/test/test_utils.py
-            # Legacy MMLU scorer modules: ascend/run_eval.py's
-            # ascend/simple_eval_mmlu.py imports sglang.test.simple_eval_mmlu,
-            # which the preinstalled image does not ship. Copy both files so
-            # they stay version-matched.
+            # Legacy MMLU scorer modules are not shipped in the preinstalled image.
             cp $(pwd)/python/sglang/test/simple_eval_mmlu.py ${sglang_pkg_path}/sglang/test/simple_eval_mmlu.py
             cp $(pwd)/python/sglang/test/simple_eval_common.py ${sglang_pkg_path}/sglang/test/simple_eval_common.py
 

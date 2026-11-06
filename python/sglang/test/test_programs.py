@@ -532,15 +532,13 @@ def test_gen_min_new_tokens():
 def test_hellaswag_select():
     """Benchmark the accuracy of sgl.select on the HellaSwag dataset.
 
-    Restored from upstream test_programs.py (pre-#39892) for
-    kits/hellaswag_kit.py. Prefers the CI-preloaded /tmp/hellaswag_val.jsonl
+    For kits/hellaswag_kit.py. Prefers the CI-preloaded /tmp/hellaswag_val.jsonl
     and falls back to download_and_cache_file.
     """
     import time
 
     import numpy as np
-    # NB: both helpers live in sglang.utils (sglang.test.test_utils does not
-    # ship download_and_cache_file, which broke the import on CI images).
+
     from sglang.utils import download_and_cache_file, read_jsonl
 
     def get_one_example(lines, i, include_answer):

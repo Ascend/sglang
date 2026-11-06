@@ -17,9 +17,8 @@ class TestMMLU:
     def test_mmlu(self):
         accuracy_mmlu_threshold = getattr(self, "accuracy_mmlu", 0.00)
 
-        # NB: getattr's default is evaluated eagerly, so referencing
-        # self.other_args here would raise AttributeError on mixins whose
-        # subclass never defines it. Resolve defensively instead.
+        # getattr's default is evaluated eagerly; resolve the server command
+        # defensively instead.
         if hasattr(self, "server_cmd"):
             server_cmd = self.server_cmd
         else:
