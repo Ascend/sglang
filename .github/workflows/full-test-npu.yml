@@ -1,15 +1,11 @@
 name: Full Test (NPU)
 
 on:
-  # Per-push full-test CI for PRs touching this workflow (mirrors the
-  # FullTest-1023 flow): the paths filter matches this file, which any PR
-  # that modifies the full-test pipeline itself satisfies, so every push to
-  # such a PR re-triggers the suite.
-  pull_request:
-    branches:
-      - testcases-261015
-    paths:
-      - ".github/workflows/full-test-npu.yml"
+#  pull_request:
+#    branches:
+#      - main
+#    paths:
+#      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -52,12 +48,6 @@ jobs:
       coverage_mode: ${{ steps.set-vars.outputs.coverage_mode }}
       only_tests: ${{ steps.set-vars.outputs.only_tests }}
     steps:
-      # Shallow checkout so the precision-list file below can be read from the
-      # event commit (the PR merge ref for pull_request events).
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
         id: set-vars
@@ -98,30 +88,6 @@ jobs:
             {
               echo "only_tests<<EOF"
               printf '%s' "${IN_ONLY_TESTS}" | tr ',' '\n' | sed '/^[[:space:]]*$/d'
-              echo "EOF"
-            } >> $GITHUB_OUTPUT
-          fi
-
-          # ---------- TEMP: precision-validation defaults for this PR's CI ----------
-          # Kept LAST on purpose: GITHUB_OUTPUT is last-write-wins, so these
-          # override the empty pull_request-event fallbacks above.
-          # pull_request events carry no workflow_dispatch inputs, so a
-          # PR-triggered run would otherwise fall back to the full suite.
-          # While this PR (head branch fix/npu-full-test-infra-testcases) is
-          # under validation, PR-triggered runs instead exercise only the 29
-          # full-test #1481 failure files this PR fixes, in coverage mode on
-          # the same cann9.1.0-a3-B010 image the failures were captured on.
-          # Gated on the head branch name, so merged future PRs are
-          # unaffected; drop this block (and the list file) when merging.
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.head_ref }}" = "fix/npu-full-test-infra-testcases" ]; then
-            PRECISION_LIST="${GITHUB_WORKSPACE}/scripts/ci/npu/precise-test/fulltest-1481-precision-list.txt"
-            n=$(grep -vc '^[[:space:]]*\(#\|$\)' "${PRECISION_LIST}")
-            echo "PR validation: precision mode with ${n} target files (coverage on, image B010)"
-            echo "coverage_mode=true" >> $GITHUB_OUTPUT
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B010" >> $GITHUB_OUTPUT
-            {
-              echo "only_tests<<EOF"
-              grep -v '^[[:space:]]*\(#\|$\)' "${PRECISION_LIST}"
               echo "EOF"
             } >> $GITHUB_OUTPUT
           fi
