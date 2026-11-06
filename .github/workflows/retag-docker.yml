@@ -1,0 +1,252 @@
+name: Merge Multi-Arch Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_platform:
+        description: "Source Platform (pull only, NO login)"
+        required: true
+        type: choice
+        options:
+          - swr
+          - quay
+          - dockerhub
+      source_amd64_tag:
+        description: "Existing linux/amd64 image tag"
+        required: true
+      source_arm64_tag:
+        description: "Existing linux/arm64 image tag"
+        required: true
+      target_platform:
+        description: "Target Platform (push only, NEED login)"
+        required: true
+        type: choice
+        options:
+          - swr
+          - quay
+          - dockerhub
+      target_tag:
+        description: "New multi-arch image tag (e.g., latest)"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  DOCKER_CLI_EXPERIMENTAL: enabled
+
+jobs:
+  merge:
+    if: github.repository == 'Ascend/sglang'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ====================== 仅目标平台需要登录 ======================
+      - name: Login to SWR
+        if: inputs.target_platform == 'swr'
+        uses: docker/login-action@v2
+        with:
+          registry: swr.cn-southwest-2.myhuaweicloud.com
+          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
+          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+
+      - name: Login to Quay.io
+        if: inputs.target_platform == 'quay'
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_NAME }}
+          password: ${{ secrets.QUAY_PWD }}
+
+      - name: Login to DockerHub
+        if: inputs.target_platform == 'dockerhub'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Install skopeo
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
+
+      - name: Resolve and validate images
+        env:
+          SOURCE_PLATFORM: ${{ inputs.source_platform }}
+          TARGET_PLATFORM: ${{ inputs.target_platform }}
+          SOURCE_AMD64_TAG: ${{ inputs.source_amd64_tag }}
+          SOURCE_ARM64_TAG: ${{ inputs.source_arm64_tag }}
+          TARGET_TAG: ${{ inputs.target_tag }}
+        run: |
+          set -euo pipefail
+
+          validate_tag() {
+            local name="$1"
+            local value="$2"
+            if [[ ! "${value}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+              echo "::error::${name} 不是合法的 Docker tag: ${value}"
+              exit 1
+            fi
+          }
+
+          validate_tag "source_amd64_tag" "${SOURCE_AMD64_TAG}"
+          validate_tag "source_arm64_tag" "${SOURCE_ARM64_TAG}"
+          validate_tag "target_tag" "${TARGET_TAG}"
+
+          resolve_repository() {
+            case "$1" in
+              swr)
+                echo "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang"
+                ;;
+              quay)
+                echo "quay.io/ascend/sglang"
+                ;;
+              dockerhub)
+                echo "lmsysorg/sglang"
+                ;;
+              *)
+                echo "::error::不支持的平台: $1" >&2
+                exit 1
+                ;;
+            esac
+          }
+
+          SOURCE_REPOSITORY="$(resolve_repository "${SOURCE_PLATFORM}")"
+          TARGET_REPOSITORY="$(resolve_repository "${TARGET_PLATFORM}")"
+          AMD64_SOURCE="${SOURCE_REPOSITORY}:${SOURCE_AMD64_TAG}"
+          ARM64_SOURCE="${SOURCE_REPOSITORY}:${SOURCE_ARM64_TAG}"
+          TARGET_IMAGE="${TARGET_REPOSITORY}:${TARGET_TAG}"
+
+          if [[ "${TARGET_IMAGE}" == "${AMD64_SOURCE}" ||
+                "${TARGET_IMAGE}" == "${ARM64_SOURCE}" ]]; then
+            echo "::error::target_tag 不能覆盖任一单架构源 tag"
+            exit 1
+          fi
+
+          {
+            echo "SOURCE_REPOSITORY=${SOURCE_REPOSITORY}"
+            echo "TARGET_REPOSITORY=${TARGET_REPOSITORY}"
+            echo "AMD64_SOURCE=${AMD64_SOURCE}"
+            echo "ARM64_SOURCE=${ARM64_SOURCE}"
+            echo "TARGET_IMAGE=${TARGET_IMAGE}"
+            # 临时 tag 包含本次运行编号，避免并发任务互相覆盖。
+            echo "AMD64_STAGE=${TARGET_REPOSITORY}:merge-amd64-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            echo "ARM64_STAGE=${TARGET_REPOSITORY}:merge-arm64-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          } >> "${GITHUB_ENV}"
+
+          echo "======= Multi-Arch Image Merge ======="
+          echo "Source platform: ${SOURCE_PLATFORM}"
+          echo "Target platform: ${TARGET_PLATFORM}"
+          echo "AMD64 source:     ${AMD64_SOURCE}"
+          echo "ARM64 source:     ${ARM64_SOURCE}"
+          echo "Target image:     ${TARGET_IMAGE}"
+          echo "======================================"
+
+      - name: Inspect source architectures
+        run: |
+          set -euo pipefail
+
+          check_single_arch_image() {
+            local image="$1"
+            local expected_arch="$2"
+            local raw_manifest
+            local actual_platform
+
+            raw_manifest="$(skopeo inspect --raw "docker://${image}")"
+
+            if jq -e 'has("manifests")' >/dev/null <<<"${raw_manifest}"; then
+              echo "::error::${image} 已经是 manifest list/OCI index；这里要求输入单架构镜像 tag"
+              exit 1
+            fi
+
+            actual_platform="$(
+              skopeo inspect --config "docker://${image}" |
+                jq -r '(.os // "") + "/" + (.architecture // "")'
+            )"
+
+            if [[ "${actual_platform}" != "linux/${expected_arch}" ]]; then
+              echo "::error::${image} 的平台是 ${actual_platform}，期望 linux/${expected_arch}"
+              exit 1
+            fi
+
+            echo "${image}: ${actual_platform}"
+          }
+
+          check_single_arch_image "${AMD64_SOURCE}" amd64
+          check_single_arch_image "${ARM64_SOURCE}" arm64
+
+      - name: Copy architecture images to staging tags
+        run: |
+          set -euo pipefail
+
+          # 统一转换为 Docker V2.2，使最终 manifest list 同时兼容 SWR、Quay 和 DockerHub。
+          # staging tag 是最终 manifest list 的子 manifest 引用，推送后必须保留。
+          skopeo copy \
+            --format v2s2 \
+            "docker://${AMD64_SOURCE}" \
+            "docker://${AMD64_STAGE}"
+
+          skopeo copy \
+            --format v2s2 \
+            "docker://${ARM64_SOURCE}" \
+            "docker://${ARM64_STAGE}"
+
+      - name: Create and push manifest list
+        run: |
+          set -euo pipefail
+
+          docker manifest create \
+            "${TARGET_IMAGE}" \
+            "${AMD64_STAGE}" \
+            "${ARM64_STAGE}"
+
+          docker manifest annotate \
+            "${TARGET_IMAGE}" \
+            "${AMD64_STAGE}" \
+            --os linux \
+            --arch amd64
+
+          docker manifest annotate \
+            "${TARGET_IMAGE}" \
+            "${ARM64_STAGE}" \
+            --os linux \
+            --arch arm64
+
+          # 推送前校验：必须恰好包含 linux/amd64 和 linux/arm64。
+          platforms="$(
+            docker manifest inspect "${TARGET_IMAGE}" |
+              jq -r '[.manifests[] | .platform | "\(.os)/\(.architecture)"] | sort | join(",")'
+          )"
+
+          if [[ "${platforms}" != "linux/amd64,linux/arm64" ]]; then
+            echo "::error::合并后的平台不符合预期: ${platforms}"
+            exit 1
+          fi
+
+          docker manifest push --purge "${TARGET_IMAGE}"
+
+      - name: Verify pushed image
+        run: |
+          set -euo pipefail
+
+          raw_manifest="$(skopeo inspect --raw "docker://${TARGET_IMAGE}")"
+
+          if ! jq -e 'has("manifests")' >/dev/null <<<"${raw_manifest}"; then
+            echo "::error::${TARGET_IMAGE} 推送后不是 manifest list/OCI index"
+            exit 1
+          fi
+
+          platforms="$(
+            jq -r '[.manifests[] | .platform | "\(.os)/\(.architecture)"] | sort | join(",")' \
+              <<<"${raw_manifest}"
+          )"
+
+          if [[ "${platforms}" != "linux/amd64,linux/arm64" ]]; then
+            echo "::error::推送后的平台不符合预期: ${platforms}"
+            exit 1
+          fi
+
+          echo "合并完成: ${TARGET_IMAGE}"
+          echo "平台: ${platforms}"
