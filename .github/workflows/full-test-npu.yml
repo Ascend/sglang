@@ -374,7 +374,7 @@ jobs:
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() && needs.set-image-config.outputs.only_tests == '' }}
+    if: ${{ !cancelled() && needs.set-image-config.result == 'success' && needs.set-image-config.outputs.only_tests == '' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -475,7 +475,7 @@ jobs:
 
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    if: ${{ always() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
+    if: ${{ always() && needs.set-image-config.result == 'success' && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config, full-poc-multi-node-tests]
     strategy:
       fail-fast: false
