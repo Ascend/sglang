@@ -4,11 +4,9 @@ import unittest
 import torch
 
 import sglang as sgl
+from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import (
-    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
-    CustomTestCase,
-)
+from sglang.test.test_utils import CustomTestCase
 
 register_npu_ci(est_time=150, suite="full-2-npu-a3", nightly=True)
 
@@ -33,7 +31,7 @@ class TestUpdateWeightsFromTensor(CustomTestCase):
         custom_loader_name = "sglang.srt.model_executor.model_runner_components.weight_updater._model_load_weights_direct"
 
         engine = sgl.Engine(
-            model_path=DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
+            model_path=LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
             tp_size=1,
             custom_weight_loader=[custom_loader_name],
         )

@@ -53,6 +53,12 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
                 "modelslim",
                 "--mem-fraction-static",
                 "0.75",
+                # Cold-cache CI runs hit aclrtMallocHost 207001 (host OOM) at the
+                # first prefill request: the ~235GB safetensors page cache built
+                # during the weight load leaves too little reclaimable RAM for
+                # the pinned allocations. Dropping the shard page cache right
+                # after load keeps host RAM available for real requests.
+                "--weight-loader-drop-cache-after-load",
             ],
             env={
                 "SGLANG_ENABLE_JIT_DEEPGEMM": "0",

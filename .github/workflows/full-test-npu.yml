@@ -311,7 +311,7 @@ jobs:
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.set-image-config.result == 'success' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -412,7 +412,7 @@ jobs:
 
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    if: ${{ always() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ always() && needs.set-image-config.result == 'success' && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config, full-poc-multi-node-tests]
     strategy:
       fail-fast: false
@@ -482,6 +482,13 @@ jobs:
           rm -rf ${test_dir}/kits
           cp -r python/sglang/test/kits ${test_dir}/
           cp python/sglang/test/test_programs.py ${test_dir}/
+          # Version-match test_utils with the branch (see the matching copy in
+          # _npu-pr-test-stage.yml: carries the NPU launch-timeout raise).
+          cp python/sglang/test/test_utils.py ${test_dir}/
+          # Keep the legacy MMLU scorer modules version-matched with the
+          # overlay (ascend/simple_eval_mmlu.py imports them).
+          cp python/sglang/test/simple_eval_mmlu.py ${test_dir}/
+          cp python/sglang/test/simple_eval_common.py ${test_dir}/
           out=/tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs
           mkdir -p ${out}
           tar -czf ${out}/sglang-image-src.tar.gz \
