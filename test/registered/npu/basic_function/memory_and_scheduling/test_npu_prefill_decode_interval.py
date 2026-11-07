@@ -47,6 +47,24 @@ class TestPrefillDecodeInterval(CustomTestCase):
             except OSError:
                 pass
 
+    def tearDown(self):
+        # 服务进程只挂在实例上，tearDownClass 拿不到 cls.process，必须在这里回收
+        if getattr(self, "_stop_event", None) is not None:
+            self._stop_event.set()
+        if getattr(self, "process", None) is not None:
+            kill_process_tree(self.process.pid)
+            self.process = None
+        if getattr(self, "stderr_fh", None) is not None:
+            try:
+                self.stderr_fh.close()
+            except OSError:
+                pass
+        if getattr(self, "stderr_file", None) is not None:
+            try:
+                os.unlink(self.stderr_file)
+            except OSError:
+                pass
+
     def _read_stderr(self):
         """Background thread: poll stderr file for new lines until stop event is set."""
         pt = 0
@@ -63,13 +81,19 @@ class TestPrefillDecodeInterval(CustomTestCase):
 
     def test_prefill_decode_interval(self):
         """Send 2 concurrent requests and assert prefill interval >= 400."""
+        # CI 失败重试会复用同一实例重跑本方法，先回收上一轮残留的服务进程，
+        # 否则新进程的 PID 会覆盖 self.process，导致上一个进程变成孤儿
+        if getattr(self, "process", None) is not None:
+            kill_process_tree(self.process.pid)
+            self.process = None
+
         interval = 400
 
         # Create temp file for stderr capture
         fd, self.stderr_file = tempfile.mkstemp(suffix=".txt", prefix="sglang_stderr_")
         os.close(fd)
 
-        stderr_fh = open(self.stderr_file, "w")
+        self.stderr_fh = open(self.stderr_file, "w")
 
         # Set environment variables (merged on top of os.environ by popen_launch_server)
         env = {
@@ -95,7 +119,7 @@ class TestPrefillDecodeInterval(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
             env=env,
-            return_stdout_stderr=(None, stderr_fh),
+            return_stdout_stderr=(None, self.stderr_fh),
         )
 
         # Start background thread to collect stderr (polls continuously)
@@ -127,7 +151,7 @@ class TestPrefillDecodeInterval(CustomTestCase):
         # Wait a moment for stderr to flush, then stop the reader thread
         time.sleep(2)
         self._stop_event.set()
-        stderr_fh.close()
+        self.stderr_fh.close()
         reader_thread.join(timeout=5)
 
         # Parse stderr for "Prefill batch [N]" entries.

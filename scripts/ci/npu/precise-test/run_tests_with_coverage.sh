@@ -176,6 +176,10 @@ export SGLANG_KILL_PROCESS_TREE_GRACEFUL=1
 export SGLANG_KILL_PROCESS_TREE_GRACEFUL_TIMEOUT="${SGLANG_KILL_PROCESS_TREE_GRACEFUL_TIMEOUT:-5}"
 export PYTHONPATH="${SCRIPT_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 export PYTEST_PLUGINS="precise_test_coverage_plugin"
+# Pin the fastest tracer core: on Python 3.12 coverage may fall back to
+# sys.monitoring (PEP 669), which is several times slower than the C tracer
+# for line tracing and can push server launches past the health-check window.
+export COVERAGE_CORE=ctrace
 
 targets=("$@")
 if [ "${#targets[@]}" -eq 0 ]; then

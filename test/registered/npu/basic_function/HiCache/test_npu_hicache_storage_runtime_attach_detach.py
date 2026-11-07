@@ -31,6 +31,7 @@ register_npu_ci(
     nightly=True,
 )
 
+
 ADMIN_API_KEY = "admin-hicache-test-key"
 
 

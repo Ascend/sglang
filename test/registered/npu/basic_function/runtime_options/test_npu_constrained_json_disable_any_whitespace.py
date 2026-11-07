@@ -17,7 +17,7 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
-class TestJSONModeMixin:
+class JSONModeMixin:
     """Mixin class containing JSON mode test methods"""
 
     def test_json_mode_response(self):
@@ -151,11 +151,11 @@ class ServerWithGrammarBackend(CustomTestCase):
         kill_process_tree(cls.process.pid)
 
 
-class TestJSONModeXgrammar(ServerWithGrammarBackend, TestJSONModeMixin):
+class TestJSONModeXgrammar(ServerWithGrammarBackend, JSONModeMixin):
     backend = "xgrammar"
 
 
-class TestJSONModeOutlines(ServerWithGrammarBackend, TestJSONModeMixin):
+class TestJSONModeOutlines(ServerWithGrammarBackend, JSONModeMixin):
     backend = "outlines"
 
 
