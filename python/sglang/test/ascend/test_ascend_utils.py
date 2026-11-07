@@ -110,10 +110,14 @@ GRANITE_3_0_3B_A800M_INSTRUCT_WEIGHTS_PATH = os.path.join(
 GRANITE_3_1_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "ibm-granite/granite-3.1-8b-instruct"
 )
+GRANITE_4_0_MICRO_WEIGHTS_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "ibm-granite/granite-4.0-micro"
+)
 GROK_2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "huihui-ai/grok-2")
 GROK_2_WEIGHTS_TOKENIZER_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "huihui-ai/grok-2/tokenizer.tok.json"
 )
+HY3_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Tencent-Hunyuan/Hy3")
 INTERNLM2_7B_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Shanghai_AI_Laboratory/internlm2-7b"
 )
@@ -122,6 +126,7 @@ KIMI_K2_5_W4A8_MODEL_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Eco-Tech/Kimi-K2.5-
 KIMI_K2_5_EAGLE3_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "lightseekorg/kimi-k2.5-eagle3"
 )
+LAGUNA_XS_2_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "poolside/Laguna-XS.2")
 LING_LITE_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "inclusionAI/Ling-lite")
 LLAMA_2_7B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "LLM-Research/Llama-2-7B")
 LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH = os.path.join(
