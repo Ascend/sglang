@@ -27,6 +27,7 @@ class GSM8KAscendMixin(ABC):
         "--disable-cuda-graph",
     ]
     server_cmd = ""
+    max_tokens = 512
     gsm8k_num_shots = 5
     num_questions = 200
     gsm8k_parallel = 128
@@ -66,14 +67,14 @@ class GSM8KAscendMixin(ABC):
         kill_process_tree(cls.process.pid)
 
     def test_gsm8k(self):
-        from sglang.test.ascend.npu_eval_accuracy_kit import (
-            _is_pr_pipeline,
-            run_npu_pr_smoke,
-        )
-
-        if _is_pr_pipeline:
-            run_npu_pr_smoke(self.base_url)
-            return
+        # from sglang.test.ascend.npu_eval_accuracy_kit import (
+        #     _is_pr_pipeline,
+        #     run_npu_pr_smoke,
+        # )
+        #
+        # if _is_pr_pipeline:
+        #     run_npu_pr_smoke(self.base_url)
+        #     return
         accuracy_threshold = getattr(self, "accuracy", 0.00)
         output_throughput_threshold = getattr(self, "output_throughput", 0.00)
 
@@ -86,7 +87,7 @@ class GSM8KAscendMixin(ABC):
 
         try:
             args = SimpleNamespace(
-                max_tokens=512,
+                max_tokens=self.max_tokens,
                 base_url=self.base_url,
                 model=self.model,
                 eval_name="gsm8k",
@@ -114,3 +115,21 @@ class GSM8KAscendMixin(ABC):
             self.fail(f"Test failed for {self.model}: {e}")
         finally:
             write_results_to_github_step_summary({self.model: model_metrics})
+
+    def test_gsm8k1(self):
+        self.test_gsm8k()
+
+    def test_gsm8k2(self):
+        self.test_gsm8k()
+
+    # def test_gsm8k_2048(self):
+    #     self.max_tokens = 2048
+    #     self.test_gsm8k()
+    #
+    # def test_gsm8k_2048_1(self):
+    #     self.max_tokens = 2048
+    #     self.test_gsm8k()
+    #
+    # def test_gsm8k_2048_2(self):
+    #     self.max_tokens = 2048
+    #     self.test_gsm8k()

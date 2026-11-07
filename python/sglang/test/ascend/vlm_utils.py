@@ -32,6 +32,9 @@ class TestVLMModels(CustomTestCase):
     ]
     timeout_for_server_launch = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
     max_tokens = 30
+    env = {
+        **os.environ,
+    }
 
     @classmethod
     def setUpClass(cls):
@@ -43,16 +46,13 @@ class TestVLMModels(CustomTestCase):
         os.environ["OPENAI_API_KEY"] = cls.api_key
         os.environ["OPENAI_API_BASE"] = f"{cls.base_url}/v1"
 
-        # Prepare environment variables
-        process_env = os.environ.copy()
-
         cls.process = popen_launch_server(
             cls.model,
             base_url=cls.base_url,
             timeout=cls.timeout_for_server_launch,
             api_key=cls.api_key,
             other_args=cls.other_args,
-            env=process_env,
+            env=cls.env,
         )
 
     @classmethod
