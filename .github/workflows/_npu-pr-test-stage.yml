@@ -387,6 +387,27 @@ jobs:
               -o /tmp/selected_tests.txt
             echo "Selected test files:"
             cat /tmp/selected_tests.txt
+            # Precision filtering works in coverage mode too: keep the
+            # intersection of the suite enumeration with ONLY_TESTS (mirrors
+            # --only-file-list on the run_suite path below). No match -> empty
+            # selection -> the run below is skipped cleanly.
+            # list_tests emits checkout-rooted absolute paths while ONLY_TESTS
+            # is repo-relative: normalize the enumerated path to its
+            # test/registered/... form for matching, but keep the original
+            # absolute line for the runner below. (A plain grep -Fxf matched
+            # nothing and every partition silently passed with zero tests.)
+            if [ -n "${ONLY_TESTS}" ]; then
+              printf '%s\n' "${ONLY_TESTS}" | tr ',' '\n' | sed '/^[[:space:]]*$/d' > /tmp/precision_tests.txt
+              awk 'FNR==NR { sub(/\r$/, ""); if ($0 != "") want[$0]=1; next }
+                   { rel=$0; sub(/^.*\/test\/registered\//, "test/registered/", rel); if (rel in want) print }' \
+                  /tmp/precision_tests.txt /tmp/selected_tests.txt > /tmp/selected_tests_filtered.txt || true
+              mv /tmp/selected_tests_filtered.txt /tmp/selected_tests.txt
+              echo "Precision mode: $(wc -l < /tmp/selected_tests.txt) selected file(s) after filter:"
+              cat /tmp/selected_tests.txt
+              if [ ! -s /tmp/selected_tests.txt ]; then
+                echo "::warning::Precision filter selected 0 files for ${{ inputs.self_name }} — ONLY_TESTS paths likely do not match list_tests output"
+              fi
+            fi
             # Artifact transport: stage in a job-private root so the
             # artifact carries exactly this job's tests. The default
             # (shared-disk) RUN_DIR would also sweep sibling jobs' data
