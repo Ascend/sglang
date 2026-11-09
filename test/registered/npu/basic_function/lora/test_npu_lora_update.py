@@ -26,6 +26,7 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=4350, suite="full-1-npu-a3", nightly=True)
 
+
 PROMPTS = [
     "SGL is a",
     "AI is a field of computer science focused on",

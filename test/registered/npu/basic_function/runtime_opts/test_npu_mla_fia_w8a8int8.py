@@ -17,7 +17,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=400, suite="base-b-test-2-npu-a3")
 register_npu_ci(est_time=400, suite="nightly-2-npu-a3", nightly=True)
 
-
 TEST_MODEL_MATRIX = {
     "/root/.cache/modelscope/hub/models/vllm-ascend/DeepSeek-V2-Lite-W8A8": {
         "accuracy": 0.34,
