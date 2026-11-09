@@ -95,7 +95,7 @@ RUN set -eux; \
         --index-url https://download.pytorch.org/whl/cpu; \
     ${PIP_INSTALL} "${TORCH_NPU_WHEEL}"
 
-RUN ${PIP_INSTALL} modelscope evalscope
+RUN ${PIP_INSTALL} modelscope evalscope pytest
 
 ## Install triton-ascend
 RUN ${PIP_INSTALL} pybind11 && \
