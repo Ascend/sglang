@@ -91,7 +91,7 @@ class HiCacheStorageBaseMixin:
             other_args=common_args + cls._get_extra_server_args(),
             env={
                 **os.environ,
-                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
             },
         )
         return process

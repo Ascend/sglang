@@ -57,7 +57,7 @@ SWA_COMMON_ARGS = [
 # NPU allocator config: the fixture launches the server without an explicit
 # env dict, so set it on the process env that popen_launch_server inherits.
 os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
-    "expandable_segments:True,pin_memory_expandable_segments:True"
+    "expandable_segments:True"
 )
 
 

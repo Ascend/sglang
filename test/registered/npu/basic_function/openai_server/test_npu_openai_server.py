@@ -16,7 +16,7 @@ import openai
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+from sglang.srt.utils.hf_transformers import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import (
     BGE_RERANKER_V2_M3_WEIGHTS_PATH,
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,

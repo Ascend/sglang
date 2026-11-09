@@ -41,7 +41,7 @@ class TestDeepEpDeepseek(GSM8KAscendMixin, CustomTestCase):
         "HCCL_BUFFSIZE": "2048",
         "MOE_ENABLE_TOPK_NEG_ONE": "1",
         "PYTORCH_NPU_ALLOC_CONF": (
-            "expandable_segments:True,pin_memory_expandable_segments:True"
+            "expandable_segments:True"
         ),
     }
 

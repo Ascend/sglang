@@ -9,7 +9,7 @@ from sglang.test.ci.ci_register import register_npu_ci
 register_npu_ci(est_time=6500, suite="full-acc-2-npu-a3", nightly=True)
 
 ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_BUFFSIZE": "1000",
     "HCCL_OP_EXPANSION_MODE": "AIV",

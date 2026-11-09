@@ -175,7 +175,7 @@ class _BaseNPUMoEWeightUpdateTest(CustomTestCase):
                 **os.environ,
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
                 "PYTORCH_NPU_ALLOC_CONF": (
-                    "expandable_segments:True,pin_memory_expandable_segments:True"
+                    "expandable_segments:True"
                 ),
             },
         )
@@ -308,7 +308,7 @@ class TestNPUMoEWeightUpdateFromDiskTP1(_BaseNPUMoEWeightUpdateTest):
                 **os.environ,
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
                 "PYTORCH_NPU_ALLOC_CONF": (
-                    "expandable_segments:True,pin_memory_expandable_segments:True"
+                    "expandable_segments:True"
                 ),
             },
         )

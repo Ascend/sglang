@@ -33,7 +33,7 @@ NPU_ENV = {
     "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:24666",
     "SGLANG_MM_SKIP_COMPUTE_HASH": "True",
     "PYTORCH_NPU_ALLOC_CONF": (
-        "expandable_segments:True,pin_memory_expandable_segments:True"
+        "expandable_segments:True"
     ),
     "HCCL_BUFFSIZE": "200",
     "TRANSFORMERS_VERBOSITY": os.getenv("TRANSFORMERS_VERBOSITY", "error"),

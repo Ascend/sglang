@@ -13,7 +13,7 @@ register_npu_ci(est_time=3600, suite="full-acc-4-npu-a3", nightly=True)
 QWEN3_30B_A3B_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": (
-        "expandable_segments:True,pin_memory_expandable_segments:True"
+        "expandable_segments:True"
     ),
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",

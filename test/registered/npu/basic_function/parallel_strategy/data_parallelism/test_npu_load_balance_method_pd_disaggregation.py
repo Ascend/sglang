@@ -53,7 +53,7 @@ class BaseTestNPULoadBalanceMethodDPDisaggregation(TestDisaggregationBase):
         cls.model = QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH
         os.environ["ASCEND_MF_STORE_URL"] = "tcp://127.0.0.1:24666"
         os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
-            "expandable_segments:True,pin_memory_expandable_segments:True"
+            "expandable_segments:True"
         )
 
         # Non blocking start servers
