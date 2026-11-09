@@ -1,4 +1,3 @@
-import os
 import unittest
 from urllib.parse import urlparse
 
@@ -15,10 +14,6 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=800, suite="full-2-npu-a3", nightly=True)
-
-os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
-    "expandable_segments:True"
-)
 
 
 TEST_MODEL_MATRIX = {

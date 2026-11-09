@@ -144,7 +144,6 @@ class TestDisaggregationDecodeWithHiCache(DisaggregationHiCacheBase):
         decode_args += cls.transfer_backend + cls.rdma_devices
         env = {
             **os.environ,
-            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
             "HCCL_SOCKET_IFNAME": "lo",
             "GLOO_SOCKET_IFNAME": "lo",
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,

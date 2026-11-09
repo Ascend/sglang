@@ -34,7 +34,6 @@ register_npu_ci(
     nightly=True,
 )
 
-
 # Force deterministic inference so that the cached_tokens assertion is stable
 # across runs (mirrors the GPU test's SGLANG_ENABLE_DETERMINISTIC_INFERENCE=1).
 os.environ.setdefault("SGLANG_ENABLE_DETERMINISTIC_INFERENCE", "1")

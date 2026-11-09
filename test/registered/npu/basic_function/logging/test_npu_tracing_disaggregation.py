@@ -85,9 +85,6 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             cls.prefill_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=prefill_args,
-            env={
-                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
-            },
         )
 
     @classmethod
@@ -119,7 +116,6 @@ class TestNPUTracingDisaggregation(TestDisaggregationBase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=decode_args,
             env={
-                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
                 "SGLANG_OTLP_EXPORTER_SCHEDULE_DELAY_MILLIS": "50",
                 "SGLANG_OTLP_EXPORTER_MAX_EXPORT_BATCH_SIZE": "4",
             },

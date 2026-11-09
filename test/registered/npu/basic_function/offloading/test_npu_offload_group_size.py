@@ -15,10 +15,6 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
-os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
-    "expandable_segments:True"
-)
-
 
 class TestOffloadGroupSize(CustomTestCase):
     """Testcase: Test the --offload-group-size parameter the parameter

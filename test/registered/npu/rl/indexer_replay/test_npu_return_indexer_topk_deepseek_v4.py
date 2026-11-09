@@ -61,9 +61,6 @@ class TestNPUDeepSeekV4ReturnIndexerTopk(CustomTestCase):
         ]
         env = os.environ.copy()
         env.update(DEEPSEEK_V4_BF16_ENVS)
-        env["PYTORCH_NPU_ALLOC_CONF"] = (
-            "expandable_segments:True"
-        )
         _, host, port = DEFAULT_URL_FOR_TEST.split(":")
         server_command = [
             "python3",

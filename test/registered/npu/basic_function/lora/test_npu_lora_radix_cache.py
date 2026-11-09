@@ -24,11 +24,6 @@ PROMPTS = [
 ]
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
-os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
-    "expandable_segments:True"
-)
-
-
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 
