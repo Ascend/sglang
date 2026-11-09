@@ -117,6 +117,8 @@ ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 
 ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Ascend/cann-${CANN_VERSION}/lib:/usr/local/Ascend/cann-${CANN_VERSION}/x86_64-linux/devlib/device:/usr/local/Ascend/driver/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
+RUN sed -Ei -e '/^[[:space:]]*"torch\.npu\.random\.manual_seed(_all)?",[[:space:]]*$/d' -e 's/^([[:space:]]*)"torch\.npu\.set_device",/\1"torch.npu.random.manual_seed_all",\n\1"torch.npu.random.manual_seed",\n\1"torch.npu.set_device",/' /usr/local/python3.12.15/lib/python3.12/site-packages/torch_npu/dynamo/trace_rule.py
+
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
     source /usr/local/Ascend/cann-${CANN_VERSION}/set_env.sh && \
