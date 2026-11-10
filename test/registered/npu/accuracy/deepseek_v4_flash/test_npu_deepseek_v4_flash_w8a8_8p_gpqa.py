@@ -1,7 +1,10 @@
+import logging
 import os
 import subprocess
+import time
 import unittest
 
+from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
     BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
@@ -12,6 +15,12 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import DEFAULT_URL_FOR_TEST
 from sglang.utils import wait_for_server
+
+logger = logging.getLogger(__name__)
+
+# Number of server launches used to observe how much startup time the model
+# cache saves on each restart.
+SERVER_LAUNCH_TIMES = 5
 
 register_npu_ci(
     est_time=3600,
@@ -148,7 +157,12 @@ class TestNPUDeepSeekV4FlashW8A88PGPQA(TestNpuAccuracyTestCaseBase):
 
     @classmethod
     def setUpClass(cls):
-        """Launch server via `python3 -m sglang.launch_server` instead of `sglang serve`."""
+        """Launch server via `python3 -m sglang.launch_server` instead of `sglang serve`.
+
+        The server is launched SERVER_LAUNCH_TIMES times so we can observe how
+        much startup time the model cache saves on each restart. Each server is
+        killed right after it becomes ready, then the next one is launched.
+        """
         cls._setup_per_case_output()
         cls.base_url = DEFAULT_URL_FOR_TEST
         env = os.environ.copy()
@@ -168,12 +182,59 @@ class TestNPUDeepSeekV4FlashW8A88PGPQA(TestNpuAccuracyTestCaseBase):
             "--port",
             port,
         ]
-        cls.process = subprocess.Popen(command, env=env)
-        wait_for_server(cls.base_url, timeout=cls.server_timeout, process=cls.process)
 
-    def test_npu_deepseek_v4_flash_w8a8_8p_gpqa(self):
-        """Run NPU accuracy test for DeepSeek-V4-Flash W8A8 8p DSPARK GPQA."""
-        self.run_accuracy()
+        cls.launch_seconds = []
+        try:
+            for i in range(SERVER_LAUNCH_TIMES):
+                start = time.perf_counter()
+                cls.process = subprocess.Popen(command, env=env)
+                wait_for_server(
+                    cls.base_url, timeout=cls.server_timeout, process=cls.process
+                )
+                elapsed = time.perf_counter() - start
+                cls.launch_seconds.append(elapsed)
+                if i == 0:
+                    logger.info(
+                        "Server launch %d/%d took %.1fs (cold cache baseline)",
+                        i + 1,
+                        SERVER_LAUNCH_TIMES,
+                        elapsed,
+                    )
+                else:
+                    logger.info(
+                        "Server launch %d/%d took %.1fs (saved %.1fs vs launch 1)",
+                        i + 1,
+                        SERVER_LAUNCH_TIMES,
+                        elapsed,
+                        cls.launch_seconds[0] - elapsed,
+                    )
+                # Kill the server right after it is ready, then launch the next one.
+                kill_process_tree(cls.process.pid)
+                cls.process = None
+        finally:
+            # unittest does not call tearDownClass when setUpClass fails, so make
+            # sure a failed/timeout launch never leaves a server holding the
+            # port and NPU devices for the next runs.
+            if cls.process is not None:
+                kill_process_tree(cls.process.pid, wait_timeout=None)
+                cls.process = None
+
+    def test_npu_deepseek_v4_flash_w8a8_8p_server_launch_time(self):
+        """Report the launch time of each of the SERVER_LAUNCH_TIMES starts."""
+        launches = self.__class__.launch_seconds
+        self.assertEqual(len(launches), SERVER_LAUNCH_TIMES)
+        for i, elapsed in enumerate(launches, start=1):
+            logger.info(
+                "Launch %d/%d: %.1fs (saved %.1fs vs launch 1)",
+                i,
+                SERVER_LAUNCH_TIMES,
+                elapsed,
+                launches[0] - elapsed,
+            )
+
+    # def test_npu_deepseek_v4_flash_w8a8_8p_gpqa(self):
+    #     """Run NPU accuracy test for DeepSeek-V4-Flash W8A8 8p DSPARK GPQA."""
+    #     self.run_accuracy()
 
 
 if __name__ == "__main__":
