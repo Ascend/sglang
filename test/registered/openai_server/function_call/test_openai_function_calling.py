@@ -4,7 +4,11 @@ import unittest
 import openai
 
 from sglang.srt.utils import is_npu, kill_process_tree
-from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+
+try:
+    from sglang.srt.hf_transformers import get_tokenizer
+except ImportError:
+    from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 from sglang.test.ci.ci_register import (
     register_amd_ci,
     register_cuda_ci,
