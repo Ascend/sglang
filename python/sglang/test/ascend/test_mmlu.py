@@ -6,15 +6,27 @@ from sglang.test.sgl_eval_utils import run_sgl_eval
 
 
 class TestMMLU:
+    # NB: pytest collects every module attribute matching Test* — including
+    # this mixin imported into a test file's namespace. A bare instance has
+    # no base_url/model/fail, so each importing file gains a spurious failing
+    # test. Opt the mixin out explicitly; real host classes set __test__ = True.
+    __test__ = False
+
     mmlu_num_examples = 128
 
     def test_mmlu(self):
         accuracy_mmlu_threshold = getattr(self, "accuracy_mmlu", 0.00)
 
+        # getattr's default is evaluated eagerly; resolve the server command
+        # defensively instead.
+        if hasattr(self, "server_cmd"):
+            server_cmd = self.server_cmd
+        else:
+            server_cmd = subprocess.list2cmdline(
+                map(str, getattr(self, "other_args", []))
+            )
         model_metrics = {
-            "server": getattr(
-                self, "server_cmd", subprocess.list2cmdline(map(str, self.other_args))
-            ),
+            "server": server_cmd,
             "client": "sgl-eval",
             "accuracy_threshold": getattr(self, "accuracy_mmlu", "N/A"),
         }
