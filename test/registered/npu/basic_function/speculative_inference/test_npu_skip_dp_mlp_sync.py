@@ -35,7 +35,7 @@ register_npu_ci(
     est_time=600,
     suite="full-4-npu-a3",
     nightly=True,
-    disabled="The community has removed this parameter"
+    disabled="The community has removed this parameter",
 )
 
 
