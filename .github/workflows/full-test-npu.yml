@@ -28,6 +28,11 @@ on:
         required: false
         type: boolean
         default: false
+      only_tests:
+        description: 'Precision mode: comma/newline-separated repo-relative test file paths to run (empty = full suite). Non-matching jobs run nothing and pass.'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: full-test-npu-${{ inputs.coverage_mode == true && 'coverage-' || '' }}${{ inputs.ref || github.ref }}
@@ -41,10 +46,21 @@ jobs:
       job_filter: ${{ steps.set-vars.outputs.job_filter }}
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
       coverage_mode: ${{ steps.set-vars.outputs.coverage_mode }}
+      only_tests: ${{ steps.set-vars.outputs.only_tests }}
     steps:
+      # Shallow checkout so the precision-list file below can be read from the
+      # event commit (the PR merge ref for pull_request events).
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
       - name: Set image config
         id: set-vars
+        env:
+          # env-indirection: only_tests may be a multi-line list, which must
+          # not be text-expanded into the bash conditionals below.
+          IN_ONLY_TESTS: ${{ inputs.only_tests }}
         run: |
           if [ -z "${{ inputs.ref }}" ]; then
             echo "ref=" >> $GITHUB_OUTPUT
@@ -70,12 +86,45 @@ jobs:
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
 
+          if [ -z "${IN_ONLY_TESTS}" ]; then
+            echo "only_tests=" >> $GITHUB_OUTPUT
+          else
+            # Normalize commas/blank lines to the one-path-per-line form the
+            # stage workflow's precision mode consumes.
+            {
+              echo "only_tests<<EOF"
+              printf '%s' "${IN_ONLY_TESTS}" | tr ',' '\n' | sed '/^[[:space:]]*$/d'
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          fi
+
+          # ---------- TEMP: precision re-run for the cann9.2.0 failure set ----------
+          # Kept LAST on purpose: GITHUB_OUTPUT is last-write-wins, so these
+          # override the empty pull_request-event fallbacks above.
+          # A PR-triggered run would otherwise execute the full suite. While
+          # this validation branch is under test, PR-triggered runs execute only
+          # the re-run targets, in coverage mode on the same image the failures
+          # were captured on. Gated on the head branch name, so merged future
+          # PRs are unaffected; drop this block (and the list file) afterwards.
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.head_ref }}" = "fix/cann920-rerun" ]; then
+            PRECISION_LIST="${GITHUB_WORKSPACE}/scripts/ci/npu/precise-test/cann920-rerun-list.txt"
+            n=$(grep -vc '^[[:space:]]*\(#\|$\)' "${PRECISION_LIST}")
+            echo "PR validation: precision mode with ${n} target files (coverage on, image cann9.2.0-a3-20261109post3)"
+            echo "coverage_mode=true" >> $GITHUB_OUTPUT
+            echo "image_a3=quay.io/ascend/sglang:cann9.2.0-a3-20261109post3" >> $GITHUB_OUTPUT
+            {
+              echo "only_tests<<EOF"
+              grep -v '^[[:space:]]*\(#\|$\)' "${PRECISION_LIST}"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          fi
+
   nighly-test-npu:
     needs: [set-image-config]
     name: nightly-test-npu
     # Coverage mode: nested nightly collects coverage for its basic-function
     # and accuracy suites only.
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     uses: ./.github/workflows/nightly-test-npu.yml
     with:
       ref:  ${{ needs.set-image-config.outputs.ref }}
@@ -91,6 +140,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-1-npu-a3
+      only_tests: ${{ needs.set-image-config.outputs.only_tests }}
       runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x timeout budget.
@@ -111,6 +161,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-2-npu-a3
+      only_tests: ${{ needs.set-image-config.outputs.only_tests }}
       runner_config: linux-aarch64-a3-2
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x timeout budget.
@@ -131,6 +182,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-4-npu-a3
+      only_tests: ${{ needs.set-image-config.outputs.only_tests }}
       runner_config: linux-aarch64-a3-4
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x timeout budget.
@@ -151,6 +203,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-8-npu-a3
+      only_tests: ${{ needs.set-image-config.outputs.only_tests }}
       runner_config: linux-aarch64-a3-8
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x timeout budget.
@@ -171,6 +224,7 @@ jobs:
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
       self_name: full-16-npu-a3
+      only_tests: ${{ needs.set-image-config.outputs.only_tests }}
       runner_config: linux-aarch64-a3-16
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       # Coverage mode: 2x timeout budget.
@@ -186,7 +240,7 @@ jobs:
 
   full-acc-2-npu-a3:
     name: full-acc-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -206,7 +260,7 @@ jobs:
 
   full-acc-4-npu-a3:
     name: full-acc-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -226,7 +280,7 @@ jobs:
 
   full-acc-16-npu-a3:
     name: full-acc-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
@@ -246,7 +300,7 @@ jobs:
 
   full-perf-2-npu-a3:
     name: full-perf-2-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -262,7 +316,7 @@ jobs:
 
   full-perf-4-npu-a3:
     name: full-perf-4-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -278,7 +332,7 @@ jobs:
 
   full-perf-8-npu-a3:
     name: full-perf-8-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -294,7 +348,7 @@ jobs:
 
   full-perf-16-npu-a3:
     name: full-perf-16-npu-a3
-    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
@@ -311,7 +365,7 @@ jobs:
   full-poc-multi-node-tests:
     name: multi-node-poc
     needs: [ set-image-config ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.set-image-config.outputs.only_tests == '' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -412,7 +466,7 @@ jobs:
 
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
-    if: ${{ always() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
+    if: ${{ always() && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') && needs.set-image-config.outputs.only_tests == '' }}
     needs: [set-image-config, full-poc-multi-node-tests]
     strategy:
       fail-fast: false
