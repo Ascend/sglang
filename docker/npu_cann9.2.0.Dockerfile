@@ -77,9 +77,7 @@ RUN set -eux; \
     mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
     ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
 
-### Install SGLang Model Gateway
-RUN ${PIP_INSTALL} sglang-router
-
+RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe
 
 ### Install PyTorch and PTA
 RUN set -eux; \
@@ -95,8 +93,6 @@ RUN set -eux; \
         --index-url https://download.pytorch.org/whl/cpu; \
     ${PIP_INSTALL} "${TORCH_NPU_WHEEL}"
 
-RUN ${PIP_INSTALL} modelscope evalscope pytest
-
 ## Install triton-ascend
 RUN ${PIP_INSTALL} pybind11 && \
     if [ "$TARGETARCH" = "arm64" ]; then \
@@ -109,9 +105,17 @@ RUN ${PIP_INSTALL} pybind11 && \
     fi
 
 # Install SGLang
-RUN git clone https://github.com/lilDss/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
-    cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
-    ${PIP_INSTALL} -v -e .[all_npu]
+#RUN git clone https://github.com/lilDss/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+#    cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
+#    ${PIP_INSTALL} -v -e .[all_npu]
+RUN git clone https://github.com/lilDss/sglang /sgl-workspace/sglang && \
+    cd /sgl-workspace/sglang && \
+    git fetch --no-tags origin refs/pull/47438/merge && \
+    git checkout --detach FETCH_HEAD && \
+    cd python && \
+    rm -rf pyproject.toml && \
+    mv pyproject_npu.toml pyproject.toml && \
+    ${PIP_INSTALL} -v -e ".[all_npu]"
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 
