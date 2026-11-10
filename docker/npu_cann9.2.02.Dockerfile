@@ -118,11 +118,24 @@ RUN sed -Ei -e '/^[[:space:]]*"torch\.npu\.random\.manual_seed(_all)?",[[:space:
 
 RUN set -eux; \
     case "${TARGETARCH}" in \
-        arm64) ASCEND_ARCH="aarch64" ;; \
-        amd64) ASCEND_ARCH="x86_64" ;; \
-        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+        arm64) \
+            ASCEND_ARCH="aarch64"; \
+            LIBDIR="/usr/lib/aarch64-linux-gnu"; \
+            ;; \
+        amd64) \
+            ASCEND_ARCH="x86_64"; \
+            LIBDIR="/usr/lib/x86_64-linux-gnu"; \
+            ;; \
+        *) \
+            echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; \
+            exit 1; \
+            ;; \
     esac; \
-    cp "/usr/local/Ascend/cann-${CANN_VERSION}/${ASCEND_ARCH}-linux/lib64/libmmpa.so" /usr/lib64/
+    install -Dm755 \
+        "/usr/local/Ascend/cann-${CANN_VERSION}/${ASCEND_ARCH}-linux/lib64/libmmpa.so" \
+        "${LIBDIR}/libmmpa.so"; \
+    ldconfig; \
+    ldconfig -p | grep libmmpa.so
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
