@@ -104,18 +104,10 @@ RUN ${PIP_INSTALL} pybind11 && \
         exit 1; \
     fi
 
-# Install SGLang
-#RUN git clone https://github.com/lilDss/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
-#    cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
-#    ${PIP_INSTALL} -v -e .[all_npu]
-RUN git clone https://github.com/lilDss/sglang /sgl-workspace/sglang && \
-    cd /sgl-workspace/sglang && \
-    git fetch --no-tags origin refs/pull/47438/merge && \
-    git checkout --detach FETCH_HEAD && \
-    cd python && \
-    rm -rf pyproject.toml && \
-    mv pyproject_npu.toml pyproject.toml && \
-    ${PIP_INSTALL} -v -e ".[all_npu]"
+#Install SGLang
+RUN git clone https://github.com/lilDss/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+    cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
+    ${PIP_INSTALL} -v -e .[all_npu]
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
 
