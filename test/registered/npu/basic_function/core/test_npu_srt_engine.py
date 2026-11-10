@@ -5,7 +5,12 @@ import unittest
 import torch
 
 import sglang as sgl
-from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+
+try:
+    from sglang.srt.hf_transformers import get_tokenizer
+except ImportError:
+    from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
     QWEN2_1_5B_INSTRUCT_GTE_WEIGHTS_PATH,
