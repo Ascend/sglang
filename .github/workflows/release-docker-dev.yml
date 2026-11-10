@@ -28,22 +28,22 @@ jobs:
             dockerfile: docker/npu_cann9.1.0_python312_910b_B070.Dockerfile
             platform: arm64
             runner: ubuntu-22.04-arm
-          - device_type: a3
-            dockerfile: docker/npu_cann9.1.0_python312_a3_B070.Dockerfile
-            platform: amd64
-            runner: ubuntu-latest
-          - device_type: a3
-            dockerfile: docker/npu_cann9.1.0_python312_a3_B070.Dockerfile
-            platform: arm64
-            runner: ubuntu-22.04-arm
-          - device_type: 950
-            dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
-            platform: amd64
-            runner: ubuntu-latest
-          - device_type: 950
-            dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
-            platform: arm64
-            runner: ubuntu-22.04-arm
+  #        - device_type: a3
+  #          dockerfile: docker/npu_cann9.1.0_python312_a3_B070.Dockerfile
+  #          platform: amd64
+   #         runner: ubuntu-latest
+  #        - device_type: a3
+  #          dockerfile: docker/npu_cann9.1.0_python312_a3_B070.Dockerfile
+  #          platform: arm64
+  #          runner: ubuntu-22.04-arm
+  #        - device_type: 950
+  #          dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
+  #          platform: amd64
+   #         runner: ubuntu-latest
+  #        - device_type: 950
+  #          dockerfile: docker/npu_cann9.1.0_python312_950_B070.Dockerfile
+   #         platform: arm64
+   #         runner: ubuntu-22.04-arm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -104,7 +104,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        device_type: ["a3", "950"]
+        #device_type: ["a3", "950"]
+        device_type: ["910b"]
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -141,6 +142,8 @@ jobs:
     strategy:
       matrix:
         include:
+          - device_type: 910b
+            dockerfile: docker/npu_cann9.1.0_python312_910b_B070.Dockerfile
           - device_type: a3
             dockerfile: docker/npu_cann9.1.0_python312_a3_B070.Dockerfile
           - device_type: 950
