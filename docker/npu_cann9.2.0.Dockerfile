@@ -151,8 +151,23 @@ RUN ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil \
     && unzip sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch2.13.0-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip \
     && rm -f sgl_kernel_npu*.whl \
     && ${PIP_INSTALL} deep_ep*.whl torch_memory_saver*.whl \
-    && ${PIP_INSTALL} 
     && cd .. && rm -rf sgl-kernel-npu \
     && cd "$(python3 -m pip show deep-ep | awk '/^Location:/ {print $2}')" && ln -sf deep_ep/deep_ep_cpp*.so
+
+RUN git clone https://github.com/sgl-project/sgl-kernel-npu.git /tmp/sgl-kernel-npu && \
+    cd /tmp/sgl-kernel-npu && \
+    git fetch origin 836ccad21e8a811858fd1543896ba2f1b932be52 && \
+    git checkout --detach FETCH_HEAD && \
+    git submodule update --init --recursive && \
+    source /usr/local/Ascend/cann-${CANN_VERSION}/set_env.sh && \
+    export LD_LIBRARY_PATH="${ASCEND_HOME_PATH}/runtime/lib64/stub:${LD_LIBRARY_PATH}" && \
+    case "${DEVICE_TYPE}" in \
+        950) ./build.sh -a kernels Ascend950PR_9599 ;; \
+        a3)  ./build.sh -a kernels ;; \
+        *)   echo "Unsupported DEVICE_TYPE: ${DEVICE_TYPE}" >&2; exit 1 ;; \
+    esac && \
+    ${PIP_INSTALL} --force-reinstall --no-deps output/sgl_kernel_npu-*.whl && \
+    cd / && rm -rf /tmp/sgl-kernel-npu
+    
 
 CMD ["/bin/bash"]
