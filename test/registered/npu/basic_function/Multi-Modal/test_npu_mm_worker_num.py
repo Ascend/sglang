@@ -49,7 +49,7 @@ BASE_SERVER_ARGS = [
 BENCHMARK_ARGS = [
     sys.executable,
     "-m",
-    "sglang.bench_serving",
+    "sglang.benchmark.serving",
     "--dataset-name",
     "image",
     "--model",

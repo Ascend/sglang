@@ -60,7 +60,7 @@ class TestNpuHierarchicalCacheMla(CustomTestCase):
                 "ascend",
                 "--enable-hierarchical-cache",
                 "--hicache-ratio",
-                5,
+                3,
                 "--hicache-write-policy",
                 "write_back",
             ],

@@ -8,7 +8,7 @@ from typing import Dict
 
 import requests
 
-from sglang.bench_serving import get_tokenizer
+from sglang.benchmark.serving import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import QWEN3_32B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval

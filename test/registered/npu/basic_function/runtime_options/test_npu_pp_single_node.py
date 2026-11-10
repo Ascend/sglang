@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import requests
 
-from sglang.bench_one_batch_server import BenchArgs as OneBatchBenchArgs
+from sglang.benchmark.one_batch_server import BenchArgs as OneBatchBenchArgs
 from sglang.srt.server_args import ServerArgs
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (

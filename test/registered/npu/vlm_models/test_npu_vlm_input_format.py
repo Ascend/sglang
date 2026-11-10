@@ -41,7 +41,7 @@ if not hasattr(_hf_activations, "PytorchGELUTanh"):
 from sglang import Engine
 from sglang.srt.entrypoints.openai.protocol import ChatCompletionRequest
 from sglang.srt.parser.conversation import generate_chat_conv
-from sglang.srt.utils.hf_transformers_utils import _fix_added_tokens_encoding
+from sglang.srt.hf_transformers import _fix_added_tokens_encoding
 
 register_npu_ci(est_time=747, suite="full-2-npu-a3", nightly=True)
 
