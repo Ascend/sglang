@@ -31,7 +31,12 @@ from sglang.test.test_utils import (
     write_github_step_summary,
 )
 
-register_npu_ci(est_time=600, suite="full-4-npu-a3", nightly=True, disabled="The community has removed this parameter")
+register_npu_ci(
+    est_time=600,
+    suite="full-4-npu-a3",
+    nightly=True,
+    disabled="The community has removed this parameter"
+)
 
 
 NPU_ENV = {
