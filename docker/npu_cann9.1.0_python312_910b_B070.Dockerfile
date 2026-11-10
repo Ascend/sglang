@@ -2,14 +2,12 @@ ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=910b
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
-ARG arch
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
 # Update pip & apt sources
 ARG TARGETARCH
 ARG CANN_VERSION
 ARG DEVICE_TYPE
-ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
 # torch_npu 2.10.0.post6 requires torch==2.10.0, so PYTORCH_VERSION stays at 2.10.0
@@ -20,7 +18,7 @@ ARG TORCH_NPU_VERSION="2.10.0.post6"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG SGLANG_TAG=main
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
-ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post12
+ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post1
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
 # modelscope / evalscope versions (leave empty to install the latest release)
