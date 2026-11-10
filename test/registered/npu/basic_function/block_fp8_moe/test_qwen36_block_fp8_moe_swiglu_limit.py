@@ -21,16 +21,16 @@ from sglang.test.test_utils import (
 
 OUTPUT_DIR = "./profiler_dir"
 
-# Accuracy floors, one per mode. testcases.md keeps the native group as the
-# reference and puts the MXFP8 group one notch lower. DeepSeek-V4-Flash-Base has
-# no public GSM8K baseline, so these start as guard rails and can be tightened
-# once a calibration run pins the real numbers.
+# Accuracy floors: no public GSM8K baseline for this Base checkpoint, so these are
+# guard rails to tighten after a calibration run.
 ACCURACY_NATIVE = 0.90
 ACCURACY_MXFP8 = 0.89
 
-# Envs aligned with the DeepSeek-V4-Flash-0731 A5 case
-# (test/registered/npu/accuracy/deepseek_v4_flash/test_npu_deepseek_v4_flash_fp8_4p_gpqa_a5.py),
-# minus the items this case does not need: DSPARK speculative, reasoning effort.
+# AscendC custom ops: export these in the shell before launching the server.
+#   export LD_LIBRARY_PATH="/usr/local/Ascend/cann-9.1.0/opp/vendors/customize/op_api/lib:/usr/local/Ascend/cann-9.1.0/opp/vendors/custom_transformer/op_api/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+#   export ASCEND_CUSTOM_OPP_PATH="/usr/local/Ascend/cann-9.1.0/opp/vendors/customize:/usr/local/Ascend/cann-9.1.0/opp/vendors/custom_transformer"
+
+# Envs aligned with the DeepSeek-V4-Flash-0731 A5 case.
 SERVER_ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
@@ -45,16 +45,12 @@ SERVER_ENVS = {
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "256",
-    # dsv4. These have no in-tree reader, but the out-of-tree AscendC custom-ops
-    # package may consume them (USE_FUSED_HC_PRE_ASCENDC shares its name with the
-    # npu_hc_pre aclnn op), so keep them in lockstep with the 0731 A5 case.
+    # dsv4: consumed by the out-of-tree AscendC custom-ops package.
     "IS_DEEPSEEK_V4": "1",
     "USE_FUSED_HC_PRE_ASCENDC": "1",
     "SGLANG_DSV4_NPU_FUSED_COMPRESSOR": "1",
     "SGLANG_DSV4_NPU_FUSED_COMPRESSOR_PREFILL": "1",
-    # The Ascend block FP8 MoE method is only selected when the routed experts
-    # are not MXFP4-packed (see layers/quantization/fp8.py), so this must stay
-    # off even though the 0731 A5 case sets it to True.
+    # Keep off: the Ascend block FP8 MoE path needs non-MXFP4 experts.
     "SGLANG_DSV4_FP4_EXPERTS": "False",
     # skip gpu branch
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
@@ -72,12 +68,9 @@ SERVER_ENVS = {
     "USE_NPU_MOE_GATING_TOP_K": "1",
 }
 
-# Model specific args for DSV4-Flash on Ascend, aligned with the 0731 cases.
-# No Qwen3.6 only options (mamba, multimodal, NEXTN, qwen3 parsers) and no DSPARK
-# speculative args (the Base checkpoint ships no draft model).
-# mem-fraction-static is the one deliberate deviation: the Base routed experts are
-# FP8 while 0731's are FP4, so the checkpoint is bigger per rank and the 0731 value
-# 0.73 leaves no room for the KV pool (weights alone take 0.841).
+# Model args for DSV4-Flash on Ascend, aligned with the 0731 cases; no Qwen3.6-only
+# or DSPARK speculative options. mem-fraction-static deviates: this Base checkpoint
+# is FP8 (larger per rank) instead of 0731's FP4.
 SERVER_ARGS = [
     "--page-size",
     "128",
@@ -91,7 +84,7 @@ SERVER_ARGS = [
     "--watchdog-timeout",
     "9000",
     "--mem-fraction-static",
-    "0.90",
+    "0.85",
     "--max-running-requests",
     "32",
     "--chunked-prefill-size",
@@ -102,6 +95,7 @@ SERVER_ARGS = [
     "1",
     "2",
     "4",
+    "8",
     "--kv-cache-dtype",
     "auto",
     "--enable-dp-lm-head",
