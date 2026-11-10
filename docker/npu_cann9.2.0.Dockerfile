@@ -124,7 +124,13 @@ ENV LD_LIBRARY_PATH=/usr/local/Ascend/cann-${CANN_VERSION}/lib64:/usr/local/Asce
 
 RUN sed -Ei -e '/^[[:space:]]*"torch\.npu\.random\.manual_seed(_all)?",[[:space:]]*$/d' -e 's/^([[:space:]]*)"torch\.npu\.set_device",/\1"torch.npu.random.manual_seed_all",\n\1"torch.npu.random.manual_seed",\n\1"torch.npu.set_device",/' /usr/local/python3.12.15/lib/python3.12/site-packages/torch_npu/dynamo/trace_rule.py
 
-RUN cp /usr/local/Ascend/cann-9.2.0/aarch64-linux/lib64/libmmpa.so /usr/lib64/
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+        arm64) ASCEND_ARCH="aarch64" ;; \
+        amd64) ASCEND_ARCH="x86_64" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    cp "/usr/local/Ascend/cann-${CANN_VERSION}/${ASCEND_ARCH}-linux/lib64/libmmpa.so" /usr/lib64/
 
 RUN mkdir cann-custom-ops && \
     cd cann-custom-ops && \
