@@ -10,9 +10,9 @@ from typing import Optional
 import numpy as np
 import requests
 
+from sglang.srt.hf_transformers import get_tokenizer
 from sglang.srt.sampling.custom_logit_processor import CustomLogitProcessor
 from sglang.srt.utils import kill_process_tree
-from sglang.srt.hf_transformers import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_0_6B_WEIGHTS_PATH,
     DeterministicLogitProcessor,
