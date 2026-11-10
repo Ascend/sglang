@@ -78,6 +78,7 @@ RUN set -eux; \
     ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
 
 RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe
+RUN python3 -m pip install --no-deps cannbot-dsl==0.8.0
 
 ### Install PyTorch and PTA
 RUN set -eux; \
