@@ -14,6 +14,7 @@ register_npu_ci(
     est_time=7200,
     suite="full-acc-16-npu-a3",
     nightly=True,
+    disabled="Not maintaining use cases",
 )
 
 MINIMAX_M2_5_W8A8_4P_IN64K_OUT1K_PREFIX90_ENVS = {
