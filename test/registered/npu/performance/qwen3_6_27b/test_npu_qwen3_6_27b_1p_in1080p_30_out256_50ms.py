@@ -15,6 +15,7 @@ register_npu_ci(
 )
 
 QWEN3_6_27B_1080P_ENVS = {
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
