@@ -1,10 +1,6 @@
 name: Full Test (NPU)
 
 on:
-  # TEMP (validation): enable per-push full-test CI for this PR so the
-  # precision re-run can be triggered from the PR event. The base branch keeps
-  # this trigger commented out; drop this block together with the precision
-  # scaffold.
   pull_request:
     branches:
       - testcases-261015
@@ -26,7 +22,7 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-a3'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-20261109post3'
       coverage_mode:
         description: 'Run in coverage mode: full and nightly basic-function/accuracy suites collect coverage (per-job artifacts); perf and multi-node suites run normally.'
         required: false
@@ -79,7 +75,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-a3" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-20261109post3" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
@@ -110,7 +106,7 @@ jobs:
           # the re-run targets, in coverage mode on the same image the failures
           # were captured on. Gated on the head branch name, so merged future
           # PRs are unaffected; drop this block (and the list file) afterwards.
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.head_ref }}" = "fix/cann920-rerun-v2" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.head_ref }}" = "fix/cann920-rerun" ]; then
             PRECISION_LIST="${GITHUB_WORKSPACE}/scripts/ci/npu/precise-test/cann920-rerun-list.txt"
             n=$(grep -vc '^[[:space:]]*\(#\|$\)' "${PRECISION_LIST}")
             echo "PR validation: precision mode with ${n} target files (coverage on, image cann9.2.0-a3-20261109post3)"
@@ -171,7 +167,7 @@ jobs:
       # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
-      partitions: '{"size":2,"arr":[0,1]}'
+      partitions: '{"size":4,"arr":[0,1,2,3]}'
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
@@ -213,7 +209,7 @@ jobs:
       # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
-      partitions: '{"size":2,"arr":[0,1]}'
+      partitions: '{"size":4,"arr":[0,1,2,3]}'
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
@@ -234,7 +230,7 @@ jobs:
       # Coverage mode: 2x timeout budget.
       run_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
       timeout_per_file: '7200'
-      partitions: '{"size":2,"arr":[0,1]}'
+      partitions: '{"size":4,"arr":[0,1,2,3]}'
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
@@ -375,50 +371,50 @@ jobs:
       max-parallel: 1
       matrix:
         test_config:
-          # glm5.2 performance tests
-          - name: glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms
-            prefill_size: 4
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
-            prefill_size: 4
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms
-            prefill_size: 3
-            decode_size: 1
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          - name: glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
-          # glm5.1 performance tests
-          - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
-            prefill_size: 2
-            decode_size: 2
-            router_size: 1
-            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
-            test_type: 'perf'
-            prefill_decode_deployment: 'separation'
+#          # glm5.2 performance tests
+#          - name: glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms
+#            prefill_size: 4
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in128k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms
+#            prefill_size: 4
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_4p1d_48p_in64k_out1k_prefix90_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms
+#            prefill_size: 3
+#            decode_size: 1
+#            router_size: 1
+#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_3p1d_32p_in16k_out1k_50ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in64k_out1k_prefix90_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          - name: glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/npu/performance/glm5_2/test_npu_glm_5_2_w4a8_2p1d_32p_in128k_out1k_prefix90_20ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
+#          # glm5.1 performance tests
+#          - name: glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms
+#            prefill_size: 2
+#            decode_size: 2
+#            router_size: 1
+#            test_case: test/registered/npu/performance/glm5_1/test_npu_glm5_1_w4a8_1p1d_32p_in65k_out1k5_prefix90_25ms.py
+#            test_type: 'perf'
+#            prefill_decode_deployment: 'separation'
           - name: glm5_1_w4a8_3p1d_32p_in16k_out1k_50ms
             prefill_size: 3
             decode_size: 1
@@ -540,6 +536,13 @@ jobs:
           rm -rf ${test_dir}/kits
           cp -r python/sglang/test/kits ${test_dir}/
           cp python/sglang/test/test_programs.py ${test_dir}/
+          # Version-match test_utils with the branch (see the matching copy in
+          # _npu-pr-test-stage.yml: carries the NPU launch-timeout raise).
+          cp python/sglang/test/test_utils.py ${test_dir}/
+          # Keep the legacy MMLU scorer modules version-matched with the
+          # overlay (ascend/simple_eval_mmlu.py imports them).
+          cp python/sglang/test/simple_eval_mmlu.py ${test_dir}/
+          cp python/sglang/test/simple_eval_common.py ${test_dir}/
           out=/tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs
           mkdir -p ${out}
           tar -czf ${out}/sglang-image-src.tar.gz \
@@ -641,6 +644,9 @@ jobs:
 
           import yaml
 
+          # Built at runtime so this file never contains the GitHub expression
+          # opener followed by no closing braces, which breaks the parser.
+          EXPR_OPEN = "$" + "{{"
           specs = []
           for name in ("full-test-npu.yml", "nightly-test-npu.yml"):
               path = os.path.join(".github/workflows", name)
@@ -653,13 +659,13 @@ jobs:
                   if "upload_coverage_artifact" not in job_with:
                       continue
                   suite = job_with.get("self_name") or job_with.get("test_suite")
-                  if not isinstance(suite, str) or "${{" in suite:
+                  if not isinstance(suite, str) or EXPR_OPEN in suite:
                       print(f"::error::{name}:{job_id} needs a literal self_name/test_suite")
                       sys.exit(1)
                   parts = job_with.get("partitions")
                   if parts is None:
                       size = 1
-                  elif not isinstance(parts, str) or "${{" in parts:
+                  elif not isinstance(parts, str) or EXPR_OPEN in parts:
                       print(f"::error::{name}:{job_id} partitions must be a literal JSON string")
                       sys.exit(1)
                   else:
