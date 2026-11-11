@@ -106,7 +106,7 @@ jobs:
           # the re-run targets, in coverage mode on the same image the failures
           # were captured on. Gated on the head branch name, so merged future
           # PRs are unaffected; drop this block (and the list file) afterwards.
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.head_ref }}" = "fix/cann920-rerun" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.head_ref }}" = "fix/cann920-clean" ]; then
             PRECISION_LIST="${GITHUB_WORKSPACE}/scripts/ci/npu/precise-test/cann920-rerun-list.txt"
             n=$(grep -vc '^[[:space:]]*\(#\|$\)' "${PRECISION_LIST}")
             echo "PR validation: precision mode with ${n} target files (coverage on, image cann9.2.0-a3-20261109post3)"

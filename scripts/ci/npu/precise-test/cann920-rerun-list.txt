@@ -1,6 +1,6 @@
 # Precision re-run list for the cann9.2.0-a3-20261109post3 failure set.
 # Consumed by full-test-npu.yml's TEMP PR-validation scaffold: PR-triggered
-# runs of the fix/cann920-rerun branch run exactly these files (one
+# runs of the fix/cann920-clean branch run exactly these files (one
 # repo-relative path per line, '#' comments allowed) instead of the full suite.
 #
 # Scope: non-product-problem cases only. Product problems (spec_eagle kits
