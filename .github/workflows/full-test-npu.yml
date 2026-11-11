@@ -204,23 +204,21 @@ jobs:
       upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
     secrets: inherit
 
-
   nightly-perf-2-npu-a3-Verify:
     name: nightly-perf-2-npu-a3-Verify
-    # Coverage mode: perf runs without coverage.
-    if: ${{ !cancelled() }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
-    uses: ./.github/workflows/_npu-single-node-test-stage.yml
+    uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:
-      runner: linux-aarch64-a3-800t-2
-      test_type: 'perf'
-      test_suite: nightly-perf-2-npu-a3-Verify
+      self_name: nightly-perf-2-npu-a3-Verify
+      runner_config: linux-aarch64-a3-800t-2
+      image: ${{ needs.set-image-config.outputs.image_a3 }}
+      run_timeout_minutes: '240'
+      timeout_per_file: '3600'
+      ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      install_sglang_deps: false
-      device_type_for_deps: 'a3'
-      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+    secrets: inherit
 
 #  full-acc-4-npu-a3:
 #    name: full-acc-4-npu-a3
