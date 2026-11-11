@@ -1,6 +1,6 @@
 import json
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 
 import anthropic
 import requests
