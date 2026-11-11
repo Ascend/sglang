@@ -780,7 +780,7 @@ class TestTokenizeDetokenize(CustomTestCase):
         r2 = self.session.post(
             self.detokenize_url, json={"model": self.model, "tokens": [1, -1, 2]}
         )
-        self.assertEqual(r2.status_code, 500)
+        self.assertEqual(r2.status_code, 400)
 
 
 if __name__ == "__main__":
