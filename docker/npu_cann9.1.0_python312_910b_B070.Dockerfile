@@ -16,7 +16,7 @@ ARG TORCHVISION_VERSION="0.25.0"
 ARG TORCHAUDIO_VERSION="2.10.0"
 ARG TORCH_NPU_VERSION="2.10.0.post6"
 ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
-ARG SGLANG_TAG=fix/modelslim-w8a8-loading-clean
+ARG SGLANG_TAG=qwen38_quant
 ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=2026.9.0.post12
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
@@ -118,7 +118,7 @@ RUN . /etc/environment_new && \
 
 # Install SGLang
 ### Install SGLang（固定 anyio 版本，避免 fastapi/starlette 的传递依赖漂移）
-RUN git clone https://github.com/zhujianwei-ops/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/chx96642264/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
