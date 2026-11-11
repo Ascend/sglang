@@ -1,11 +1,15 @@
 name: Full Test (NPU)
 
 on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - ".github/workflows/full-test-npu.yml"
+  # TEMP (validation): enable per-push full-test CI for this PR so the
+  # precision re-run can be triggered from the PR event. The base branch keeps
+  # this trigger commented out; drop this block together with the precision
+  # scaffold.
+  pull_request:
+    branches:
+      - testcases-261015
+    paths:
+      - ".github/workflows/full-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
