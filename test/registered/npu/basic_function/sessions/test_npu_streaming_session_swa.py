@@ -10,14 +10,13 @@ NPU adaptations:
 - uses the NPU kit sglang.test.ascend.npu_streaming_session_kit
 """
 
-import os
 import unittest
 
 from sglang.test.ascend.npu_streaming_session_kit import (
     AbortLeakReproKitMixin,
     StreamingSessionKitMixin,
 )
-from sglang.test.ascend.test_ascend_utils import GPT_OSS_120B_BF16_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import GEMMA_3_4B_IT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.server_fixtures.streaming_session_fixture import (
     ABORT_REPRO_CHUNKED_PREFILL_SIZE,
@@ -25,10 +24,10 @@ from sglang.test.server_fixtures.streaming_session_fixture import (
     StreamingSessionServerBase,
 )
 
-register_npu_ci(est_time=400, suite="full-8-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3-Verify", nightly=True)
 
 
-SWA_MODEL = GPT_OSS_120B_BF16_WEIGHTS_PATH
+SWA_MODEL = GEMMA_3_4B_IT_WEIGHTS_PATH
 
 # NPU adaptation: use bf16 gpt-oss-120b instead of mxfp4 gpt-oss-20b to avoid
 # quantization compatibility issues. Parameters referenced from
@@ -48,17 +47,11 @@ SWA_COMMON_ARGS = [
     "--watchdog-timeout",
     "9000",
     "--tp-size",
-    "8",
+    "1",
     "--sampling-backend",
     "ascend",
     "--disable-cuda-graph",
 ]
-
-# NPU allocator config: the fixture launches the server without an explicit
-# env dict, so set it on the process env that popen_launch_server inherits.
-os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
-    "expandable_segments:True,pin_memory_expandable_segments:True"
-)
 
 
 class TestStreamingSessionSWA(StreamingSessionServerBase, StreamingSessionKitMixin):
