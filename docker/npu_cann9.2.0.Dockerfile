@@ -144,7 +144,7 @@ RUN set -eux; \
     mkdir /tmp/sgl-kernel-npu; \
     cd /tmp/sgl-kernel-npu; \
     wget \
-      "https://github.com/sgl-project/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch${PYTORCH_VERSION}-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip"; \
+      "https://github.com/huangxiaojun15/sgl-kernel-npu/releases/download/${SGLANG_KERNEL_NPU_TAG}/sgl-kernel-npu-${SGLANG_KERNEL_NPU_TAG}-torch${PYTORCH_VERSION}-py312-cann${CANN_VERSION}-${DEVICE_TYPE}-$(arch).zip"; \
     unzip ./*.zip; \
     ${PIP_INSTALL} \
         ./sgl_kernel_npu*.whl \
