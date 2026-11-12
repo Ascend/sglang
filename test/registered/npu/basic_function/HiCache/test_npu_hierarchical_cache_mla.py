@@ -14,6 +14,10 @@ register_npu_ci(
     nightly=True,
 )
 
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
+
 
 class TestNpuHierarchicalCacheMla(CustomTestCase):
     """The test used the DeepSeek-R1 model, with hierarchical cache enabled, and TTFT improved by 20%.

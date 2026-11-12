@@ -47,7 +47,7 @@ def _start_prefill_with_capture(cls):
         **os.environ,
         "HCCL_SOCKET_IFNAME": "lo",
         "GLOO_SOCKET_IFNAME": "lo",
-        "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+        "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
         "HCCL_BUFFSIZE": "1600",
         "SGLANG_SET_CPU_AFFINITY": "1",
         "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
@@ -144,6 +144,7 @@ class TestDisaggregationDecodeWithHiCache(DisaggregationHiCacheBase):
         decode_args += cls.transfer_backend + cls.rdma_devices
         env = {
             **os.environ,
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
             "HCCL_SOCKET_IFNAME": "lo",
             "GLOO_SOCKET_IFNAME": "lo",
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,

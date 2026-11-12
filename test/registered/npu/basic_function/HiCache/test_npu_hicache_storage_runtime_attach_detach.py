@@ -31,6 +31,11 @@ register_npu_ci(
     nightly=True,
 )
 
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
+
+
 ADMIN_API_KEY = "admin-hicache-test-key"
 
 

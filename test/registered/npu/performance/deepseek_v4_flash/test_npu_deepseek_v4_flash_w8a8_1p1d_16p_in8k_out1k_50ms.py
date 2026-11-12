@@ -17,7 +17,7 @@ register_npu_ci(
 
 # Prefill node environment variables for DSV4-Flash PD-Sep deployment.
 DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "INF_NAN_MODE_FORCE_DISABLE": "1",
     "SGLANG_SET_CPU_AFFINITY": "1",
@@ -50,7 +50,7 @@ DEEPSEEK_V4_FLASH_W8A8_1P1D_PREFILL_ENVS = {
 
 # Decode node environment variables for DSV4-Flash PD-Sep deployment.
 DEEPSEEK_V4_FLASH_W8A8_1P1D_DECODE_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "INF_NAN_MODE_FORCE_DISABLE": "1",
     "SGLANG_SET_CPU_AFFINITY": "1",

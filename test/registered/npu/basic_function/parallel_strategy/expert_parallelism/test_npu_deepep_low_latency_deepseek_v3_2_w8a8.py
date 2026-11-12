@@ -19,6 +19,9 @@ class TestDeepEpDeepseekV32(GSM8KAscendMixin, TestMMLU, CustomTestCase):
     [Test Suggestions] Mixing deployment + low_latency mode is not recommended.
     """
 
+    # The mixin sets __test__ = False; opt this real test class back in.
+    __test__ = True
+
     model = DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH
     timeout_for_server_launch = 6000
     other_args = [
