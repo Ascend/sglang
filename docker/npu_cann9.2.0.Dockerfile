@@ -21,7 +21,7 @@ ARG TRITON_X86_64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/t
 
 ARG SGLANG_TAG=refactor/dsv4-cann-transformer-kernels
 
-ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post3
+ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post13
 
 ARG MF_VERSION="1.3.0"
 
