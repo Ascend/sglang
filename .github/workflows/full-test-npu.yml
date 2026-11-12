@@ -83,6 +83,7 @@ jobs:
 #      image_a3: ${{ needs.set-image-config.outputs.image_a3 }}
 #      coverage_mode: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
 #    secrets: inherit
+
   full-1-npu-a3-Verify:
     name: full-1-npu-a3-Verify
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
