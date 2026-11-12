@@ -2,13 +2,14 @@ import multiprocessing as mp
 import os
 import unittest
 
-from sglang import Engine
+import torch
+
 from sglang.test.ascend.lora_utils import CI_MULTI_LORA_MODELS
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.runners import SRTRunner
 from sglang.test.test_utils import CustomTestCase
 
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
-os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 PROMPTS = [
     "AI is a field of computer science focused on",
@@ -22,204 +23,128 @@ PROMPTS = [
     ### Answer:
     """,
 ]
-
 register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 
-# On Ascend the KV cache is paged in 128-token pages. With
-# `logprob_start_len=-1` the matcher may reuse at most len(input_ids) - 1
-# tokens, so a prompt of 129 tokens reports exactly 128 cached tokens when it
-# is sent a second time.
+
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 PAGE_TOKENS = 128
-LONG_PROMPT_TOKENS = PAGE_TOKENS + 1
 LOGPROB_TOLERANCE = 0.3
-PORT_CACHE_OFF = 31100
-PORT_CACHE_ON = 31101
 
 
 class TestLoRARadixCache(CustomTestCase):
-    """Validate that LoRA requests reuse the radix cache correctly.
-
-    The reference is a cache-disabled SRT engine. On the cache-enabled engine we
-    compare the next-token logprob of the same prompt, adapter and target token
-    id, then verify that a repeated long prompt really hits 128 cached tokens
-    and that a different adapter does not reuse another adapter's prefix.
-
-    The old test compared 32 tokens of independent HF/SRT free generation. Once
-    the two engines pick different tokens the histories diverge, so later
-    logprobs no longer describe the same input; that comparison is not a valid
-    cache oracle. It also sent `logprob_start_len=0`, which caps the reusable
-    prefix at zero and made every "radix cache" request a cache miss.
-    """
-
-    def _start_engine(self, model_case, disable_radix_cache, port):
-        return Engine(
-            model_path=model_case.base,
-            tp_size=model_case.tp_size,
-            dtype="bfloat16",
-            port=port,
-            mem_fraction_static=0.88,
-            attention_backend="ascend",
-            lora_paths=[adaptor.name for adaptor in model_case.adaptors],
-            max_loras_per_batch=model_case.max_loras_per_batch,
-            max_loaded_loras=model_case.max_loaded_loras,
-            lora_backend="csgmv",
-            disable_radix_cache=disable_radix_cache,
-        )
-
-    def _generate(self, engine, prompt, lora_path, target_token_id=None):
-        # A list of token ids must go through `input_ids`; `prompt` is text.
-        prompt_kwargs = (
-            {"input_ids": prompt} if isinstance(prompt, list) else {"prompt": prompt}
-        )
+    @staticmethod
+    def _generate(engine, prompt, adaptor, *, token_ids_logprob=None):
         return engine.generate(
-            **prompt_kwargs,
-            lora_path=lora_path,
-            sampling_params={
-                "temperature": 0,
-                "max_new_tokens": 1,
-                "ignore_eos": True,
-            },
+            prompt,
+            lora_path=adaptor.name,
+            sampling_params={"max_new_tokens": 1, "temperature": 0},
             return_logprob=True,
-            # -1 keeps the full prompt matchable; 0 would cap the prefix at 0.
             logprob_start_len=-1,
-            token_ids_logprob=(
-                [target_token_id] if target_token_id is not None else None
-            ),
+            top_logprobs_num=5,
+            token_ids_logprob=token_ids_logprob,
         )
-
-    def _first_logprob(self, response):
-        logprob, token_id, *_ = response["meta_info"]["output_token_logprobs"][0]
-        return logprob, token_id
-
-    def _assert_cached_tokens(self, response, expected, label):
-        cached = response["meta_info"]["cached_tokens"]
-        self.assertEqual(
-            cached,
-            expected,
-            f"{label}: expected {expected} cached tokens, got {cached}",
-        )
-
-    def _assert_same_target_logprob(self, reference, response, label):
-        ref_logprob, ref_token_id = reference
-        token_logprobs = response["meta_info"]["output_token_ids_logprobs"]
-        self.assertTrue(
-            token_logprobs and token_logprobs[0],
-            f"{label}: no token_ids_logprob returned for token {ref_token_id}",
-        )
-        hit_logprob = token_logprobs[0][0][0]
-        diff = abs(ref_logprob - hit_logprob)
-        print(
-            f"{label}: ref={ref_logprob:.6f} hit={hit_logprob:.6f} "
-            f"diff={diff:.6f} cached={response['meta_info']['cached_tokens']}"
-        )
-        self.assertLess(
-            diff,
-            LOGPROB_TOLERANCE,
-            f"{label}: next-token logprob for fixed token {ref_token_id} "
-            f"differs by {diff} (ref={ref_logprob}, cache-on={hit_logprob}, "
-            f"tolerance={LOGPROB_TOLERANCE})",
-        )
-
-    def _build_long_input_ids(self, tokenizer, prompt):
-        prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
-        filler_ids = tokenizer.encode(
-            " The quick brown fox jumps over the lazy dog.",
-            add_special_tokens=False,
-        )
-        self.assertTrue(prompt_ids)
-        self.assertTrue(filler_ids)
-        input_ids = list(prompt_ids)
-        while len(input_ids) < LONG_PROMPT_TOKENS:
-            input_ids.extend(filler_ids)
-        return input_ids[:LONG_PROMPT_TOKENS]
 
     def test_lora_radix_cache(self):
         model_case = CI_MULTI_LORA_MODELS[0]
-        adaptor_names = [adaptor.name for adaptor in model_case.adaptors]
-        self.assertGreaterEqual(len(adaptor_names), 2)
-        first_adaptor, second_adaptor = adaptor_names[0], adaptor_names[1]
+        adaptors = model_case.adaptors
+        self.assertGreaterEqual(len(adaptors), 2)
+        prompts = list(PROMPTS)
+        # About 180 tokens: a repeated request reuses exactly one 128-token page.
+        long_prefix = " ".join([PROMPTS[0]] * 20)
+        prompts.append(long_prefix)
+        torch_dtype = torch.bfloat16
+        lora_paths = [adaptor.name for adaptor in adaptors]
+        # Keep the CI BF16 setup and each model case's existing tolerance unchanged.
+        runner_args = {
+            "torch_dtype": torch_dtype,
+            "model_type": "generation",
+            "tp_size": model_case.tp_size,
+            "lora_paths": lora_paths,
+            "max_loras_per_batch": model_case.max_loras_per_batch,
+            "max_loaded_loras": model_case.max_loaded_loras,
+            "lora_backend": "csgmv",
+            "attention_backend": "ascend",
+            "disable_cuda_graph": False,
+            "mem_fraction_static": 0.88,
+        }
 
-        references = {}
+        # One generated token isolates the next-token distribution under a fixed
+        # history. The old independent HF free-generation branch is not a
+        # radix-cache oracle.
+        with SRTRunner(
+            model_case.base, disable_radix_cache=True, **runner_args
+        ) as runner:
+            off_reference = {}
+            for prompt_index, prompt in enumerate(prompts):
+                for adaptor_index, adaptor in enumerate(adaptors[:2]):
+                    response = self._generate(runner.engine, prompt, adaptor)
+                    ranked = response["meta_info"]["output_top_logprobs"][0]
+                    self.assertEqual(len(ranked), 5)
+                    off_reference[(prompt_index, adaptor_index)] = {
+                        int(entry[1]): float(entry[0]) for entry in ranked
+                    }
 
-        # Reference arm: radix cache disabled, so every request is a full prefill.
-        with self._start_engine(model_case, True, PORT_CACHE_OFF) as reference_engine:
-            tokenizer = reference_engine.tokenizer_manager.tokenizer
-            long_inputs = [
-                self._build_long_input_ids(tokenizer, prompt) for prompt in PROMPTS
-            ]
-            for prompt_idx, prompt in enumerate(PROMPTS):
-                for adaptor in adaptor_names:
-                    short_response = self._generate(reference_engine, prompt, adaptor)
-                    long_response = self._generate(
-                        reference_engine, long_inputs[prompt_idx], adaptor
+        # Revisit each prompt with both adapters to exercise cache hits and
+        # isolation. flush_cache() makes the first request of every prompt a
+        # guaranteed cold start, independent of the prompts that came before.
+        with SRTRunner(
+            model_case.base, disable_radix_cache=False, **runner_args
+        ) as runner:
+            for prompt_index, prompt in enumerate(prompts):
+                runner.engine.flush_cache()
+                long_case = prompt_index >= len(PROMPTS)
+                seen = set()
+                for adaptor_index, adaptor in (
+                    (0, adaptors[0]),
+                    (1, adaptors[1]),
+                    (0, adaptors[0]),
+                    (1, adaptors[1]),
+                ):
+                    key = (prompt_index, adaptor_index)
+                    target_ids = list(off_reference[key])
+                    cold_start = not (long_case and key in seen)
+                    seen.add(key)
+                    label = (
+                        f"prompt{prompt_index + 1}/"
+                        f"{os.path.basename(adaptor.name)}/"
+                        f"{'cold' if cold_start else 'hit'}"
                     )
-                    references[(prompt_idx, adaptor, "short")] = self._first_logprob(
-                        short_response
+                    response = self._generate(
+                        runner.engine, prompt, adaptor, token_ids_logprob=target_ids
                     )
-                    references[(prompt_idx, adaptor, "long")] = self._first_logprob(
-                        long_response
+                    meta = response["meta_info"]
+                    cached = meta["cached_tokens"]
+                    expected_cached = 0 if cold_start else PAGE_TOKENS
+                    self.assertEqual(
+                        cached,
+                        expected_cached,
+                        f"{label}: expected {expected_cached} cached tokens, "
+                        f"got {cached}",
                     )
 
-        # Cache-enabled arm.
-        with self._start_engine(model_case, False, PORT_CACHE_ON) as engine:
-            for prompt_idx, prompt in enumerate(PROMPTS):
-                long_ids = long_inputs[prompt_idx]
-
-                # ---- Short prompts: below one page, so a repeat is still a miss.
-                for adaptor in adaptor_names:
-                    short_label = (
-                        f"prompt{prompt_idx + 1}/{os.path.basename(adaptor)}/short"
+                    hit_logprobs = {
+                        int(entry[1]): float(entry[0])
+                        for entry in meta["output_token_ids_logprobs"][0]
+                    }
+                    self.assertEqual(len(hit_logprobs), len(target_ids))
+                    diffs = []
+                    for token_id in target_ids:
+                        ref = off_reference[key][token_id]
+                        got = hit_logprobs[token_id]
+                        diff = abs(ref - got)
+                        diffs.append(diff)
+                        print(
+                            f"{label}: token={token_id} ref={ref:.6f} "
+                            f"hit={got:.6f} diff={diff:.6f} cached={cached}"
+                        )
+                    self.assertLess(
+                        max(diffs),
+                        LOGPROB_TOLERANCE,
+                        f"{label}: max logprob diff {max(diffs)} over the top-5 "
+                        f"ids exceeds tolerance {LOGPROB_TOLERANCE} "
+                        f"(cached={cached})",
                     )
-                    cold = self._generate(engine, prompt, adaptor)
-                    self._assert_cached_tokens(cold, 0, f"{short_label}/first")
-                    reference = references[(prompt_idx, adaptor, "short")]
-                    warm = self._generate(
-                        engine, prompt, adaptor, target_token_id=reference[1]
-                    )
-                    self._assert_cached_tokens(warm, 0, f"{short_label}/repeat")
-                    self._assert_same_target_logprob(reference, warm, short_label)
-
-                # ---- Long prompt: A cold / A hit, then B cold / B hit.
-                first_label = (
-                    f"prompt{prompt_idx + 1}/{os.path.basename(first_adaptor)}/long"
-                )
-                first_cold = self._generate(engine, long_ids, first_adaptor)
-                self._assert_cached_tokens(first_cold, 0, f"{first_label}/first")
-                first_hit = self._generate(
-                    engine,
-                    long_ids,
-                    first_adaptor,
-                    target_token_id=references[(prompt_idx, first_adaptor, "long")][1],
-                )
-                self._assert_cached_tokens(
-                    first_hit, PAGE_TOKENS, f"{first_label}/repeat"
-                )
-                self._assert_same_target_logprob(
-                    references[(prompt_idx, first_adaptor, "long")],
-                    first_hit,
-                    first_label,
-                )
-
-                second_label = (
-                    f"prompt{prompt_idx + 1}/{os.path.basename(second_adaptor)}/long"
-                )
-                second_cold = self._generate(engine, long_ids, second_adaptor)
-                # A different adapter must not reuse the first adapter's prefix.
-                self._assert_cached_tokens(second_cold, 0, f"{second_label}/first")
-                second_hit = self._generate(
-                    engine,
-                    long_ids,
-                    second_adaptor,
-                    target_token_id=references[(prompt_idx, second_adaptor, "long")][1],
-                )
-                self._assert_cached_tokens(
-                    second_hit, PAGE_TOKENS, f"{second_label}/repeat"
-                )
-                self._assert_same_target_logprob(
-                    references[(prompt_idx, second_adaptor, "long")],
-                    second_hit,
-                    second_label,
-                )
 
 
 if __name__ == "__main__":
