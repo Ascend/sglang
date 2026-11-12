@@ -1,0 +1,20 @@
+# Precision re-run list for the cann9.2.0-a3-20261109post3 failure set.
+# Consumed by full-test-npu.yml's TEMP PR-validation scaffold: PR-triggered
+# runs of the fix/cann920-clean branch run exactly these files (one
+# repo-relative path per line, '#' comments allowed) instead of the full suite.
+#
+# Scope: non-product-problem cases only. Product problems (spec_eagle kits
+# import, scheduler_recv_interval health check, model_tokenizer
+# tokenizer-worker crash loop) are excluded; the eight
+# ModuleNotFoundError/ImportError cases (removed re-export shims) are excluded
+# as requested. lora_radix_cache is re-included with a rewritten oracle (SRT
+# cache-off vs cache-on, fixed target token, real 128-token page hit).
+test/registered/npu/basic_function/Multi-Modal/test_npu_multimodal_chat_completions.py
+test/registered/npu/basic_function/parameter/test_npu_custom_sigquit_handler.py
+test/registered/npu/basic_function/lora/test_npu_wait_threshold.py
+test/registered/npu/basic_function/lora/test_npu_lora_radix_cache.py
+test/registered/npu/basic_function/HiCache/test_npu_hierarchical_cache_ttft_mha.py
+test/registered/npu/llm_models/test_npu_qwen3_1_7b_gptq_int8.py
+test/registered/npu/basic_function/memory_and_scheduling/test_npu_radix_attention.py
+test/registered/npu/basic_function/offloading/test_npu_offload_modes.py
+test/registered/npu/basic_function/offloading/test_npu_cpu_offload_gb.py

@@ -245,6 +245,13 @@ jobs:
             rm -rf ${sglang_pkg_path}/sglang/test/kits
             cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
             cp $(pwd)/python/sglang/test/test_programs.py ${sglang_pkg_path}/sglang/test/test_programs.py
+            # Version-match test_utils with the branch: it carries the NPU
+            # 1200s launch-timeout default; the preinstalled 600s copy would
+            # silently override it.
+            cp $(pwd)/python/sglang/test/test_utils.py ${sglang_pkg_path}/sglang/test/test_utils.py
+            # Legacy MMLU scorer modules are not shipped in the preinstalled image.
+            cp $(pwd)/python/sglang/test/simple_eval_mmlu.py ${sglang_pkg_path}/sglang/test/simple_eval_mmlu.py
+            cp $(pwd)/python/sglang/test/simple_eval_common.py ${sglang_pkg_path}/sglang/test/simple_eval_common.py
 
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
             pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
@@ -255,6 +262,7 @@ jobs:
             pip install mindstudio-probe --pre
             pip install "antlr4-python3-runtime==4.9.3" --force-reinstall --no-deps
             pip install "uvicorn[standard]"
+            pip install "openai==2.8.0" "openai-harmony==0.0.4"
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
             sglang_source_path=$(pwd)
@@ -380,6 +388,26 @@ jobs:
               -o /tmp/selected_tests.txt
             echo "Selected test files:"
             cat /tmp/selected_tests.txt
+            # Precision filtering works in coverage mode too: keep the
+            # intersection of the suite enumeration with ONLY_TESTS (mirrors
+            # --only-file-list on the run_suite path below). No match -> empty
+            # selection -> the run below is skipped cleanly.
+            # list_tests emits checkout-rooted absolute paths while ONLY_TESTS
+            # is repo-relative: normalize the enumerated path to its
+            # test/registered/... form for matching, but keep the original
+            # absolute line for the runner below.
+            if [ -n "${ONLY_TESTS}" ]; then
+              printf '%s\n' "${ONLY_TESTS}" | tr ',' '\n' | sed '/^[[:space:]]*$/d' > /tmp/precision_tests.txt
+              awk 'FNR==NR { sub(/\r$/, ""); if ($0 != "") want[$0]=1; next }
+                   { rel=$0; sub(/^.*\/test\/registered\//, "test/registered/", rel); if (rel in want) print }' \
+                  /tmp/precision_tests.txt /tmp/selected_tests.txt > /tmp/selected_tests_filtered.txt || true
+              mv /tmp/selected_tests_filtered.txt /tmp/selected_tests.txt
+              echo "Precision mode: $(wc -l < /tmp/selected_tests.txt) selected file(s) after filter:"
+              cat /tmp/selected_tests.txt
+              if [ ! -s /tmp/selected_tests.txt ]; then
+                echo "::warning::Precision filter selected 0 files for ${{ inputs.self_name }} — ONLY_TESTS paths likely do not match list_tests output"
+              fi
+            fi
             # Artifact transport: stage in a job-private root so the
             # artifact carries exactly this job's tests. The default
             # (shared-disk) RUN_DIR would also sweep sibling jobs' data

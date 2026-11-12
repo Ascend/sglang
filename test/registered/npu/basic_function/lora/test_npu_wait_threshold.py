@@ -113,7 +113,14 @@ class TestLoraDrainWaitThreshold(CustomTestCase):
         content = self.err_log_file.read()
         self.assertIn("draining", content)
         self.err_log_file.seek(0)
-        self.assertIn("finished draining", content)
+        # The drain-completion log was renamed to "stopped draining" in the
+        # current product code; accept either wording so the assertion tracks
+        # the behaviour (a drained adapter) rather than one message spelling.
+        self.assertTrue(
+            "finished draining" in content or "stopped draining" in content,
+            "expected a LoRA drain completion log "
+            "('finished draining' or 'stopped draining')",
+        )
 
 
 class TestUnLoraDrainWaitThreshold(CustomTestCase):
