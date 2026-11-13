@@ -14,10 +14,11 @@ register_npu_ci(
     est_time=4800,
     suite="full-acc-16-npu-a3",
     nightly=True,
+    disabled="Not maintaining use cases",
 )
 
 MINIMAX_M2_5_HIGH_THROUGHPUT_ENVS = {
-    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+    "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",

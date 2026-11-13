@@ -163,9 +163,9 @@ GLM_5_1_PD_SEP_MODEL_CONFIG = {
 }
 
 
-@unittest.skip(
-    "Prefill CP on HIP/NPU/MUSA is deprecated; CP support will be refactored soon."
-)
+# @unittest.skip(
+#     "Prefill CP on HIP/NPU/MUSA is deprecated; CP support will be refactored soon."
+# )
 class TestNPUGLM5_1_W4A8_PD_SEP_AIME2026(TestNpuAccuracyMultiNodePdSepTestCaseBase):
     """Test NPU accuracy for GLM-5.1-w4a8 PD separation on AIME2026"""
 

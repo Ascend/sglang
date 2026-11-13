@@ -17,19 +17,22 @@ register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 class TestStreamResponseIncludeUsage(CustomTestCase):
-    """Test --stream-response-default-include-usage parameter: forces
-    usage (token consumption statistics) into every streaming response
-    regardless of whether the client requested it.
+    """Test --stream-response-default-include-usage parameter: provides a
+    server-side default for including usage (token consumption statistics)
+    in streaming responses when the client does not specify stream_options.
+
+    Note: As of should_include_usage() semantic change, this parameter acts
+    ONLY as a fallback default. Client explicit stream_options.include_usage=False
+    is always respected (OpenAI-compatible behavior).
 
     Business scenario: Multi-tenant SaaS platform — different client
     SDK versions may or may not request usage.  The server-side flag
-    ensures every stream ends with a usage chunk for billing, rate
-    limiting, or cost analytics.
+    ensures usage is included by default for billing, rate limiting,
+    or cost analytics when the client does not explicitly opt out.
 
     This parameter ONLY affects the /v1/chat/completions endpoint for
     streaming requests.  /v1/completions is not covered here (same
     ``should_include_usage`` function but different output assembly).
-
 
     [Test Category] Parameter
     [Test Target] --stream-response-default-include-usage
@@ -177,8 +180,8 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             health = requests.get(f"{self.base_url}/health_generate")
             self.assertEqual(health.status_code, 200)
 
-            # TC-IU-01: no stream_options → usage forced by server default
-            #   Branch: utils.py:88-91 B1
+            # TC-IU-01: no stream_options → usage provided by server default
+            #   Branch: should_include_usage() fallback to server default
             chunks, has_usage = self._stream_chat(
                 send_stream_options=False,
             )
@@ -190,18 +193,20 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             )
             self._assert_usage_chunk_valid(chunks)
 
-            # TC-IU-02: client include_usage=False → server overrides
-            #   Branch: utils.py:84-85 A2 (False or True == True)
+            # TC-IU-02: client include_usage=False → client explicitly disables usage
+            #   New semantics: client explicit False takes priority over server default.
+            #   Server default only fills in when stream_options is not provided.
             chunks, has_usage = self._stream_chat(
                 send_stream_options=True,
                 client_include_usage=False,
             )
             self.assertGreater(len(chunks), 0, "Expected at least one data chunk")
-            self.assertTrue(
+            self.assertFalse(
                 has_usage,
-                "Server default=True must override client include_usage=False",
+                "Client explicit include_usage=False must disable usage; "
+                "server default only applies when stream_options is not provided",
             )
-            self._assert_usage_chunk_valid(chunks)
+            self._assert_content_chunks_valid(chunks)
         finally:
             kill_process_tree(process.pid)
 
@@ -218,7 +223,7 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             self.assertEqual(health.status_code, 200)
 
             # TC-IU-03: client include_usage=True → opted in
-            #   Branch: utils.py:84-85 A1 (True or False == True)
+            #   Branch: should_include_usage() client True
             chunks, has_usage = self._stream_chat(
                 send_stream_options=True,
                 client_include_usage=True,
@@ -228,7 +233,7 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             self._assert_usage_chunk_valid(chunks)
 
             # TC-IU-04: client include_usage=False → no usage
-            #   Branch: utils.py:84-85 A3 (False or False == False)
+            #   Branch: should_include_usage() client False
             chunks, has_usage = self._stream_chat(
                 send_stream_options=True,
                 client_include_usage=False,
@@ -240,7 +245,7 @@ class TestStreamResponseIncludeUsage(CustomTestCase):
             self._assert_content_chunks_valid(chunks)
 
             # TC-IU-05: no stream_options at all → default, no usage
-            #   Branch: utils.py:88-91 B2
+            #   Branch: should_include_usage() no stream_options, server default False
             chunks, has_usage = self._stream_chat(
                 send_stream_options=False,
             )

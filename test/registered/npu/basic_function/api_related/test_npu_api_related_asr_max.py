@@ -121,7 +121,12 @@ class TestAsrMaxTranscription(CustomTestCase):
             try:
                 init_raw = ws.recv()
                 init_msg = json.loads(init_raw)
-                logging.warning("Initial service message:", init_msg)
+                logging.warning("Initial service message: %s", init_msg)
+            except WebSocketConnectionClosedException:
+                self.fail(
+                    "Server closed the WebSocket right after connect, "
+                    "before sending the initial `session.created` event."
+                )
             except WebSocketTimeoutException:
                 self.fail(
                     "Service unresponsive: Initial `session.created` event not received within 10 seconds of connecting to WebSocket."
@@ -156,8 +161,12 @@ class TestAsrMaxTranscription(CustomTestCase):
                     if evt["type"] == "error":
                         error = evt
                         break
-                except (WebSocketTimeoutException, WebSocketConnectionClosedException):
+                except WebSocketTimeoutException:
                     continue
+                except (WebSocketConnectionClosedException, ConnectionResetError):
+                    # A peer RST surfaces as ConnectionResetError from send_close
+                    # inside recv, not WebSocketConnectionClosedException — catch both.
+                    break
             self.assertTrue(
                 session_ok,
                 "Failed to wait for the session.updated configuration timeout.",
@@ -166,6 +175,7 @@ class TestAsrMaxTranscription(CustomTestCase):
             offset = 0
             total_sec = 0.0
             ws.settimeout(1.0)
+            server_closed_while_streaming = False
 
             # Cyclically shard and transmit the complete audio.
             while offset < len(full_pcm):
@@ -189,13 +199,25 @@ class TestAsrMaxTranscription(CustomTestCase):
                     evt = json.loads(evt_raw)
                     if evt["type"] == "error":
                         error = evt
-                        logging.warning("Received a server-side error:", error)
+                        logging.warning("Received a server-side error: %s", error)
                         self.assertIn(
                             "Accumulated audio exceeded", error["error"]["message"]
                         )
                         break
-                except (WebSocketTimeoutException, WebSocketConnectionClosedException):
+                except WebSocketTimeoutException:
                     continue
+                except (WebSocketConnectionClosedException, ConnectionResetError):
+                    # The peer closed the connection: sending further chunks is
+                    # pointless and only produces a misleading ConnectionResetError.
+                    server_closed_while_streaming = True
+                    break
+
+            if error is None and server_closed_while_streaming:
+                self.fail(
+                    "Server closed the WebSocket while audio was being streamed "
+                    f"(after {total_sec:.1f}s) without sending an error event; "
+                    "expected 'Accumulated audio exceeded' (buffer_overflow)."
+                )
 
             # No errors occurred; sending a commit triggers full inference.
             if not error:
@@ -212,7 +234,7 @@ class TestAsrMaxTranscription(CustomTestCase):
                             == "conversation.item.input_audio_transcription.completed"
                         ):
                             transcript_text = resp["transcript"]
-                            logging.warning("Final version:", transcript_text)
+                            logging.warning("Final version: %s", transcript_text)
                             finish_flag = True
                             break
                         if resp["type"] == "error":
@@ -223,12 +245,24 @@ class TestAsrMaxTranscription(CustomTestCase):
                             )
                             finish_flag = True
                             break
-                    except (
-                        WebSocketTimeoutException,
-                        WebSocketConnectionClosedException,
-                    ):
+                    except WebSocketTimeoutException:
                         logging.warning("Timed out waiting for transcription event.")
                         continue
+                    except (WebSocketConnectionClosedException, ConnectionResetError):
+                        # The 15.5s wav exceeds --asr-max-buffer-seconds=5, so the
+                        # overflow path always fires here; the server must send the
+                        # buffer_overflow error event before closing. A bare close
+                        # without the event is a protocol violation (older prebuilt
+                        # images drop the TCP connection instead) — fail fast with
+                        # these semantics instead of letting errno 104 escape.
+                        self.fail(
+                            "Server closed the WebSocket after input_audio_buffer.commit "
+                            "without sending the transcription-completed or "
+                            "buffer_overflow error event; the audio (15.5s) exceeds "
+                            "--asr-max-buffer-seconds=5, so the overflow path fired "
+                            "but the server dropped the connection without the "
+                            "protocol-required error event."
+                        )
                 self.assertTrue(
                     finish_flag,
                     f"Transcription completion event not received within 30 seconds.",

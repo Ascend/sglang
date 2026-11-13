@@ -43,6 +43,7 @@ from sglang.srt.utils import (
     get_device,
     is_blackwell,
     is_cuda,
+    is_npu,
     is_xpu,
     kill_process_tree,
     retry,
@@ -258,6 +259,13 @@ if is_h200_system():
 
 if is_in_ci() and is_xpu():
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 1800
+
+if is_npu():
+    # NPU CI: cold-cache MoE weight loads are slow — torch_npu does CPU-side
+    # dtype conversion/layout before the H2D copy (see _load_w13/_load_w2),
+    # and multi-rank loads contend. Observed loads needing >600s on 35B-class
+    # models and gpt-oss, which made the server launch health check time out.
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 1200
 
 
 def find_available_port(base_port: int):
@@ -1136,7 +1144,10 @@ def run_score_benchmark_multi(
 
     async def _run_benchmark(batch_size, warmup):
         # Load tokenizer for generating test data
-        from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+        try:
+            from sglang.srt.hf_transformers import get_tokenizer
+        except ImportError:
+            from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 
         tokenizer = get_tokenizer(model)
 
@@ -1468,7 +1479,7 @@ def run_bench_one_batch_server(
     other_server_args,
     simulate_spec_acc_lens=None,
 ):
-    from sglang.bench_one_batch_server import run_benchmark
+    from sglang.benchmark.one_batch_server import run_benchmark
 
     if simulate_spec_acc_lens is not None:
         env = {**os.environ, "SIMULATE_ACC_LEN": str(simulate_spec_acc_lens)}

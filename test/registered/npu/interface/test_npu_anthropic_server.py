@@ -1,5 +1,6 @@
 import json
 import unittest
+from types import SimpleNamespace
 
 import anthropic
 import requests
@@ -116,7 +117,9 @@ class TestAnthropicServer(CustomTestCase):
             ],
         )
 
-        serving = AnthropicServing(openai_serving_chat=object())
+        serving = AnthropicServing(
+            openai_serving_chat=SimpleNamespace(supports_inline_system=True)
+        )
         chat_request = serving._convert_to_chat_completion_request(anthropic_request)
         converted = chat_request.model_dump()
 

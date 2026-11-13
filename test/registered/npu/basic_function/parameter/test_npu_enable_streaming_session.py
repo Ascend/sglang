@@ -21,7 +21,11 @@ import requests
 
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
-from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+
+try:
+    from sglang.srt.hf_transformers import get_tokenizer
+except ImportError:
+    from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -68,6 +72,8 @@ LONG_SAMPLING_PARAMS = {
     "no_stop_trim": True,
     "skip_special_tokens": False,
 }
+
+KV_PAGE_SIZE = 128
 
 # ------------------------------------------------------------------
 # Test class
@@ -242,11 +248,13 @@ class TestNpuEnableStreamingSession(CustomTestCase):
                 else:
                     # Turns 2+: cached_tokens must equal previous
                     # turn's total tokens, proving full KV reuse
+                    expected = ((prev_kv_len - 1) // KV_PAGE_SIZE) * KV_PAGE_SIZE
                     self.assertEqual(
                         cached,
-                        prev_kv_len,
-                        f"Turn {turn_idx + 1}: inherited {cached} != "
-                        f"prev total {prev_kv_len}",
+                        expected,
+                        f"Turn {turn_idx + 1}: inherited {cached} != page-aligned "
+                        f"expectation {expected} (prev total {prev_kv_len}, "
+                        f"page_size {KV_PAGE_SIZE})",
                     )
                 # Record this turn's total for the next iteration
                 prev_kv_len = turn_total
