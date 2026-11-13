@@ -5,13 +5,19 @@ import time
 import unittest
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH,
+    logger,
+)
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
 )
+
+register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
 SERVER_ENVS = {
     "STREAMS_PER_DEVICE": "32",
@@ -81,7 +87,7 @@ SERVER_ARGS = [
 ]
 
 LOG_READ_TIMEOUT = 60
-# Server output is dumped here so a failure stays triagable after the screen scrolls.
+# Dump server output here so a failure stays triagable after the screen scrolls.
 LOG_DIR = os.path.join(tempfile.gettempdir(), "qwen36_block_fp8_moe_startup_logs")
 
 
@@ -115,11 +121,10 @@ class _StartupErrorBase(CustomTestCase):
 
     def assert_startup_fails(self):
         name = type(self).__name__
-        # The construct-time guards are mode independent, so pin the native mode.
+        # Construct-time guards are mode independent; pin the native mode.
         env = {**SERVER_ENVS, "SGLANG_NPU_ARCH35_REQUANT_BLOCK_FP8": "0"}
-        # popen_launch_server raises a generic "Server process exited with code N"
-        # without the real error text, so tee the server output into buffers and
-        # assert the expected message on them.
+        # popen_launch_server only raises a generic exit-code error, so tee server
+        # output into buffers and assert the expected message on them.
         stdout = io.StringIO()
         stderr = io.StringIO()
         timed_out = False
@@ -133,9 +138,9 @@ class _StartupErrorBase(CustomTestCase):
                 return_stdout_stderr=(stdout, stderr),
             )
         except Exception as exc:
-            # TimeoutError means the process never exited -> silent hang suspected.
+            # TimeoutError means the process never exited; a silent hang is suspected.
             timed_out = isinstance(exc, TimeoutError)
-            print(f"[{name}] startup failed as expected: {exc}")
+            logger.info(f"[{name}] startup failed as expected: {exc}")
         else:
             kill_process_tree(process.pid)
             log_path = self.dump_log(self.captured_output(stdout, stderr), name)
@@ -145,7 +150,7 @@ class _StartupErrorBase(CustomTestCase):
 
         output = wait_for_log_text((stdout, stderr), self.expected_error)
         log_path = self.dump_log(output, name)
-        print(f"[{name}] log={log_path}")
+        logger.info(f"[{name}] log={log_path}")
 
         if timed_out:
             self.fail(
@@ -161,8 +166,7 @@ class _StartupErrorBase(CustomTestCase):
         )
 
 
-# The A/B prefixes keep unittest's alphabetical collection in the S1/S2 order of
-# the case table (runner-backend check runs first, dispatcher-dtype check second).
+# A/B prefixes force unittest's alphabetical order: runner-backend before dispatcher-dtype.
 class TestE2E6ARunnerBackendRejected(_StartupErrorBase):
     """Testcase: Verify an invalid --moe-runner-backend (a legal CLI value, but only auto/ascend is accepted by this feature) makes startup fail with an explicit error instead of silently serving.
 

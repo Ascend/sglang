@@ -2,7 +2,11 @@ import unittest
 
 from sglang.benchmark.serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH,
+    logger,
+)
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -10,6 +14,8 @@ from sglang.test.test_utils import (
     get_benchmark_args,
     popen_launch_server,
 )
+
+register_npu_ci(est_time=3600, suite="full-2-npu-a3", nightly=True)
 
 SERVER_ENVS = {
     "STREAMS_PER_DEVICE": "32",
@@ -24,11 +30,9 @@ SERVER_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
 }
 
-# Note: --max-running-requests 10 caps the effective concurrency below the
-# documented 32; both modes share the same args, so the comparison stays fair.
-# --device npu comes from SERVER_ARGS; popen_launch_server still appends its own
-# copy (it appends for the default device="auto"). The duplicate is identical,
-# and leaving the kwarg out matches how the registered NPU tests are wired.
+# --max-running-requests 10 caps concurrency below the documented 32; both modes share
+# the args, so the comparison stays fair. --device npu is also appended identically by
+# popen_launch_server (for device="auto").
 SERVER_ARGS = [
     "--tp-size",
     "2",
@@ -84,17 +88,12 @@ SERVER_ARGS = [
 ]
 
 
-# Run-to-run noise on throughput/TTFT is ~1% at this scale, so a strict tie is
-# not measurable. Allow a small margin and judge "not slower" instead of "faster".
+# ~1% run-to-run noise here, so judge "not slower" (with margin), not "faster".
 METRIC_TOLERANCE = 0.02
 
 
 class TestE2E5DualModePerf(CustomTestCase):
     """Testcase: Verify the requantized MXFP8 mode is not slower than the native Block FP8 mode under the same load: E1 throughput and E2 TTFT stay within METRIC_TOLERANCE of native.
-
-    The two modes are expected to be at near parity, so this is a non-regression
-    gate ("not slower"), not a speedup assertion; the tolerance absorbs the ~1%
-    run-to-run noise of a single measurement.
 
     [Test Category] Performance
     [Test Target] SGLANG_NPU_ARCH35_REQUANT_BLOCK_FP8=0 vs =1
@@ -104,11 +103,7 @@ class TestE2E5DualModePerf(CustomTestCase):
     model = QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH
 
     def bench_once(self, mode):
-        """Start a server in the given mode, benchmark it, then stop it.
-
-        The mode is an environment variable, so hand it to the server process
-        directly instead of mutating os.environ for the whole test.
-        """
+        """Start a server in the given mode, benchmark it, then stop it."""
         process = popen_launch_server(
             self.model,
             DEFAULT_URL_FOR_TEST,
@@ -131,8 +126,7 @@ class TestE2E5DualModePerf(CustomTestCase):
             base_url=DEFAULT_URL_FOR_TEST,
             backend="sglang",
             dataset_name="random",
-            # The "random" mode samples token ids from ShareGPT, so point it at
-            # the local copy instead of letting it download from HuggingFace.
+            # "random" samples from ShareGPT, so use the local copy, not a HuggingFace download.
             dataset_path="/tmp/ShareGPT_V3_unfiltered_cleaned_split.json",
             tokenizer=self.model,
             num_prompts=200,
@@ -142,17 +136,14 @@ class TestE2E5DualModePerf(CustomTestCase):
             max_concurrency=32,
         )
         args.model = self.model
-        # A few warm-up requests keep the first measured request from carrying the
-        # server's own cold-start cost.
+        # Warm-up requests keep the first measured request free of cold-start cost.
         args.warmup_requests = 16
         return run_benchmark(args)
 
     def test_mxfp8_not_slower_than_native(self):
-        # Phase 0: warm each mode once with a throwaway server so both measured
-        # runs start from the same cache state. Warming only one mode would let
-        # the other one compile more during its own measured window and bias the
-        # comparison.
-        print(f"[{type(self).__name__}] warming caches (result discarded)")
+        # Warm each mode once so both measured runs start from the same cache state;
+        # warming only one would bias the other's compile time into its measured window.
+        logger.info(f"[{type(self).__name__}] warming caches (result discarded)")
         self.bench_once("0")
         self.bench_once("1")
 
@@ -162,7 +153,7 @@ class TestE2E5DualModePerf(CustomTestCase):
         throughput_ratio = mxfp8["output_throughput"] / native["output_throughput"]
         ttft_ratio = mxfp8["mean_ttft_ms"] / native["mean_ttft_ms"]
 
-        print(
+        logger.info(
             f"[{type(self).__name__}] native throughput={native['output_throughput']:.2f} "
             f"mean_ttft={native['mean_ttft_ms']:.2f}ms | "
             f"mxfp8 throughput={mxfp8['output_throughput']:.2f} "
@@ -170,11 +161,10 @@ class TestE2E5DualModePerf(CustomTestCase):
             f"throughput_ratio={throughput_ratio:.4f} ttft_ratio={ttft_ratio:.4f}"
         )
 
-        # Both modes must actually produce results, otherwise the measurement is void.
+        # Both modes must produce results, else the measurement is void.
         self.assertGreater(native["output_throughput"], 0)
         self.assertGreater(mxfp8["output_throughput"], 0)
 
-        # E1: MXFP8 throughput >= native; E2: MXFP8 TTFT <= native (within noise).
         self.assertGreaterEqual(
             throughput_ratio,
             1.0 - METRIC_TOLERANCE,
@@ -188,7 +178,7 @@ class TestE2E5DualModePerf(CustomTestCase):
             "E2 failed: MXFP8 TTFT is higher than native "
             f"(ttft_ratio={ttft_ratio:.4f})",
         )
-        print(
+        logger.info(
             f"[{type(self).__name__}] E1/E2 passed: "
             f"throughput gain={throughput_ratio - 1.0:+.2%}, "
             f"ttft_ratio={ttft_ratio:.4f}"

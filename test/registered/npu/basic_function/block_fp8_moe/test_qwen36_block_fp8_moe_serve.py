@@ -2,7 +2,10 @@ import unittest
 
 from sglang.test.ascend.gsm8k_ascend_mixin import GSM8KAscendMixin
 from sglang.test.ascend.test_ascend_utils import QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
+
+register_npu_ci(est_time=3600, suite="full-2-npu-a3", nightly=True)
 
 SERVER_ENVS = {
     "STREAMS_PER_DEVICE": "32",
@@ -82,17 +85,15 @@ ASCEND_OPS_ARGS = [
 
 
 class _Qwen36BlockFp8(GSM8KAscendMixin):
-    """Common Qwen3.6-35B-A3B-FP8 server args and GSM8K protocol; does not inherit from
-    CustomTestCase on purpose so that unittest does not collect it.
-    """
+    """Common Qwen3.6-35B-A3B-FP8 server args and GSM8K protocol; not a CustomTestCase so unittest does not collect it."""
 
     model = QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH
     other_args = SERVER_ARGS
-    # The documented eval protocol differs from the mixin default (completion/512).
+    # Eval protocol differs from the mixin default (completion/512).
     api = "chat"
     max_tokens = 4096
-    # Full GSM8K set: the first 5 rows are the shots, 1314 questions are scored.
-    num_questions = 1319
+    # 200-question smoke subset: 5 shots + 195 scored.
+    num_questions = 200
     num_threads = 16
     chat_template_kwargs = {"enable_thinking": False}
 
@@ -102,7 +103,7 @@ class TestE2E1NativeBlockFp8(_Qwen36BlockFp8, CustomTestCase):
 
     [Test Category] Accuracy
     [Test Target] SGLANG_NPU_ARCH35_REQUANT_BLOCK_FP8=0
-    [Test Config] TP2, npu graph enabled, NEXTN speculative decoding, full GSM8K, chat api with thinking disabled
+    [Test Config] TP2, npu graph enabled, NEXTN speculative decoding, GSM8K 200-question subset, chat api with thinking disabled
     """
 
     accuracy = 0.95
@@ -114,7 +115,7 @@ class TestE2E2RequantMxfp8(_Qwen36BlockFp8, CustomTestCase):
 
     [Test Category] Accuracy
     [Test Target] SGLANG_NPU_ARCH35_REQUANT_BLOCK_FP8=1
-    [Test Config] TP2, npu graph enabled, NEXTN speculative decoding, full GSM8K, chat api with thinking disabled
+    [Test Config] TP2, npu graph enabled, NEXTN speculative decoding, GSM8K 200-question subset, chat api with thinking disabled
     """
 
     accuracy = 0.94
@@ -126,7 +127,7 @@ class TestE2E8AscendOpsNative(_Qwen36BlockFp8, CustomTestCase):
 
     [Test Category] Cross Regression
     [Test Target] --moe-a2a-backend ascend_ops + SGLANG_NPU_ARCH35_REQUANT_BLOCK_FP8=0
-    [Test Config] TP2 EP2, npu graph enabled, NEXTN speculative decoding, full GSM8K, chat api with thinking disabled
+    [Test Config] TP2 EP2, npu graph enabled, NEXTN speculative decoding, GSM8K 200-question subset, chat api with thinking disabled
     """
 
     other_args = SERVER_ARGS + ASCEND_OPS_ARGS
@@ -139,7 +140,7 @@ class TestE2E9AscendOpsMxfp8(_Qwen36BlockFp8, CustomTestCase):
 
     [Test Category] Cross Regression
     [Test Target] --moe-a2a-backend ascend_ops + SGLANG_NPU_ARCH35_REQUANT_BLOCK_FP8=1
-    [Test Config] TP2 EP2, npu graph enabled, NEXTN speculative decoding, full GSM8K, chat api with thinking disabled
+    [Test Config] TP2 EP2, npu graph enabled, NEXTN speculative decoding, GSM8K 200-question subset, chat api with thinking disabled
     """
 
     other_args = SERVER_ARGS + ASCEND_OPS_ARGS

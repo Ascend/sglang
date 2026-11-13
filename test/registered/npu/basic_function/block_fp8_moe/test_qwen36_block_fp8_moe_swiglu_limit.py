@@ -2,15 +2,19 @@ import glob
 import gzip
 import json
 import os
+import shutil
+import time
 import unittest
-from pathlib import Path
 from types import SimpleNamespace
 
 import requests
 
-from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import DEEPSEEK_V4_FLASH_BASE_MODEL_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    DEEPSEEK_V4_FLASH_BASE_MODEL_PATH,
+    logger,
+)
+from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -19,10 +23,12 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-OUTPUT_DIR = "./profiler_dir"
+register_npu_ci(est_time=3600, suite="full-4-npu-a3", nightly=True)
 
-# Accuracy floors: no public GSM8K baseline for this Base checkpoint, so these are
-# guard rails to tighten after a calibration run.
+# Per-script profiler dir: the final cleanup removes it, siblings share the cwd.
+OUTPUT_DIR = "./profiler_dir_" + os.path.splitext(os.path.basename(__file__))[0]
+
+# No public GSM8K baseline for this Base checkpoint; these floors are provisional.
 ACCURACY_NATIVE = 0.90
 ACCURACY_MXFP8 = 0.89
 
@@ -68,9 +74,8 @@ SERVER_ENVS = {
     "USE_NPU_MOE_GATING_TOP_K": "1",
 }
 
-# Model args for DSV4-Flash on Ascend, aligned with the 0731 cases; no Qwen3.6-only
-# or DSPARK speculative options. mem-fraction-static deviates: this Base checkpoint
-# is FP8 (larger per rank) instead of 0731's FP4.
+# mem-fraction-static 0.90: FP8 (non-MXFP4) experts cost ~78 GB/rank at TP4, so the
+# FP4-case 0.6x starves the KV pool; the configurator's bare minimum is 0.867.
 SERVER_ARGS = [
     "--page-size",
     "128",
@@ -84,7 +89,7 @@ SERVER_ARGS = [
     "--watchdog-timeout",
     "9000",
     "--mem-fraction-static",
-    "0.85",
+    "0.90",
     "--max-running-requests",
     "32",
     "--chunked-prefill-size",
@@ -111,9 +116,10 @@ SERVER_ARGS = [
     "fp8",
 ]
 
-# Op-level checks: empty by default (dump first, pin later).
-W13_OP_PATTERNS = []
-SWIGLU_OP_PATTERNS = []
+# w13 runs unfused here; the clamp is a separate op (swiglu_group_quant with
+# clamp_value=limit). npu_clipped_swiglu belongs to the dense path, not the experts.
+W13_OP_PATTERNS = ["npu::npu_grouped_matmul"]
+SWIGLU_OP_PATTERNS = ["swiglu_group_quant"]
 CANDIDATE_KEYWORDS = (
     "w13",
     "gate_up",
@@ -131,6 +137,9 @@ CANDIDATE_KEYWORDS = (
 PROFILE_NUM_STEPS = 8
 PROFILE_BURST_PROMPTS = 32
 PROFILE_BURST_MAX_NEW_TOKENS = 32
+# The trace export runs in its own process, so the server must stay up until it finishes.
+PROFILE_EXPORT_TIMEOUT = 180
+PROFILE_EXPORT_POLL_INTERVAL = 5
 
 
 def ops_pinned():
@@ -145,19 +154,48 @@ def load_ops(trace_path):
     else:
         with open(trace_path) as f:
             trace = json.load(f)
-    events = [e for e in trace.get("traceEvents", []) if e.get("ph") == "X"]
+    # Chrome traces are either a {"traceEvents": ...} object or a bare event array.
+    events = trace.get("traceEvents", []) if isinstance(trace, dict) else trace
+    events = [e for e in events if e.get("ph") == "X"]
     events.sort(key=lambda e: e.get("ts", 0))
     return [e.get("name", "") for e in events]
 
 
 def find_trace(profiler_dir):
+    # Newest match wins; guards only against leftovers from a run that died before cleanup.
     for pattern in ("**/trace_view.json", "**/*.trace.json.gz", "**/*.json.gz"):
-        hits = sorted(
-            glob.glob(os.path.join(str(profiler_dir), pattern), recursive=True)
-        )
+        hits = glob.glob(os.path.join(str(profiler_dir), pattern), recursive=True)
         if hits:
-            return hits[0]
-    raise AssertionError(f"no trace file found under {profiler_dir}")
+            return max(hits, key=os.path.getmtime)
+    return None
+
+
+def wait_for_trace(profiler_dir, timeout):
+    """Wait for the exporter to finish writing the trace, then return its path.
+
+    The export runs in a torch_npu process spawned after the profiler stops, so an
+    early kill aborts it; the file is done once two polls see the same non-zero size.
+    """
+    deadline = time.time() + timeout
+    last_size = None
+    while True:
+        if time.time() >= deadline:
+            raise AssertionError(
+                f"no complete trace file found under {profiler_dir} "
+                f"within {timeout}s"
+            )
+        path = find_trace(profiler_dir)
+        size = None
+        if path is not None:
+            try:
+                size = os.path.getsize(path)
+            except OSError:
+                # The exporter can rename/remove a mid-poll candidate; treat as not-ready, not a crash.
+                size = None
+        if size and size == last_size:
+            return path
+        last_size = size
+        time.sleep(PROFILE_EXPORT_POLL_INTERVAL)
 
 
 class _SwigluCaseBase(CustomTestCase):
@@ -166,17 +204,13 @@ class _SwigluCaseBase(CustomTestCase):
     model = DEEPSEEK_V4_FLASH_BASE_MODEL_PATH
     base_url = DEFAULT_URL_FOR_TEST
 
-    @classmethod
-    def setUpClass(cls):
-        envs.SGLANG_TORCH_PROFILER_DIR.set(OUTPUT_DIR)
-
     def launch(self, mode, tag, cuda_graph=True):
         args = list(SERVER_ARGS)
         if not cuda_graph:
             args.append("--disable-cuda-graph")
         env = dict(SERVER_ENVS)
         env["SGLANG_NPU_ARCH35_REQUANT_BLOCK_FP8"] = mode
-        print(f"[{tag}] mode={mode} cuda_graph={cuda_graph} model={self.model}")
+        logger.info(f"[{tag}] mode={mode} cuda_graph={cuda_graph} model={self.model}")
         return popen_launch_server(
             self.model,
             self.base_url,
@@ -184,10 +218,6 @@ class _SwigluCaseBase(CustomTestCase):
             other_args=args,
             env=env,
         )
-
-    @staticmethod
-    def ops_path(tag):
-        return os.path.join(OUTPUT_DIR, f"prof_{tag}", "ops.txt")
 
     def post(self, path, payload, tag, timeout=300):
         resp = requests.post(f"{self.base_url}{path}", json=payload, timeout=timeout)
@@ -199,13 +229,11 @@ class _SwigluCaseBase(CustomTestCase):
             SimpleNamespace(
                 base_url=self.base_url,
                 eval_name="gsm8k",
-                api="chat",
-                num_examples=1319,
+                api="completion",
+                num_examples=200,
                 num_shots=5,
                 num_threads=16,
-                max_tokens=4096,
-                temperature=0,
-                chat_template_kwargs={"enable_thinking": False},
+                max_tokens=512,
             )
         )
         return result["score"]
@@ -216,7 +244,7 @@ class _SwigluCaseBase(CustomTestCase):
             score = self.run_gsm8k()
         finally:
             kill_process_tree(process.pid)
-        print(f"[{tag}] score={score:.4f} threshold={threshold:.2f}")
+        logger.info(f"[{tag}] score={score:.4f} threshold={threshold:.2f}")
         self.assertGreaterEqual(
             score,
             threshold,
@@ -226,48 +254,62 @@ class _SwigluCaseBase(CustomTestCase):
 
     def collect_ops(self, mode, tag):
         profiler_dir = os.path.join(OUTPUT_DIR, f"prof_{tag}")
+        # Clean slate so a stale trace cannot be picked up; the dir is dropped below.
+        shutil.rmtree(profiler_dir, ignore_errors=True)
         os.makedirs(profiler_dir, exist_ok=True)
-        process = self.launch(mode, tag, cuda_graph=False)
         try:
-            self.post(
-                "/start_profile",
-                {"num_steps": PROFILE_NUM_STEPS, "output_dir": profiler_dir},
-                tag,
-                timeout=60,
-            )
-            for i in range(PROFILE_BURST_PROMPTS):
+            process = self.launch(mode, tag, cuda_graph=False)
+            try:
                 self.post(
-                    "/generate",
-                    {
-                        "text": f"Question {i + 1}: The capital of France is",
-                        "sampling_params": {
-                            "temperature": 0,
-                            "max_new_tokens": PROFILE_BURST_MAX_NEW_TOKENS,
-                        },
-                    },
+                    "/start_profile",
+                    {"num_steps": PROFILE_NUM_STEPS, "output_dir": profiler_dir},
                     tag,
+                    timeout=60,
                 )
-            self.post("/stop_profile", {}, tag, timeout=60)
+                for i in range(PROFILE_BURST_PROMPTS):
+                    self.post(
+                        "/generate",
+                        {
+                            "text": f"Question {i + 1}: The capital of France is",
+                            "sampling_params": {
+                                "temperature": 0,
+                                "max_new_tokens": PROFILE_BURST_MAX_NEW_TOKENS,
+                            },
+                        },
+                        tag,
+                    )
+                # The burst spans more forwards than num_steps, so the server auto-stops
+                # the profiler; an explicit /stop_profile would 500. The flush runs in a
+                # separate process, hence the wait before the kill.
+                trace_path = wait_for_trace(profiler_dir, PROFILE_EXPORT_TIMEOUT)
+            finally:
+                kill_process_tree(process.pid)
+            ops = load_ops(trace_path)
         finally:
-            kill_process_tree(process.pid)
-
-        ops = load_ops(find_trace(profiler_dir))
-        Path(self.ops_path(tag)).write_text("\n".join(ops))
-        candidates = sorted(
-            {n for n in ops if any(k in n.lower() for k in CANDIDATE_KEYWORDS)}
-        )
-        print(
-            f"[{tag}] ops={len(ops)} candidates={candidates[:20]} "
-            f"detail={self.ops_path(tag)}"
-        )
+            shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+        candidates = {
+            n for n in ops if any(k in n.lower() for k in CANDIDATE_KEYWORDS)
+        }
+        if ops_pinned():
+            logger.info(f"[{tag}] ops={len(ops)} candidates={len(candidates)}")
+        else:
+            # While unpinned, list distinct candidate ops in trace order (ordering is what matters).
+            logger.info(
+                f"[{tag}] ops={len(ops)} candidates={len(candidates)}, in trace order:"
+            )
+            seen = set()
+            for index, name in enumerate(ops):
+                if name in candidates and name not in seen:
+                    seen.add(name)
+                    logger.info(f"[{tag}] #{index} {name}")
         return ops
 
     def assert_swiglu_separate(self, ops, tag):
         """Op-level check; recorded only while the op names are not pinned yet."""
         if not ops_pinned():
-            print(
-                f"[WARN] [{tag}] W13_OP_PATTERNS/SWIGLU_OP_PATTERNS not pinned yet, "
-                f"op-level check downgraded to recording; review {self.ops_path(tag)}"
+            logger.warning(
+                f"[{tag}] W13_OP_PATTERNS/SWIGLU_OP_PATTERNS not pinned yet, "
+                "op-level check downgraded to the printed candidates"
             )
             return
 
@@ -296,7 +338,7 @@ class _SwigluCaseBase(CustomTestCase):
 
 
 class TestE2E7SwigluLimitBranch(_SwigluCaseBase):
-    """Testcase: Verify a model whose config carries swiglu_limit>0 runs fine in both modes, and that the clamped SwiGLU activation is executed outside the w13 GMM. The model has no public GSM8K baseline, so the ACCURACY_* floors are guard rails to be tightened after a calibration run.
+    """Testcase: Verify a model whose config carries swiglu_limit>0 runs fine in both modes, and that the clamped SwiGLU activation is executed outside the w13 GMM.
 
     [Test Category] Accuracy
     [Test Target] swiglu_limit>0 branch (non-fused w13 + NPUSwigluWithLimit)
@@ -310,7 +352,7 @@ class TestE2E7SwigluLimitBranch(_SwigluCaseBase):
         ops = self.collect_ops("1", "e2e7-mxfp8")
         self.assert_swiglu_separate(ops, "e2e7-mxfp8")
 
-        print(
+        logger.info(
             f"[{type(self).__name__}] native_score={native_score:.4f} "
             f"mxfp8_score={mxfp8_score:.4f} ops={len(ops)}"
         )
