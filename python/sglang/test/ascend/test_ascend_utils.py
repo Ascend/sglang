@@ -93,6 +93,9 @@ DEEPSEEK_V3_2_EXP_W8A8_WEIGHTS_PATH = os.path.join(
 DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "vllm-ascend/DeepSeek-V3.2-W8A8"
 )
+DEEPSEEK_V4_FLASH_BASE_MODEL_PATH = os.path.join(
+    MODEL_WEIGHTS_DIR, "deepseek-ai/DeepSeek-V4-Flash-Base"
+)
 DEEPSEEK_V4_FLASH_BF16_MODEL_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "deepseek-ai/DeepSeek-V4-Flash-BF16"
 )
@@ -238,6 +241,7 @@ QWEN3_6_27B_CYBERSECURITY_LORA_MODEL_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "hotdogs/qwen3.6-27b-cybersecurity-lora"
 )
 QWEN3_6_35B_A3B_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-35B-A3B")
+QWEN3_6_35B_A3B_FP8_WEIGHTS_PATH = os.path.join(MODEL_WEIGHTS_DIR, "Qwen/Qwen3.6-35B-A3B-FP8")
 QWEN3_1_7B_GPTQ_INT8_WEIGHTS_PATH = os.path.join(
     MODEL_WEIGHTS_DIR, "Qwen/Qwen3-1.7B-GPTQ-Int8"
 )

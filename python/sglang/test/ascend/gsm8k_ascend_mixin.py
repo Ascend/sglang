@@ -30,6 +30,10 @@ class GSM8KAscendMixin(ABC):
     gsm8k_num_shots = 5
     num_questions = 200
     gsm8k_parallel = 128
+    api = "completion"
+    max_tokens = 512
+    num_threads = 128
+    chat_template_kwargs = {}
 
     env = {
         **os.environ,
@@ -86,14 +90,15 @@ class GSM8KAscendMixin(ABC):
 
         try:
             args = SimpleNamespace(
-                max_tokens=512,
+                max_tokens=self.max_tokens,
                 base_url=self.base_url,
                 model=self.model,
                 eval_name="gsm8k",
-                api="completion",
+                api=self.api,
                 num_examples=self.num_questions,
-                num_threads=128,
+                num_threads=self.num_threads,
                 num_shots=self.gsm8k_num_shots,
+                chat_template_kwargs=self.chat_template_kwargs,
             )
             metrics = run_eval(args)
             model_metrics["accuracy"] = metrics["score"]
