@@ -53,7 +53,7 @@ QWEN3_5_397B_A17B_3K5_1K5_OTHER_ARGS = [
     432,
     "--mem-fraction-static",
     0.8,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     4,
     6,
@@ -124,8 +124,6 @@ class TestNPUQwen3_5_397B_A17B_3K5_1K5_50ms(TestNpuPerformanceTestCaseBase):
     tpot = 50
     output_token_throughput = 5415
     request_rate = float("inf")
-    temperature = 0.6
-    top_p = 0.95
 
     def test_npu_qwen3_5_397b_a17b_3k5_1k5(self):
         """Run NPU performance test for Qwen3.5-397B-A17B in3k5 out1k5"""
