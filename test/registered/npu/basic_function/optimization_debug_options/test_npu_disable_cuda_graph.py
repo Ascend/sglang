@@ -43,7 +43,7 @@ class TestDisableCudaGraph(CustomTestCase):
                 "ascend",
                 "--disable-prefill-cuda-graph",
                 "--disable-decode-cuda-graph",
-                "--disable-piecewise-cuda-graph",
+                "--cuda-graph-backend-prefill=disabled",
                 "--enable-dp-attention-local-control-broadcast",
                 "--gc-threshold",
                 "50",

@@ -25,6 +25,8 @@ QWEN3_6_35B_A3B_64K_PREFIX_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "0",
     "ASCEND_USE_FIA": "1",
     "GDN_ATTN_BACKEND_TRITON": "1",
+    "SGLANG_REQ_RUNNING_TIMOUT": "-1",
+    "SGLANG_REQ_WAITING_TIMOUT": "-1",
 }
 
 QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
@@ -43,7 +45,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     "--max-prefill-tokens",
     65536,
     "--trust-remote-code",
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--max-running-requests",
     40,
@@ -51,7 +53,7 @@ QWEN3_6_35B_A3B_64K_PREFIX_OTHER_ARGS = [
     200,
     "--mem-fraction-static",
     0.9,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     8,
     16,
