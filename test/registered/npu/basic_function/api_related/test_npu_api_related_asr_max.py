@@ -25,6 +25,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="validate-cleanup-npu", nightly=True)
 
 parsed = urlparse(DEFAULT_URL_FOR_TEST)
 host = parsed.hostname
@@ -217,9 +218,11 @@ class TestAsrMaxTranscription(CustomTestCase):
                             break
                         if resp["type"] == "error":
                             error = resp
-                            logging.warning(
-                                "Service error during the transcription stage:", error
+                            self.assertIn(
+                                "Accumulated audio exceeded",
+                                error["error"]["message"],
                             )
+                            finish_flag = True
                             break
                     except (
                         WebSocketTimeoutException,
@@ -231,9 +234,12 @@ class TestAsrMaxTranscription(CustomTestCase):
                     finish_flag,
                     f"Transcription completion event not received within 30 seconds.",
                 )
-                self.assertGreater(
-                    len(transcript_text.strip()), 0, "Transcription result is empty."
-                )
+                if transcript_text is not None:
+                    self.assertGreater(
+                        len(transcript_text.strip()),
+                        0,
+                        "Transcription result is empty.",
+                    )
 
         finally:
             ws.close()

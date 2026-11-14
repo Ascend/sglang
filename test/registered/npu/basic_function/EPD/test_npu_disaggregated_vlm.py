@@ -12,6 +12,7 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
+# register_npu_ci(est_time=400, suite="validate-cleanup-npu", nightly=True)
 
 
 _INLINE_IMAGE_URL = (
@@ -21,6 +22,7 @@ _INLINE_IMAGE_URL = (
     "cua9HOR7Y6w6swBwMy0qLTpkeI77qdEBpBFAHBBDAGH8WrwJKI4AAegUCfAKgEgpQDvh3CR"
     "3oQCuav58qlAw73kKCSgAAAABJRU5ErkJggg=="
 )
+
 
 
 class TestDisaggregatedVLM(TestDisaggregationBase):

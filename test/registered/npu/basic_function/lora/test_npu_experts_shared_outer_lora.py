@@ -53,7 +53,7 @@ class TestExpertsSharedOuterLora(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
-                "--cuda-graph-max-bs",
+                "--cuda-graph-max-bs-decode",
                 32,
                 "--tp-size",
                 2,

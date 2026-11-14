@@ -29,6 +29,11 @@ QWEN3_5_397B_64K_PREFIX_ENVS = {
     "GLOO_SOCKET_IFNAME": "lo",
     "SGLANG_ENABLE_SPEC_V2": "1",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
+    "SGLANG_ZBAL_LOCAL_MEM_SIZE": "58672",
+    "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
+    "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:24669",
+    "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
+    "ZBAL_ENABLE_GRAPH": "1",
 }
 
 QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
@@ -44,7 +49,7 @@ QWEN3_5_397B_64K_PREFIX_OTHER_ARGS = [
     65536,
     "--max-mamba-cache-size",
     640,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
@@ -105,8 +110,6 @@ class TestNPUQwen3_5_397B_64K_Prefix90(TestNpuPerformanceTestCaseBase):
     seed = 1
     tpot = 50
     request_rate = float("inf")
-    temperature = 0.6
-    top_p = 0.95
     output_token_throughput = 1012.3
     pop_sglang_is_in_ci_for_gsp = True
 
