@@ -211,10 +211,34 @@ jobs:
             mkdir -p ${ascend_test_util_path}
             mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
             cp -r $(pwd)/python/sglang/test/ascend ${ascend_test_util_path}
+            # Overlay test kits + test_programs.py from the PR checkout (image
+            # snapshots may predate kits/ and test_hellaswag_select).
+            rm -rf ${sglang_pkg_path}/sglang/test/kits
+            cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
+            cp $(pwd)/python/sglang/test/test_programs.py ${sglang_pkg_path}/sglang/test/test_programs.py
 
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
             pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
             pip install jsonlines "evaluate>=0.4.0" numexpr dotenv
+
+            # Preload hellaswag: rowanz/hellaswag was DMCA-taken-down on 2026-09-14, the
+            # URL in test_programs.py 404s since. download_and_cache_file skips download
+            # when the file exists. HF parquet stores label as string; test code does
+            # endings[label], so cast to int. NOTE: use a heredoc, NOT a multi-line
+            # `python3 -c "..."` — YAML run-block indentation leaks into the -c string
+            # and causes IndentationError (root cause of the test_npu_basic_sanity.py
+            # 404 failure in run 37605365300). Heredoc body lines must stay at the
+            # `set -euo pipefail` indent level so they start at column 0 in the script.
+            python3 - <<'PYEOF' || echo "WARN: hellaswag preload failed; test_accuracy_floor will fail if /tmp file is absent"
+          import json
+          from datasets import load_dataset
+          ds = load_dataset('Rowan/hellaswag', split='validation')
+          with open('/tmp/hellaswag_val.jsonl', 'w') as f:
+              for row in ds:
+                  row['label'] = int(row['label'])
+                  f.write(json.dumps(row) + '\n')
+          print(f'preloaded {len(ds)} hellaswag examples to /tmp/hellaswag_val.jsonl')
+          PYEOF
 
             hf download MMMU/MMMU --repo-type dataset
           fi
@@ -267,3 +291,4 @@ jobs:
             --auto-partition-size ${{ fromJson(inputs.partitions).size }} \
             ${{ inputs.timeout_per_file && format('--timeout-per-file {0}', inputs.timeout_per_file) || '' }} \
             $NIGHTLY_FLAG $CONTINUE_ON_ERROR_FLAG
+
