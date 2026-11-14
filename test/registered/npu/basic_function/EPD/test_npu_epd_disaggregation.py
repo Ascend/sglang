@@ -43,7 +43,7 @@ DEFAULT_NPU_ENCODER_TRANSFER_BACKEND = "zmq_to_scheduler"
 
 DEFAULT_NPU_TP_SIZE = "4"
 
-register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-epd-validate", nightly=True)
 
 
 class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBase):
