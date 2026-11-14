@@ -50,7 +50,7 @@ QWEN3_6_35B_A3B_1080P_OTHER_ARGS = [
     42,
     "--mem-fraction-static",
     0.75,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     4,
     8,
     16,

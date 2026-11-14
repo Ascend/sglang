@@ -75,6 +75,7 @@ class TestDPAttentionMixedChunk(
     NPUGSM8KMixin,
 ):
     gsm8k_accuracy_thres = 0.34
+    gsm8k_num_questions = 1319
 
     @classmethod
     def setUpClass(cls):

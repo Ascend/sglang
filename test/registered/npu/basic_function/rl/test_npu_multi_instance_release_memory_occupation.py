@@ -106,6 +106,16 @@ class EngineWrapper:
 
         dist.barrier(group=self._device_mesh_cpu.get_group())
 
+    def begin_weight_update(self):
+        if self._tp_rank == 0:
+            self._engine.begin_weight_update()
+        dist.barrier(group=self._device_mesh_cpu.get_group())
+
+    def end_weight_update(self):
+        if self._tp_rank == 0:
+            self._engine.end_weight_update()
+        dist.barrier(group=self._device_mesh_cpu.get_group())
+
     def update_weights_from_tensor(
         self, named_tensors: Iterable[Tuple[str, torch.Tensor]]
     ):
@@ -276,9 +286,11 @@ def _run_sglang_subprocess(
 
         # 4 - resume sglang weights and update from hf model
         engine.resume_memory_occupation(tags=["weights"])
+        engine.begin_weight_update()
         engine.update_weights_from_tensor(
             named_tensors=list(hf_model.named_parameters()) if hf_model else []
         )
+        engine.end_weight_update()
 
         # 5 - release hf model (TP master only)
         if is_tp_master:

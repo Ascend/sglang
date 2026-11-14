@@ -62,6 +62,8 @@ class TestWeightLoaderPrefetchTp4(CustomTestCase):
                 "--weight-loader-prefetch-checkpoints",
                 "--weight-loader-prefetch-num-threads",
                 "3",  # Custom thread count, matches 2.log pattern
+                "--log-level",
+                "debug",
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
         )

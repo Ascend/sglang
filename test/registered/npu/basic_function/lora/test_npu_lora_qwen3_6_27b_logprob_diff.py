@@ -73,6 +73,8 @@ def get_prompt_logprobs(engine, input_ids, lora_path):
     return [logprob for logprob, _, _ in out["meta_info"]["input_token_logprobs"]][1:]
 
 
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestLoRAQwen3_6_27BLogprobDiff(CustomTestCase):
 
     def test_lora_qwen3_6_27b_logprob_accuracy(self):

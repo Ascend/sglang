@@ -56,7 +56,7 @@ QWEN3_5_397B_128K_OTHER_ARGS = [
     16,
     "--mem-fraction-static",
     0.6,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     2,
     3,
     4,
@@ -115,8 +115,8 @@ class TestNPUQwen3_5_397B_128K_1k_20ms(TestNpuPerformanceTestCaseBase):
     seed = 1
     tpot = 20
     request_rate = float("inf")
-    temperature = 0.6
-    top_p = 0.95
+    # temperature = 0.6
+    # top_p = 0.95
     output_token_throughput = 40.6
 
     def test_npu_qwen3_5_397b_128K_1k_20ms(self):
