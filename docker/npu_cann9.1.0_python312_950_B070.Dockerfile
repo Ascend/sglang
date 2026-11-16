@@ -61,6 +61,27 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
     ca-certificates \
+    git \
+    ninja-build \
+    patchelf \
+    libyaml-cpp-dev \
+    libgflags-dev \
+    libgoogle-glog-dev \
+    libjsoncpp-dev \
+    libunwind-dev \
+    libnuma-dev \
+    libasio-dev \
+    libboost-dev \
+    libcurl4-openssl-dev \
+    libgrpc++-dev \
+    libprotobuf-dev \
+    protobuf-compiler-grpc \
+    liburing-dev \
+    libmsgpack-dev \
+    libzstd-dev \
+    libxxhash-dev \
+    libcli11-dev \
+    libibverbs-dev \
     && rm -rf /var/cache/apt/* \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates \
