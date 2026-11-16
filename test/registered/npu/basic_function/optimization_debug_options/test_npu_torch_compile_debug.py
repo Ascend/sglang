@@ -38,12 +38,12 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         "ascend",
         "--disable-cuda-graph",
         "--disable-radix-cache",
-        "--enforce-piecewise-cuda-graph",
+        "--cuda-graph-backend-prefill=tc_piecewise",
     ]
     enable_args = [
         "--enable-torch-compile-debug-mode",
-        "--enforce-piecewise-cuda-graph",
-        "--piecewise-cuda-graph-max-tokens",
+        "--cuda-graph-backend-prefill=tc_piecewise",
+        "--cuda-graph-max-bs-prefill",
         "64",
     ]
 
@@ -86,7 +86,7 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
             num_questions=200,
             max_new_tokens=512,
             parallel=128,
-            host="http://127.0.0.1",
+            host="127.0.0.1",
             port=int(self.base_url.split(":")[-1]),
         )
         avg_time1, all_times1 = self.benchmark_gsm8k(args, num_runs=5)

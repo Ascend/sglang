@@ -57,7 +57,7 @@ class TestNpuMultiTokenizerPauseResume(CustomTestCase):
                 2,
                 "--tokenizer-worker-num",
                 2,
-                "--cuda-graph-bs",
+                "--cuda-graph-bs-decode",
                 4,
                 16,
             ],
