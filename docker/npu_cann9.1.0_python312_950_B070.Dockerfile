@@ -2,7 +2,6 @@ ARG CANN_VERSION=9.1.0
 ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
-ARG arch
 
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
@@ -10,7 +9,6 @@ FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 ARG TARGETARCH
 ARG CANN_VERSION
 ARG DEVICE_TYPE
-ARG arch
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG APTMIRROR=""
 ARG PYTORCH_VERSION="2.10.0"
@@ -24,9 +22,6 @@ ARG ASCEND_CANN_PATH=/usr/local/Ascend/ascend-toolkit
 ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post5
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG DEVICE_TYPE
-# modelscope / evalscope versions (leave empty to install the latest release)
-ARG MODELSCOPE_VERSION=""
-ARG EVALSCOPE_VERSION=""
 
 ARG MF_VERSION="1.3.1"
 
@@ -93,39 +88,16 @@ ENV LC_ALL=en_US.UTF-8
 
 
 ### Install MemFabric and MemCache
-RUN set -eux; \
-    case "$DEVICE_TYPE" in \
-      950) MF_SOC_VERSION="A5" ;; \
-      a3)  MF_SOC_VERSION="A3" ;; \
-      *)   echo "Unsupported DEVICE_TYPE for mfcli kernel install: $DEVICE_TYPE" >&2; \
-           exit 1 ;; \
-    esac; \
-    ${PIP_INSTALL} memfabric-hybrid==${MF_VERSION}; \
-    mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
-    ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
+RUN ${PIP_INSTALL} memfabric-hybrid==1.3.1
 
-### Install memfabric-zbal
-RUN ${PIP_INSTALL} memfabric-zbal==1.2.21004.post1 -i https://pypi.org/simple/
-### Install SGLang Model Gateway
-RUN ${PIP_INSTALL} sglang-router
+RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe msgpack
 
+RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine_memfabric-0.3.14-cp312-cp312-manylinux_2_35_$(arch).whl --force --no-deps
 
 ### Install PyTorch and PTA
 RUN . /etc/environment_new && \
     (${PIP_INSTALL} torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} torchaudio==${TORCHAUDIO_VERSION} --index-url https://download.pytorch.org/whl/cpu) \
     && (${PIP_INSTALL} torch-npu==${TORCH_NPU_VERSION} --extra-index-url ${TORCH_NPU_INDEX_URL})
-
-
-### Install ModelScope & EvalScope
-# Installed right after torch/torch-npu so their dependencies resolve against the pinned torch.
-# MODELSCOPE_VERSION / EVALSCOPE_VERSION are empty by default -> latest release.
-RUN . /etc/environment_new && \
-    MS_PKG="modelscope" && \
-    ES_PKG="evalscope" && \
-    if [ -n "${MODELSCOPE_VERSION}" ]; then MS_PKG="modelscope==${MODELSCOPE_VERSION}"; fi && \
-    if [ -n "${EVALSCOPE_VERSION}" ]; then ES_PKG="evalscope==${EVALSCOPE_VERSION}"; fi && \
-    ${PIP_INSTALL} "${MS_PKG}" "${ES_PKG}"
-
 
 ## Install triton-ascend
 RUN . /etc/environment_new && \
