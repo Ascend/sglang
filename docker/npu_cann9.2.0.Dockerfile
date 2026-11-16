@@ -70,6 +70,7 @@ RUN ${PIP_INSTALL} memfabric-hybrid==1.3.1
 
 RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe 
 
+RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine_memfabric-0.3.14-cp312-cp312-manylinux_2_35_$(arch).whl --force --no-deps
 
 RUN python3 -m pip install --no-deps cannbot-dsl==0.8.0
 
