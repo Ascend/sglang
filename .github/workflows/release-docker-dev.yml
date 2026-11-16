@@ -97,8 +97,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        #device_type: ["a3", "950"]
-        device_type: ["910b"]
+        device_type: ["a3", "950"]
+        #device_type: ["910b"]
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
