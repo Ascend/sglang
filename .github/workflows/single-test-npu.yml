@@ -1,5 +1,21 @@
 name: Single Test (NPU)
-# test round 1: <测试用例描述>
+# test round 1: test_npu_deepep_auto_deepseek_v2.py / test_npu_deepep_low_latency_deepseek_v2.py -
+#               验证 num_questions=None 全量 gsm8k 精度评估 (1314 题) 是否稳定高于 0.34 阈值,
+#               对应提单: B071/B072 上 200 题采样精度 0.33/0.31 < 0.34 门禁翻转
+# test round 2: GITHUB_EVENT_NAME 改为脚本内 export (step env 的 GITHUB_ 保留前缀静默失效);
+#               test_mmlu 首次真实执行即 0.0 分 (5-shot completion 续写答案提取系统性失败),
+#               该轮仅跑 test_gsm8k 聚焦验证
+# test round 3: mmlu 修复验证 - 应用 8月12日提单的修复 (删除 num_shots + 基线 0.58->0.38),
+#               本轮跑完整用例 (test_gsm8k 全量 + test_mmlu 0-shot)
+#               (首次尝试 run 37785710869 因 runner 拉取 B081 镜像瞬时 ImagePullBackOff 失败,
+#                属基础设施抖动, 非测试问题, 本轮为重试)
+#               B081 持续拉取失败 4 次 (13:37~14:48), 改用 B082 镜像重试
+#               B082 同样 ImagePullBackOff (run 37817218278), 改用 B083 镜像重试
+#               真实根因 (10-11 确认): round 3 重写 yml 时 SWR 域名误写成
+#               swr.cn-south-west-2 (多了连字符), DNS 无法解析导致全部 6 次
+#               ImagePullBackOff; round 1/2 成功时用的是正确域名 swr.cn-southwest-2,
+#               a3-8 池本身无故障 (此前"池链路故障"为误诊)。本次修正域名并恢复 a3-8,
+#               10-11 11:29 他人 run 用正确域名+同配置成功拉起 B083
 
 on:
   pull_request:
@@ -16,9 +32,9 @@ concurrency:
 jobs:
   single-node-poc:
     name: single-node-poc
-    runs-on: linux-aarch64-a3-2
+    runs-on: linux-aarch64-a3-8
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.0.0-a3-20260622
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.1.0-a3-B083
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,20 +44,26 @@ jobs:
           npu-smi info
 
       - name: Run test
-        timeout-minutes: 120
+        timeout-minutes: 180
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
           SGLANG_IS_IN_CI: true
         shell: bash
         run: |
+          # GITHUB_* vars cannot be overridden via step env (reserved prefix), so
+          # export in-shell: GSM8KAscendMixin.test_gsm8k short-circuits to a
+          # one-request smoke check when GITHUB_EVENT_NAME == "pull_request".
+          export GITHUB_EVENT_NAME=workflow_dispatch
+
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
           # Test cases - 使用时替换为实际的测试用例路径
           test_cases=(
-            "test/registered/npu/llm_models/test_npu_deepseek_v3_2_w8a8.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_auto_deepseek_v2.py"
+            "test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_deepep_low_latency_deepseek_v2.py"
           )
 
           for test_case in "${test_cases[@]}"; do
