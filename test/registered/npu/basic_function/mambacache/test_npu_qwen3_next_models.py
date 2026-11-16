@@ -57,7 +57,6 @@ class TestQwen3Next(
                 other_args=cls.other_args,
                 env={
                     "ASCEND_USE_FIA": "1",
-                    "GDN_USE_MEGA_GDN": "1",
                 },
             )
 
