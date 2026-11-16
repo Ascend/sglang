@@ -66,18 +66,11 @@ ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
 ### Install MemFabric and MemCache
-RUN set -eux; \
-    case "$DEVICE_TYPE" in \
-      950) MF_SOC_VERSION="A5" ;; \
-      a3)  MF_SOC_VERSION="A3" ;; \
-      *)   echo "Unsupported DEVICE_TYPE for mfcli kernel install: $DEVICE_TYPE" >&2; \
-           exit 1 ;; \
-    esac; \
-    ${PIP_INSTALL} memfabric-hybrid==${MF_VERSION}; \
-    mfcli kernel install --soc-version "$MF_SOC_VERSION"; \
-    ${PIP_INSTALL} memcache-hybrid==${MF_VERSION}
+RUN ${PIP_INSTALL} memfabric-hybrid==1.3.1
 
-RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe
+RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe 
+
+
 RUN python3 -m pip install --no-deps cannbot-dsl==0.8.0
 
 ### Install PyTorch and PTA
