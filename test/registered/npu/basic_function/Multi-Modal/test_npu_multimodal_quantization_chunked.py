@@ -5,6 +5,7 @@ NPU quantization (w8a8) multimodal tests.
   - Quantization + chunked prefill + image
 """
 
+import os
 import unittest
 
 from sglang.srt.utils import kill_process_tree
@@ -53,6 +54,8 @@ _LONG_PREFIX = (
 # ============================================
 # Quantization (w8a8) + image -> accuracy acceptable
 # ============================================
+os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
+
 class TestMultimodalQuantization(CustomTestCase):
     """Verify w8a8 quantization does not degrade image understanding.
 

@@ -43,7 +43,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     32768,
     "--max-prefill-tokens",
     32768,
-    "--mamba-scheduler-strategy",
+    "--mamba-radix-cache-strategy",
     "extra_buffer",
     "--trust-remote-code",
     "--max-running-requests",
@@ -52,7 +52,7 @@ QWEN3_6_27B_64K_PREFIX_OTHER_ARGS = [
     120,
     "--mem-fraction-static",
     0.8,
-    "--cuda-graph-bs",
+    "--cuda-graph-bs-decode",
     1,
     2,
     4,
@@ -96,7 +96,7 @@ class TestNPUQwen3_6_27B_1P_In64k_Out1k_Prefix90_gpqa(TestNpuAccuracyTestCaseBas
     eval_batch_size = 64
     generation_config = {
         "max_tokens": 81920,
-        "temperature": 1.0,
+        "temperature": 0,
         "extra_body": {
             "chat_template_kwargs": {"enable_thinking": True},
         },

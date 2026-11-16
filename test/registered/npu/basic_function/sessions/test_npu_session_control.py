@@ -43,7 +43,7 @@ class TestNPUSessionControl(CustomTestCase):
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
-                "--disable-piecewise-cuda-graph",
+                "--cuda-graph-backend-prefill=disabled",
             ],
         )
 

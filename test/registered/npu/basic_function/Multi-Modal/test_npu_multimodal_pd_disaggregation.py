@@ -60,6 +60,8 @@ class TestMultimodalPDDisaggregation(CustomTestCase):
                 str(cls._bootstrap_port),
                 "--mamba-radix-cache-strategy",
                 "extra_buffer",
+                "--mamba-ssm-dtype",
+                "bfloat16",
                 "--mem-fraction-static",
                 "0.6",
                 "--tp-size",
