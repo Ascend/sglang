@@ -86,6 +86,8 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+RUN python3 -m pip install --no-deps cannbot-dsl==0.8.0
+
 RUN ${PIP_INSTALL} memfabric-hybrid==1.3.1
 
 RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe msgpack
