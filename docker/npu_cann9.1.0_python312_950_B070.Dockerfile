@@ -28,7 +28,7 @@ ARG DEVICE_TYPE
 ARG MODELSCOPE_VERSION=""
 ARG EVALSCOPE_VERSION=""
 
-ARG MF_VERSION="1.3.0"
+ARG MF_VERSION="1.3.1"
 
 # Later RUN steps source /etc/environment_new, so make sure it exists
 RUN touch /etc/environment_new
