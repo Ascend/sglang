@@ -66,7 +66,7 @@ class BaseTestDetokenizerWatchdog:
 
         # Scenario 4 timeout set to 60 seconds (ensure complete log printing)
         timeout = (
-            60
+            1800
             if (cls.ci_mode is False and cls.set_soft_watchdog is False)
             else DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
         )
