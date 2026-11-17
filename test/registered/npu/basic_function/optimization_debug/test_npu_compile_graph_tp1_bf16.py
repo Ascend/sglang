@@ -15,7 +15,12 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=400, suite="base-b-test-1-npu-a3")
-register_npu_ci(est_time=400, suite="nightly-1-npu-a3", nightly=True)
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a3",
+    nightly=True,
+    disabled="Parameter: --enable-torch-compile is no longer supported, test case removed",
+)
 
 TEST_MODEL_MATRIX = {
     "/root/.cache/modelscope/hub/models/Qwen/Qwen2.5-7B-Instruct": {
@@ -41,6 +46,7 @@ class TestAscendTp1Bf16(CustomTestCase):
             "--attention-backend",
             "ascend",
             "--disable-radix-cache",
+            "--enable-torch-compile",
             "--watchdog-timeout",
             30000,
         ]
