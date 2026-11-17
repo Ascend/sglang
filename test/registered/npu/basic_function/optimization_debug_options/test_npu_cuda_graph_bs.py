@@ -123,6 +123,7 @@ class TestCudaGraphBs(CustomTestCase):
             extra_args=[
                 "--cuda-graph-max-bs-decode",
                 "8",
+                # tc_piecewise prefill backend was removed on --cuda-graph-backend-prefill; use breakable.
                 "--cuda-graph-backend-prefill",
                 "breakable",
                 "--cuda-graph-max-bs-prefill",
@@ -160,6 +161,7 @@ class TestCudaGraphBs(CustomTestCase):
                 "2",
                 "4",
                 "8",
+                # tc_piecewise prefill backend was removed on NPU; use breakable.
                 "--cuda-graph-backend-prefill",
                 "breakable",
                 "--cuda-graph-bs-prefill",
