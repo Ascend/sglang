@@ -33,7 +33,6 @@ concurrency:
   group: full-test-npu-${{ inputs.coverage_mode == true && 'coverage-' || '' }}${{ inputs.ref || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
-
 jobs:
   set-image-config:
     runs-on: ubuntu-latest
