@@ -410,9 +410,6 @@ jobs:
           # Version-match test_utils with the branch (see the matching copy in
           # _npu-pr-test-stage.yml: carries the NPU launch-timeout raise).
           cp python/sglang/test/test_utils.py ${test_dir}/
-          # Keep the legacy MMLU scorer module version-matched with the
-          # overlay (ascend/simple_eval_mmlu.py imports it).
-          cp python/sglang/test/simple_eval_mmlu.py ${test_dir}/
           out=/tmp/precise-test-image-src/${{ github.run_id }}-attempt-${{ github.run_attempt }}/outputs
           mkdir -p ${out}
           tar -czf ${out}/sglang-image-src.tar.gz \

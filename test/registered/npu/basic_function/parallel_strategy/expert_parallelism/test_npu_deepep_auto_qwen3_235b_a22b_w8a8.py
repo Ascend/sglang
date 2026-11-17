@@ -3,10 +3,10 @@ import unittest
 from types import SimpleNamespace
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.run_eval import run_eval as run_ascend_eval
 from sglang.test.ascend.test_ascend_utils import QWEN3_235B_A22B_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval as run_gsm8k
+from sglang.test.sgl_eval_utils import run_sgl_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -81,11 +81,9 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
             eval_name="mmlu",
             num_examples=8,
             num_threads=32,
-            # mmlu is scored by sgl-eval; use the ascend legacy scorer.
-            api="completion",
         )
 
-        metrics = run_ascend_eval(args)
+        metrics = run_sgl_eval(args)
         self.assertGreaterEqual(metrics["score"], 0.5)
 
     def test_gsm8k(self):
