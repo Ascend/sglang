@@ -20,7 +20,7 @@ ARG TRITON_AARCH64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/
 ARG TRITON_X86_64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/triton-ascend/20261105160244/triton_ascend-3.6.0%2Bdev20261105160244-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_34_x86_64.whl"
 
 #ARG SGLANG_TAG=main
-ARG SGLANG_TAG=
+ARG SGLANG_TAG=dsv41-a5-jd
 
 ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post7
 
@@ -90,7 +90,9 @@ ENV LC_ALL=en_US.UTF-8
 ### Install MemFabric and MemCache
 RUN ${PIP_INSTALL} memfabric-hybrid==1.3.1
 
-RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe msgpack
+RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe msgpack 
+
+RUN ${PIP_INSTALL} cannbot-dsl==0.8.0
 
 RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine_memfabric-0.3.14-cp312-cp312-manylinux_2_35_$(arch).whl --force --no-deps
 
@@ -122,7 +124,7 @@ RUN ${PIP_INSTALL} pybind11 && \
     fi
 
 #Install SGLang
-RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/randgun/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
