@@ -177,9 +177,8 @@ MODEL_PATH=/path/to/model-weights
 
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 source /usr/local/Ascend/nnal/atb/set_env.sh
-for f in /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/{customize,custom_transformer}/bin/set_env.bash; do
-    [ -f "$f" ] && source "$f"
-done
+source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true
+source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true
 
 export DEEP_NORMAL_MODE_USE_INT8_QUANT=1
 export FORCE_DRAFT_MODEL_NON_QUANT=1
