@@ -104,6 +104,7 @@ jobs:
       upload_coverage_artifact: ${{ needs.set-image-config.outputs.coverage_mode == 'true' }}
     secrets: inherit
 
+
   full-2-npu-a3:
     name: full-2-npu-a3
     if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
