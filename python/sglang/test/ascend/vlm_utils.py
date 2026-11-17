@@ -12,6 +12,9 @@ from sglang.test.test_utils import (
 class TestVLMModels(CustomTestCase):
     model = ""
     mmmu_accuracy = 0.00
+    # Generation cap for the MMMU benchmark; subclasses should override this
+    # to match their model's answer length.
+    max_tokens = 30
     other_args = [
         "--trust-remote-code",
         "--cuda-graph-max-bs-decode",
@@ -71,7 +74,7 @@ class TestVLMModels(CustomTestCase):
             eval_name="mmmu",
             num_examples=100,
             num_threads=64,
-            max_tokens=30,
+            max_tokens=self.max_tokens,
             return_latency=True,
         )
 

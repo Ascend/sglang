@@ -175,6 +175,7 @@ GLM5_TOP64_PRUNED_GSM8K_MODEL_PATH = (
 GLM_5_1_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.1-w4a8"
 GLM_5_2_W4A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.2-w4a8"
 GLM_5_2_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.2-w8a8"
+GLM_5_3_W8A8_MODEL_PATH = "/root/.cache/modelscope/hub/models/Eco-Tech/GLM-5.3-w8a8"
 MINIMAX_M2_5_W8A8_MODEL_PATH = (
     "/root/.cache/modelscope/hub/models/Eco-Tech/MiniMax-M2.5-w8a8-QuaRot"
 )
@@ -232,7 +233,7 @@ MAX_SERVER_KEEP_ALIVE_TIME = 3600
 # Timeouts and delays
 SERVER_INITIALIZATION_DELAY = 120
 BENCHMARK_STDOUT_DRAIN_GRACE = 10  # Grace seconds to wait for the direct child to exit after it drains stdout / exits
-BENCHMARK_STDOUT_IDLE_TIMEOUT = 300  # Idle timeout: no output for this long means the benchmark is stuck, then force-kill
+BENCHMARK_STDOUT_IDLE_TIMEOUT = 3600  # Idle timeout: no output for this long means the benchmark is stuck, then force-kill
 BENCHMARK_WATCHDOG_POLL_INTERVAL = 30  # Watchdog polling interval (seconds)
 
 # Test parameters
@@ -422,7 +423,7 @@ def run_bench_serving(
         cmd_args = [
             PYTHON_FOR_TEST_TOOL,
             "-m",
-            "sglang.bench_serving",
+            "sglang.benchmark.serving",
             "--host",
             host,
             "--port",
@@ -471,7 +472,7 @@ def run_bench_serving(
         cmd_args = [
             PYTHON_FOR_TEST_TOOL,
             "-m",
-            "sglang.bench_serving",
+            "sglang.benchmark.serving",
             "--host",
             host,
             "--port",

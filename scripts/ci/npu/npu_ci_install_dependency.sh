@@ -168,3 +168,8 @@ rm -rf python/pyproject.toml && mv python/pyproject_npu.toml python/pyproject.to
 # fails on a version without a wheel for this Python. No-op once the pins are gone from the file.
 sed -i '/"memfabric-/d' python/pyproject.toml
 ${UV_PIP_INSTALL} -v -e "python[dev_npu]"
+
+# Pin the OpenAI client and its harmony runtime used by the /v1/responses tests.
+# openai-harmony declares no dependency on `openai`, so pip would otherwise keep
+# whatever the base image ships.
+${PIP_INSTALL} "openai==2.8.0" "openai-harmony==0.0.4"

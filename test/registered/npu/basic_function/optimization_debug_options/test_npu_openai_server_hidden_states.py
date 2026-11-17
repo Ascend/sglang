@@ -5,7 +5,11 @@ from abc import ABC
 import openai
 
 from sglang.srt.utils import kill_process_tree
-from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+
+try:
+    from sglang.srt.hf_transformers import get_tokenizer
+except ImportError:
+    from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import (
     EAGLE3_LLAMA3_1_INSTRUCT_8B_WEIGHTS_PATH,
     LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,

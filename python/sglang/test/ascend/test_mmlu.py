@@ -6,15 +6,26 @@ from sglang.test.sgl_eval_utils import run_sgl_eval
 
 
 class TestMMLU:
+    # Plain mixin, not a test case. Without this, pytest collects it from every
+    # module that imports it (python_classes = Test*), instantiating it without
+    # a server and failing with AttributeError.
+    __test__ = False
+
     mmlu_num_examples = 128
 
     def test_mmlu(self):
         accuracy_mmlu_threshold = getattr(self, "accuracy_mmlu", 0.00)
 
+        # getattr's default is evaluated eagerly; resolve the server command
+        # defensively instead.
+        if hasattr(self, "server_cmd"):
+            server_cmd = self.server_cmd
+        else:
+            server_cmd = subprocess.list2cmdline(
+                map(str, getattr(self, "other_args", []))
+            )
         model_metrics = {
-            "server": getattr(
-                self, "server_cmd", subprocess.list2cmdline(map(str, self.other_args))
-            ),
+            "server": server_cmd,
             "client": "sgl-eval",
             "accuracy_threshold": getattr(self, "accuracy_mmlu", "N/A"),
         }

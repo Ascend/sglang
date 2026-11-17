@@ -24,7 +24,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=1800, suite="full-2-npu-a3", nightly=True)
+register_npu_ci(est_time=1800, suite="full-4-npu-a3", nightly=True)
 
 MODEL = QWEN2_5_VL_3B_INSTRUCT_WEIGHTS_PATH
 
@@ -49,7 +49,7 @@ BASE_SERVER_ARGS = [
 BENCHMARK_ARGS = [
     sys.executable,
     "-m",
-    "sglang.bench_serving",
+    "sglang.benchmark.serving",
     "--dataset-name",
     "image",
     "--model",
