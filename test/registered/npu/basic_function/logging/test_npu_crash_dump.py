@@ -28,6 +28,12 @@ class TestNPUCrashDump(CustomTestCase):
     [Test Target] --crash-dump-folder
     """
 
+    # The server is crashed on purpose by SGLANG_TEST_CRASH_AFTER_STREAM_OUTPUTS.
+    # Opt out of CustomTestCase's fail-fast watcher and retry: the watcher aborts
+    # the whole runner on the expected non-zero exit (rc=-9), and a retry would
+    # reuse the already-dead server.
+    expect_server_exit = True
+
     crash_dump_folder = None
     MAX_NEW_TOKENS = 4
     NUM_REQUESTS_BEFORE_CRASH = 5
