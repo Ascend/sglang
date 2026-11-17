@@ -97,7 +97,6 @@ class TestMultimodalParameterInteractions(CustomTestCase):
         "bfloat16",
         "--tool-call-parser",
         "qwen",
-        "--enable-deterministic-inference",
     ]
     _spec_args = [
         "--speculative-algorithm",
