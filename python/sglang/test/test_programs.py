@@ -505,7 +505,11 @@ def test_gen_min_new_tokens():
     We verify that the number of tokens in the answer is >= the min_tokens threshold.
     """
     import sglang as sgl
-    from sglang.srt.utils.hf_transformers_utils import get_tokenizer
+
+    try:
+        from sglang.srt.hf_transformers import get_tokenizer
+    except ImportError:
+        from sglang.srt.utils.hf_transformers_utils import get_tokenizer
 
     model_path = sgl.global_config.default_backend.endpoint.get_model_name()
     MIN_TOKENS, MAX_TOKENS = 64, 128
@@ -527,3 +531,103 @@ def test_gen_min_new_tokens():
 
     state = convo_1.run()
     assert_min_tokens(tokenizer, state["answer"])
+
+
+def test_hellaswag_select():
+    """Benchmark the accuracy of sgl.select on the HellaSwag dataset.
+
+    For kits/hellaswag_kit.py. Prefers the CI-preloaded /tmp/hellaswag_val.jsonl
+    and falls back to download_and_cache_file.
+    """
+    import time
+
+    import numpy as np
+
+    from sglang.utils import download_and_cache_file, read_jsonl
+
+    def get_one_example(lines, i, include_answer):
+        ret = lines[i]["activity_label"] + ": " + lines[i]["ctx"] + " "
+        if include_answer:
+            ret += lines[i]["endings"][lines[i]["label"]]
+        return ret
+
+    def get_few_shot_examples(lines, k):
+        ret = ""
+        for i in range(k):
+            ret += get_one_example(lines, i, True) + "\n\n"
+        return ret
+
+    # Read data (CI preloads the validation split at /tmp/hellaswag_val.jsonl)
+    url = "https://raw.githubusercontent.com/rowanz/hellaswag/master/data/hellaswag_val.jsonl"
+    import os
+
+    filename = "/tmp/hellaswag_val.jsonl"
+    if not os.path.exists(filename):
+        filename = download_and_cache_file(url)
+    lines = list(read_jsonl(filename))
+
+    # Construct prompts
+    num_questions = 200
+    num_shots = 20
+    few_shot_examples = get_few_shot_examples(lines, num_shots)
+
+    questions = []
+    choices = []
+    labels = []
+    for i in range(len(lines[:num_questions])):
+        questions.append(get_one_example(lines, i, False))
+        choices.append(lines[i]["endings"])
+        labels.append(lines[i]["label"])
+    arguments = [{"question": q, "choices": c} for q, c in zip(questions, choices)]
+
+    #####################################
+    ######### SGL Program Begin #########
+    #####################################
+
+    @sgl.function
+    def few_shot_hellaswag(s, question, choices):
+        s += few_shot_examples + question
+        s += sgl.select("answer", choices=choices)
+
+    #####################################
+    ########## SGL Program End ##########
+    #####################################
+
+    # Run requests
+    tic = time.perf_counter()
+    rets = few_shot_hellaswag.run_batch(
+        arguments,
+        temperature=0,
+        num_threads=64,
+        progress_bar=True,
+        generator_style=False,
+    )
+    preds = []
+    for i, ret in enumerate(rets):
+        preds.append(choices[i].index(ret["answer"]))
+    latency = time.perf_counter() - tic
+
+    # Compute accuracy
+    accuracy = np.mean(np.array(preds) == np.array(labels))
+
+    # Test generator style of run_batch
+    tic = time.perf_counter()
+    rets = few_shot_hellaswag.run_batch(
+        arguments,
+        temperature=0,
+        num_threads=64,
+        progress_bar=True,
+        generator_style=True,
+    )
+    preds_gen = []
+    for i, ret in enumerate(rets):
+        preds_gen.append(choices[i].index(ret["answer"]))
+    latency_gen = time.perf_counter() - tic
+
+    # Compute accuracy
+    accuracy_gen = np.mean(np.array(preds_gen) == np.array(labels))
+    print(f"{accuracy=}, {accuracy_gen=} {latency=:.2f}s {latency_gen=:.2f}s")
+    assert np.abs(accuracy_gen - accuracy) < 0.1
+    # No latency assert: the 2nd run hits the radix cache the 1st filled.
+
+    return accuracy, latency

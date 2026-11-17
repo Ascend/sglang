@@ -6,7 +6,7 @@ from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_235B_A22B_W8A8_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval as run_gsm8k
-from sglang.test.run_eval import run_eval
+from sglang.test.sgl_eval_utils import run_sgl_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -53,6 +53,12 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
                 "modelslim",
                 "--mem-fraction-static",
                 "0.75",
+                # Cold-cache CI runs hit aclrtMallocHost 207001 (host OOM) at the
+                # first prefill request: the ~235GB safetensors page cache built
+                # during the weight load leaves too little reclaimable RAM for
+                # the pinned allocations. Dropping the shard page cache right
+                # after load keeps host RAM available for real requests.
+                "--weight-loader-drop-cache-after-load",
             ],
             env={
                 "SGLANG_ENABLE_JIT_DEEPGEMM": "0",
@@ -77,7 +83,7 @@ class TestDeepEpAutoQwen3235B(CustomTestCase):
             num_threads=32,
         )
 
-        metrics = run_eval(args)
+        metrics = run_sgl_eval(args)
         self.assertGreaterEqual(metrics["score"], 0.5)
 
     def test_gsm8k(self):

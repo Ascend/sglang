@@ -8,6 +8,7 @@ from sglang.test.ascend.test_ascend_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
+from sglang.test.sgl_eval_utils import run_sgl_eval
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -114,7 +115,7 @@ class TestDeepepLowlatencyDeepseekR1(CustomTestCase):
         )
 
         # Execute MMLU evaluation and retrieve performance metrics
-        metrics = run_eval(args)
+        metrics = run_sgl_eval(args)
         # Assertion: Ensure the MMLU score meets the basic performance threshold
         self.assertGreater(metrics["score"], 0.5)
 

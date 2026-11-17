@@ -1,10 +1,12 @@
+import base64
+import io
 import os
 import tempfile
-import threading
 import time
 import unittest
 
 import requests
+from PIL import Image
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
@@ -20,15 +22,21 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=900, suite="full-1-npu-a3", nightly=True)
 
-# Minimal valid 8x8 white JPEG base64 for testing (JPEG minimum block size is 8x8)
-_BASE64_WHITE_JPEG = (
-    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a"
-    "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAAIAAgBAREA/8QAHwAAAQUBAQEB"
-    "AQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1Fh"
-    "ByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZ"
-    "WmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXG"
-    "x8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APv6/9k="
-)
+
+def _white_jpeg_base64(size: int = 256) -> str:
+    """Return a solid white JPEG as base64.
+
+    The image must be comfortably above the Qwen2.5-VL min_pixels (56x56).
+    With a tiny 8x8 JPEG the processor upscales it and the 3B model answers
+    "Blue" even though every pixel is white (verified with Transformers on
+    CPU as well), which makes the color assertions below flaky.
+    """
+    buf = io.BytesIO()
+    Image.new("RGB", (size, size), "white").save(buf, format="JPEG", quality=95)
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+_WHITE_JPEG_BASE64 = _white_jpeg_base64()
 
 
 class TestMmProcessorIoWorkerNum(CustomTestCase):
@@ -43,42 +51,34 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.process = None
         cls.stderr_lines = []
 
-    @classmethod
-    def tearDownClass(cls):
-        if cls.process:
-            kill_process_tree(cls.process.pid)
-
     def setUp(self):
+        self.process = None
         self._stderr_file = None
         self._stderr_fh = None
-        self.reader_thread = None
 
     def tearDown(self):
+        # Always kill the server here: a test that fails before its explicit
+        # _stop_server() call would otherwise leak the process and keep the
+        # shared port busy for every following test.
+        self._stop_server()
         self._cleanup_stderr()
 
     def _cleanup_stderr(self):
-        """Close stderr file handle, join reader thread, unlink temp file."""
-        if self.reader_thread is not None:
-            self.reader_thread.join(timeout=5)
+        """Close stderr file handle and unlink the temp file."""
         if self._stderr_fh is not None:
             try:
                 self._stderr_fh.close()
             except OSError:
                 pass
+            self._stderr_fh = None
         if self._stderr_file is not None:
             try:
                 os.unlink(self._stderr_file)
             except OSError:
                 pass
-
-    def _read_stderr(self):
-        """Background thread: read stderr lines into stderr_lines."""
-        with open(self._stderr_file, "r") as f:
-            for line in f:
-                self.stderr_lines.append(line)
+            self._stderr_file = None
 
     def _launch_server(self, other_args, env=None):
         """Launch server with stderr capture. Stores process in self.process."""
@@ -99,15 +99,26 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         )
 
         self.stderr_lines.clear()
-        self.reader_thread = threading.Thread(target=self._read_stderr, daemon=True)
-        self.reader_thread.start()
 
     def _stop_server(self):
-        """Kill server process and collect remaining stderr."""
-        if self.process:
-            time.sleep(2)  # Let logs flush
-            kill_process_tree(self.process.pid)
-            self.process = None
+        """Kill the server (if still running) and read the captured stderr.
+
+        Reading here (instead of from a reader thread started at launch time)
+        is deterministic: such a thread exits at the first EOF and misses the
+        whole log when the server has not written anything yet.
+        """
+        if not self.process:
+            return
+
+        time.sleep(2)  # Let logs flush
+        kill_process_tree(self.process.pid)
+        self.process = None
+
+        time.sleep(0.5)  # Let popen_launch_server drain the closed pipes
+        self.stderr_lines.clear()
+        if self._stderr_file is not None:
+            with open(self._stderr_file) as f:
+                self.stderr_lines.extend(f.readlines())
 
     def _send_image_request(self):
         """Send a base64 image chat request and return the response."""
@@ -122,7 +133,7 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/jpeg;base64,{_BASE64_WHITE_JPEG}"
+                                    "url": f"data:image/jpeg;base64,{_WHITE_JPEG_BASE64}"
                                 },
                             },
                             {
