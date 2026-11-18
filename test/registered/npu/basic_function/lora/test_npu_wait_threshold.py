@@ -111,8 +111,6 @@ class TestLoraDrainWaitThreshold(CustomTestCase):
         self.assertEqual(response3.status_code, 200)
         self.err_log_file.seek(0)
         content = self.err_log_file.read()
-        # Latest product code (upstream sgl-project/sglang) logs this exact
-        # completion message; CI follows the latest image, so assert it strictly.
         self.assertIn("stopped draining", content)
 
 
