@@ -64,6 +64,8 @@ class TestNPUMambaHiCache(CustomTestCase):
             "kernel",
             "--hicache-mem-layout",
             "page_first_direct",
+            "--hybrid-cache-checkpoints-level",
+            "3",
         ]
 
     def _generate(self, token_id: int) -> dict:
