@@ -29,6 +29,7 @@ import os
 import socket
 import time
 import unittest
+import uuid
 
 import requests
 import torch
@@ -66,6 +67,14 @@ logger = logging.getLogger(__name__)
 
 mp.set_start_method("spawn", force=True)
 
+def _admin_api_key():
+    return (
+        os.environ.get("SGLANG_ADMIN_API_KEY")
+        or "sglang-test-admin-" + uuid.uuid4().hex[:12]
+    )
+ADMIN_API_KEY = _admin_api_key()
+def _auth_headers():
+    return {"Authorization": f"Bearer {ADMIN_API_KEY}"}
 # ──────────────────────────────────────────────────────────────────────
 # Model & Communication Config
 # ──────────────────────────────────────────────────────────────────────
@@ -100,7 +109,9 @@ def _get_decode_logprob_signature(base_url, *, max_new_tokens=16):
         "return_logprob": True,
     }
     t0 = time.perf_counter()
-    resp = requests.post(f"{base_url}/generate", json=payload, timeout=120)
+    resp = requests.post(
+        f"{base_url}/generate", json=payload, headers=_auth_headers(), timeout=120
+    )
     resp.raise_for_status()
     elapsed = time.perf_counter() - t0
     ret = resp.json()
@@ -395,6 +406,7 @@ def _inference_process(
     ]
     if tp_size == 1:
         server_args.append("--disable-cuda-graph")
+    server_args+= ["--admin-api-key", ADMIN_API_KEY]
 
     base_url = DEFAULT_URL_FOR_TEST
 
@@ -444,9 +456,12 @@ def _inference_process(
 
     def _do_update(label):
         """Call /update_weights_from_distributed (wrapped in a weight-update session)."""
-        resp = requests.post(f"{base_url}/begin_weight_update", json={}, timeout=60)
-        assert resp.json()["success"], (
-            f"begin_weight_update [{label}] failed: {resp.json()}"
+        resp = requests.post(
+            f"{base_url}/begin_weight_update", json={}, headers=_auth_headers(), timeout=60
+        )
+        assert resp.status_code == 200 and resp.json().get("success"), (
+            f"begin_weight_update [{label}] failed: "
+            f"HTTP {resp.status_code} {resp.text}"
         )
         t0 = time.perf_counter()
         payload = {
@@ -461,15 +476,19 @@ def _inference_process(
         resp = requests.post(
             f"{base_url}/update_weights_from_distributed",
             json=payload,
+            headers=_auth_headers(),
             timeout=600,
         )
         elapsed = time.perf_counter() - t0
-        assert resp.json()["success"], (
-            f"update_weights_from_distributed [{label}] failed: {resp.json()}"
+        assert resp.status_code == 200 and resp.json().get("success"), (
+            f"update_weights_from_distributed [{label}] failed: "
+            f"HTTP {resp.status_code} {resp.text}"
         )
-        resp = requests.post(f"{base_url}/end_weight_update", json={}, timeout=60)
-        assert resp.json()["success"], (
-            f"end_weight_update [{label}] failed: {resp.json()}"
+        resp = requests.post(
+            f"{base_url}/end_weight_update", json={}, headers=_auth_headers(), timeout=60
+        )
+        assert resp.status_code == 200 and resp.json().get("success"), (
+            f"end_weight_update [{label}] failed: HTTP {resp.status_code} {resp.text}"
         )
         logger.info(
             "[inference] update_weights_from_distributed [%s]: OK (%.1fs)",
@@ -504,10 +523,11 @@ def _inference_process(
                 "group_name": GROUP_NAME,
                 "backend": BACKEND,
             },
+            headers=_auth_headers(),
             timeout=60,
         )
-        assert resp.json()["success"], (
-            f"init_weights_update_group failed: {resp.json()}"
+        assert resp.status_code == 200 and resp.json().get("success"), (
+            f"init_weights_update_group failed: HTTP {resp.status_code} {resp.text}"
         )
         logger.info("[inference] init_weights_update_group: OK")
 
@@ -609,6 +629,7 @@ def _inference_process(
             resp = requests.post(
                 f"{base_url}/destroy_weights_update_group",
                 json={"group_name": GROUP_NAME},
+                headers=_auth_headers(),
                 timeout=30,
             )
             logger.info(
