@@ -78,6 +78,7 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
     libxxhash-dev \
     libcli11-dev \
     libibverbs-dev \
+    git-lfs \
     && rm -rf /var/cache/apt/* \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates \
@@ -86,6 +87,9 @@ RUN apt-get update -y && apt upgrade -y && apt-get install -y \
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
+
+
+RUN git lfs install --system
 
 ### Install MemFabric and MemCache
 RUN ${PIP_INSTALL} memfabric-hybrid==1.3.1
