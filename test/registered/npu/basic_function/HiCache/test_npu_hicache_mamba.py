@@ -64,6 +64,7 @@ class TestNPUMambaHiCache(CustomTestCase):
             "kernel",
             "--hicache-mem-layout",
             "page_first_direct",
+            # HiCache default cache policy was updated: the previous level 2 is now level 3.
             "--hybrid-cache-checkpoints-level",
             "3",
         ]
