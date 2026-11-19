@@ -2,14 +2,11 @@
 Usage:
 python3 -m unittest test_npu_session_control.TestNPUSessionControl.test_session_control
 python3 -m unittest test_npu_session_control.TestNPUSessionControl.test_session_control_with_branching
-python3 -m unittest test_npu_session_control.TestNPUSessionControl.test_session_control_backtrack_with_abort
 """
 
-import asyncio
-import json
 import unittest
+import uuid
 
-import aiohttp
 import requests
 
 from sglang.srt.utils import kill_process_tree
@@ -30,10 +27,6 @@ from sglang.test.test_utils import (
 register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
-def remove_prefix(text: str, prefix: str) -> str:
-    return text[len(prefix) :] if text.startswith(prefix) else text
-
-
 class TestNPUSessionControl(CustomTestCase):
     @classmethod
     def setUpClass(cls):
@@ -46,7 +39,8 @@ class TestNPUSessionControl(CustomTestCase):
             other_args=[
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--cuda-graph-backend-prefill=disabled",
             ],
         )
@@ -97,7 +91,6 @@ class TestNPUSessionControl(CustomTestCase):
                         "id": session_id,
                         "rid": rid,
                         "offset": -1,
-                        "replace": True,
                     },
                     "sampling_params": {
                         "temperature": 0,
@@ -131,7 +124,6 @@ class TestNPUSessionControl(CustomTestCase):
                     "id": session_id,
                     "rid": rid,
                     "offset": -1,
-                    "replace": True,
                 },
                 "sampling_params": {
                     "temperature": 0,
@@ -155,7 +147,6 @@ class TestNPUSessionControl(CustomTestCase):
                     "id": session_id,
                     "rid": first_rid,
                     "offset": -1,
-                    "replace": True,
                 },
                 "sampling_params": {
                     "temperature": 0,
@@ -175,14 +166,36 @@ class TestNPUSessionControl(CustomTestCase):
             ]
         )
 
-        # query with a non-existing rid (the last one should be disappeared because of backtrack), should see abort
+        # query with a non-existing rid, should see abort
         ret = requests.post(
             self.base_url + "/generate",
             json={
                 "input_ids": chunks_ids[-1],
                 "session_params": {
                     "id": session_id,
-                    "rid": rid,
+                    "rid": uuid.uuid4().hex,
+                    "offset": -1,
+                },
+                "sampling_params": {
+                    "temperature": 0,
+                    "max_new_tokens": gen_len,
+                    "no_stop_trim": True,
+                    "skip_special_tokens": False,
+                },
+                "return_logprob": True,
+            },
+        )
+        self.assertNotEqual(ret.status_code, 200)
+
+        # query with replace, which is not supported, should see abort
+
+        ret = requests.post(
+            self.base_url + "/generate",
+            json={
+                "input_ids": chunks_ids[-1],
+                "session_params": {
+                    "id": session_id,
+                    "rid": first_rid,
                     "offset": -1,
                     "replace": True,
                 },
@@ -192,7 +205,6 @@ class TestNPUSessionControl(CustomTestCase):
                     "no_stop_trim": True,
                     "skip_special_tokens": False,
                 },
-                "return_logprob": True,
             },
         )
         self.assertNotEqual(ret.status_code, 200)
@@ -212,7 +224,6 @@ class TestNPUSessionControl(CustomTestCase):
                     "id": session_id,
                     "rid": first_rid,
                     "offset": -1,
-                    "replace": True,
                 },
                 "sampling_params": {
                     "temperature": 0,
@@ -301,142 +312,6 @@ class TestNPUSessionControl(CustomTestCase):
         for a, b in zip(logprobs_from_session, logprobs_normal):
             assert abs(a - b) <= 0.15, f"logprobs {a} and {b} differ by more than 0.15"
 
-    async def async_generate(self, payload):
-        url = self.base_url + "/generate"
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=url, json=payload) as response:
-                assert response.status == 200
-                async for chunk_bytes in response.content:
-                    chunk_bytes = chunk_bytes.strip()
-                    if not chunk_bytes:
-                        continue
-                    chunk = remove_prefix(chunk_bytes.decode("utf-8"), "data: ")
-                    if chunk == "[DONE]":
-                        yield "", None, ""
-                    else:
-                        data = json.loads(chunk)
-                        finish_reason = (
-                            data["meta_info"]["finish_reason"]["type"]
-                            if data["meta_info"]["finish_reason"]
-                            else ""
-                        )
-                        yield data["text"], data["meta_info"]["id"], finish_reason
-
-    async def run_session_control_backtrack_with_abort(self, replace):
-        chunks = [
-            "Let me tell you something about France.",
-            "The capital of France is",
-        ]
-        tokenizer = get_tokenizer(self.model)
-        chunks_ids = [tokenizer.encode(x) for x in chunks]
-        for i in range(1, len(chunks_ids)):
-            if chunks_ids[i][0] == tokenizer.bos_token_id:
-                chunks_ids[i] = chunks_ids[i][1:]
-
-        # 1. using session control
-        requests.post(self.base_url + "/flush_cache")
-        session_id = requests.post(
-            self.base_url + "/open_session",
-            json={"capacity_of_str_len": 1000},
-        ).json()
-        rid = None
-
-        payload = {
-            "input_ids": chunks_ids[0],
-            "session_params": {
-                "id": session_id,
-                "rid": rid,
-                "offset": -1,
-                "replace": True,
-            },
-            "sampling_params": {
-                "temperature": 0,
-                "max_new_tokens": 100,
-                "no_stop_trim": True,
-                "skip_special_tokens": False,
-                "ignore_eos": True,
-            },
-            "stream": True,
-        }
-        gen_so_far = ""
-        finish_reason = ""
-        second_output = ""
-        async for chunk, rid, finish_reason_chunk in self.async_generate(payload):
-            gen_so_far += chunk
-            if finish_reason == "":
-                finish_reason = finish_reason_chunk
-            if len(gen_so_far) > 50 and second_output == "":
-                payload2 = {
-                    "input_ids": chunks_ids[1],
-                    "session_params": {
-                        "id": session_id,
-                        "rid": rid,
-                        "offset": 50,
-                        "replace": replace,
-                    },
-                    "sampling_params": {
-                        "temperature": 0,
-                        "max_new_tokens": 32,
-                        "no_stop_trim": True,
-                        "skip_special_tokens": False,
-                    },
-                    "stream": False,
-                    "stream_output": True,
-                }
-                response = requests.post(
-                    url=self.base_url + "/generate", json=payload2
-                ).json()
-                second_output = response["text"]
-        if replace:
-            assert finish_reason == "abort"
-        print("first request output:")
-        print(gen_so_far)
-        print("second request output:")
-        print(second_output)
-
-        # close the session
-        ret = requests.post(
-            self.base_url + "/close_session",
-            json={"session_id": session_id},
-        )
-        assert ret.status_code == 200
-
-        if not replace:
-            assert response["meta_info"]["finish_reason"]["type"] == "abort"
-        else:
-            # 2. not using session control
-            requests.post(self.base_url + "/flush_cache")
-            output_ids = tokenizer.encode(gen_so_far)
-            if output_ids[0] == tokenizer.bos_token_id:
-                output_ids = output_ids[1:]
-            input_ids = chunks_ids[0] + output_ids
-            input_ids = input_ids[:50] + chunks_ids[1]
-            payload = {
-                "input_ids": input_ids,
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 32,
-                    "no_stop_trim": True,
-                    "skip_special_tokens": False,
-                },
-                "stream": False,
-                "stream_output": True,
-            }
-            response = requests.post(
-                url=self.base_url + "/generate", json=payload
-            ).json()
-            output_no_session = response["text"]
-            print("second request output without session:")
-            print(output_no_session)
-            assert second_output == output_no_session, (
-                f"second_output: {second_output}, output_no_session: {output_no_session}"
-            )
-
-    @unittest.skip("broken")
-    def test_session_control_backtrack_with_abort(self):
-        asyncio.run(self.run_session_control_backtrack_with_abort(replace=True))
-        asyncio.run(self.run_session_control_backtrack_with_abort(replace=False))
-
     def run_session_control_with_branching(
         self, root_prompt, chunks_per_step, gen_len=16
     ):
@@ -459,8 +334,7 @@ class TestNPUSessionControl(CustomTestCase):
                 "session_params": {
                     "id": session_id,
                     "rid": None,
-                    "offset": -1,
-                    "replace": True,
+                    "offset": 0,
                 },
                 "sampling_params": {
                     "temperature": 0,
@@ -473,8 +347,8 @@ class TestNPUSessionControl(CustomTestCase):
         rid_per_branch = [response["meta_info"]["id"]] * len(chunks_per_step[0])
         outputs_from_session.append(response["text"])
 
+        # send the prompts in branches
         for chunks_for_branches in chunks_per_step:
-            is_first_step = chunks_for_branches == chunks_per_step[0]
             for j, chunk in enumerate(chunks_for_branches):
                 response = requests.post(
                     self.base_url + "/generate",
@@ -483,8 +357,7 @@ class TestNPUSessionControl(CustomTestCase):
                         "session_params": {
                             "id": session_id,
                             "rid": rid_per_branch[j],
-                            "offset": -1,
-                            "replace": False if is_first_step else True,
+                            "offset": 0,
                         },
                         "sampling_params": {
                             "temperature": 0,
@@ -549,11 +422,8 @@ class TestNPUSessionControl(CustomTestCase):
         print(outputs_from_session)
         print("====== outputs from normal queries: =======")
         print(outputs_normal)
-        self.assertTrue(len(outputs_from_session) > 0)
-        self.assertEqual(
-            len(outputs_from_session),
-            len(outputs_normal),
-            f"outputs_from_session: {outputs_from_session}, outputs_normal: {outputs_normal}",
+        assert outputs_from_session == outputs_normal, (
+            f"outputs_from_session: {outputs_from_session}, outputs_normal: {outputs_normal}"
         )
 
     def test_session_control_with_branching(self):
