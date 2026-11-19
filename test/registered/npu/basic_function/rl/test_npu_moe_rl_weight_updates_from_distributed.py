@@ -67,12 +67,17 @@ logger = logging.getLogger(__name__)
 
 mp.set_start_method("spawn", force=True)
 
+
 def _admin_api_key():
     return (
         os.environ.get("SGLANG_ADMIN_API_KEY")
         or "sglang-test-admin-" + uuid.uuid4().hex[:12]
     )
+
+
 ADMIN_API_KEY = _admin_api_key()
+
+
 def _auth_headers():
     return {"Authorization": f"Bearer {ADMIN_API_KEY}"}
 # ──────────────────────────────────────────────────────────────────────
@@ -406,7 +411,7 @@ def _inference_process(
     ]
     if tp_size == 1:
         server_args.append("--disable-cuda-graph")
-    server_args+= ["--admin-api-key", ADMIN_API_KEY]
+    server_args += ["--admin-api-key", ADMIN_API_KEY]
 
     base_url = DEFAULT_URL_FOR_TEST
 
@@ -457,11 +462,13 @@ def _inference_process(
     def _do_update(label):
         """Call /update_weights_from_distributed (wrapped in a weight-update session)."""
         resp = requests.post(
-            f"{base_url}/begin_weight_update", json={}, headers=_auth_headers(), timeout=60
+            f"{base_url}/begin_weight_update",
+            json={},
+            headers=_auth_headers(),
+            timeout=60,
         )
         assert resp.status_code == 200 and resp.json().get("success"), (
-            f"begin_weight_update [{label}] failed: "
-            f"HTTP {resp.status_code} {resp.text}"
+            f"begin_weight_update [{label}] failed: HTTP {resp.status_code} {resp.text}"
         )
         t0 = time.perf_counter()
         payload = {
@@ -485,7 +492,10 @@ def _inference_process(
             f"HTTP {resp.status_code} {resp.text}"
         )
         resp = requests.post(
-            f"{base_url}/end_weight_update", json={}, headers=_auth_headers(), timeout=60
+            f"{base_url}/end_weight_update",
+            json={},
+            headers=_auth_headers(),
+            timeout=60,
         )
         assert resp.status_code == 200 and resp.json().get("success"), (
             f"end_weight_update [{label}] failed: HTTP {resp.status_code} {resp.text}"
