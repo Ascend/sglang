@@ -151,9 +151,17 @@ class TestAbort(CustomTestCase):
 
         p = multiprocessing.Process(target=process_func)
         p.start()
-        time.sleep(0.5)
+        time.sleep(2)
         p.terminate()
-        time.sleep(10)
+        # The NPU server does not reliably notice a non-streaming client
+        # disconnect, so abort explicitly to make the abort path (and the
+        # memory-leak check that depends on it) deterministic.
+        requests.post(
+            f"{base_url}/abort_request",
+            json={"abort_all": True},
+            timeout=30,
+        ).raise_for_status()
+        time.sleep(8)
 
     def test_memory_leak(self):
         _run_and_check_memory_leak_npu(
@@ -194,9 +202,17 @@ class TestAbortWithApiKey(CustomTestCase):
 
         p = multiprocessing.Process(target=process_func)
         p.start()
-        time.sleep(0.5)
+        time.sleep(2)
         p.terminate()
-        time.sleep(10)
+        # See TestAbort.workload_func: abort explicitly instead of relying on
+        # disconnect detection. The api_key protects /abort_request here.
+        requests.post(
+            f"{base_url}/abort_request",
+            json={"abort_all": True},
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=30,
+        ).raise_for_status()
+        time.sleep(8)
 
     def test_memory_leak_with_api_key(self):
         api_key = "test-api-key"

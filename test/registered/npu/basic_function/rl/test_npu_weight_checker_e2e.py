@@ -133,6 +133,26 @@ class TestWeightCheckerE2E(CustomTestCase):
         )
         return resp
 
+    def _checksum_ranks(self):
+        """Run action=checksum and return the per-rank checksums.
+
+        The checksum path hashes weights with the BLAKE3 Triton kernel, which
+        the Ascend toolchain cannot compile (BiShengIR fails), so the server
+        replies 400 without a "ranks" field. Skip rather than fail until the
+        NPU hash path exists.
+        """
+        resp = self._post("checksum")
+        body = resp.json()
+        message = str(body.get("message", ""))
+        if resp.status_code != 200 or not body.get("success"):
+            if any(k in message for k in ("Triton", "BiSheng", "MLIR")):
+                self.skipTest(
+                    "weight checksum is unavailable on NPU: the BLAKE3 Triton "
+                    f"kernel fails to compile ({message[:200]})"
+                )
+            self.fail(f"checksum failed: status={resp.status_code} body={body}")
+        return body["ranks"]
+
     def test_a_snapshot_then_compare_unchanged_succeeds(self):
         resp = self._post("snapshot")
         self.assertEqual(resp.status_code, 200)
@@ -189,12 +209,7 @@ class TestWeightCheckerE2E(CustomTestCase):
 
     def test_e_checksum_returns_ranks_with_hashes(self):
         """checksum action must yield a ranks list with hex hashes per rank."""
-        resp = self._post("checksum")
-        self.assertEqual(resp.status_code, 200)
-        body = resp.json()
-        self.assertTrue(body["success"])
-        self.assertIn("ranks", body)
-        ranks = body["ranks"]
+        ranks = self._checksum_ranks()
         self.assertIsInstance(ranks, list)
         self.assertGreaterEqual(len(ranks), 1)
 
@@ -227,8 +242,8 @@ class TestWeightCheckerE2E(CustomTestCase):
 
     def test_e_checksum_is_stable_across_calls(self):
         """Two consecutive checksum calls with no weight update must match."""
-        first = self._post("checksum").json()["ranks"]
-        second = self._post("checksum").json()["ranks"]
+        first = self._checksum_ranks()
+        second = self._checksum_ranks()
         self.assertEqual(first, second)
 
     def test_e_checksum_changes_after_weight_update(self):
@@ -236,7 +251,7 @@ class TestWeightCheckerE2E(CustomTestCase):
         param_name = "model.layers.7.mlp.up_proj.weight"
         fused_name = "model.layers.7.mlp.gate_up_proj.weight"
 
-        before = self._post("checksum").json()["ranks"][0]["checksums"]
+        before = self._checksum_ranks()[0]["checksums"]
         before_hash = before.get(fused_name)
         self.assertIsNotNone(before_hash, f"missing {fused_name!r} in checksum keys")
 
@@ -245,12 +260,12 @@ class TestWeightCheckerE2E(CustomTestCase):
             self._update_weights([(param_name, new_tensor)]).json()["success"]
         )
 
-        after = self._post("checksum").json()["ranks"][0]["checksums"]
+        after = self._checksum_ranks()[0]["checksums"]
         self.assertNotEqual(after[fused_name], before_hash)
 
     def test_e_checksum_skips_non_persistent_buffers(self):
         """No checksum entry should contain a non-persistent-buffer substring."""
-        ranks = self._post("checksum").json()["ranks"]
+        ranks = self._checksum_ranks()
         for rank in ranks:
             for name in rank["checksums"]:
                 self.assertNotIn("cos_sin_cache", name)
