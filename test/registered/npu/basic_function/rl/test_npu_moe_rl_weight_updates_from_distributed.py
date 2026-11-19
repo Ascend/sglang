@@ -80,6 +80,8 @@ ADMIN_API_KEY = _admin_api_key()
 
 def _auth_headers():
     return {"Authorization": f"Bearer {ADMIN_API_KEY}"}
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Model & Communication Config
 # ──────────────────────────────────────────────────────────────────────
