@@ -8,7 +8,7 @@ from typing import Dict
 
 import requests
 
-from sglang.bench_serving import get_tokenizer
+from sglang.benchmark.serving import get_tokenizer
 from sglang.test.ascend.test_ascend_utils import QWEN3_32B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.few_shot_gsm8k import run_eval
@@ -80,7 +80,7 @@ class DisaggregationHiCacheBase(PDDisaggregationServerBase):
             **os.environ,
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:26666",
-            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
         }
         cls.process_prefill = popen_launch_pd_server(
             cls.model,
@@ -159,7 +159,7 @@ class TestDisaggregationPrefillWithHiCache(DisaggregationHiCacheBase):
             **os.environ,
             "SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR": cls.temp_dir,
             "ASCEND_MF_STORE_URL": "tcp://127.0.0.1:26666",
-            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+            "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
         }
         cls.process_decode = popen_launch_pd_server(
             cls.model,

@@ -24,7 +24,7 @@ from sglang.test.server_fixtures.streaming_session_fixture import (
     StreamingSessionServerBase,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3-Verify", nightly=True)
+register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
 
 
 SWA_MODEL = GEMMA_3_4B_IT_WEIGHTS_PATH

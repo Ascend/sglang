@@ -18,7 +18,7 @@ class TestDeepEpDeepseekV32(GSM8KAscendMixin, TestMMLU, CustomTestCase):
     [Test Target] --moe-a2a-backend deepep;--deepep-mode
     """
 
-    # The mixin sets __test__ = False; opt this real test class back in.
+    # opt-in: the TestMMLU mixin sets __test__ = False and pytest inherits it
     __test__ = True
 
     model = DEEPSEEK_V3_2_W8A8_WEIGHTS_PATH

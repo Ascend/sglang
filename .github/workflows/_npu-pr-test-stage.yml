@@ -245,6 +245,10 @@ jobs:
             rm -rf ${sglang_pkg_path}/sglang/test/kits
             cp -r $(pwd)/python/sglang/test/kits ${sglang_pkg_path}/sglang/test/
             cp $(pwd)/python/sglang/test/test_programs.py ${sglang_pkg_path}/sglang/test/test_programs.py
+            # Version-match test_utils with the branch: it carries the NPU
+            # 1200s launch-timeout default; the preinstalled 600s copy would
+            # silently override it.
+            cp $(pwd)/python/sglang/test/test_utils.py ${sglang_pkg_path}/sglang/test/test_utils.py
 
             pip install sentence_transformers zss "wandb>=0.16.0" tenacity==8.3.0 loguru openpyxl latex2sympy2 zstandard transformers-stream-generator tqdm-multiprocess pycocoevalcap
             pip install yt-dlp sentencepiece==0.1.99 nltk av ftfy sqlitedict==2.1.0 "sacrebleu>=1.5.0" pytablewriter "peft>=0.2.0" "accelerate>=0.29.1"
@@ -255,11 +259,6 @@ jobs:
             pip install mindstudio-probe --pre
             pip install "antlr4-python3-runtime==4.9.3" --force-reinstall --no-deps
             pip install "uvicorn[standard]"
-            # openai_harmony is a hard dependency of srt/entrypoints/openai/
-            # serving_responses.py. When the image ships a sglang build without
-            # it, OpenAIServingResponses fails to import, the /v1/responses
-            # handler is left uninitialized and answers 500 (KeyError:
-            # 'openai_serving_responses') instead of a real status code.
             pip install "openai==2.8.0" "openai-harmony==0.0.4"
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh

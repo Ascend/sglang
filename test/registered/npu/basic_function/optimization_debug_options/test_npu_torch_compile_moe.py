@@ -15,7 +15,12 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(
+    est_time=400,
+    suite="full-1-npu-a3",
+    nightly=True,
+    disabled="Parameter: --enable-torch-compile is no longer supported, test case removed",
+)
 
 
 class TestTorchCompileMoe(CustomTestCase):

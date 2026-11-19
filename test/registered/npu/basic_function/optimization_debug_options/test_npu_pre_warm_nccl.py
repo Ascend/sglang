@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import psutil
 import requests
 
-from sglang.bench_serving import run_benchmark
+from sglang.benchmark.serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.srt.utils.network import wait_port_available
 from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH, logger
