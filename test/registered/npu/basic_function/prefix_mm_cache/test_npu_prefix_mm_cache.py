@@ -1,12 +1,12 @@
+import base64
+import io
 import unittest
 
 import requests
+from PIL import Image
 
 from sglang.test.ascend.disaggregation_utils import TestDisaggregationBase
-from sglang.test.ascend.test_ascend_utils import (
-    INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH,
-    QWEN3_VL_8B_INSTRUCT_WEIGHTS_PATH,
-)
+from sglang.test.ascend.test_ascend_utils import QWEN3_VL_8B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -15,7 +15,23 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=400, suite="full-2-npu-a3", nightly=True)
 
-image_url = INVOICE_WITH_BARCODE_LOGO_IMAGES_PATH
+
+def _make_image_data_url(size=512):
+    """Build the input image in memory.
+
+    The kernel-test image does not ship the shared images dataset, so the
+    previous file-path asset made the encoder reject every request before the
+    prefix cache could be exercised. A deterministic in-memory JPEG keeps the
+    case self-contained while still sending the same bytes on both requests.
+    """
+    buffer = io.BytesIO()
+    Image.new("RGB", (size, size), "white").save(buffer, format="JPEG", quality=95)
+    return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode(
+        "ascii"
+    )
+
+
+image_url = _make_image_data_url()
 
 
 class TestPrefixMmCache(TestDisaggregationBase):
