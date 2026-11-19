@@ -29,14 +29,24 @@ register_npu_ci(est_time=300, suite="full-1-npu-a3", nightly=True)
 os.environ["SGLANG_MAMBA_SSM_DTYPE"] = "bfloat16"
 
 PAGE_TOKENS = 128
+# A 129-token prompt (one page + 1) reuses exactly one 128-token page, leaving
+# a single token to recompute. The shorter suffix keeps the cache-hit path
+# numerically close to the full prefill on every runner; a ~180-token prompt
+# leaves ~52 tokens to recompute and its tail logprobs vary by runner.
+LONG_PROMPT_TOKENS = PAGE_TOKENS + 1
+LONG_PROMPT_FILLER = " The quick brown fox jumps over the lazy dog."
 LOGPROB_TOLERANCE = 0.3
 
 
 class TestLoRARadixCache(CustomTestCase):
     @staticmethod
     def _generate(engine, prompt, adaptor, *, token_ids_logprob=None):
+        # Token ids must go through `input_ids`; `prompt` is text.
+        prompt_kwargs = (
+            {"input_ids": prompt} if isinstance(prompt, list) else {"prompt": prompt}
+        )
         return engine.generate(
-            prompt,
+            **prompt_kwargs,
             lora_path=adaptor.name,
             sampling_params={"max_new_tokens": 1, "temperature": 0},
             return_logprob=True,
@@ -45,14 +55,21 @@ class TestLoRARadixCache(CustomTestCase):
             token_ids_logprob=token_ids_logprob,
         )
 
+    def _build_long_input_ids(self, tokenizer, prompt):
+        prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+        filler_ids = tokenizer.encode(LONG_PROMPT_FILLER, add_special_tokens=False)
+        self.assertTrue(prompt_ids)
+        self.assertTrue(filler_ids)
+        input_ids = list(prompt_ids)
+        while len(input_ids) < LONG_PROMPT_TOKENS:
+            input_ids.extend(filler_ids)
+        return input_ids[:LONG_PROMPT_TOKENS]
+
     def test_lora_radix_cache(self):
         model_case = CI_MULTI_LORA_MODELS[0]
         adaptors = model_case.adaptors
         self.assertGreaterEqual(len(adaptors), 2)
         prompts = list(PROMPTS)
-        # About 180 tokens: a repeated request reuses exactly one 128-token page.
-        long_prefix = " ".join([PROMPTS[0]] * 20)
-        prompts.append(long_prefix)
         torch_dtype = torch.bfloat16
         lora_paths = [adaptor.name for adaptor in adaptors]
         # Keep the CI BF16 setup and each model case's existing tolerance unchanged.
@@ -75,6 +92,9 @@ class TestLoRARadixCache(CustomTestCase):
         with SRTRunner(
             model_case.base, disable_radix_cache=True, **runner_args
         ) as runner:
+            long_input_ids = self._build_long_input_ids(runner.tokenizer, PROMPTS[0])
+            self.assertEqual(len(long_input_ids), LONG_PROMPT_TOKENS)
+            prompts.append(long_input_ids)
             off_reference = {}
             for prompt_index, prompt in enumerate(prompts):
                 for adaptor_index, adaptor in enumerate(adaptors[:2]):

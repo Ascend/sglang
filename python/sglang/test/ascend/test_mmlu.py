@@ -6,9 +6,10 @@ from sglang.test.sgl_eval_utils import run_sgl_eval
 
 
 class TestMMLU:
-    # Plain mixin, not a test case. Without this, pytest collects it from every
-    # module that imports it (python_classes = Test*), instantiating it without
-    # a server and failing with AttributeError.
+    # NB: pytest collects every module attribute matching Test* — including
+    # this mixin imported into a test file's namespace. A bare instance has
+    # no base_url/model/fail, so each importing file gains a spurious failing
+    # test. Opt the mixin out explicitly; real host classes set __test__ = True.
     __test__ = False
 
     mmlu_num_examples = 128

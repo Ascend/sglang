@@ -81,6 +81,61 @@ def _download(cache, name, expected):
     return path
 
 
+# torch>=2.13 hard-removed ATen named tensors (pytorch/pytorch#173895), so the
+# pinned 2.0.0 source package still calls them and no longer compiles. These
+# statements only propagate dimension names -- metadata the newer torch does
+# not have -- so dropping them is behavior-preserving for unnamed input, which
+# is what every caller passes. Remove this once the artifact is rebuilt.
+_NAMED_TENSOR_STATEMENTS = {
+    "npu_matmul_batch_invariant.cpp": (
+        "at::NoNamesGuard guard;",
+        "auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);",
+        "at::namedinference::propagate_names_if_nonempty(result, maybe_outnames);",
+    ),
+    "npu_mm_batch_invariant.cpp": (
+        "auto names = at::namedinference::compute_matmul_outnames(self, mat2);",
+        "at::namedinference::propagate_names_if_nonempty(result, names);",
+    ),
+}
+
+_NAMED_TENSOR_MARKERS = ("at::NoNamesGuard", "at::namedinference::")
+
+
+def strip_removed_named_tensor_api(source):
+    """Drop named-tensor statements that torch>=2.13 no longer provides."""
+    import torch
+
+    version = torch.__version__.split("+")[0].split(".")
+    if tuple(int(part) for part in version[:2]) < (2, 13):
+        return
+
+    for filename, statements in _NAMED_TENSOR_STATEMENTS.items():
+        cpp = source / "csrc" / filename
+        lines = cpp.read_text(encoding="utf-8").splitlines(keepends=True)
+        kept = [ln for ln in lines if ln.strip() not in statements]
+        removed = len(lines) - len(kept)
+        if removed:
+            cpp.write_text("".join(kept), encoding="utf-8")
+            print(
+                f"[batch-invariant CI] {filename}: removed {removed} named-tensor line(s)",
+                flush=True,
+            )
+
+    # Fail loudly if the pinned artifact ever carries named-tensor usage we do
+    # not know about: it would break the build in a much noisier way.
+    leftover = [
+        f"{cpp.name}: {ln.strip()}"
+        for cpp in sorted((source / "csrc").glob("*.cpp"))
+        for ln in cpp.read_text(encoding="utf-8").splitlines()
+        if any(marker in ln for marker in _NAMED_TENSOR_MARKERS)
+    ]
+    if leftover:
+        raise RuntimeError(
+            "batch_invariant_ops still uses the ATen named-tensor API removed in "
+            "torch >=2.13; extend _NAMED_TENSOR_STATEMENTS: " + "; ".join(leftover)
+        )
+
+
 def install():
     """Prepare this test process's environment and install missing dependencies."""
     if platform.machine() != "aarch64":
@@ -122,6 +177,7 @@ def install():
             with zipfile.ZipFile(source_package) as archive:
                 archive.extractall(build_dir)
             source = Path(build_dir) / "torch_ops_extension/batch_invariant_ops"
+            strip_removed_named_tensor_api(source)
             build_env = os.environ.copy()
             build_env["USE_NINJA"] = "1"
             # Avoid exhausting smaller CI containers with concurrent C++ compiles.
