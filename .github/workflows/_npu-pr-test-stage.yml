@@ -298,11 +298,6 @@ jobs:
           PYEOF
 
             hf download MMMU/MMMU --repo-type dataset
-            # Pre-seed the mmlu dataset into the same HF cache the Run test step
-            # reads, so sgl-eval's mmlu suite resolves it from cache instead of
-            # pulling data.tar from huggingface.co at test time (the runner's
-            # egress intermittently answers 503).
-            HF_HOME=/hf-cache hf download cais/mmlu --repo-type dataset
             pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-exporter-otlp-proto-grpc opentelemetry-exporter-otlp-proto-http
           fi
 
@@ -313,12 +308,6 @@ jobs:
       - name: Run test
         timeout-minutes: ${{ fromJson(inputs.run_timeout_minutes) }}
         env:
-          HF_HOME: /hf-cache
-          # Datasets/models are pre-seeded in /hf-cache by the Install
-          # dependencies step; loading them offline avoids depending on the
-          # runner's egress to the HF endpoints at test time.
-          HF_HUB_OFFLINE: '1'
-          HF_DATASETS_OFFLINE: '1'
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
           TEST_LOG_DIR: /tmp/test-logs
           NPU_PR_SMOKE: ${{ inputs.is_nightly_pipeline_job == true && 'false' || 'true' }}
