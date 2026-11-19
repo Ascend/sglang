@@ -426,7 +426,7 @@ def run_bench_serving(
         cmd_args = [
             PYTHON_FOR_TEST_TOOL,
             "-m",
-            "sglang.bench_serving",
+            "sglang.benchmark.serving",
             "--host",
             host,
             "--port",
@@ -475,7 +475,7 @@ def run_bench_serving(
         cmd_args = [
             PYTHON_FOR_TEST_TOOL,
             "-m",
-            "sglang.bench_serving",
+            "sglang.benchmark.serving",
             "--host",
             host,
             "--port",
