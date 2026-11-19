@@ -7,6 +7,8 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
     QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
     run_command,
 )
@@ -68,6 +70,8 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
                 cls.expert_distribution_recorder_mode,
                 "--expert-balancedness-report-mode",
                 cls.expert_balancedness_report_mode,
+                "--admin-api-key",
+                ADMIN_API_KEY,
             ],
             env={
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
@@ -90,7 +94,10 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
 
     def test_recorder_mode(self):
         # Start recording
-        requests.post(f"{DEFAULT_URL_FOR_TEST}/start_expert_distribution_record")
+        requests.post(
+            f"{DEFAULT_URL_FOR_TEST}/start_expert_distribution_record",
+            headers=ADMIN_AUTH_HEADERS,
+        )
 
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
@@ -110,10 +117,16 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
         )
 
         # Stop recording
-        requests.post(f"{DEFAULT_URL_FOR_TEST}/stop_expert_distribution_record")
+        requests.post(
+            f"{DEFAULT_URL_FOR_TEST}/stop_expert_distribution_record",
+            headers=ADMIN_AUTH_HEADERS,
+        )
 
         # Export the .pt file
-        requests.post(f"{DEFAULT_URL_FOR_TEST}/dump_expert_distribution_record")
+        requests.post(
+            f"{DEFAULT_URL_FOR_TEST}/dump_expert_distribution_record",
+            headers=ADMIN_AUTH_HEADERS,
+        )
 
         # Check distribution_recorder_files
         distribution_recorder_suffixes = ["*.pt"]

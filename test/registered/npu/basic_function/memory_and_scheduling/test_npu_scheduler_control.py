@@ -11,11 +11,12 @@ import requests
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
     LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.kits.abort_timeout_kit import AbortAllMixin, WaitingTimeoutMixin
-from sglang.test.kits.pause_generation_kit import PauseResumeInPlaceMixin
+from sglang.test.kits.abort_timeout_kit import WaitingTimeoutMixin
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -210,7 +211,24 @@ class TestAbortWithApiKey(CustomTestCase):
         )
 
 
-class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCase):
+class TestSchedulerControl(CustomTestCase):
+    """Duplicate-rid checks plus abort-all / pause-resume coverage.
+
+    The server is started with --admin-api-key because /pause_generation and
+    /continue_generation require the admin key (they return 403 otherwise) and
+    /abort_request requires it once an admin key is configured. The abort/pause
+    bodies are implemented here rather than reusing AbortAllMixin /
+    PauseResumeInPlaceMixin: the kits shipped with the CI image post without an
+    Authorization header, so those calls would be rejected.
+    """
+
+    abort_all_num_requests = 32
+    abort_all_max_new_tokens = 16000
+    abort_all_sleep = 2
+    pause_num_requests = 32
+    pause_max_new_tokens = 512
+    pause_duration = 5
+
     @classmethod
     def setUpClass(cls):
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
@@ -225,6 +243,8 @@ class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCas
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
+                "--admin-api-key",
+                ADMIN_API_KEY,
             ],
         )
 
@@ -311,6 +331,128 @@ class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCas
         resp = self._generate_with_rid("after-dup-health")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("text", resp.json())
+
+    def test_abort_all(self):
+        num_requests = self.abort_all_num_requests
+
+        def run_decode():
+            return requests.post(
+                self.base_url + "/generate",
+                json={
+                    "text": "The capital of France is",
+                    "sampling_params": {
+                        "temperature": 0,
+                        "max_new_tokens": self.abort_all_max_new_tokens,
+                        "ignore_eos": True,
+                    },
+                },
+                timeout=60,
+            )
+
+        with ThreadPoolExecutor(num_requests) as executor:
+            futures = [executor.submit(run_decode) for _ in range(num_requests)]
+
+            time.sleep(self.abort_all_sleep)
+
+            requests.post(
+                self.base_url + "/abort_request",
+                json={"abort_all": True},
+                headers=ADMIN_AUTH_HEADERS,
+                timeout=10,
+            ).raise_for_status()
+
+            for future in as_completed(futures):
+                result = future.result().json()
+                self.assertEqual(result["meta_info"]["finish_reason"]["type"], "abort")
+
+            self.assertIsNone(self.process.poll())
+
+    def test_pause_resume_in_place(self):
+        num_requests = self.pause_num_requests
+
+        def generate(prompt_id):
+            return requests.post(
+                self.base_url + "/generate",
+                json={
+                    "text": (
+                        f"Question {prompt_id}: Write a short essay "
+                        f"about the number {prompt_id}."
+                    ),
+                    "sampling_params": {
+                        "temperature": 0.8,
+                        "max_new_tokens": self.pause_max_new_tokens,
+                    },
+                },
+                timeout=180,
+            )
+
+        with ThreadPoolExecutor(max_workers=num_requests) as executor:
+            futures = {executor.submit(generate, i): i for i in range(num_requests)}
+
+            time.sleep(1)
+
+            requests.post(
+                self.base_url + "/pause_generation",
+                json={"mode": "in_place"},
+                headers=ADMIN_AUTH_HEADERS,
+                timeout=30,
+            ).raise_for_status()
+
+            time.sleep(0.5)
+            done_before = sum(1 for f in futures if f.done())
+
+            time.sleep(self.pause_duration)
+            done_after = sum(1 for f in futures if f.done())
+
+            self.assertLess(
+                done_before,
+                num_requests,
+                "All requests completed before pause took effect -- "
+                "increase pause_max_new_tokens to make the test meaningful.",
+            )
+            self.assertEqual(
+                done_after - done_before,
+                0,
+                f"{done_after - done_before} requests completed during pause "
+                f"({done_before} before, {done_after} after) -- "
+                f"pause_generation was not respected by the scheduler.",
+            )
+
+            requests.post(
+                self.base_url + "/continue_generation",
+                json={},
+                headers=ADMIN_AUTH_HEADERS,
+                timeout=30,
+            ).raise_for_status()
+
+            completed = 0
+            errors = []
+            for future in as_completed(futures, timeout=180):
+                prompt_id = futures[future]
+                try:
+                    resp = future.result()
+                    if resp.status_code == 200:
+                        body = resp.json()
+                        self.assertIn("text", body)
+                        self.assertGreater(len(body["text"]), 0)
+                        completed += 1
+                    else:
+                        errors.append(f"Request {prompt_id}: status={resp.status_code}")
+                except Exception as e:
+                    errors.append(f"Request {prompt_id}: exception={e}")
+
+        self.assertEqual(
+            completed + len(errors),
+            num_requests,
+            "Some requests did not resolve within the timeout -- likely hung "
+            "during pause.",
+        )
+        self.assertEqual(
+            completed,
+            num_requests,
+            f"Some requests failed: {completed}/{num_requests} succeeded. "
+            f"Errors: {errors}",
+        )
 
 
 class TestAbortAllWithRetraction(CustomTestCase):

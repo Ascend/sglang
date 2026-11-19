@@ -15,7 +15,11 @@ import requests
 import torch
 
 from sglang.srt.utils import MultiprocessingSerializer, kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+    QWEN3_0_6B_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -76,6 +80,8 @@ class TestWeightCheckerE2E(CustomTestCase):
                 "--disable-cuda-graph",
                 "--model-checksum",
                 "Qwen/Qwen3-0.6B",
+                "--admin-api-key",
+                ADMIN_API_KEY,
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
         )
@@ -93,13 +99,21 @@ class TestWeightCheckerE2E(CustomTestCase):
         # slower than snapshot/compare, so allow a generous timeout.
         timeout = 600 if action == "checksum" else 120
         return requests.post(
-            f"{self.url}/weights_checker", json={"action": action}, timeout=timeout
+            f"{self.url}/weights_checker",
+            json={"action": action},
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=timeout,
         )
 
     def _update_weights(
         self, named_tensors: List[Tuple[str, torch.Tensor]]
     ) -> requests.Response:
-        requests.post(f"{self.url}/begin_weight_update", json={}, timeout=120)
+        requests.post(
+            f"{self.url}/begin_weight_update",
+            json={},
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=120,
+        )
         resp = requests.post(
             f"{self.url}/update_weights_from_tensor",
             json={
@@ -108,9 +122,15 @@ class TestWeightCheckerE2E(CustomTestCase):
                 ],
                 "flush_cache": True,
             },
+            headers=ADMIN_AUTH_HEADERS,
             timeout=120,
         )
-        requests.post(f"{self.url}/end_weight_update", json={}, timeout=120)
+        requests.post(
+            f"{self.url}/end_weight_update",
+            json={},
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=120,
+        )
         return resp
 
     def test_a_snapshot_then_compare_unchanged_succeeds(self):

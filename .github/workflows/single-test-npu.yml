@@ -1,5 +1,5 @@
 name: Single Test (NPU)
-# test round 1: <test case description>
+# test round 2: split test cases into one matrix job per case
 
 on:
   pull_request:
@@ -14,11 +14,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  single-node-poc:
-    name: single-node-poc
+  npu-test:
+    name: ${{ matrix.name }}
     runs-on: linux-aarch64-a3-2
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-kernel-test
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: session-control
+            test_case: test/registered/npu/basic_function/sessions/test_npu_session_control.py
+          - name: expert-distribution-recorder-mode
+            test_case: test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_expert_distribution_recorder_mode.py
+          - name: lora-update
+            test_case: test/registered/npu/basic_function/lora/test_npu_lora_update.py
+          - name: rl-pause-resume-loop
+            test_case: test/registered/npu/basic_function/rl/test_npu_rl_pause_resume_loop.py
+          - name: api
+            test_case: test/registered/npu/interface/test_npu_api.py
+          - name: weight-checker-e2e
+            test_case: test/registered/npu/basic_function/rl/test_npu_weight_checker_e2e.py
+          - name: scheduler-control
+            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_scheduler_control.py
+          - name: start-profile
+            test_case: test/registered/npu/basic_function/parameter/test_npu_start_profile.py
+          - name: update-weights-from-disk
+            test_case: test/registered/npu/basic_function/Custom_weight_loader/test_npu_update_weights_from_disk.py
+          - name: rl-pause-resume-tool-call
+            test_case: test/registered/npu/basic_function/rl/test_npu_rl_pause_resume_tool_call.py
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,28 +53,21 @@ jobs:
           npu-smi info
 
       - name: Run test
-        timeout-minutes: 120
         env:
           SGLANG_USE_MODELSCOPE: true
           HF_ENDPOINT: https://hf-mirror.com
           SGLANG_IS_IN_CI: true
+          TEST_CASE: ${{ matrix.test_case }}
         shell: bash
         run: |
           sglang_source_path=$(pwd)
           echo "Source code path: ${sglang_source_path}"
           ln -sf ${sglang_source_path} /root/sglang
 
-          # Test cases - replace with the actual test case path when using
-          test_cases=(
-            "test/registered/npu/basic_function/sessions/test_npu_session_control.py"
-          )
-
-          for test_case in "${test_cases[@]}"; do
-            if [ ! -f "${sglang_source_path}/${test_case}" ]; then
-              echo "The testcase does not exit: ${sglang_source_path}/${test_case}"
-              exit 1
-            fi
-          done
+          if [ ! -f "${sglang_source_path}/${TEST_CASE}" ]; then
+            echo "The testcase does not exit: ${sglang_source_path}/${TEST_CASE}"
+            exit 1
+          fi
 
           # copy required file from our daily cache
           # cp ~/.cache/modelscope/hub/datasets/otavia/ShareGPT_Vicuna_unfiltered/ShareGPT_V3_unfiltered_cleaned_split.json /tmp
@@ -82,12 +100,9 @@ jobs:
           mkdir -p ${log_path}
           echo "Log path: ${log_path}"
 
-          for test_case in "${test_cases[@]}"; do
-            tc_name=$(basename ${test_case} .py)
-            echo "Running test case ${test_case}"
-            python -u ${sglang_source_path}/${test_case}
-            echo "Finished test case ${test_case}"
-          done
+          echo "Running test case ${TEST_CASE}"
+          python -u ${sglang_source_path}/${TEST_CASE}
+          echo "Finished test case ${TEST_CASE}"
 
           plog_path="/root/ascend/log/debug/plog"
           if [ -d "$plog_path" ];then
