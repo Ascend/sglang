@@ -70,6 +70,7 @@ jobs:
             echo "coverage_mode=${{ inputs.coverage_mode }}" >> $GITHUB_OUTPUT
           fi
 
+
   nighly-test-npu:
     needs: [set-image-config]
     name: nightly-test-npu
