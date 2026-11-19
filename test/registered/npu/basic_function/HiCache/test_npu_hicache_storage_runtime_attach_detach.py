@@ -143,19 +143,19 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             wait_for_http_ready(base_url_a, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH)
 
             # No admin header.
-            self.assertEqual(self._get_backend(base_url_a).status_code, 400)
-            self.assertEqual(self._attach_backend(base_url_a, "file").status_code, 400)
-            self.assertEqual(self._detach_backend(base_url_a).status_code, 400)
+            self.assertEqual(self._get_backend(base_url_a).status_code, 403)
+            self.assertEqual(self._attach_backend(base_url_a, "file").status_code, 403)
+            self.assertEqual(self._detach_backend(base_url_a).status_code, 403)
 
             # Even with a Bearer header, endpoints must remain disabled
             # because the server itself was started without --admin-api-key.
             h = self._admin_headers()
-            self.assertEqual(self._get_backend(base_url_a, headers=h).status_code, 400)
+            self.assertEqual(self._get_backend(base_url_a, headers=h).status_code, 403)
             self.assertEqual(
-                self._attach_backend(base_url_a, "file", headers=h).status_code, 400
+                self._attach_backend(base_url_a, "file", headers=h).status_code, 403
             )
             self.assertEqual(
-                self._detach_backend(base_url_a, headers=h).status_code, 400
+                self._detach_backend(base_url_a, headers=h).status_code, 403
             )
         finally:
             kill_process_tree(process_a.pid)
