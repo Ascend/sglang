@@ -125,7 +125,7 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
 
         # ===================== Phase A: no admin-api-key =====================
         # Without --admin-api-key, the storage-backend endpoints must be
-        # disabled (return 400) for ALL verbs.
+        # disabled (return 403) for ALL verbs.
         logging.warning("Phase A: launch server WITHOUT --admin-api-key")
         port_a = find_available_port(20000)
         base_url_a = f"http://127.0.0.1:{port_a}"
