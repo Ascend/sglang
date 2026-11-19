@@ -99,10 +99,8 @@ class TestNPUDeepSeekV4ReturnIndexerTopk(CustomTestCase):
         command = [
             "bash",
             "-c",
-            "[ -f /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash ] && "
-            "source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash; "
-            "[ -f /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash ] && "
-            "source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash; "
+            "source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/bin/set_env.bash || true; "
+            "source /usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_transformer/bin/set_env.bash || true; "
             'exec "$@"',
             "bash",
             *server_command,
