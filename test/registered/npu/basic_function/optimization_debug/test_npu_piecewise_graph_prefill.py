@@ -29,7 +29,8 @@ class TestPiecewiseGraphPrefillCorrectness(GSM8KAscendMixin, CustomTestCase):
         "ascend",
         "--cuda-graph-bs-decode",
         128,
-        "--cuda-graph-backend-prefill=breakable",
+        "--cuda-graph-backend-prefill",
+        "breakable",
         "--cuda-graph-bs-prefill",
         *TOKENS_TO_CAPTURE,
     ]
@@ -45,7 +46,8 @@ class TestPiecewiseGraphPrefillBenchmark(CustomTestCase):
         0.8,
         "--attention-backend",
         "ascend",
-        "--cuda-graph-backend-prefill=breakable",
+        "--cuda-graph-backend-prefill",
+        "breakable",
         "--cuda-graph-bs-prefill",
     ] + TOKENS_TO_CAPTURE
 
