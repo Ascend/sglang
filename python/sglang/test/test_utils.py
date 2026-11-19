@@ -43,6 +43,7 @@ from sglang.srt.utils import (
     get_device,
     is_blackwell,
     is_cuda,
+    is_npu,
     is_xpu,
     kill_process_tree,
     retry,
@@ -258,6 +259,13 @@ if is_h200_system():
 
 if is_in_ci() and is_xpu():
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 1800
+
+if is_npu():
+    # NPU CI: cold-cache MoE weight loads are slow — torch_npu does CPU-side
+    # dtype conversion/layout before the H2D copy (see _load_w13/_load_w2),
+    # and multi-rank loads contend. Observed loads needing >600s on 35B-class
+    # models and gpt-oss, which made the server launch health check time out.
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH = 1200
 
 
 def find_available_port(base_port: int):
