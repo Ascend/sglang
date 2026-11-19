@@ -5,6 +5,8 @@ from sglang.test.ascend.test_ascend_utils import (
     DEEPSEEK_R1_0528_W8A8_WEIGHTS_PATH,
     run_bench_serving,
 )
+
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = "expandable_segments:True"
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
 
@@ -60,7 +62,7 @@ class TestNpuHierarchicalCacheMla(CustomTestCase):
                 "ascend",
                 "--enable-hierarchical-cache",
                 "--hicache-ratio",
-                5,
+                3,
                 "--hicache-write-policy",
                 "write_back",
             ],

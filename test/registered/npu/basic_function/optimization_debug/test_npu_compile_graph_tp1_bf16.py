@@ -46,7 +46,6 @@ class TestAscendTp1Bf16(CustomTestCase):
             "--attention-backend",
             "ascend",
             "--disable-radix-cache",
-            "--enable-torch-compile",
             "--watchdog-timeout",
             30000,
         ]

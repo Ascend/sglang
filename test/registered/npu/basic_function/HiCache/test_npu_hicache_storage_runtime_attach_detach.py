@@ -136,7 +136,7 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             other_args=_common_hicache_args(port_a),
             env={
                 **os.environ,
-                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
             },
         )
         try:
@@ -175,7 +175,7 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             other_args=other_args_b,
             env={
                 **os.environ,
-                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True,pin_memory_expandable_segments:True",
+                "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
             },
         )
         try:
