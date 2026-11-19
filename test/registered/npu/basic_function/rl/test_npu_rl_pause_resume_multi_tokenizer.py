@@ -3,6 +3,7 @@ E2E tests for NPU pause/resume generation — multi-tokenizer worker PauseContin
 """
 
 import logging
+import os
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -68,6 +69,14 @@ class TestNpuMultiTokenizerPauseResume(CustomTestCase):
                 "--admin-api-key",
                 ADMIN_API_KEY,
             ],
+            env={
+                **os.environ,
+                # With --tokenizer-worker-num > 1 the HTTP app is re-imported by
+                # every uvicorn worker. Under the coverage runner that import
+                # exceeds uvicorn's 10s worker healthcheck, so the supervisor
+                # keeps killing and respawning the workers.
+                "SGLANG_UVICORN_WORKER_HEALTHCHECK_TIMEOUT": "180",
+            },
         )
 
     @classmethod

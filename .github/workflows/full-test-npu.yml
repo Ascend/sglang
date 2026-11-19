@@ -106,6 +106,8 @@ jobs:
           # the re-run targets, in coverage mode on the same image the failures
           # were captured on. Gated on the head branch name, so merged future
           # PRs are unaffected; drop this block (and the list file) afterwards.
+          # Re-run revision 2: multi-tokenizer worker healthcheck raised for the
+          # coverage runner (see the test's SGLANG_UVICORN_WORKER_HEALTHCHECK_TIMEOUT).
           if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.head_ref }}" = "fix/cann920-kernel-test-cases" ]; then
             PRECISION_LIST="${GITHUB_WORKSPACE}/scripts/ci/npu/precise-test/cann920-kernel-test-rerun-list.txt"
             n=$(grep -vc '^[[:space:]]*\(#\|$\)' "${PRECISION_LIST}")
