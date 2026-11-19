@@ -2,6 +2,42 @@ ARG CANN_VERSION=9.2.0
 ARG DEVICE_TYPE=950
 ARG OS=ubuntu22.04
 ARG PYTHON_VERSION=py3.12
+ARG SGLANG_TAG=main
+
+FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION AS sgl-router-builder
+
+ARG SGLANG_TAG
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PCRE2_SYS_STATIC=1 \
+    RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:${PATH}
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        git \
+        pkg-config \
+        protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --single-branch \
+        --branch "${SGLANG_TAG}" \
+        https://github.com/sgl-project/sglang.git \
+        /src/sglang \
+    && curl --proto '=https' --tlsv1.2 --retry 3 --retry-delay 2 -sSf \
+        https://sh.rustup.rs \
+        | sh -s -- -y --profile minimal --default-toolchain none \
+    && cd /src/sglang/sgl-router \
+    # Install the toolchain pinned by sgl-router/rust-toolchain.toml.
+    && rustup toolchain install \
+    && cargo build --locked --release --bin sgl-router \
+    && install -Dm755 target/release/sgl-router /out/sgl-router \
+    && /out/sgl-router --help >/dev/null
 
 FROM quay.io/ascend/cann:$CANN_VERSION-$DEVICE_TYPE-$OS-$PYTHON_VERSION
 
@@ -19,8 +55,7 @@ ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG TRITON_AARCH64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/triton-ascend/20261105160244/triton_ascend-3.6.0%2Bdev20261105160244-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_34_aarch64.whl"
 ARG TRITON_X86_64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/triton-ascend/20261105160244/triton_ascend-3.6.0%2Bdev20261105160244-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_34_x86_64.whl"
 
-#ARG SGLANG_TAG=main
-ARG SGLANG_TAG=dsv41-a3-dev-1112
+ARG SGLANG_TAG=main
 
 ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post8
 
@@ -29,6 +64,10 @@ ARG MF_VERSION="1.3.0"
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG TARGETARCH
+
+COPY --from=sgl-router-builder /out/sgl-router /usr/local/bin/sgl-router
+#进行冒烟测试，后面可以删除
+RUN sgl-router --help >/dev/null
 
 WORKDIR /workspace
 
@@ -88,7 +127,6 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-
 RUN git lfs install --system
 
 ### Install MemFabric and MemCache
@@ -128,7 +166,7 @@ RUN ${PIP_INSTALL} pybind11 && \
     fi
 
 #Install SGLang
-RUN git clone https://github.com/HEX1A0A/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
@@ -159,8 +197,6 @@ RUN set -eux; \
     ldconfig; \
     ldconfig -p | grep libmmpa.so
 
-# Install SGL-Kernel-NPU.
-# The unified sgl_kernel_npu wheel already contains custom ops and third-party vendors.
 RUN set -eux; \
     ${PIP_INSTALL} wheel==0.45.1 pybind11 pyyaml decorator scipy attrs psutil; \
     mkdir /tmp/sgl-kernel-npu; \
