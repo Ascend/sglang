@@ -10,7 +10,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -60,6 +64,9 @@ class TestNpuMultiTokenizerPauseResume(CustomTestCase):
                 "--cuda-graph-bs-decode",
                 4,
                 16,
+                # /pause_generation and /continue_generation are ADMIN_FORCE.
+                "--admin-api-key",
+                ADMIN_API_KEY,
             ],
         )
 
@@ -92,6 +99,7 @@ class TestNpuMultiTokenizerPauseResume(CustomTestCase):
         return requests.post(
             self.base_url + "/pause_generation",
             json={"mode": mode},
+            headers=ADMIN_AUTH_HEADERS,
             timeout=30,
         )
 
@@ -99,6 +107,7 @@ class TestNpuMultiTokenizerPauseResume(CustomTestCase):
         return requests.post(
             self.base_url + "/continue_generation",
             json={"torch_empty_cache": torch_empty_cache},
+            headers=ADMIN_AUTH_HEADERS,
             timeout=30,
         )
 

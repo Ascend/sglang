@@ -1,11 +1,12 @@
 import glob
 import os
+import shutil
+import tempfile
 import unittest
 
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import run_command
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -14,7 +15,7 @@ from sglang.test.test_utils import (
     popen_launch_server,
 )
 
-register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
+register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 
 
 class TestDownloadDir(CustomTestCase):
@@ -25,11 +26,15 @@ class TestDownloadDir(CustomTestCase):
     """
 
     model = "Qwen/Qwen2-0.5B-Instruct"
-    download_dir = "./weight"
 
     @classmethod
     def setUpClass(cls):
-        run_command(f"mkdir -p {cls.download_dir}")
+        cls.download_dir = tempfile.mkdtemp(prefix="sglang-download-dir-")
+        # The CI image pre-populates the default ModelScope cache, so a cached
+        # lookup would bypass --download-dir entirely. Point the default cache
+        # at an empty directory: resolution then has to download into
+        # --download-dir, which is what this test verifies.
+        cls.empty_modelscope_cache = tempfile.mkdtemp(prefix="sglang-empty-ms-cache-")
         other_args = [
             "--download-dir",
             cls.download_dir,
@@ -42,12 +47,18 @@ class TestDownloadDir(CustomTestCase):
             DEFAULT_URL_FOR_TEST,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=other_args,
+            env={
+                **os.environ,
+                "SGLANG_USE_MODELSCOPE": "true",
+                "MODELSCOPE_CACHE": cls.empty_modelscope_cache,
+            },
         )
 
     @classmethod
     def tearDownClass(cls):
         kill_process_tree(cls.process.pid)
-        run_command(f"rm -rf {cls.download_dir}")
+        shutil.rmtree(cls.download_dir, ignore_errors=True)
+        shutil.rmtree(cls.empty_modelscope_cache, ignore_errors=True)
 
     def test_download_dir(self):
         response = requests.post(
