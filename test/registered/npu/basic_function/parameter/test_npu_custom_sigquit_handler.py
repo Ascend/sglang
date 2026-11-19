@@ -180,7 +180,10 @@ class TestNpuCustomSigquitHandler(CustomTestCase):
             args=(marker_path, self.model, self._alloc_port()),
         )
         proc.start()
-        proc.join(timeout=120)
+        # Import + Engine startup takes >140s under the CI coverage runner, so
+        # the old 120s join expired before the worker even sent SIGQUIT and the
+        # test failed on a premature None exitcode. Give startup headroom.
+        proc.join(timeout=300)
 
         # Process must have been killed by SIGQUIT (Unix: negated signal number)
         self.assertIsNotNone(proc.exitcode, "Worker process should have terminated")

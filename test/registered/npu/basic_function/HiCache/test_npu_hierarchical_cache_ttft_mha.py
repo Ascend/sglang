@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from sglang.test.ascend.test_ascend_utils import (
@@ -6,6 +7,18 @@ from sglang.test.ascend.test_ascend_utils import (
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import CustomTestCase
+
+# PR runners have a ~55GiB host-memory cgroup. Keep this run's host pool small
+# (same convention as the other HiCache tests) so the pool fits next to the
+# 32B weights; the shared system prefix is only ~1.8k tokens, so 1GiB is still
+# enough to demonstrate the TTFT win.
+_is_pr_pipeline = os.environ.get("GITHUB_EVENT_NAME") == "pull_request" and (
+    "nightly-test-npu.yml" not in os.environ.get("GITHUB_WORKFLOW_REF", "")
+)
+# Reduce host pinned-memory fragmentation for the 32B server.
+os.environ["PYTORCH_NPU_ALLOC_CONF"] = (
+    "expandable_segments:True,pin_memory_expandable_segments:True"
+)
 
 register_npu_ci(
     est_time=400,
@@ -50,8 +63,8 @@ class TestNpuHierarchicalCacheTTFT(CustomTestCase):
                 "-1",
                 "--disable-cuda-graph",
                 "--enable-hierarchical-cache",
-                "--hicache-ratio",
-                5,
+                "--hicache-size",
+                1 if _is_pr_pipeline else 10,
                 "--hicache-write-policy",
                 "write_back",
             ],
