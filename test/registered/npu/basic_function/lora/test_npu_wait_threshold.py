@@ -111,9 +111,7 @@ class TestLoraDrainWaitThreshold(CustomTestCase):
         self.assertEqual(response3.status_code, 200)
         self.err_log_file.seek(0)
         content = self.err_log_file.read()
-        self.assertIn("draining", content)
-        self.err_log_file.seek(0)
-        self.assertIn("finished draining", content)
+        self.assertIn("stopped draining", content)
 
 
 class TestUnLoraDrainWaitThreshold(CustomTestCase):

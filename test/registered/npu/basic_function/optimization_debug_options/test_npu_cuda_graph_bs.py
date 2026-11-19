@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 import unittest
 
-from sglang.bench_serving import run_benchmark
+from sglang.benchmark.serving import run_benchmark
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH,
@@ -23,7 +23,7 @@ register_npu_ci(est_time=600, suite="full-1-npu-a3", nightly=True)
 MODEL = QWEN2_5_7B_INSTRUCT_WEIGHTS_PATH
 _LAUNCH_TIMEOUT = DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH
 
-_DECODE_RE = re.compile(r"Capture target decode.*begin.*bs=\[([^\]]+)\]")
+_DECODE_RE = re.compile(r"Capture target decode.*end.*bs=\[([^\]]+)\]")
 _PREFILL_RE = re.compile(r"Capture target prefill.*begin.*num_tokens=\[([^\]]+)\]")
 
 
@@ -123,8 +123,9 @@ class TestCudaGraphBs(CustomTestCase):
             extra_args=[
                 "--cuda-graph-max-bs-decode",
                 "8",
+                # tc_piecewise prefill backend was removed on --cuda-graph-backend-prefill; use breakable.
                 "--cuda-graph-backend-prefill",
-                "tc_piecewise",
+                "breakable",
                 "--cuda-graph-max-bs-prefill",
                 "256",
             ],
@@ -160,8 +161,9 @@ class TestCudaGraphBs(CustomTestCase):
                 "2",
                 "4",
                 "8",
+                # tc_piecewise prefill backend was removed on NPU; use breakable.
                 "--cuda-graph-backend-prefill",
-                "tc_piecewise",
+                "breakable",
                 "--cuda-graph-bs-prefill",
                 "64",
                 "128",

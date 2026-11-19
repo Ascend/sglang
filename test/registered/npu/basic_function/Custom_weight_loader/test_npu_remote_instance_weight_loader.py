@@ -11,10 +11,10 @@ import requests
 import torch
 import torch.multiprocessing as mp
 
+from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_PORT_FOR_SRT_TEST_RUNNER,
-    DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
@@ -223,7 +223,11 @@ def init_process_dst(
     terminate_process(process)
 
 
-def test_load_weights_from_remote_instance(
+# NB: not named test_* — the arguments are supplied by
+# TestLoadWeightsFromRemoteInstance below; a parameterized test_ function at
+# module level makes pytest collect it with missing fixtures
+# ("fixture 'tp_size' not found") under the CI runner.
+def load_weights_from_remote_instance_impl(
     tp_size,
     dp_size,
     model_name,
@@ -310,7 +314,7 @@ class TestLoadWeightsFromRemoteInstance(CustomTestCase):
 
         # Test cases with different backends
         test_suits = [
-            (1, 1, DEFAULT_SMALL_MODEL_NAME_FOR_TEST, "transfer_engine"),
+            (1, 1, LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH, "transfer_engine"),
         ]
 
         # Weight validation configuration
@@ -331,7 +335,7 @@ class TestLoadWeightsFromRemoteInstance(CustomTestCase):
 
         # Run all test cases
         for tp_size, dp_size, model_name, remote_backend in test_suits:
-            test_load_weights_from_remote_instance(
+            load_weights_from_remote_instance_impl(
                 tp_size,
                 dp_size,
                 model_name,

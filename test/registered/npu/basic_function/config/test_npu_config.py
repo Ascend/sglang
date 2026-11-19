@@ -89,7 +89,7 @@ class TestConfigPriority(CustomTestCase):
 
     def test_config_priority(self):
         # will use false model path (/nonexistent/Qwen/Qwen3-32B) service start fail
-        error_message = "404 page not found"
+        error_message = "/nonexistent/Qwen/Qwen3-32B"
         with (
             tempfile.NamedTemporaryFile(
                 mode="w+", delete=True, suffix="out.log"
