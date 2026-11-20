@@ -149,28 +149,17 @@ class TestNpuRlPauseResume(CustomTestCase):
         )
 
     def _assert_valid_response(self, resp, expect_tool_calls=False):
-        """Assert a chat completions response is well-formed.
-
-        Returns (body, tool_calls). A missing tool call is not fatal: the 1B
-        model does not reliably emit a parseable llama3 tool call, and this
-        test targets pause/resume behavior, so callers fall back to a plain
-        text turn when `tool_calls` is None.
-        """
+        """Assert a chat completions response is well-formed."""
         self.assertEqual(resp.status_code, 200, f"Request failed: {resp.text[:500]}")
         body = resp.json()
         choice = body["choices"][0]
         if expect_tool_calls:
             tool_calls = choice["message"].get("tool_calls")
-            if tool_calls:
-                self.assertGreater(len(tool_calls), 0, "Empty tool_calls")
-            else:
-                print(
-                    "[warn] model returned no parseable tool call; "
-                    "continuing with plain content"
-                )
+            self.assertIsNotNone(tool_calls, "Expected tool_calls")
+            self.assertGreater(len(tool_calls), 0, "Empty tool_calls")
             return body, tool_calls
         else:
-            content = choice["message"].get("content", "") or ""
+            content = choice["message"].get("content", "")
             return body, content
 
     # ── full RL loop ──
@@ -200,27 +189,16 @@ class TestNpuRlPauseResume(CustomTestCase):
         try:
             time.sleep(1)
 
-            if tool_calls:
-                tool_call = tool_calls[0]
-                tool_call_id = tool_call.get("id", "call_001")
-                messages.append(body["choices"][0]["message"])
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tool_call_id,
-                        "content": "Cloudy, 15°C",
-                    }
-                )
-            else:
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": body["choices"][0]["message"].get("content") or "",
-                    }
-                )
-                messages.append(
-                    {"role": "user", "content": "What is the temperature in Celsius?"}
-                )
+            tool_call = tool_calls[0]
+            tool_call_id = tool_call.get("id", "call_001")
+            messages.append(body["choices"][0]["message"])
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": "Cloudy, 15°C",
+                }
+            )
         finally:
             self._continue().raise_for_status()
 
@@ -248,43 +226,28 @@ class TestNpuRlPauseResume(CustomTestCase):
         # Pass full tool set to verify model selects calculate for conversion.
         resp = self._chat(messages, max_tokens=256, tools=self.TOOLS)
         body3, tool_calls3 = self._assert_valid_response(resp, expect_tool_calls=True)
-        if tool_calls3:
-            self.assertEqual(
-                tool_calls3[0]["function"]["name"],
-                "calculate",
-                f"Expected calculate tool call for temperature conversion, "
-                f"got '{tool_calls3[0]['function']['name']}'",
-            )
+        self.assertEqual(
+            tool_calls3[0]["function"]["name"],
+            "calculate",
+            f"Expected calculate tool call for temperature conversion, "
+            f"got '{tool_calls3[0]['function']['name']}'",
+        )
 
         # Final pause/resume — simulate tool execution + weight sync
         self._pause("in_place").raise_for_status()
         try:
             time.sleep(1)
 
-            if tool_calls3:
-                tool_call3 = tool_calls3[0]
-                tool_call_id3 = tool_call3.get("id", "call_002")
-                messages.append(body3["choices"][0]["message"])
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tool_call_id3,
-                        "content": "15°C = 59°F",
-                    }
-                )
-            else:
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": body3["choices"][0]["message"].get("content") or "",
-                    }
-                )
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": "Convert that to Fahrenheit.",
-                    }
-                )
+            tool_call3 = tool_calls3[0]
+            tool_call_id3 = tool_call3.get("id", "call_002")
+            messages.append(body3["choices"][0]["message"])
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id3,
+                    "content": "15°C = 59°F",
+                }
+            )
         finally:
             self._continue().raise_for_status()
 
