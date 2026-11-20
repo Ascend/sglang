@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from typing import List, Tuple
 
+import requests
 import torch
 
 from sglang.srt.utils import MultiprocessingSerializer, kill_process_tree
@@ -90,7 +91,7 @@ class TestWeightCheckerE2E(CustomTestCase):
         os.unlink(cls.out_file.name)
         os.unlink(cls.err_file.name)
 
-    def _post(self, action: str) -> admin_Response:
+    def _post(self, action: str) -> requests.Response:
         # checksum action iterates over all model weights on NPU and is much
         # slower than snapshot/compare, so allow a generous timeout.
         timeout = 600 if action == "checksum" else 120
@@ -100,7 +101,7 @@ class TestWeightCheckerE2E(CustomTestCase):
 
     def _update_weights(
         self, named_tensors: List[Tuple[str, torch.Tensor]]
-    ) -> admin_Response:
+    ) -> requests.Response:
         admin_post(f"{self.url}/begin_weight_update", json={}, timeout=120)
         resp = admin_post(
             f"{self.url}/update_weights_from_tensor",
