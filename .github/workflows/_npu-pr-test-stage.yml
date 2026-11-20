@@ -302,85 +302,6 @@ jobs:
           apt-get install -y libssl-dev
           pip install sglang_router
 
-      # ---------- TEMP: resource audit for the cann9.2.0 kernel-test image ----------
-      # Lists the operator-provided 20 assets plus the model dependencies of
-      # the resource-audit case set, and prints the image's muse_spark_hook
-      # source so the decrypted-config result can be attributed to the image.
-      - name: Audit test resources
-        if: ${{ inputs.self_name == 'full-1-npu-a3' || inputs.self_name == 'full-2-npu-a3' }}
-        shell: bash
-        run: |
-          python3 - <<'PYEOF'
-          import inspect
-          import os
-
-          model_root = "/root/.cache/modelscope/hub/models"
-          hf_root = "/root/.cache/huggingface/hub"
-          dataset_root = "/root/.cache/modelscope/hub/datasets"
-          paths = [
-              f"{model_root}/sglang-EAGLE3-LLaMA3.1-Instruct-8B",
-              f"{model_root}/rednote-hilab/dots.ocr",
-              f"{model_root}/Qwen/Qwen3-4B",
-              f"{model_root}/Qwen/Qwen3-4B-lora-v2",
-              f"{model_root}/Qwen/Qwen3-4B-LoRA-ZH-WebNovelty-v0.0",
-              f"{model_root}/stepfun-ai/Step3-VL-10B",
-              f"{model_root}/Qwen/Qwen3-VL-8B-Instruct-Eagle3",
-              f"{model_root}/CohereForAI/c4ai-command-r-v01",
-              f"{model_root}/jamezoon/qwen3.5-4b-mcat-lora",
-              f"{model_root}/Aswinkv07/qwen3.5-4b-neo4j-text2cypher-lora",
-              f"{hf_root}/Qwen3-30B-A3B-Instruct-2507-theo-style-lora",
-              f"{model_root}/hotdogs/qwen3.6-27b-cybersecurity-lora",
-              f"{model_root}/hotdogs/qwen3.6-27b-cybersecurity-lora/compare_sample_train_data.pt",
-              f"{dataset_root}/wav/asr_en.wav",
-              f"{dataset_root}/images/invoice_with_barcode_logo.jpeg",
-              f"{dataset_root}/images/man_ironing_on_back_of_suv.png",
-              f"{dataset_root}/images/sgl_logo.png",
-              "/root/.cache/sglang/hot_map/expert_distribution_recorder.pt",
-              "/root/.cache/sglang/hot_map/expert_distribution_recorder.json",
-              "/root/.cache/sglang/hot_map/qwen3_30b_a3b_random_no_redundant.json",
-              # Model dependencies of the audited cases.
-              f"{model_root}/Qwen/Qwen3-30B-A3B-Instruct-2507",
-              f"{model_root}/Qwen/Qwen3.5-4B",
-              f"{model_root}/Qwen/Qwen3.6-27B",
-              f"{model_root}/Qwen/Qwen3-VL-8B-Instruct",
-              f"{model_root}/Qwen/Qwen3-8B",
-              f"{model_root}/YZY/Qwen3-8B",
-              f"{model_root}/YZY/Qwen3-8B_eagle3",
-              f"{model_root}/google/gemma-3-4b-it",
-              f"{model_root}/moonshotai/Kimi-VL-A3B-Instruct",
-              f"{model_root}/Qwen/Qwen2.5-VL-3B-Instruct",
-          ]
-          for path in paths:
-              if os.path.isdir(path):
-                  count = sum(len(files) for _, _, files in os.walk(path))
-                  print(f"DIR  {path} files={count}")
-              elif os.path.isfile(path):
-                  print(f"FILE {path} size={os.path.getsize(path)}")
-              else:
-                  print(f"MISS {path}")
-
-          for directory in (
-              f"{dataset_root}/images",
-              f"{dataset_root}/wav",
-              "/root/.cache/sglang/hot_map",
-          ):
-              if os.path.isdir(directory):
-                  print(f"LIST {directory}: {sorted(os.listdir(directory))}")
-              else:
-                  print(f"LIST {directory}: MISSING")
-
-          try:
-              import sglang
-              from sglang.srt.arg_groups import muse_spark_hook
-
-              print("SGLANG", getattr(sglang, "__version__", None), sglang.__file__)
-              print("HOOK_SOURCE_BEGIN")
-              print(inspect.getsource(muse_spark_hook.apply_muse_spark_env_defaults))
-              print("HOOK_SOURCE_END")
-          except Exception as exc:
-              print("HOOK_INSPECT_FAILED", repr(exc))
-          PYEOF
-
       - name: Run test
         timeout-minutes: ${{ fromJson(inputs.run_timeout_minutes) }}
         env:
@@ -464,26 +385,6 @@ jobs:
               -o /tmp/selected_tests.txt
             echo "Selected test files:"
             cat /tmp/selected_tests.txt
-            # Precision filtering works in coverage mode too: keep the
-            # intersection of the suite enumeration with ONLY_TESTS (mirrors
-            # --only-file-list on the run_suite path below). No match -> empty
-            # selection -> the run below is skipped cleanly.
-            # list_tests emits checkout-rooted absolute paths while ONLY_TESTS
-            # is repo-relative: normalize the enumerated path to its
-            # test/registered/... form for matching, but keep the original
-            # absolute line for the runner below.
-            if [ -n "${ONLY_TESTS}" ]; then
-              printf '%s\n' "${ONLY_TESTS}" | tr ',' '\n' | sed '/^[[:space:]]*$/d' > /tmp/precision_tests.txt
-              awk 'FNR==NR { sub(/\r$/, ""); if ($0 != "") want[$0]=1; next }
-                   { rel=$0; sub(/^.*\/test\/registered\//, "test/registered/", rel); if (rel in want) print }' \
-                  /tmp/precision_tests.txt /tmp/selected_tests.txt > /tmp/selected_tests_filtered.txt || true
-              mv /tmp/selected_tests_filtered.txt /tmp/selected_tests.txt
-              echo "Precision mode: $(wc -l < /tmp/selected_tests.txt) selected file(s) after filter:"
-              cat /tmp/selected_tests.txt
-              if [ ! -s /tmp/selected_tests.txt ]; then
-                echo "::warning::Precision filter selected 0 files for ${{ inputs.self_name }} — ONLY_TESTS paths likely do not match list_tests output"
-              fi
-            fi
             # Artifact transport: stage in a job-private root so the
             # artifact carries exactly this job's tests. The default
             # (shared-disk) RUN_DIR would also sweep sibling jobs' data
