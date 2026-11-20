@@ -75,11 +75,6 @@ on:
         type: string
         default: '300'
         description: 'timeout-minutes for the Run test step'
-      timeout_per_file:
-        required: false
-        type: string
-        default: '10800'
-        description: 'Per test-file (case) timeout in seconds, passed to run_suite.py --timeout-per-file'
       use_coverage_runner:
         description: 'If true, delegate test execution to scripts/ci/npu/precise-test/run_tests_with_coverage.sh instead of running via run_suite.py directly'
         type: boolean
@@ -495,8 +490,8 @@ jobs:
           # Run NPU test suite with run_suite.py.
           # Capture mode (--enable-retry --max-attempts 1) keeps test subprocesses off the
           # tee pipe, so leftover server processes cannot block the pipeline on exit.
-          ${PYTHON_FOR_SGLANG} -u run_suite.py --hw npu --suite ${test_suite} ${NIGHTLY_FLAG} ${PARTITION_ARGS} ${ONLY_FILE_ARGS} ${TIMEOUT_FLAG} --enable-retry --max-attempts 1 --timeout-per-file ${{ inputs.timeout_per_file }} 2>&1 | tee "${LOG_TEE_TARGETS[@]}" || test_exit_code=$?
-
+          ${PYTHON_FOR_SGLANG} -u run_suite.py --hw npu --suite ${test_suite} ${NIGHTLY_FLAG} ${PARTITION_ARGS} ${ONLY_FILE_ARGS} ${TIMEOUT_FLAG} --enable-retry --max-attempts 1 --timeout-per-file 10800 2>&1 | tee "${LOG_TEE_TARGETS[@]}" || test_exit_code=$?
+          
           echo "Finished test: ${tc_name}"
 
           if [ "${test_exit_code}" = "0" ]; then

@@ -197,8 +197,6 @@ jobs:
       is_nightly_pipeline_job: true
       # Coverage mode: 2x timeout budget.
       test_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
-      # Per test-file (case) timeout: 4 hours.
-      timeout_per_file: '14400'
       partitions: '{"size":5,"arr":[0,1,2,3,4]}'
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
@@ -219,8 +217,6 @@ jobs:
       is_nightly_pipeline_job: true
       # Coverage mode: 2x timeout budget.
       test_timeout_minutes: ${{ needs.set-image-config.outputs.coverage_mode == 'true' && '960' || '480' }}
-      # Per test-file (case) timeout: 4 hours.
-      timeout_per_file: '14400'
       partitions: '{"size":5,"arr":[0,1,2,3,4]}'
       device_type_for_deps: 'a3'
       skip_pr_test_health_check: 'true'
