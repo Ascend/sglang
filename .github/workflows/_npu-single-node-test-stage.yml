@@ -112,7 +112,7 @@ jobs:
     # default would preemptively kill e.g. full-acc-2's 480-minute run step,
     # so pin an explicit cap: 540 for non-coverage callers, raised for
     # coverage runs (full-test-npu passes step timeouts up to 960).
-    timeout-minutes: ${{ inputs.use_coverage_runner && 1020 || 1400 }}
+    timeout-minutes: ${{ inputs.use_coverage_runner && 1020 || 1020 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -491,7 +491,7 @@ jobs:
           # Capture mode (--enable-retry --max-attempts 1) keeps test subprocesses off the
           # tee pipe, so leftover server processes cannot block the pipeline on exit.
           ${PYTHON_FOR_SGLANG} -u run_suite.py --hw npu --suite ${test_suite} ${NIGHTLY_FLAG} ${PARTITION_ARGS} ${ONLY_FILE_ARGS} ${TIMEOUT_FLAG} --enable-retry --max-attempts 1 --timeout-per-file 10800 2>&1 | tee "${LOG_TEE_TARGETS[@]}" || test_exit_code=$?
-          
+
           echo "Finished test: ${tc_name}"
 
           if [ "${test_exit_code}" = "0" ]; then
