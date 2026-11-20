@@ -42,6 +42,15 @@ from sglang.test.test_utils import (
 STDERR_FILENAME = "/tmp/stderr.txt"
 STDOUT_FILENAME = "/tmp/stdout.txt"
 
+# Management endpoints (/pause_generation, /continue_generation, /weights_checker,
+# /update_weights_from_disk, /update_weights_from_tensor, /start_profile,
+# /load_lora_adapter, /abort_request, ...) are declared ADMIN_FORCE in sglang's
+# endpoint auth table: they return 403 unless the server is launched with
+# --admin-api-key. Tests that exercise them must launch the server with this key
+# and send the matching Bearer header.
+ADMIN_API_KEY = "SGLANG_CI_ADMIN_API_KEY"
+ADMIN_AUTH_HEADERS = {"Authorization": f"Bearer {ADMIN_API_KEY}"}
+
 
 class DeterministicLogitProcessor(CustomLogitProcessor):
     """A dummy logit processor that always assigns the highest probability to
