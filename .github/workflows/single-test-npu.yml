@@ -5,7 +5,7 @@ on:
   pull_request:
     branches:
       - testcases
-#      - testcases-261015
+      - testcases-261015
     paths:
       - ".github/workflows/single-test-npu.yml"
 
@@ -30,8 +30,8 @@ jobs:
 #            test_case: test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_expert_distribution_recorder_mode.py
 #          - name: lora-update
 #            test_case: test/registered/npu/basic_function/lora/test_npu_lora_update.py
-          - name: rl-pause-resume-loop
-            test_case: test/registered/npu/basic_function/rl/test_npu_rl_pause_resume_loop.py
+#          - name: rl-pause-resume-loop
+#            test_case: test/registered/npu/basic_function/rl/test_npu_rl_pause_resume_loop.py
 #          - name: api
 #            test_case: test/registered/npu/interface/test_npu_api.py
           - name: weight-checker-e2e
