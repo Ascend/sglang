@@ -11,7 +11,6 @@ import tempfile
 import unittest
 from typing import List, Tuple
 
-import requests
 import torch
 
 from sglang.srt.utils import MultiprocessingSerializer, kill_process_tree
