@@ -4,7 +4,11 @@ import unittest
 import requests
 
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+    QWEN3_0_6B_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.eval_accuracy_kit import GSM8KMixin
 from sglang.test.test_utils import (
@@ -41,6 +45,9 @@ class TestDataParallelism(CustomTestCase, GSM8KMixin):
                 2,
                 "--attention-backend",
                 "ascend",
+                # /update_weights_from_disk is ADMIN_FORCE.
+                "--admin-api-key",
+                ADMIN_API_KEY,
             ],
         )
 
@@ -52,6 +59,7 @@ class TestDataParallelism(CustomTestCase, GSM8KMixin):
         response = requests.post(
             self.base_url + "/update_weights_from_disk",
             json={"model_path": QWEN3_0_6B_WEIGHTS_PATH},
+            headers=ADMIN_AUTH_HEADERS,
         )
 
         # check if the response is 200
@@ -63,6 +71,7 @@ class TestDataParallelism(CustomTestCase, GSM8KMixin):
         response = requests.post(
             self.base_url + "/update_weights_from_disk",
             json={"model_path": QWEN3_0_6B_WEIGHTS_PATH},
+            headers=ADMIN_AUTH_HEADERS,
         )
 
         # check if the response is 200
