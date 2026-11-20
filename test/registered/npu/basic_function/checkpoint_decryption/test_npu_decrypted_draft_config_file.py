@@ -1,7 +1,4 @@
-import json
 import os
-import shutil
-import tempfile
 import unittest
 from types import SimpleNamespace
 
@@ -9,6 +6,7 @@ from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     QWEN3_8B_DECRYPTED_WEIGHTS_PATH,
     QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH,
+    run_command,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.run_eval import run_eval
@@ -25,36 +23,6 @@ register_npu_ci(
     nightly=True,
 )
 
-DECRYPTED_CONFIG_FILE = os.path.join(
-    os.path.dirname(__file__), "Qwen3-8B", "config.json"
-)
-DECRYPTED_DRAFT_CONFIG_FILE = os.path.join(
-    os.path.dirname(__file__), "Qwen3-8B_eagle3", "config.json"
-)
-
-
-def _mirror_weights_with_stub_config(source_dir, target_dir, decrypted_config_file):
-    """Mirror a checkpoint through symlinks and shadow config.json with a stub.
-
-    The image reads <model_path>/config.json in muse_spark_hook before the
-    --decrypted-*-config-file overrides are applied, so a checkpoint without a
-    readable config.json cannot boot even though the decrypted file is given.
-    Mirroring the weights keeps the shared cache untouched, and the stub keeps
-    the hook happy. Its sentinel architecture matches no registered model, so
-    the case still fails if the override is ignored.
-    """
-    os.makedirs(target_dir, exist_ok=True)
-    for name in os.listdir(source_dir):
-        if name == "config.json":
-            continue
-        os.symlink(os.path.join(source_dir, name), os.path.join(target_dir, name))
-
-    with open(decrypted_config_file, encoding="utf-8") as f:
-        stub_config = json.load(f)
-    stub_config["architectures"] = ["DecryptedConfigFileOverrideSentinel"]
-    with open(os.path.join(target_dir, "config.json"), "w", encoding="utf-8") as f:
-        json.dump(stub_config, f)
-
 
 class TestDraftConfigFile(CustomTestCase):
     """Testcase: Verify set --decrypted-config-file, --decrypted-draft-config-file parameter,
@@ -66,22 +34,16 @@ class TestDraftConfigFile(CustomTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._tmpdir = tempfile.mkdtemp(prefix="sglang-decrypted-config-")
-        cls.model_path = os.path.join(cls._tmpdir, "Qwen3-8B")
-        cls.draft_model_path = os.path.join(cls._tmpdir, "Qwen3-8B_eagle3")
-        _mirror_weights_with_stub_config(
-            QWEN3_8B_DECRYPTED_WEIGHTS_PATH, cls.model_path, DECRYPTED_CONFIG_FILE
+        # Modify the config.json under the weight path
+        run_command(
+            f"mv {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, 'config.json')} {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, '_config.json')}"
         )
-        _mirror_weights_with_stub_config(
-            QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH,
-            cls.draft_model_path,
-            DECRYPTED_DRAFT_CONFIG_FILE,
+        run_command(
+            f"mv {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, 'config.json')} {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, '_config.json')}"
         )
-
-        cls.process = None
         try:
             cls.process = popen_launch_server(
-                cls.model_path,
+                QWEN3_8B_DECRYPTED_WEIGHTS_PATH,
                 DEFAULT_URL_FOR_TEST,
                 DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
                 other_args=[
@@ -96,7 +58,7 @@ class TestDraftConfigFile(CustomTestCase):
                     "--speculative-algorithm",
                     "EAGLE3",
                     "--speculative-draft-model-path",
-                    cls.draft_model_path,
+                    QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH,
                     "--speculative-num-steps",
                     "3",
                     "--speculative-eagle-topk",
@@ -111,9 +73,11 @@ class TestDraftConfigFile(CustomTestCase):
                     "--dtype",
                     "bfloat16",
                     "--decrypted-config-file",
-                    DECRYPTED_CONFIG_FILE,
+                    os.path.join(os.path.dirname(__file__), "Qwen3-8B", "config.json"),
                     "--decrypted-draft-config-file",
-                    DECRYPTED_DRAFT_CONFIG_FILE,
+                    os.path.join(
+                        os.path.dirname(__file__), "Qwen3-8B_eagle3", "config.json"
+                    ),
                 ],
                 env={
                     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
@@ -121,22 +85,32 @@ class TestDraftConfigFile(CustomTestCase):
             )
 
         except Exception as e:
-            if cls.process is not None:
+            # Service failed to start, restoring original file name
+            run_command(
+                f"mv {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
+            )
+            run_command(
+                f"mv {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
+            )
+            if cls.process:
                 kill_process_tree(cls.process.pid)
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
             raise RuntimeError(f"Failed to launch server: {e}") from e
 
     @classmethod
     def tearDownClass(cls):
-        if getattr(cls, "process", None) is not None:
-            kill_process_tree(cls.process.pid)
-        shutil.rmtree(cls._tmpdir, ignore_errors=True)
+        run_command(
+            f"mv {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
+        )
+        run_command(
+            f"mv {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, '_config.json')} {os.path.join(QWEN3_8B_EAGLE3_DECRYPTED_WEIGHTS_PATH, 'config.json')}"
+        )
+        kill_process_tree(cls.process.pid)
 
     def test_gsm8k(self):
         args = SimpleNamespace(
             max_tokens=512,
             base_url=DEFAULT_URL_FOR_TEST,
-            model=self.model_path,
+            model=QWEN3_8B_DECRYPTED_WEIGHTS_PATH,
             eval_name="gsm8k",
             api="completion",
             num_examples=200,
