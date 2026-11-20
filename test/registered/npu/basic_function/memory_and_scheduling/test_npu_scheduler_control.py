@@ -12,21 +12,20 @@ from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
-    # ADMIN_API_KEY,
-    # ADMIN_AUTH_HEADERS,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.abort_timeout_kit import AbortAllMixin, WaitingTimeoutMixin
 from sglang.test.kits.pause_generation_kit import PauseResumeInPlaceMixin
 from sglang.test.test_utils import (
+    ADMIN_HEADERS_FOR_TEST,
+    ADMIN_LAUNCH_ARGS_FOR_TEST,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
     popen_launch_server,
     read_output,
 )
-ADMIN_API_KEY = "SGLANG_CI_ADMIN_API_KEY"
-ADMIN_AUTH_HEADERS = {"Authorization": f"Bearer {ADMIN_API_KEY}"}
+
 # Disable the fast input-logprobs path; use the reference log-softmax path.
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
@@ -61,9 +60,7 @@ def _run_and_check_memory_leak_npu(
         "debug",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
-        "--admin-api-key",
-        ADMIN_API_KEY,
+        
     ]
     if disable_radix_cache:
         other_args += ["--disable-radix-cache"]
@@ -216,6 +213,7 @@ class TestAbortWithApiKey(CustomTestCase):
 
 
 class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCase):
+    abort_request_headers = ADMIN_HEADERS_FOR_TEST
     @classmethod
     def setUpClass(cls):
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
@@ -229,9 +227,8 @@ class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCas
                 "8",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
-                "--admin-api-key",
-                ADMIN_API_KEY,
+                *ADMIN_LAUNCH_ARGS_FOR_TEST,
+                
             ],
         )
 
@@ -344,7 +341,7 @@ class TestAbortAllWithRetraction(CustomTestCase):
                     "random",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
+                    
                 ],
             )
 
@@ -435,7 +432,7 @@ class TestAbortWithWaitingTimeout(WaitingTimeoutMixin, CustomTestCase):
                     "--max-running-requests=1",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
+                    
                 ],
             )
 
@@ -461,7 +458,7 @@ class TestAbortWithRunningTimeout(CustomTestCase):
                     "--skip-server-warmup",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
+                    
                 ],
             )
 
