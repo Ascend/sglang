@@ -15,6 +15,12 @@ register_npu_ci(
     suite="nightly-acc-2-npu-a3",
     nightly=True,
 )
+# Temporary single-point verification suite: only this case runs here.
+register_npu_ci(
+    est_time=8400,
+    suite="nightly-acc-2-npu-a3-temp-qwen36-27b-w8a8-3k5-gpqa",
+    nightly=True,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +60,12 @@ QWEN3_6_27B_3K5_1K5_OTHER_ARGS = [
     60000,
     "--disable-radix-cache",
     "--trust-remote-code",
+    # Long prompts (3.5k in) keep more pinned host tensors alive per running
+    # request. torch_npu's CachingHostAllocator never shrinks, so a high cap
+    # exhausts host pinned memory (207001) on this case; stay close to the
+    # already-stable 1p_gpqa baseline (20).
     "--max-running-requests",
-    64,
+    24,
     "--max-mamba-cache-size",
     74,
     "--mem-fraction-static",
@@ -101,7 +111,9 @@ class TestNPUQwen3_6_27B_1P_In3k5_Out1k5_gpqa(TestNpuAccuracyTestCaseBase):
     accuracy = 0.878
     datasets = ["gpqa_diamond"]
     few_shot_num = 0
-    eval_batch_size = 16
+    # Halve the evalscope submit batch to smooth the pinned-memory allocation
+    # spikes that come with wide concurrent submissions.
+    eval_batch_size = 8
     generation_config = {
         "max_tokens": 81920,
         "temperature": 0,

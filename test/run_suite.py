@@ -202,6 +202,7 @@ NIGHTLY_SUITES = {
         "nightly-8-npu-a3",
         "nightly-16-npu-a3",
         "nightly-acc-2-npu-a3",
+        "nightly-acc-2-npu-a3-temp-qwen36-27b-w8a8-3k5-gpqa",
         "nightly-acc-8-npu-a3",
         "nightly-acc-16-npu-a3",
         "nightly-acc-4-npu-a5",
