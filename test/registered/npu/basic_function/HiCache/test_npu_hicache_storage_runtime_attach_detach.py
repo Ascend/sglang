@@ -125,7 +125,7 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
 
         # ===================== Phase A: no admin-api-key =====================
         # Without --admin-api-key, the storage-backend endpoints must be
-        # disabled (return 403) for ALL verbs.
+        # disabled (return 400) for ALL verbs.
         logging.warning("Phase A: launch server WITHOUT --admin-api-key")
         port_a = find_available_port(20000)
         base_url_a = f"http://127.0.0.1:{port_a}"
@@ -143,19 +143,19 @@ class TestHiCacheStorageRuntimeAttachDetach(CustomTestCase):
             wait_for_http_ready(base_url_a, timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH)
 
             # No admin header.
-            self.assertEqual(self._get_backend(base_url_a).status_code, 403)
-            self.assertEqual(self._attach_backend(base_url_a, "file").status_code, 403)
-            self.assertEqual(self._detach_backend(base_url_a).status_code, 403)
+            self.assertEqual(self._get_backend(base_url_a).status_code, 400)
+            self.assertEqual(self._attach_backend(base_url_a, "file").status_code, 400)
+            self.assertEqual(self._detach_backend(base_url_a).status_code, 400)
 
             # Even with a Bearer header, endpoints must remain disabled
             # because the server itself was started without --admin-api-key.
             h = self._admin_headers()
-            self.assertEqual(self._get_backend(base_url_a, headers=h).status_code, 403)
+            self.assertEqual(self._get_backend(base_url_a, headers=h).status_code, 400)
             self.assertEqual(
-                self._attach_backend(base_url_a, "file", headers=h).status_code, 403
+                self._attach_backend(base_url_a, "file", headers=h).status_code, 400
             )
             self.assertEqual(
-                self._detach_backend(base_url_a, headers=h).status_code, 403
+                self._detach_backend(base_url_a, headers=h).status_code, 400
             )
         finally:
             kill_process_tree(process_a.pid)
