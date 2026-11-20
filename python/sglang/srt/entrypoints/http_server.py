@@ -2159,7 +2159,7 @@ def _admin_api_key_missing_response(
 ) -> ORJSONResponse:
     return ORJSONResponse(
         content={
-            "error": ( 
+            "error": (
                 "This endpoint requires admin API key, but this server was started "
                 "without one (admin-api-key). Restart with --admin-api-key to enable."
             )
