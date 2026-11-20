@@ -2,6 +2,8 @@
 E2E tests for NPU — pause/resume + tool call + multi-turn robustness.
 """
 
+import hashlib
+import json
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -9,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 from sglang.srt.utils import kill_process_tree
+
 from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -20,7 +23,6 @@ from sglang.test.test_utils import (
 
 register_npu_ci(est_time=60, suite="full-1-npu-a3", nightly=True)
 
-
 class TestNpuRlPauseResume(CustomTestCase):
     """E2E: RL pause/resume robustness with multi-turn + tool call + retract.
 
@@ -31,6 +33,7 @@ class TestNpuRlPauseResume(CustomTestCase):
     """
 
     REQUEST_TIMEOUT = 240
+    _tokenizer = None
 
     TOOLS = [
         {
@@ -69,17 +72,31 @@ class TestNpuRlPauseResume(CustomTestCase):
         },
     ]
 
+    # The Llama-3.2 tool-call system prompt (same wording as Meta's chat template).
+    # The flat {"name": ..., "parameters": ...} line is what the `llama3` parser
+    # expects; a loose paraphrase makes the 1B model invent e.g. the OpenAI
+    # {"type": "function", "function": {...}} schema, which the parser then drops.
     SYSTEM_MESSAGE = (
         "You are a helpful assistant with tool calling capabilities. "
-        "You have access to a weather function for checking weather "
-        "and a calculate function for math and unit conversions. "
-        "Respond in JSON format with the function name and parameters."
+        "Only reply with a tool call if the function exists in the library provided by the user. "
+        "If it doesn't exist, just reply directly in natural language. "
+        "When you receive a tool call response, use the output to format an answer to the original user question. "
+        "You have access to the following functions. "
+        "To call a function, please respond with JSON for a function call. "
+        'Respond in the format {"name": function name, "parameters": dictionary of argument name and its value}. '
+        "Do not use variables.\n\n"
     )
+
+    # /pause_generation and /continue_generation are admin endpoints: the server must
+    # be started with --admin-api-key and every call must carry this bearer token.
+    ADMIN_API_KEY = "sk-admin-for-test"
+    ADMIN_HEADERS = {"Authorization": f"Bearer {ADMIN_API_KEY}"}
 
     @classmethod
     def setUpClass(cls):
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
+        cls._log_env_fingerprint()
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -89,8 +106,42 @@ class TestNpuRlPauseResume(CustomTestCase):
                 "ascend",
                 "--tool-call-parser",
                 "llama3",
+                "--admin-api-key",
+                cls.ADMIN_API_KEY,
             ],
         )
+
+    @classmethod
+    def _log_env_fingerprint(cls):
+        """Print the inputs that decide the tool-call prompt.
+
+        This file passed on the 11-10 image and failed on the 11-19 one without a
+        code change, so the sglang/transformers/chat-template versions have to be
+        in the log for the next flip to be attributable.
+        """
+        import sglang
+
+        print(
+            f"[env] sglang={getattr(sglang, '__version__', 'unknown')} "
+            f"path={getattr(sglang, '__file__', 'unknown')}",
+            flush=True,
+        )
+        try:
+            import transformers
+            from transformers import AutoTokenizer
+
+            cls._tokenizer = AutoTokenizer.from_pretrained(
+                cls.model, local_files_only=True
+            )
+            template = cls._tokenizer.chat_template or ""
+            print(
+                f"[env] transformers={transformers.__version__} "
+                f"chat_template_sha1={hashlib.sha1(template.encode()).hexdigest()[:12]} "
+                f"chat_template_len={len(template)}",
+                flush=True,
+            )
+        except Exception as e:  # noqa: BLE001 - diagnostics must never fail setup
+            print(f"[env] cannot fingerprint chat template: {e}", flush=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -120,16 +171,100 @@ class TestNpuRlPauseResume(CustomTestCase):
             body["tools"] = tools
         if ignore_eos:
             body["ignore_eos"] = True
-        return requests.post(
+        resp = requests.post(
             self._chat_url,
             json=body,
             timeout=self.REQUEST_TIMEOUT,
         )
+        self._dump_response(
+            f"chat max_tokens={max_tokens} tools={len(tools or [])}", resp
+        )
+        return resp
+
+    def _raw_generation(self, messages, tools=None, max_new_tokens=64):
+        """Print what the model really generates for these messages.
+
+        The chat endpoint hides it: when the llama3 parser sees a tool marker but
+        cannot build a call out of it, it consumes the text and answers with
+        content="". Replaying the same prompt through /generate (no chat layer, no
+        tool parser) shows the raw output, which is what a CI log needs.
+        """
+        try:
+            from transformers import AutoTokenizer
+
+            if self._tokenizer is None:
+                self._tokenizer = AutoTokenizer.from_pretrained(
+                    self.model, local_files_only=True
+                )
+            prompt = self._tokenizer.apply_chat_template(
+                messages,
+                tools=tools,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        except Exception as e:  # noqa: BLE001 - diagnostics must never mask the failure
+            print(f"[raw generation] cannot render prompt: {e}", flush=True)
+            return None
+
+        resp = requests.post(
+            self.base_url + "/generate",
+            json={
+                "text": prompt,
+                "sampling_params": {
+                    "max_new_tokens": max_new_tokens,
+                    "temperature": 0,
+                    "skip_special_tokens": False,
+                },
+            },
+            timeout=self.REQUEST_TIMEOUT,
+        )
+        print(
+            f"[raw generation] status={resp.status_code}",
+            flush=True,
+        )
+        print(f"[raw generation] prompt -----\n{prompt}", flush=True)
+        print(
+            f"[raw generation] prompt end -----\n[raw generation] output -----\n"
+            f"{resp.text[:4000]}",
+            flush=True,
+        )
+        return resp
+
+    def _dump_response(self, tag, resp):
+        """Print the whole response so a failing tool-call assertion is diagnosable."""
+        print(f"\n===== [{tag}] {resp.status_code} =====", flush=True)
+        try:
+            payload = resp.json()
+        except Exception:
+            print(f"----- [{tag}] non-JSON body -----\n{resp.text}", flush=True)
+            print(f"===== [{tag}] end =====\n", flush=True)
+            return
+        choice = (payload.get("choices") or [{}])[0]
+        message = choice.get("message") or {}
+        content = message.get("content") or ""
+        print(
+            f"----- [{tag}] finish_reason={choice.get('finish_reason')!r} "
+            f"usage={payload.get('usage')} content_len={len(content)}",
+            flush=True,
+        )
+        print(
+            f"----- [{tag}] tool_calls -----\n"
+            + json.dumps(message.get("tool_calls"), ensure_ascii=False, indent=2),
+            flush=True,
+        )
+        print(f"----- [{tag}] content (full) -----\n{content}", flush=True)
+        print(
+            f"----- [{tag}] raw body -----\n"
+            + json.dumps(payload, ensure_ascii=False, indent=2),
+            flush=True,
+        )
+        print(f"===== [{tag}] end =====\n", flush=True)
 
     def _pause(self, mode: str = "in_place"):
         return requests.post(
             self.base_url + "/pause_generation",
             json={"mode": mode},
+            headers=self.ADMIN_HEADERS,
             timeout=30,
         )
 
@@ -137,21 +272,44 @@ class TestNpuRlPauseResume(CustomTestCase):
         return requests.post(
             self.base_url + "/continue_generation",
             json={"torch_empty_cache": torch_empty_cache},
+            headers=self.ADMIN_HEADERS,
             timeout=30,
         )
 
-    def _assert_valid_response(self, resp, expect_tool_calls=False):
+    def _assert_valid_response(
+        self, resp, expect_tool_calls=False, messages=None, tools=None
+    ):
         """Assert a chat completions response is well-formed."""
         self.assertEqual(resp.status_code, 200, f"Request failed: {resp.text[:500]}")
         body = resp.json()
         choice = body["choices"][0]
+        message = choice["message"]
         if expect_tool_calls:
-            tool_calls = choice["message"].get("tool_calls")
-            self.assertIsNotNone(tool_calls, "Expected tool_calls")
+            tool_calls = message.get("tool_calls")
+            if not tool_calls:
+                # A missing tool_calls usually means the model emitted an
+                # incomplete / nameless call and the parser dropped it, so always
+                # show the raw text and why generation stopped.
+                print(
+                    "[tool_calls missing] "
+                    f"finish_reason={choice.get('finish_reason')!r} "
+                    f"content={message.get('content')!r}",
+                    flush=True,
+                )
+                if messages is not None:
+                    # The parser swallows the raw tool-call text, so replay the
+                    # prompt through /generate to see what the model produced.
+                    self._raw_generation(messages, tools=tools)
+            self.assertIsNotNone(
+                tool_calls,
+                "Expected tool_calls, got none "
+                f"(finish_reason={choice.get('finish_reason')!r}, "
+                f"content={message.get('content')!r})",
+            )
             self.assertGreater(len(tool_calls), 0, "Empty tool_calls")
             return body, tool_calls
         else:
-            content = choice["message"].get("content", "")
+            content = message.get("content", "")
             return body, content
 
     # ── full RL loop ──
@@ -174,7 +332,9 @@ class TestNpuRlPauseResume(CustomTestCase):
         # ── Cycle 1: First rollout → tool call ──
         # Pass full tool set to verify model selects the right tool.
         resp = self._chat(messages, max_tokens=256, tools=self.TOOLS)
-        body, tool_calls = self._assert_valid_response(resp, expect_tool_calls=True)
+        body, tool_calls = self._assert_valid_response(
+            resp, expect_tool_calls=True, messages=messages, tools=self.TOOLS
+        )
 
         # Pause → simulate tool execution by RL environment
         self._pause("in_place").raise_for_status()
@@ -217,7 +377,9 @@ class TestNpuRlPauseResume(CustomTestCase):
         # ── Cycle 3: Follow-up → temperature conversion tool call ──
         # Pass full tool set to verify model selects calculate for conversion.
         resp = self._chat(messages, max_tokens=256, tools=self.TOOLS)
-        body3, tool_calls3 = self._assert_valid_response(resp, expect_tool_calls=True)
+        body3, tool_calls3 = self._assert_valid_response(
+            resp, expect_tool_calls=True, messages=messages, tools=self.TOOLS
+        )
         self.assertEqual(
             tool_calls3[0]["function"]["name"],
             "calculate",
