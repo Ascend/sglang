@@ -30,14 +30,14 @@ jobs:
 #            test_case: test/registered/npu/basic_function/parallel_strategy/expert_parallelism/test_npu_expert_distribution_recorder_mode.py
 #          - name: lora-update
 #            test_case: test/registered/npu/basic_function/lora/test_npu_lora_update.py
-#          - name: rl-pause-resume-loop
-#            test_case: test/registered/npu/basic_function/rl/test_npu_rl_pause_resume_loop.py
-#          - name: api
-#            test_case: test/registered/npu/interface/test_npu_api.py
-          - name: weight-checker-e2e
-            test_case: test/registered/npu/basic_function/rl/test_npu_weight_checker_e2e.py
-          - name: scheduler-control
-            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_scheduler_control.py
+          - name: rl-pause-resume-loop
+            test_case: test/registered/npu/basic_function/rl/test_npu_rl_pause_resume_loop.py
+          - name: api
+            test_case: test/registered/npu/interface/test_npu_api.py
+#          - name: weight-checker-e2e
+#            test_case: test/registered/npu/basic_function/rl/test_npu_weight_checker_e2e.py
+#          - name: scheduler-control
+#            test_case: test/registered/npu/basic_function/memory_and_scheduling/test_npu_scheduler_control.py
 #          - name: start-profile
 #            test_case: test/registered/npu/basic_function/parameter/test_npu_start_profile.py
 #          - name: update-weights-from-disk
