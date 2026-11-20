@@ -10,8 +10,8 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    ADMIN_API_KEY,
-    ADMIN_AUTH_HEADERS,
+    # ADMIN_API_KEY,
+    # ADMIN_AUTH_HEADERS,
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -23,7 +23,8 @@ from sglang.test.test_utils import (
 )
 
 register_npu_ci(est_time=60, suite="full-1-npu-a3", nightly=True)
-
+ADMIN_API_KEY = "SGLANG_CI_ADMIN_API_KEY"
+ADMIN_AUTH_HEADERS = {"Authorization": f"Bearer {ADMIN_API_KEY}"}
 
 class TestNpuRlPauseResume(CustomTestCase):
     """E2E: RL pause/resume robustness with multi-turn + tool call + retract.

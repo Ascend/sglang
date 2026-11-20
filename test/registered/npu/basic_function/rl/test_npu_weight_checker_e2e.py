@@ -1,14 +1,24 @@
+"""End-to-end test for the /weights_checker HTTP endpoint on NPU.
+
+Exercises the full HTTP -> tokenizer_manager -> scheduler -> model_runner ->
+WeightChecker chain on a real Ascend NPU engine. Unit tests in
+test/registered/unit/utils/test_weight_checker.py cover the in-module
+logic; this file is the thin integration cover plus interaction with
+update_weights_from_tensor."""
+
+import os
+import tempfile
 import unittest
+from typing import List, Tuple
 
 import requests
+import torch
 
-import sglang as sgl
-from sglang.srt.utils import kill_process_tree
+from sglang.srt.utils import MultiprocessingSerializer, kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
-    ADMIN_API_KEY,
-    ADMIN_AUTH_HEADERS,
-    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
-    LLAMA_3_2_1B_WEIGHTS_PATH,
+    # ADMIN_API_KEY,
+    # ADMIN_AUTH_HEADERS,
+    QWEN3_0_6B_WEIGHTS_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
@@ -17,160 +27,254 @@ from sglang.test.test_utils import (
     CustomTestCase,
     popen_launch_server,
 )
+ADMIN_API_KEY = "SGLANG_CI_ADMIN_API_KEY"
+ADMIN_AUTH_HEADERS = {"Authorization": f"Bearer {ADMIN_API_KEY}"}
+register_npu_ci(est_time=1500, suite="full-1-npu-a3", nightly=True)
 
-register_npu_ci(est_time=200, suite="full-1-npu-a3", nightly=True)
+_MODEL_NAME = QWEN3_0_6B_WEIGHTS_PATH
+# We address the up half via the HF-style unfused name "up_proj.weight". sglang's
+# stacked_params_mapping rewrites this to "gate_up_proj.weight" with shard_id=1,
+# so the upload writes only the up half of the fused tensor. Sending the fused
+# name directly hits a name.replace() collision (gate_up_proj contains up_proj),
+# producing a malformed key like "gate_gate_up_proj.weight" and crashing load.
+_UP_PROJ_SHAPE = (3072, 1024)  # intermediate_size, hidden_size for Qwen3-0.6B
 
 
-class TestEngineUpdateWeightsFromDisk(CustomTestCase):
-    """Test update weights from disk on NPU.
+class TestWeightCheckerE2E(CustomTestCase):
+    """All cases share one launched server (setUpClass).
 
-    [Test Category] RL Weight Update
-    [Test Target] Engine.update_weights_from_disk
+    The reset case mutates weights to random; it is named to sort last so any
+    case that needs intact weights runs first. The server is torn down right
+    after, so leaving the engine in a corrupted state is harmless.
     """
 
-    def setUp(self):
-        self.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-        self.engine = sgl.Engine(
-            model_path=self.model,
-            trust_remote_code=True,
-        )
+    """
+    Testcase: Set the parameter --model-checksum, the model weights will be verified.
 
-    def tearDown(self):
-        if hasattr(self, "engine") and self.engine:
-            try:
-                self.engine.shutdown()
-            except Exception:
-                pass  # Ignore shutdown errors
-
-    def run_decode(self):
-        prompts = ["The capital of France is"]
-        sampling_params = {"temperature": 0, "max_new_tokens": 32}
-        outputs = self.engine.generate(prompts, sampling_params)
-        return outputs[0]["text"]
-
-    def run_update_weights(self, model_path):
-        ret = self.engine.update_weights_from_disk(model_path)
-        return ret
-
-    def test_update_weights(self):
-        origin_response = self.run_decode()
-        new_model_path = LLAMA_3_2_1B_WEIGHTS_PATH
-        ret = self.run_update_weights(new_model_path)
-        self.assertTrue(ret[0])
-
-        updated_response = self.run_decode()
-        self.assertNotEqual(origin_response[:32], updated_response[:32])
-
-        ret = self.run_update_weights(self.model)
-        self.assertTrue(ret[0])
-        reverted_response = self.run_decode()
-        self.assertEqual(origin_response[:32], reverted_response[:32])
-
-    def test_update_weights_unexist_model(self):
-        origin_response = self.run_decode()
-        new_model_path = self.model.replace("-Instruct", "wrong")
-        ret = self.run_update_weights(new_model_path)
-        self.assertFalse(ret[0])
-        updated_response = self.run_decode()
-        self.assertEqual(origin_response[:32], updated_response[:32])
-
-
-class TestServerUpdateWeightsFromDisk(CustomTestCase):
-    """Test update weights from disk via HTTP server on NPU.
-
-    [Test Category] RL Weight Update
-    [Test Target] /update_weights_from_disk endpoint
+    [Test Category] Parameter
+    [Test Target] --model-checksum
     """
 
     @classmethod
     def setUpClass(cls):
-        cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
-        cls.base_url = DEFAULT_URL_FOR_TEST
+        cls.url = DEFAULT_URL_FOR_TEST
+        # --mem-fraction-static 0.7 leaves enough free NPU memory for
+        # _check_tensors's CPU->NPU round trip: snapshot lives on CPU, then
+        # _compare moves each snapshot tensor back to NPU for byte equality.
+        # With the default 0.88, the vocab-embedding round-trip OOMs the
+        # snapshot/reset/compare cycle in test_z_*.
+        cls.out_file = tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".txt", delete=False
+        )
+        cls.err_file = tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".txt", delete=False
+        )
         cls.process = popen_launch_server(
-            cls.model,
-            cls.base_url,
+            _MODEL_NAME,
+            cls.url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
-                "--trust-remote-code",
+                "--mem-fraction-static",
+                "0.7",
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
-                "--mem-fraction-static",
-                "0.7",
+                "--model-checksum",
+                "Qwen/Qwen3-0.6B",
                 "--admin-api-key",
                 ADMIN_API_KEY,
             ],
+            return_stdout_stderr=(cls.out_file, cls.err_file),
         )
 
     @classmethod
     def tearDownClass(cls):
-        try:
-            kill_process_tree(cls.process.pid)
-        except Exception:
-            pass  # Ignore cleanup errors
+        kill_process_tree(cls.process.pid)
+        cls.out_file.close()
+        cls.err_file.close()
+        os.unlink(cls.out_file.name)
+        os.unlink(cls.err_file.name)
 
-    def run_decode(self):
-        response = requests.post(
-            self.base_url + "/generate",
-            json={
-                "text": "The capital of France is",
-                "sampling_params": {"temperature": 0, "max_new_tokens": 32},
-            },
+    def _post(self, action: str) -> requests.Response:
+        # checksum action iterates over all model weights on NPU and is much
+        # slower than snapshot/compare, so allow a generous timeout.
+        timeout = 600 if action == "checksum" else 120
+        return requests.post(
+            f"{self.url}/weights_checker",
+            json={"action": action},
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=timeout,
         )
-        return response.json()["text"]
 
-    def get_model_info(self):
-        response = requests.get(self.base_url + "/get_model_info")
-        model_path = response.json()["model_path"]
-        return model_path
-
-    def run_update_weights(self, model_path, flush_cache=True):
-        response = requests.post(
-            self.base_url + "/update_weights_from_disk",
+    def _update_weights(
+        self, named_tensors: List[Tuple[str, torch.Tensor]]
+    ) -> requests.Response:
+        requests.post(
+            f"{self.url}/begin_weight_update",
+            json={},
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=120,
+        )
+        resp = requests.post(
+            f"{self.url}/update_weights_from_tensor",
             json={
-                "model_path": model_path,
-                "flush_cache": flush_cache,
+                "serialized_named_tensors": [
+                    MultiprocessingSerializer.serialize(named_tensors, output_str=True)
+                ],
+                "flush_cache": True,
             },
             headers=ADMIN_AUTH_HEADERS,
+            timeout=120,
         )
-        return response.json()
+        requests.post(
+            f"{self.url}/end_weight_update",
+            json={},
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=120,
+        )
+        return resp
 
-    def test_update_weights(self):
-        origin_model_path = self.get_model_info()
-        origin_response = self.run_decode()
+    def test_a_snapshot_then_compare_unchanged_succeeds(self):
+        resp = self._post("snapshot")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["success"])
 
-        new_model_path = LLAMA_3_2_1B_WEIGHTS_PATH
-        ret = self.run_update_weights(new_model_path)
-        self.assertTrue(ret["success"])
+        resp = self._post("compare")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["success"])
 
-        updated_model_path = self.get_model_info()
-        self.assertEqual(updated_model_path, new_model_path)
-        self.assertNotEqual(updated_model_path, origin_model_path)
+    def test_b_unknown_action_returns_400(self):
+        resp = self._post("nonsense_action")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Unsupported", resp.json()["message"])
 
-        updated_response = self.run_decode()
-        self.assertNotEqual(origin_response[:32], updated_response[:32])
+    def test_c_update_with_diff_tensor_makes_compare_fail(self):
+        """A snapshot then an update with new bytes must make compare fail."""
+        self.assertEqual(self._post("snapshot").status_code, 200)
 
-        ret = self.run_update_weights(origin_model_path)
-        self.assertTrue(ret["success"])
-        updated_model_path = self.get_model_info()
-        self.assertEqual(updated_model_path, origin_model_path)
+        # The unfused HF name "up_proj" is what update_weights_from_tensor accepts;
+        # sglang's loader rewrites it onto the fused gate_up_proj tensor.
+        upload_name = "model.layers.5.mlp.up_proj.weight"
+        new_tensor = torch.full(_UP_PROJ_SHAPE, 1.5, device="npu")
+        update_resp = self._update_weights([(upload_name, new_tensor)])
+        self.assertEqual(update_resp.status_code, 200)
+        self.assertTrue(update_resp.json()["success"])
 
-        updated_response = self.run_decode()
-        self.assertEqual(origin_response[:32], updated_response[:32])
+        resp = self._post("compare")
+        self.assertEqual(resp.status_code, 400)
+        body = resp.json()
+        self.assertFalse(body["success"])
+        # The error references the fused on-device parameter name, not the upload alias.
+        self.assertIn("model.layers.5.mlp.gate_up_proj.weight", body["message"])
+        self.assertIn("max_abs_err", body["message"])
 
-    def test_update_weights_unexist_model(self):
-        origin_model_path = self.get_model_info()
-        origin_response = self.run_decode()
+    def test_d_update_with_same_tensor_keeps_compare_passing(self):
+        """Prime a param, snapshot, push the same bytes again, compare must pass."""
+        param_name = "model.layers.6.mlp.up_proj.weight"
+        same_tensor = torch.full(_UP_PROJ_SHAPE, 0.25, device="npu")
 
-        new_model_path = self.model.replace("-Instruct", "wrong")
-        ret = self.run_update_weights(new_model_path)
-        self.assertFalse(ret["success"])
+        # Step 1: prime the param to a known value.
+        self.assertTrue(
+            self._update_weights([(param_name, same_tensor)]).json()["success"]
+        )
+        # Step 2: snapshot the now-primed state.
+        self.assertEqual(self._post("snapshot").status_code, 200)
+        # Step 3: push the exact same bytes again — should be a byte-perfect no-op.
+        self.assertTrue(
+            self._update_weights([(param_name, same_tensor)]).json()["success"]
+        )
+        # Step 4: compare passes.
+        resp = self._post("compare")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["success"])
 
-        updated_model_path = self.get_model_info()
-        self.assertEqual(updated_model_path, origin_model_path)
+    def test_e_checksum_returns_ranks_with_hashes(self):
+        """checksum action must yield a ranks list with hex hashes per rank."""
+        resp = self._post("checksum")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertTrue(body["success"])
+        self.assertIn("ranks", body)
+        ranks = body["ranks"]
+        self.assertIsInstance(ranks, list)
+        self.assertGreaterEqual(len(ranks), 1)
 
-        updated_response = self.run_decode()
-        self.assertEqual(origin_response[:32], updated_response[:32])
+        first = ranks[0]
+        self.assertIn("checksums", first)
+        self.assertIn("parallelism_info", first)
+
+        infos = first["parallelism_info"]
+        # one entry per runner; without speculative decoding that is the target
+        self.assertEqual([info["role"] for info in infos], ["target"])
+        info = infos[0]
+        for key in (
+            "tp_rank",
+            "tp_size",
+            "dp_rank",
+            "dp_size",
+            "pp_rank",
+            "pp_size",
+            "rank",
+            "size",
+        ):
+            self.assertIn(key, info)
+
+        checksums = first["checksums"]
+        self.assertGreater(len(checksums), 0)
+        for name, h in checksums.items():
+            self.assertIsInstance(h, str)
+            self.assertEqual(len(h), 16, f"unexpected hash length for {name!r}: {h!r}")
+            int(h, 16)
+
+    def test_e_checksum_is_stable_across_calls(self):
+        """Two consecutive checksum calls with no weight update must match."""
+        first = self._post("checksum").json()["ranks"]
+        second = self._post("checksum").json()["ranks"]
+        self.assertEqual(first, second)
+
+    def test_e_checksum_changes_after_weight_update(self):
+        """Updating a tensor must change its corresponding hash."""
+        param_name = "model.layers.7.mlp.up_proj.weight"
+        fused_name = "model.layers.7.mlp.gate_up_proj.weight"
+
+        before = self._post("checksum").json()["ranks"][0]["checksums"]
+        before_hash = before.get(fused_name)
+        self.assertIsNotNone(before_hash, f"missing {fused_name!r} in checksum keys")
+
+        new_tensor = torch.full(_UP_PROJ_SHAPE, 0.5, device="npu")
+        self.assertTrue(
+            self._update_weights([(param_name, new_tensor)]).json()["success"]
+        )
+
+        after = self._post("checksum").json()["ranks"][0]["checksums"]
+        self.assertNotEqual(after[fused_name], before_hash)
+
+    def test_e_checksum_skips_non_persistent_buffers(self):
+        """No checksum entry should contain a non-persistent-buffer substring."""
+        ranks = self._post("checksum").json()["ranks"]
+        for rank in ranks:
+            for name in rank["checksums"]:
+                self.assertNotIn("cos_sin_cache", name)
+                self.assertNotIn("inv_freq", name)
+                self.assertNotIn("freqs_cis", name)
+                self.assertNotIn("_weight_fp32", name)
+
+    def test_z_snapshot_reset_compare_detects_diff(self):
+        """Destructive: leaves weights randomized. Named test_z_* so it runs last."""
+        self.assertEqual(self._post("snapshot").status_code, 200)
+        self.assertEqual(self._post("reset_tensors").status_code, 200)
+
+        resp = self._post("compare")
+        self.assertEqual(resp.status_code, 400)
+        body = resp.json()
+        self.assertFalse(body["success"])
+        self.assertIn("max_abs_err", body["message"])
+
+    def test_model_checksum(self):
+        # Model Weight File Verification
+        self.out_file.seek(0)
+        content = self.out_file.read()
+        self.assertIn("[ModelFileVerifier] All 7 files verified successfully.", content)
 
 
 if __name__ == "__main__":

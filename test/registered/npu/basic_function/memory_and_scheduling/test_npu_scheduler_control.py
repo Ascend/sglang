@@ -12,6 +12,8 @@ from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
     LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH,
+    # ADMIN_API_KEY,
+    # ADMIN_AUTH_HEADERS,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.abort_timeout_kit import AbortAllMixin, WaitingTimeoutMixin
@@ -23,7 +25,8 @@ from sglang.test.test_utils import (
     popen_launch_server,
     read_output,
 )
-
+ADMIN_API_KEY = "SGLANG_CI_ADMIN_API_KEY"
+ADMIN_AUTH_HEADERS = {"Authorization": f"Bearer {ADMIN_API_KEY}"}
 # Disable the fast input-logprobs path; use the reference log-softmax path.
 os.environ["SGLANG_ENABLE_FAST_INPUT_LOGPROBS"] = "0"
 
@@ -59,6 +62,8 @@ def _run_and_check_memory_leak_npu(
         "--attention-backend",
         "ascend",
         "--disable-cuda-graph",
+        "--admin-api-key",
+        ADMIN_API_KEY,
     ]
     if disable_radix_cache:
         other_args += ["--disable-radix-cache"]
@@ -225,6 +230,8 @@ class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCas
                 "--attention-backend",
                 "ascend",
                 "--disable-cuda-graph",
+                "--admin-api-key",
+                ADMIN_API_KEY,
             ],
         )
 
