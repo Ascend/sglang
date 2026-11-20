@@ -57,16 +57,14 @@ ARG TRITON_X86_64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/t
 
 ARG SGLANG_TAG=main
 
-ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post8
-
-ARG MF_VERSION="1.3.0"
+ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post12
 
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
 ARG TARGETARCH
 
 COPY --from=sgl-router-builder /out/sgl-router /usr/local/bin/sgl-router
-#进行冒烟测试，后面可以删除
+
 RUN sgl-router --help >/dev/null
 
 WORKDIR /workspace
@@ -132,13 +130,11 @@ RUN git lfs install --system
 ### Install MemFabric and MemCache
 RUN ${PIP_INSTALL} memfabric-hybrid==1.3.1
 
-RUN ${PIP_INSTALL} sglang-router modelscope evalscope pytest blake3 deepseek-recipe msgpack 
+RUN ${PIP_INSTALL} modelscope evalscope pytest blake3 deepseek-recipe msgpack 
 
 RUN ${PIP_INSTALL} cannbot-dsl==0.8.0
 
 RUN ${PIP_INSTALL} https://github.com/kvcache-ai/Mooncake/releases/download/v0.3.14/mooncake_transfer_engine_memfabric-0.3.14-cp312-cp312-manylinux_2_35_$(arch).whl --force --no-deps
-
-RUN python3 -m pip install --no-deps cannbot-dsl==0.8.0
 
 ### Install PyTorch and PTA
 RUN set -eux; \
