@@ -153,7 +153,11 @@ class TestAbort(CustomTestCase):
         p = multiprocessing.Process(target=process_func)
         p.start()
         time.sleep(0.5)
-        p.terminate()
+        # SIGTERM is not honored in the NPU CI environment, so p.terminate()
+        # leaves the client process alive; its sockets stay open, the server
+        # never observes a disconnect and no request is ever aborted.
+        p.kill()
+        p.join()
         time.sleep(10)
 
     def test_memory_leak(self):
@@ -196,7 +200,10 @@ class TestAbortWithApiKey(CustomTestCase):
         p = multiprocessing.Process(target=process_func)
         p.start()
         time.sleep(0.5)
-        p.terminate()
+        # SIGTERM is not honored in the NPU CI environment; force-kill so the
+        # server sees the client disconnect and aborts the running requests.
+        p.kill()
+        p.join()
         time.sleep(10)
 
     def test_memory_leak_with_api_key(self):
