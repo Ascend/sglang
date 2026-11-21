@@ -6,13 +6,12 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 )
 from sglang.test.ascend.e2e.test_npu_multi_node_utils import NIC_NAME
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
-    KIMI_K3_DSPARK_MODEL_PATH,
     KIMI_K3_W4A8_MODEL_PATH,
 )
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=3600,
+    est_time=5400,
     suite="",
     nightly=True,
     disabled="accuracy testcase",
@@ -24,11 +23,6 @@ KIMI_K3_W4A8_32P_ENVS = {
     "SGLANG_NPU_USE_TRITON_PREFIX_KV_CACHE_STORE": "1",
     "TRITON_CACHE_DIR": "/tmp/triton_cache",
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    "SGLANG_RAGGED_VERIFY_MODE": "static",
-    "SGLANG_DSPARK_FOLDED_PROPOSAL": "0",
-    "SGLANG_DSPARK_FOLDED_SAMPLING": "0",
-    "SGLANG_DSPARK_STACKED_CTX_KV": "0",
-    "SGLANG_DSPARK_EMBED_IN_GRAPH": "0",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "HCCL_SOCKET_IFNAME": NIC_NAME,
     "GLOO_SOCKET_IFNAME": NIC_NAME,
@@ -60,8 +54,7 @@ KIMI_K3_W4A8_32P_OTHER_ARGS = [
     "bfloat16",
     "--tp-size",
     64,
-    "--enable-dp-attention",
-    "--dp-size",
+    "--attn-dp-size",
     4,
     "--enable-dp-lm-head",
     "--enable-shared-experts-attn-tp",
@@ -70,6 +63,7 @@ KIMI_K3_W4A8_32P_OTHER_ARGS = [
     0.72,
     "--chunked-prefill-size",
     8192,
+    "--enable-mixed-chunk",
     "--cuda-graph-bs-decode",
     1,
     4,
@@ -82,23 +76,18 @@ KIMI_K3_W4A8_32P_OTHER_ARGS = [
     "deepep",
     "--deepep-mode",
     "auto",
-    "--speculative-algorithm",
-    "DSPARK",
-    "--speculative-draft-model-path",
-    KIMI_K3_DSPARK_MODEL_PATH,
-    "--speculative-draft-model-quantization",
-    "unquant",
-    "--speculative-dspark-block-size",
-    7,
-    "--speculative-draft-attention-backend",
-    "ascend",
-    "--linear-attn-verify-backend",
-    "triton",
-    "--speculative-eagle-topk",
-    1,
     "--disable-custom-all-reduce",
     "--watchdog-timeout",
     9000,
+    # L2 (host) HiCache
+    "--enable-hierarchical-cache",
+    "--hicache-io-backend",
+    "kernel_ascend",
+    "--enable-cache-report",
+    "--hicache-ratio",
+    2,
+    "--hicache-write-policy",
+    "write_through",
 ]
 
 KIMI_K3_W4A8_32P_MODEL_CONFIG = {
@@ -114,7 +103,12 @@ class TestNPUKimiK3_W4A8_32P_GPQA(TestNpuAccuracyMultiNodePdMixTestCaseBase):
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model_config = KIMI_K3_W4A8_32P_MODEL_CONFIG
     accuracy = 0.935
+    max_retries = 1
     datasets = ["gpqa_diamond"]
+    # Weekday nightly overrides this to gsm8k (baseline is provisional).
+    dataset_baselines = {
+        "gsm8k": 0.92,
+    }
     few_shot_num = 0
     eval_batch_size = 32
     generation_config = {
