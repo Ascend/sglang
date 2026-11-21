@@ -61,9 +61,8 @@ class TestMultimodalEPLB(CustomTestCase):
             extra_args=[
                 "--tp-size",
                 "2",
-                "--dp-size",
+                "--attn-dp-size",
                 "2",
-                "--enable-dp-attention",
                 "--moe-a2a-backend",
                 "deepep",
                 "--deepep-mode",

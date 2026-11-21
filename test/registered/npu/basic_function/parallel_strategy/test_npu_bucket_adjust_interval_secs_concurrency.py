@@ -102,7 +102,6 @@ MODEL_CONFIG = {
         16,
         "--moe-dense-tp-size",
         1,
-        "--enable-dp-attention",
         "--enable-dp-lm-head",
         "--trust-remote-code",
         "--attention-backend",

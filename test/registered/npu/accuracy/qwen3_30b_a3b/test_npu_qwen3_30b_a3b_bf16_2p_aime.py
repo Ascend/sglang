@@ -24,7 +24,7 @@ QWEN3_30B_A3B_ENVS = {
 QWEN3_30B_A3B_OTHER_ARGS = [
     "--tp-size",
     2,
-    "--dp-size",
+    "--attn-dp-size",
     2,
     "--nnodes",
     1,
@@ -40,7 +40,6 @@ QWEN3_30B_A3B_OTHER_ARGS = [
     "--trust-remote-code",
     "--mem-fraction-static",
     0.7,
-    "--enable-dp-attention",
     "--mamba-ssm-dtype",
     "bfloat16",
 ]
