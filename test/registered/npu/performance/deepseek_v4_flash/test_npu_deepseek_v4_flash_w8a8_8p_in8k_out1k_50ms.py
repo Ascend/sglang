@@ -30,7 +30,6 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "96",
     "DEEPEP_HYBRID_DEPLOYMENT": "1",
     "SGLANG_RAGGED_VERIFY_MODE": "static",
-    "SGLANG_DSPARK_FAST_KERNEL": "0",
     # war barrier
     "SGLANG_ENABLE_WAR_BARRIER": "1",
     "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
@@ -47,12 +46,6 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
     # mtp
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
-    # ZBAL
-    # "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
-    # "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    # "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    # "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:14699",
-    # "ZBAL_ENABLE_GRAPH": "1",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -78,9 +71,8 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     131072,
     "--max-running-requests",
     192,
-    "--dp-size",
+    "--attn-dp-size",
     16,
-    "--enable-dp-attention",
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -130,11 +122,12 @@ class TestNPUDeepSeekV4FlashW8A88PIn8kOut1k50ms(TestNpuPerformanceTestCaseBase):
     num_prompts = 160
     max_concurrency = 160
     random_range_ratio = 1
-    warmup_requests = 0
+    warmup_requests = 32
     request_rate = float("inf")
-    seed = 1
     tpot = 50
-    output_token_throughput = 1708
+    max_attempts = 3
+    output_token_throughput = 3100
+    accept_rate = 0.5
 
     @classmethod
     def setUpClass(cls):
