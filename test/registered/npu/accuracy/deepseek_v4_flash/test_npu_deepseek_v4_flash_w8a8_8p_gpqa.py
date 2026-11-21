@@ -19,7 +19,7 @@ register_npu_ci(
     nightly=True,
 )
 
-# Nightly is also PR-triggered, so exclude it by workflow ref; every other caller
+#  Nightly is also PR-triggered, so exclude it by workflow ref; every other caller
 # (local runs, full test) still gets the full run.
 _is_pr_pipeline = os.environ.get("GITHUB_EVENT_NAME") == "pull_request" and (
     "nightly-test-npu.yml" not in os.environ.get("GITHUB_WORKFLOW_REF", "")
