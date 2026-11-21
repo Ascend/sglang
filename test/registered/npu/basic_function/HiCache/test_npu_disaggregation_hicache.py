@@ -71,7 +71,8 @@ class DisaggregationHiCacheBase(PDDisaggregationServerBase):
             "write_through",
             "--mem-fraction-static",
             "0.9",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--attention-backend",
             "ascend",
         ]

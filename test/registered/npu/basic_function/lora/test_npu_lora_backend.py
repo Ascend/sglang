@@ -39,7 +39,8 @@ class TestLoraBackend(CustomTestCase):
             f"{cls.lora_backend}",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--lora-path",
             f"lora_a={QWEN3_5_4B_NEO4J_TEXT2CYPHER_LORA_PATH}",
         ]

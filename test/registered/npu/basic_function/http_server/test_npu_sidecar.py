@@ -117,7 +117,8 @@ class TestSidecar(CustomTestCase):
             json.dumps(["--flag", "value", "--sidecar-shutdown-timeout", "10"]),
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         cls.out_log_file = open(OUT_LOG_PATH, "w+", encoding="utf-8")
         cls.err_log_file = open(ERR_LOG_PATH, "w+", encoding="utf-8")

@@ -46,7 +46,8 @@ _COMMON_ARGS = [
     "0.8",
     "--tp-size",
     "4",
-    "--disable-cuda-graph",
+    "--disable-decode-cuda-graph",
+    "--disable-prefill-cuda-graph",
 ]
 
 # Phase-1 result shared across the two test classes below (they run in one

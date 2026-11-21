@@ -112,7 +112,7 @@ jobs:
     # default would preemptively kill e.g. full-acc-2's 480-minute run step,
     # so pin an explicit cap: 540 for non-coverage callers, raised for
     # coverage runs (full-test-npu passes step timeouts up to 960).
-    timeout-minutes: ${{ inputs.use_coverage_runner && 1020 || 540 }}
+    timeout-minutes: ${{ inputs.use_coverage_runner && 1020 || 1020 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

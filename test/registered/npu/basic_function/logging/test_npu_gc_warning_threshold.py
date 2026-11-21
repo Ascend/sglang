@@ -40,7 +40,8 @@ class TestNPUGCWarningThreshold(TestNPULoggingBase):
             "0.8",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         # --gc-warning-threshold-secs=0.01 (a tiny value) is set to ensure GC duration exceeds the alarm threshold.
         cls.other_args.extend(["--gc-warning-threshold-secs", "0.01"])

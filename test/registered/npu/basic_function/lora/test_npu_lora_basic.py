@@ -47,7 +47,8 @@ class TestLoraBasicFunction(CustomTestCase):
             "all",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--mem-fraction-static",
             "0.3",
         ]

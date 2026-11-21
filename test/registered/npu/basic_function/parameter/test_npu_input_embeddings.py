@@ -38,7 +38,8 @@ class TestInputEmbeds(CustomTestCase):
             4,
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         cls.process = popen_launch_server(
             cls.model,

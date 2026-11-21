@@ -40,7 +40,8 @@ class TestEnableTorchCompileDebugMode(CustomTestCase):
         "0.8" if is_npu_a5() else "0.7",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--disable-radix-cache",
         "--cuda-graph-backend-prefill=tc_piecewise",
     ]

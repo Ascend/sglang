@@ -2,13 +2,13 @@
 
 import logging
 import math
-import time
 from enum import IntEnum
 from typing import List, Optional
 
 import torch
 from sgl_kernel_npu.speculative import build_tree_efficient_native
 
+from sglang.test.ascend.npu_profiler_utils import measure_device_time_us
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(est_time=400, suite="full-1-npu-a3", nightly=True)
@@ -82,125 +82,126 @@ def build_tree_kernel_efficient(
 
     bs = seq_lens.numel()
     device = seq_lens.device
-    # e.g. for bs=1, tree_mask: num_draft_token, seq_lens_sum + num_draft_token (flattened)
-    # where each row indicates the attending pattern of each draft token
-    # if use_partial_packed_tree_mask is True, tree_mask: num_draft_token (flattened, packed)
-    if tree_mask_buf is not None:
-        tree_mask = tree_mask_buf
-    elif tree_mask_mode == TreeMaskMode.QLEN_ONLY:
-        tree_mask = torch.full(
-            (num_verify_tokens * bs * num_verify_tokens,),
-            True,
-            dtype=torch.bool,
-            device=device,
-        )
-    elif tree_mask_mode == TreeMaskMode.QLEN_ONLY_BITPACKING:
-        packed_dtypes = [torch.uint8, torch.uint16, torch.uint32]
-        packed_dtype_idx = int(math.ceil(math.log2((num_verify_tokens + 7) // 8)))
-        tree_mask = torch.zeros(
-            (num_verify_tokens * bs,),
-            dtype=packed_dtypes[packed_dtype_idx],
-            device=device,
-        )
-    elif tree_mask_mode == TreeMaskMode.FULL_MASK:
-        tree_mask = torch.full(
-            (
-                seq_lens_sum * num_verify_tokens
-                + num_verify_tokens * num_verify_tokens * bs,
-            ),
-            True,
-            device=device,
-        )
-    else:
-        raise NotImplementedError(f"Invalid tree mask: {tree_mask_mode=}")
 
-    # TODO: make them torch.empty and fuse them into `sgl_build_tree_kernel`
-    retrive_index = torch.full(
-        (bs, num_verify_tokens), -1, device=device, dtype=torch.long
-    )
-    retrive_next_token = torch.full(
-        (bs, num_verify_tokens), -1, device=device, dtype=torch.long
-    )
-    retrive_next_sibling = torch.full(
-        (bs, num_verify_tokens), -1, device=device, dtype=torch.long
-    )
-    # position: where each token belongs to
-    # e.g. if depth of each draft token is [0, 1, 1, 2] and the prompt length is 7
-    # then, positions = [7, 8, 8, 9]
-    if position_buf is not None:
-        positions = position_buf
-    else:
-        positions = torch.empty(
-            (bs * num_verify_tokens,), device=device, dtype=torch.long
+    def make_buffers():
+        # e.g. for bs=1, tree_mask: num_draft_token, seq_lens_sum + num_draft_token (flattened)
+        # where each row indicates the attending pattern of each draft token
+        # if use_partial_packed_tree_mask is True, tree_mask: num_draft_token (flattened, packed)
+        if tree_mask_buf is not None:
+            tree_mask = tree_mask_buf
+        elif tree_mask_mode == TreeMaskMode.QLEN_ONLY:
+            tree_mask = torch.full(
+                (num_verify_tokens * bs * num_verify_tokens,),
+                True,
+                dtype=torch.bool,
+                device=device,
+            )
+        elif tree_mask_mode == TreeMaskMode.QLEN_ONLY_BITPACKING:
+            packed_dtypes = [torch.uint8, torch.uint16, torch.uint32]
+            packed_dtype_idx = int(math.ceil(math.log2((num_verify_tokens + 7) // 8)))
+            tree_mask = torch.zeros(
+                (num_verify_tokens * bs,),
+                dtype=packed_dtypes[packed_dtype_idx],
+                device=device,
+            )
+        elif tree_mask_mode == TreeMaskMode.FULL_MASK:
+            tree_mask = torch.full(
+                (
+                    seq_lens_sum * num_verify_tokens
+                    + num_verify_tokens * num_verify_tokens * bs,
+                ),
+                True,
+                device=device,
+            )
+        else:
+            raise NotImplementedError(f"Invalid tree mask: {tree_mask_mode=}")
+
+        # TODO: make them torch.empty and fuse them into `sgl_build_tree_kernel`
+        retrive_index = torch.full(
+            (bs, num_verify_tokens), -1, device=device, dtype=torch.long
+        )
+        retrive_next_token = torch.full(
+            (bs, num_verify_tokens), -1, device=device, dtype=torch.long
+        )
+        retrive_next_sibling = torch.full(
+            (bs, num_verify_tokens), -1, device=device, dtype=torch.long
+        )
+        # position: where each token belongs to
+        # e.g. if depth of each draft token is [0, 1, 1, 2] and the prompt length is 7
+        # then, positions = [7, 8, 8, 9]
+        if position_buf is not None:
+            positions = position_buf
+        else:
+            positions = torch.empty(
+                (bs * num_verify_tokens,), device=device, dtype=torch.long
+            )
+        return (
+            tree_mask,
+            positions,
+            retrive_index,
+            retrive_next_token,
+            retrive_next_sibling,
         )
 
-    # Initialize lists to collect timing results of two implementations
-    native_tree_times = []
-    kernel_tree_times = []
+    def run_native(buffers):
+        tree_mask, positions, retrive_index, retrive_next_token, next_sibling = buffers
+        return build_tree_efficient_native(
+            parent_list,
+            top_scores_index,
+            seq_lens,
+            tree_mask,
+            retrive_index,
+            retrive_next_token,
+            next_sibling,
+            topk,
+            num_verify_tokens,
+            tree_mask_mode,
+            bs,
+        )
 
-    # Execute native implementation and collect timing
-    torch.npu.synchronize()
-    start_time = time.time()
+    def run_kernel(buffers):
+        tree_mask, positions, retrive_index, retrive_next_token, next_sibling = buffers
+        torch.ops.npu.build_tree_kernel_efficient(
+            parent_list,
+            top_scores_index,
+            seq_lens,
+            tree_mask,
+            positions,
+            retrive_index,
+            retrive_next_token,
+            next_sibling,
+            topk,
+            spec_steps,
+            num_verify_tokens,
+            tree_mask_mode,
+        )
+        return buffers
+
+    # Compare steady-state NPU device time, not a single cold wall-clock sample:
+    # the first kernel call also pays operator registration/initialisation and
+    # used to dominate the measurement.
+    native_buffers = make_buffers()
+    kernel_buffers = make_buffers()
+    avg_native_time_us = measure_device_time_us(lambda: run_native(native_buffers))
+    avg_kernel_time_us = measure_device_time_us(lambda: run_kernel(kernel_buffers))
+
+    # Final deterministic run that produces the outputs asserted below.
     (
-        positions,
-        retrive_index,
-        retrive_next_token,
-        retrive_next_sibling,
-        tree_mask,
-    ) = build_tree_efficient_native(
-        parent_list,
-        top_scores_index,
-        seq_lens,
-        tree_mask,
-        retrive_index,
-        retrive_next_token,
-        retrive_next_sibling,
-        topk,
-        num_verify_tokens,
-        tree_mask_mode,
-        bs,
-    )
-    torch.npu.synchronize()
-    native_time = time.time() - start_time
-    native_tree_times.append(native_time)  # Collect single timing result
-
-    # Execute NPU kernel implementation and collect timing
-    torch.npu.synchronize()
-    start_time = time.time()
-    torch.ops.npu.build_tree_kernel_efficient(
-        parent_list,
-        top_scores_index,
-        seq_lens,
         tree_mask,
         positions,
         retrive_index,
         retrive_next_token,
         retrive_next_sibling,
-        topk,
-        spec_steps,
-        num_verify_tokens,
-        tree_mask_mode,
-    )
-    torch.npu.synchronize()
-    kernel_time = time.time() - start_time
-    kernel_tree_times.append(kernel_time)  # Collect single timing result
+    ) = run_kernel(make_buffers())
 
-    # Log single timing results (replace print with logging)
-    logger.info(f"native_tree_time is {native_time}")
-    logger.info(f"kernel_tree_time is {kernel_time}")
-
-    # Calculate average times (single result here, extendable for multiple runs)
-    avg_native_time = sum(native_tree_times) / len(native_tree_times)
-    avg_kernel_time = sum(kernel_tree_times) / len(kernel_tree_times)
+    logger.info(f"average native tree time (us): {avg_native_time_us}")
+    logger.info(f"average kernel tree time (us): {avg_kernel_time_us}")
 
     # Performance assertion: kernel implementation should be faster than native implementation
     # Threshold: kernel time should be at least 50% faster than native time (adjustable as needed)
-    performance_threshold = 0.5  # 10% speedup requirement
-    if avg_native_time > 1e-9:  # Avoid division by zero
-        speedup_ratio = (avg_native_time - avg_kernel_time) / avg_native_time
-        logger.info(
-            f"Average native tree time: {avg_native_time}, Average kernel tree time: {avg_kernel_time}"
-        )
+    performance_threshold = 0.5
+    if avg_native_time_us > 1e-9:  # Avoid division by zero
+        speedup_ratio = (avg_native_time_us - avg_kernel_time_us) / avg_native_time_us
         logger.info(f"Performance speedup ratio: {speedup_ratio}")
 
         # Assert the speedup meets the requirement

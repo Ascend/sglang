@@ -35,7 +35,8 @@ COMMON_ARGS = [
     MEM_FRACTION,
     "--attention-backend",
     "ascend",
-    "--disable-cuda-graph",
+    "--disable-decode-cuda-graph",
+    "--disable-prefill-cuda-graph",
     "--disable-radix-cache",
 ]
 

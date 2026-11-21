@@ -26,6 +26,10 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+)
+from sglang.test.ascend.test_ascend_utils import (
     QWEN3_30B_A3B_WEIGHTS_PATH as QWEN3_30B_A3B,
 )
 from sglang.test.ci.ci_register import register_npu_ci
@@ -109,11 +113,15 @@ class TestNPUMoEFullRLLoop(CustomTestCase):
             "bfloat16",
             "--mem-fraction-static",
             "0.95",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--max-running-requests",
             "8",
             "--tp-size",
             "1",
+            # Pause/resume, memory occupation and weight updates are ADMIN_FORCE.
+            "--admin-api-key",
+            ADMIN_API_KEY,
         ]
         cls.process = popen_launch_server(
             cls.model,
@@ -139,6 +147,7 @@ class TestNPUMoEFullRLLoop(CustomTestCase):
         return requests.post(
             f"{self.base_url}/pause_generation",
             json={"mode": mode},
+            headers=ADMIN_AUTH_HEADERS,
             timeout=30,
         )
 
@@ -146,6 +155,7 @@ class TestNPUMoEFullRLLoop(CustomTestCase):
         return requests.post(
             f"{self.base_url}/continue_generation",
             json={},
+            headers=ADMIN_AUTH_HEADERS,
             timeout=30,
         )
 
@@ -153,6 +163,7 @@ class TestNPUMoEFullRLLoop(CustomTestCase):
         return requests.post(
             f"{self.base_url}/release_memory_occupation",
             json={"tags": tags},
+            headers=ADMIN_AUTH_HEADERS,
             timeout=60,
         )
 
@@ -160,6 +171,7 @@ class TestNPUMoEFullRLLoop(CustomTestCase):
         return requests.post(
             f"{self.base_url}/resume_memory_occupation",
             json={"tags": tags},
+            headers=ADMIN_AUTH_HEADERS,
             timeout=60,
         )
 
@@ -170,6 +182,7 @@ class TestNPUMoEFullRLLoop(CustomTestCase):
                 "model_path": self.model,
                 "flush_cache": True,
             },
+            headers=ADMIN_AUTH_HEADERS,
             timeout=600,
         )
 

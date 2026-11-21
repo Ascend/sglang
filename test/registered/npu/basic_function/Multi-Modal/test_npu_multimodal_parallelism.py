@@ -65,7 +65,8 @@ class TestMultimodalTPParallelism(CustomTestCase):
                 "bfloat16",
                 "--mamba-ssm-dtype",
                 "bfloat16",
-                # "--disable-cuda-graph",
+                # "--disable-decode-cuda-graph",
+                # "--disable-prefill-cuda-graph",
                 # "--disable-radix-cache",
             ],
         )

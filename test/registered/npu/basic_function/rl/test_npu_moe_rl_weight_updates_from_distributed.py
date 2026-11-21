@@ -412,7 +412,8 @@ def _inference_process(
         str(tp_size),
     ]
     if tp_size == 1:
-        server_args.append("--disable-cuda-graph")
+        server_args.append("--disable-decode-cuda-graph")
+        server_args.append("--disable-prefill-cuda-graph")
     server_args += ["--admin-api-key", ADMIN_API_KEY]
 
     base_url = DEFAULT_URL_FOR_TEST

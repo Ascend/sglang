@@ -22,7 +22,8 @@ from sglang.test.test_utils import (
 NPU_COMMON_ARGS = [
     "--attention-backend",
     "ascend",
-    "--disable-cuda-graph",
+    "--disable-decode-cuda-graph",
+    "--disable-prefill-cuda-graph",
     "--trust-remote-code",
     "--mem-fraction-static",
     "0.5",

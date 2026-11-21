@@ -26,7 +26,8 @@ class TestSWARadixCacheKL(KLDivergenceMixin, DefaultServerBase):
         "--trust-remote-code",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--cuda-graph-backend-prefill=disabled",
     ]
 

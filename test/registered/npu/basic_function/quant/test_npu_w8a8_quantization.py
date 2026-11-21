@@ -45,7 +45,8 @@ class TestAscendW8A8CompressedTensors(CustomTestCase):
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=[
                 "--trust-remote-code",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--device",
                 "npu",
                 "--attention-backend",

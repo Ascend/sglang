@@ -85,7 +85,8 @@ class TestMultimodalOffload(CustomTestCase):
                 # during graph capture, but Ascend driver does not allow
                 # async memory copies inside a captured stream.
                 # Decode CUDA graph must be disabled.
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
 

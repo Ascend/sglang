@@ -50,7 +50,8 @@ class TestAttnTpGatherDense(CustomTestCase):
                 "0.8",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--disable-attn-tp-gather",
             ],
         )
@@ -69,15 +70,15 @@ class TestAttnTpGatherDense(CustomTestCase):
 
 
 class TestAttnTpGatherDPAttn(CustomTestCase):
-    """Verify --disable-attn-tp-gather under --enable-dp-attention.
+    """Verify --disable-attn-tp-gather under attention DP.
 
-    When dp_size == tp_size, gather is already disabled without the flag
-    (dp_size < tp_size is false). When dp_size < tp_size, gather is enabled
-    by default, and --disable-attn-tp-gather overrides it. Both scenarios
-    are tested with and without the flag.
+    When attn_dp_size == tp_size, gather is already disabled without the flag
+    (attn_dp_size < tp_size is false). When attn_dp_size < tp_size, gather is
+    enabled by default, and --disable-attn-tp-gather overrides it. Both
+    scenarios are tested with and without the flag.
 
     [Test Category] Parameter
-    [Test Target] --disable-attn-tp-gather; --enable-dp-attention
+    [Test Target] --disable-attn-tp-gather; --attn-dp-size
     """
 
     model = QWEN3_6_35B_A3B_WEIGHTS_PATH
@@ -98,13 +99,13 @@ class TestAttnTpGatherDPAttn(CustomTestCase):
             "0.8",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--moe-a2a-backend",
             "deepep",
-            "--enable-dp-attention",
             "--tp-size",
             str(tp_size),
-            "--dp-size",
+            "--attn-dp-size",
             str(dp_size),
         ]
         if disable_gather:

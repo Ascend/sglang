@@ -35,7 +35,8 @@ class TestLoRAOpenAICompatible(CustomTestCase):
         other_args = [
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--max-running-requests",
             "10",
             "--enable-lora",

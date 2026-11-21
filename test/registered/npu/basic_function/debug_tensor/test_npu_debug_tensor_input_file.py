@@ -32,7 +32,8 @@ class TestDebugTensorInputFile(CustomTestCase):
             "./input_tensor.npy",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         out_log_file = open("./tensor_input_out_log.txt", "w+", encoding="utf-8")
         err_log_file = open("./tensor_input_err_log.txt", "w+", encoding="utf-8")

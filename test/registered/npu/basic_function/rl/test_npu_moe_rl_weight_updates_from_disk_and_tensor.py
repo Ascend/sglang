@@ -26,6 +26,10 @@ import torch
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+)
+from sglang.test.ascend.test_ascend_utils import (
     QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH as QWEN3_30B_A3B_INSTRUCT,
 )
 from sglang.test.ascend.test_ascend_utils import (
@@ -59,11 +63,15 @@ def _npu_server_args(tp_size=1, **extra):
         "bfloat16",
         "--mem-fraction-static",
         "0.95",
-        # "--disable-cuda-graph",
+        # "--disable-decode-cuda-graph",
+        # "--disable-prefill-cuda-graph",
         "--max-running-requests",
         "8",
         "--tp-size",
         str(tp_size),
+        # Weight-update endpoints are ADMIN_FORCE.
+        "--admin-api-key",
+        ADMIN_API_KEY,
     ]
     args.extend(
         f"--{k.replace('_', '-')}={v}" if v is not True else f"--{k.replace('_', '-')}"
@@ -190,7 +198,10 @@ class _BaseNPUMoEWeightUpdateTest(CustomTestCase):
     # ── HTTP helpers ────────────────────────────────────────────────
     def _post(self, endpoint, payload, timeout=300):
         resp = requests.post(
-            f"{self.base_url}{endpoint}", json=payload, timeout=timeout
+            f"{self.base_url}{endpoint}",
+            json=payload,
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=timeout,
         )
         resp.raise_for_status()
         return resp.json()

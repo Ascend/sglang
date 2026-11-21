@@ -7,6 +7,8 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
     QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
     run_command,
 )
@@ -33,6 +35,9 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
 
     expert_distribution_recorder_mode = "stat"
     expert_balancedness_report_mode = "off"
+    # --enable-eplb only accepts the stat/stat_approx recorder modes; the
+    # detailed per_pass/per_token modes are file-dump-only.
+    enable_eplb = True
     path = "/tmp/pt"
 
     @classmethod
@@ -43,32 +48,37 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
         cls.err_file = tempfile.NamedTemporaryFile(
             mode="w+", suffix=".txt", delete=False
         )
+        other_args = [
+            "--trust-remote-code",
+            "--attention-backend",
+            "ascend",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
+            "--mem-fraction-static",
+            "0.8",
+            "--tp-size",
+            "2",
+            "--expert-parallel-size",
+            "2",
+            "--moe-a2a-backend",
+            "deepep",
+            "--deepep-mode",
+            "normal",
+            "--enable-metrics",
+            "--expert-distribution-recorder-mode",
+            cls.expert_distribution_recorder_mode,
+            "--expert-balancedness-report-mode",
+            cls.expert_balancedness_report_mode,
+            "--admin-api-key",
+            ADMIN_API_KEY,
+        ]
+        if cls.enable_eplb:
+            other_args.append("--enable-eplb")
         cls.process = popen_launch_server(
             QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH,
             DEFAULT_URL_FOR_TEST,
             DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            other_args=[
-                "--trust-remote-code",
-                "--attention-backend",
-                "ascend",
-                "--disable-cuda-graph",
-                "--mem-fraction-static",
-                "0.8",
-                "--tp-size",
-                "2",
-                "--expert-parallel-size",
-                "2",
-                "--enable-eplb",
-                "--moe-a2a-backend",
-                "deepep",
-                "--deepep-mode",
-                "normal",
-                "--enable-metrics",
-                "--expert-distribution-recorder-mode",
-                cls.expert_distribution_recorder_mode,
-                "--expert-balancedness-report-mode",
-                cls.expert_balancedness_report_mode,
-            ],
+            other_args=other_args,
             env={
                 "SGLANG_NPU_DISABLE_ACL_FORMAT_WEIGHT": "1",
                 "HCCL_BUFFSIZE": "1024",
@@ -90,7 +100,10 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
 
     def test_recorder_mode(self):
         # Start recording
-        requests.post(f"{DEFAULT_URL_FOR_TEST}/start_expert_distribution_record")
+        requests.post(
+            f"{DEFAULT_URL_FOR_TEST}/start_expert_distribution_record",
+            headers=ADMIN_AUTH_HEADERS,
+        )
 
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/generate",
@@ -110,10 +123,16 @@ class TestExpertDistributionRecorderModeStatic(CustomTestCase):
         )
 
         # Stop recording
-        requests.post(f"{DEFAULT_URL_FOR_TEST}/stop_expert_distribution_record")
+        requests.post(
+            f"{DEFAULT_URL_FOR_TEST}/stop_expert_distribution_record",
+            headers=ADMIN_AUTH_HEADERS,
+        )
 
         # Export the .pt file
-        requests.post(f"{DEFAULT_URL_FOR_TEST}/dump_expert_distribution_record")
+        requests.post(
+            f"{DEFAULT_URL_FOR_TEST}/dump_expert_distribution_record",
+            headers=ADMIN_AUTH_HEADERS,
+        )
 
         # Check distribution_recorder_files
         distribution_recorder_suffixes = ["*.pt"]
@@ -155,6 +174,7 @@ class TestExpertDistributionRecorderModeStatApprox(
 class TestExpertDistributionRecorderPerPass(TestExpertDistributionRecorderModeStatic):
     expert_distribution_recorder_mode = "per_pass"
     expert_balancedness_report_mode = "both"
+    enable_eplb = False
 
     def test_expert_balancedness_report_mode(self):
         # When --expert-balancedness-report-mode is both, both logs and metrics are recorded.
@@ -169,6 +189,7 @@ class TestExpertDistributionRecorderPerToken(TestExpertDistributionRecorderModeS
     # When --expert-balancedness-report-mode is server_log, only recorded in the logs
     expert_distribution_recorder_mode = "per_token"
     expert_balancedness_report_mode = "server_log"
+    enable_eplb = False
 
     def test_expert_balancedness_report_mode(self):
         response = requests.get(f"{DEFAULT_URL_FOR_TEST}/metrics")

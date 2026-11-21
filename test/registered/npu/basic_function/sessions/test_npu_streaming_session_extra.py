@@ -8,8 +8,9 @@ Adapted for Ascend NPU backend:
     is incompatible with NPU aclnnRmsNorm: the draft's RMSNorm weight is
     float16 while the main model hidden state is bfloat16, a combination
     not in the supported list).
-  - Adds `--attention-backend ascend`, `--disable-cuda-graph`,
-    `--cuda-graph-backend-decode disabled` to all server launches.
+  - Adds `--attention-backend ascend`, `--disable-decode-cuda-graph`,
+    `--disable-prefill-cuda-graph`, `--cuda-graph-backend-decode disabled`
+    to all server launches.
   - Sets `PYTORCH_NPU_ALLOC_CONF=expandable_segments:True` and a longer
     `HCCL_EXEC_TIMEOUT` for stability under multi-turn streaming workloads.
   - Adapts `--page-size` to NPU-friendly values (128/4 instead of 256),
@@ -94,7 +95,8 @@ _NPU_COMMON_ARGS = [
     "--trust-remote-code",
     "--attention-backend",
     "ascend",
-    "--disable-cuda-graph",
+    "--disable-decode-cuda-graph",
+    "--disable-prefill-cuda-graph",
     "--cuda-graph-backend-decode",
     "disabled",
     "--enable-streaming-session",

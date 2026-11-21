@@ -152,9 +152,8 @@ class TestNPUMetrics2NPU(_BaseTestNPUMetrics):
         "--enable-mfu-metrics",
         "--tp",
         "2",
-        "--dp",
+        "--attn-dp-size",
         "2",
-        "--enable-dp-attention",
     ]
     # In single-card scenarios, two identical requests suffice to trigger a KV
     # cache hit (the second request reuses the cache from the first). However,

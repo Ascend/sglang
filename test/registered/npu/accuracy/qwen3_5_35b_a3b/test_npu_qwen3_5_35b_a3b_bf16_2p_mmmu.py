@@ -6,7 +6,7 @@ from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
 from sglang.test.ascend.e2e.test_npu_performance_utils import QWEN3_5_35B_A3B_MODEL_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 
-register_npu_ci(est_time=3600, suite="full-acc-2-npu-a3", nightly=True)
+register_npu_ci(est_time=12600, suite="full-acc-2-npu-a3", nightly=True)
 
 ENVS = {
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
@@ -31,9 +31,8 @@ OTHER_ARGS = [
     "npu",
     "--tp-size",
     2,
-    "--dp-size",
+    "--attn-dp-size",
     2,
-    "--enable-dp-attention",
     "--moe-a2a-backend",
     "deepep",
     "--chunked-prefill-size",
