@@ -71,6 +71,7 @@ KIMI_K3_W4A8_32P_PREFILL_ARGS = [
     0.78,
     "--chunked-prefill-size",
     16384,
+    "--enable-mixed-chunk",
     "--max-total-tokens",
     250000,
     "--disable-radix-cache",
@@ -96,26 +97,29 @@ KIMI_K3_W4A8_32P_MODEL_CONFIG = {
 }
 
 
-class TestNPUKimiK3W4A832PMixIn128kOut1Prefill(TestNpuPerfMultiNodePdMixTestCaseBase):
-    """Pure prefill: cold 131072 in / 1 out, C1/N1, mean TTFT <= 20 s and
-    request throughput >= 0.07 req/s."""
+class TestNPUKimiK3W4A832PMixIn16kOut1k(TestNpuPerfMultiNodePdMixTestCaseBase):
+    """Mixed prefill + decode workload: 16384 in / 1024 out with 8 concurrent
+    requests, so decodes stay in flight while new prompts prefill and the
+    scheduler merges them into mixed batches (--enable-mixed-chunk).
+    Cold prefills (--disable-radix-cache), 8 x (16384 + 1024) tokens fits the
+    250000-token KV pool, so no retraction should be triggered.
+    Asserts mean TTFT <= 20 s within the tolerance of the harness."""
 
     model_config = KIMI_K3_W4A8_32P_MODEL_CONFIG
     benchmark_tool = AISBENCHMARK
     dataset_type = AISBENCHMARK_DATASET_GSM8K
     # None lets run_aisbench() generate the exact-length GSM8K dataset.
     dataset_path = None
-    input_len = 131072
-    output_len = 1
-    num_prompts = 1
-    max_concurrency = 1
+    input_len = 16384
+    output_len = 1024
+    num_prompts = 32
+    max_concurrency = 8
     random_range_ratio = 1
     request_rate = 0
     ttft = 20000.0
-    request_throughput = 0.07
 
-    def test_npu_kimi_k3_w4a8_32p_mix_in128k_out1_prefill(self):
-        """Run the 128k cold-prefill TTFT acceptance test."""
+    def test_npu_kimi_k3_w4a8_32p_mix_in16k_out1k(self):
+        """Run the 16k-in / 1k-out mixed prefill-decode throughput test."""
         self.run_throughput()
 
 
