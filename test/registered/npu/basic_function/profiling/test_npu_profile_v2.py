@@ -37,7 +37,8 @@ class TestStartProfile(CustomTestCase):
         other_args = [
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             # /start_profile and /stop_profile are ADMIN_FORCE.
             "--admin-api-key",
             ADMIN_API_KEY,

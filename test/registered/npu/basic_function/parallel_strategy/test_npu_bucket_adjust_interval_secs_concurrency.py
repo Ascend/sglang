@@ -88,7 +88,8 @@ MODEL_CONFIG = {
         "modelslim",
         "--disaggregation-transfer-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
     ],
     "decode_args": [
         "--disaggregation-mode",

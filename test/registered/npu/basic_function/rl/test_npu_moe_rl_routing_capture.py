@@ -243,7 +243,8 @@ class _BaseNPURoutingCaptureTest(CustomTestCase):
             ADMIN_API_KEY,
         ]
         if self._disable_cuda_graph:
-            args.append("--disable-cuda-graph")
+            args.append("--disable-decode-cuda-graph")
+            args.append("--disable-prefill-cuda-graph")
         args.extend(self.server_extra_args)
         if extra_args:
             args.extend(extra_args)

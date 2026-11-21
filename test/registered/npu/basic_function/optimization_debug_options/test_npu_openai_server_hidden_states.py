@@ -250,7 +250,8 @@ class TestOpenAIServerWithHiddenStatesEnabledAndCUDAGraphDisabled(
     """Testcase: In non-graphical scenarios, configuring "--enable-return-hidden-states" will return the hidden state.
 
     [Test Category] Parameter
-    [Test Target] --disable-cuda-graph; --enable-return-hidden-states
+    [Test Target] --disable-decode-cuda-graph; --disable-prefill-cuda-graph;
+    --enable-return-hidden-states
     """
 
     @classmethod
@@ -267,7 +268,8 @@ class TestOpenAIServerWithHiddenStatesEnabledAndCUDAGraphDisabled(
                 "--enable-return-hidden-states",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
             env=ENV,
         )
@@ -324,7 +326,8 @@ class TestOpenAIServerWithEAGLE3AndHiddenStatesEnabled(
                 "--enable-return-hidden-states",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
             env=ENV,
         )

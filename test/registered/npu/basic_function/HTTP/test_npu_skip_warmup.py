@@ -34,7 +34,8 @@ class TestSkipServerWarmup(CustomTestCase):
             "--skip-server-warmup",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
 
         cls.out_log_file = tempfile.NamedTemporaryFile(

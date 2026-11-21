@@ -54,7 +54,8 @@ class TestPPAccuracy(unittest.TestCase):
                 "ascend",
                 "--mem-fraction-static",
                 "0.65",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
 
@@ -136,7 +137,8 @@ class TestDPAttentionDP2PP2(CustomTestCase):
                 "32",
                 "--context-length",
                 "16384",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
 
@@ -185,7 +187,8 @@ class TestPPMixedChunk(CustomTestCase):
                 "ascend",
                 "--mem-fraction-static",
                 "0.65",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
 
@@ -239,7 +242,8 @@ class TestFixedBugs(unittest.TestCase):
             "ascend",
             "--mem-fraction-static",
             "0.65",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         run_bench_one_batch_server(
             model,

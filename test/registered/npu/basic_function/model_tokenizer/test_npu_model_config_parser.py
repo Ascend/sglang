@@ -32,7 +32,8 @@ class TestNpuModelConfigParser(CustomTestCase):
         "0.8",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
     ]
 
     @classmethod

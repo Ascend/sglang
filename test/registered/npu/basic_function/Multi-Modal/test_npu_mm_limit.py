@@ -89,7 +89,8 @@ class TestLimitMMDatePerRequest(TestVLMModels, CustomTestCase):
             "npu",
             "--tp-size",
             "4",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--limit-mm-data-per-request",
             limit_mm,
         ]

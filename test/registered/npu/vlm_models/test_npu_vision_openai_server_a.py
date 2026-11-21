@@ -43,7 +43,8 @@ class TestLlavaServer(ImageOpenAITestMixin):
     extra_args = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
     ]
 
 
@@ -52,7 +53,8 @@ class TestQwen3VL8BServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
     extra_args = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--mem-fraction-static",
         "0.5",
         "--mm-attention-backend",
@@ -65,7 +67,8 @@ class TestQwen3VLServer(ImageOpenAITestMixin, VideoOpenAITestMixin):
     extra_args = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--mem-fraction-static",
         "0.8",
         "--tp-size",
@@ -159,7 +162,8 @@ class TestGemma4itServer(ImageOpenAITestMixin):
     os.environ["ASCEND_USE_FIA"] = "1"
     model = GEMMA_4_31B_WEIGHTS_PATH
     extra_args = [
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--attention-backend",
         "ascend",
         "--tp-size",

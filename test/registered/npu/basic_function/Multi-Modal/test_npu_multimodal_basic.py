@@ -52,7 +52,8 @@ class TestMultimodalBasicFunction(CustomTestCase):
         cls.process, cls.base_url = launch_server(
             cls.model,
             extra_args=[
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--mem-fraction-static",
                 "0.857",
                 "--tp-size",
@@ -332,7 +333,8 @@ class TestMultimodalChunkedPrefill(CustomTestCase):
             extra_args=[
                 "--chunked-prefill-size",
                 "512",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--mem-fraction-static",
                 "0.25",
             ],
@@ -386,7 +388,8 @@ class TestMultimodalChunkedPrefill(CustomTestCase):
 class TestMultimodalGraphCompilation(CustomTestCase):
     """Verify multimodal inference works with graph compilation enabled.
 
-    Launches a server without --disable-cuda-graph so the NPU ViT graph
+    Launches a server without --disable-decode-cuda-graph /
+    --disable-prefill-cuda-graph so the NPU ViT graph
     runner (vit_npu_graph_runner) handles the ViT forward pass.  Validates
     that graph capture + replay does not crash, corrupt features, or produce
     gibberish.

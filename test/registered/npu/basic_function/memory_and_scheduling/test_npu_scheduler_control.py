@@ -51,7 +51,8 @@ def _run_and_check_memory_leak_npu(
 
     Differs only in that it uses LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH (a
     ModelScope-resolvable path) instead of DEFAULT_MODEL_NAME_FOR_TEST, and
-    adds NPU required args (--attention-backend ascend, --disable-cuda-graph).
+    adds NPU required args (--attention-backend ascend, --disable-decode-cuda-graph,
+    --disable-prefill-cuda-graph).
     """
     other_args = [
         "--chunked-prefill-size",

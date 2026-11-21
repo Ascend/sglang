@@ -39,7 +39,8 @@ class TestNPUKVCacheDtype(CustomTestCase):
             "auto",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--kv-cache-dtype",
             cls.kv_cache_dtype,
         ]

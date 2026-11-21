@@ -30,7 +30,8 @@ class TestDefaultPriorityValue(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--enable-priority-scheduling",
         "--enable-metrics",
         "--max-running-requests",
@@ -174,7 +175,8 @@ class TestDisablePriorityPreemption(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--enable-priority-scheduling",
         "--default-priority-value",
         "0",

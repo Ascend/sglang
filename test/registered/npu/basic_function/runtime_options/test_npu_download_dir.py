@@ -40,7 +40,8 @@ class TestDownloadDir(CustomTestCase):
             cls.download_dir,
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         cls.process = popen_launch_server(
             cls.model,

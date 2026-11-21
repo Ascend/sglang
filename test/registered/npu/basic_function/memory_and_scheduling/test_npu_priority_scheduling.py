@@ -38,7 +38,8 @@ class TestPriorityScheduling(CustomTestCase):
             "--enable-priority-scheduling",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         )
         cls.base_url = DEFAULT_URL_FOR_TEST
 
@@ -248,7 +249,8 @@ class TestPrioritySchedulingMultipleRunningRequests(CustomTestCase):
             "--enable-priority-scheduling",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         )
 
         cls.base_url = DEFAULT_URL_FOR_TEST

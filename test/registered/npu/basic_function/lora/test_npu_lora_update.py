@@ -985,7 +985,8 @@ class LoRAUpdateServerTestSession(LoRAUpdateTestSessionBase):
                     lora_path = json.dumps(lora_path)
                 other_args.append(lora_path)
         if self.disable_cuda_graph:
-            other_args.append("--disable-cuda-graph")
+            other_args.append("--disable-decode-cuda-graph")
+            other_args.append("--disable-prefill-cuda-graph")
         if self.max_lora_rank is not None:
             other_args.extend(["--max-lora-rank", str(self.max_lora_rank)])
         if self.lora_target_modules is not None:

@@ -19,7 +19,8 @@ class TestVLMEncoderDP(TestVLMModels):
         "32",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
     ]
 
     def test_vlm_mmmu_benchmark(self):

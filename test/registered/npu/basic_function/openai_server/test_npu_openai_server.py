@@ -55,7 +55,8 @@ class TestOpenAIServer(CustomTestCase):
             other_args=[
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
         cls.base_url += "/v1"
@@ -476,7 +477,8 @@ class TestOpenAIServerv1Responses(CustomTestCase):
             other_args=[
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
         cls.base_url += "/v1"
@@ -830,7 +832,8 @@ class TestOpenAIV1Rerank(CustomTestCase):
             "-1",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         cls.process = popen_launch_server(
             cls.model,
@@ -899,7 +902,8 @@ class TestOpenAIServerCustomLogitProcessor(CustomTestCase):
             other_args=[
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--enable-custom-logit-processor",
             ],
         )
@@ -977,7 +981,8 @@ class TestOpenAIV1Score(CustomTestCase):
             other_args=[
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
         cls.base_url += "/v1/score"
