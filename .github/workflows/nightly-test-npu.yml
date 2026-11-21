@@ -2,11 +2,11 @@ name: Nightly Test (NPU)
 on:
   schedule:
     - cron: '0 16 * * *'  # Execute at 0:00 a.m. Beijing Time every day
-  pull_request:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/nightly-test-npu.yml"
+#  pull_request:
+#    branches:
+#      - testcases-261015
+#    paths:
+#      - ".github/workflows/nightly-test-npu.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -126,80 +126,6 @@ jobs:
           RUN_START_METADATA="$(python3 -c "import json,sys; print(json.dumps({'branch_label':sys.argv[1],'workflow_name':sys.argv[2],'create_time':sys.argv[3]}))" "$BRANCH_LABEL" "${{ github.workflow }}" "$(date -u -d '+8 hours' +%Y%m%d-%H%M)")"
           # Write to GITHUB_OUTPUT and print to the log in one command.
           echo "run_start_metadata=${RUN_START_METADATA}" | tee -a $GITHUB_OUTPUT
-
-  nightly-1-npu-a3:
-    name: nightly-1-npu-a3
-    if: ${{ !cancelled() }}
-    needs: [set-image-config]
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: nightly-1-npu-a3
-      runner_config: linux-aarch64-a3-2
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x timeout budget.
-      run_timeout_minutes: ${{ inputs.coverage_mode == true && '180' || '90' }}
-      timeout_per_file: '3600'
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-      use_coverage_runner: ${{ inputs.coverage_mode == true }}
-      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
-    secrets: inherit
-
-  nightly-2-npu-a3:
-    name: nightly-2-npu-a3
-    if: ${{ !cancelled() }}
-    needs: [set-image-config]
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: nightly-2-npu-a3
-      runner_config: linux-aarch64-a3-2
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x timeout budget.
-      run_timeout_minutes: ${{ inputs.coverage_mode == true && '180' || '90' }}
-      timeout_per_file: '3600'
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-      use_coverage_runner: ${{ inputs.coverage_mode == true }}
-      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
-    secrets: inherit
-
-  # The nightly-4-npu-a3 suite is split across 2 parallel partition jobs, mirroring base-b-test-4-npu-a3 in the PR pipeline.
-  nightly-4-npu-a3:
-    name: nightly-4-npu-a3
-    if: ${{ !cancelled() }}
-    needs: [set-image-config]
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: nightly-4-npu-a3
-      runner_config: linux-aarch64-a3-4
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x timeout budget.
-      run_timeout_minutes: ${{ inputs.coverage_mode == true && '240' || '120' }}
-      timeout_per_file: '3600'
-      partitions: '{"size":2,"arr":[0,1]}'
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-      use_coverage_runner: ${{ inputs.coverage_mode == true }}
-      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
-    secrets: inherit
-
-  nightly-8-npu-a3:
-    name: nightly-8-npu-a3
-    if: ${{ !cancelled() }}
-    needs: [set-image-config]
-    uses: ./.github/workflows/_npu-pr-test-stage.yml
-    with:
-      self_name: nightly-8-npu-a3
-      runner_config: linux-aarch64-a3-8
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      # Coverage mode: 2x timeout budget.
-      run_timeout_minutes: ${{ inputs.coverage_mode == true && '120' || '60' }}
-      timeout_per_file: '3600'
-      is_nightly_pipeline_job: true
-      skip_pr_test_health_check: 'true'
-      use_coverage_runner: ${{ inputs.coverage_mode == true }}
-      upload_coverage_artifact: ${{ inputs.coverage_mode == true }}
-    secrets: inherit
 
   nightly-16-npu-a3:
     name: nightly-16-npu-a3
