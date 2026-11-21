@@ -42,8 +42,6 @@ DEEPSEEK_V4_FLASH_W8A8_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # mtp
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
 }
 
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PD-mix.
@@ -67,6 +65,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_OTHER_ARGS = [
     0.68,
     "--chunked-prefill-size",
     131072,
+    "--enable-mixed-chunk",
     "--max-running-requests",
     192,
     "--attn-dp-size",
