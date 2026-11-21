@@ -68,14 +68,15 @@ class TestDeepEpAutoDeepseekR1(GSM8KAscendMixin, CustomTestCase):
         "3",
         "--dtype",
         "bfloat16",
+        "--enable-prefill-delayer",
+        "--prefill-delayer-max-delay-passes",
+        200,
     ]
     env = {
         **os.environ,
         "SGLANG_SET_CPU_AFFINITY": "1",
         "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
         "STREAMS_PER_DEVICE": "32",
-        "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
-        "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "200",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "88",
         "HCCL_BUFFSIZE": "1600",
         "DEEPEP_HCCL_BUFFSIZE": "1600",

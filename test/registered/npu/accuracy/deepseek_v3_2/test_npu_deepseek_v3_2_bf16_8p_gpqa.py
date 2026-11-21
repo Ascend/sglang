@@ -12,7 +12,6 @@ ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
     "STREAMS_PER_DEVICE": "32",
-    "SGLANG_SCHEDULER_DECREASE_PREFILL_IDLE": "1",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     "HCCL_BUFFSIZE": "1200",
@@ -71,6 +70,7 @@ OTHER_ARGS = [
     "deepseekv32",
     "--reasoning-parser",
     "deepseek-v3",
+    "--enable-prefill-delayer",
 ]
 
 
