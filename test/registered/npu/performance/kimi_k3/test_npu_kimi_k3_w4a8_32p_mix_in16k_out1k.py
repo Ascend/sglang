@@ -71,7 +71,7 @@ KIMI_K3_W4A8_32P_PREFILL_ARGS = [
     0.78,
     "--chunked-prefill-size",
     16384,
-    "--enable-mixed-chunk",
+    # "--enable-mixed-chunk",
     "--max-total-tokens",
     250000,
     "--disable-radix-cache",
