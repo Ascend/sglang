@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SOURCE_IMAGE: quay.io/ascend/cann:9.2.0-a3-ubuntu22.04-py3.12
-  TARGET_IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.2.0-a3-ubuntu22.04-py3.12
+  SOURCE_IMAGE: quay.io/ascend/cann:9.2.0-950-ubuntu22.04-py3.12
+  TARGET_IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.2.0-950-ubuntu22.04-py3.12
 
 jobs:
   retag:
