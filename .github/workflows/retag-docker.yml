@@ -13,7 +13,7 @@ concurrency:
 env:
   SWR_REGISTRY: "swr.cn-southwest-2.myhuaweicloud.com"
   IMAGE: "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann/cann"
-  FINAL_TAG: "9.2.0-950-ubuntu22.04-py3.12"
+  FINAL_TAG: "9.1.0-950-ubuntu22.04-py3.12"
   DOCKERFILE: "docker/Dockerfile"
 
 jobs:
