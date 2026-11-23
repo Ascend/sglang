@@ -23,8 +23,7 @@ class TestPrefetchCheckpointsMultiNPU(CustomTestCase):
         cls.engine = sgl.Engine(
             model_path=QWEN3_32B_WEIGHTS_PATH,
             tp_size=4,
-            dp_size=4,
-            enable_dp_attention=True,
+            attn_dp_size=4,
             disable_radix_cache=True,
             weight_loader_prefetch_checkpoints=True,
             attention_backend="ascend",

@@ -237,7 +237,7 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         )
 
     def test_disable_fast_image_processor_unlocks_concurrency(self):
-        """Case 3: --disable-fast-image-processor unlocks processor concurrency on NPU."""
+        """Case 3: --image-processor-backend unlocks processor concurrency on NPU."""
         other_args = [
             "--attention-backend",
             "ascend",
@@ -245,7 +245,8 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
             "npu",
             "--trust-remote-code",
             "--enable-multimodal",
-            "--disable-fast-image-processor",
+            "--image-processor-backend",
+            "pil",
         ]
         self._launch_server(other_args)
 
@@ -261,7 +262,7 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
         self.assertRegex(
             stderr_text,
             r"Multimodal processor concurrency enabled with \d+ isolated worker threads \(auto\)",
-            f"Expected processor concurrency (auto) after disable-fast-image-processor. Logs:\n{stderr_text[-2000:]}",
+            f"Expected processor concurrency (auto) after --image-processor-backend. Logs:\n{stderr_text[-2000:]}",
         )
 
     def test_functional_correctness_with_multiple_workers(self):
@@ -274,7 +275,8 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
             "npu",
             "--trust-remote-code",
             "--enable-multimodal",
-            "--disable-fast-image-processor",
+            "--image-processor-backend",
+            "pil",
             "--mm-processor-worker-num",
             "1",
             "--mm-io-worker-num",
@@ -297,7 +299,8 @@ class TestMmProcessorIoWorkerNum(CustomTestCase):
             "npu",
             "--trust-remote-code",
             "--enable-multimodal",
-            "--disable-fast-image-processor",
+            "--image-processor-backend",
+            "pil",
             "--mm-processor-worker-num",
             "4",
             "--mm-io-worker-num",

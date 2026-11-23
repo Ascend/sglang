@@ -45,7 +45,12 @@ def _model_path():
 def _server_args(parser):
     args = ["--tool-call-parser", parser]
     if is_npu():
-        args[:0] = ["--attention-backend", "ascend", "--disable-cuda-graph"]
+        args[:0] = [
+            "--attention-backend",
+            "ascend",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
+        ]
     return args
 
 
@@ -347,8 +352,9 @@ class TestOpenAIServerFunctionCalling(CustomTestCase):
             model=self.model,
             max_tokens=2048,
             messages=messages,
-            temperature=0.9,
-            top_p=0.9,
+            # Greedy: at temperature 0.9 the 1B model writes the call as a
+            # Python dict (single quotes) in ~2-9% of runs, which isn't a tool call.
+            temperature=0,
             stream=True,
             tools=tools,
         )
@@ -1012,7 +1018,7 @@ class TestOpenAIPythonicFunctionCallingWithRust(TestOpenAIPythonicFunctionCallin
 #             other_args=[
 #                 # If your server needs extra parameters to test function calling, please add them here.
 #                 "--tool-call-parser",
-#                 "glm45",
+#                 "glm",
 #                 "--reasoning-parser",
 #                 "glm45",
 #                 "--tp-size",
