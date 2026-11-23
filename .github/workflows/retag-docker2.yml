@@ -1,0 +1,54 @@
+name: Retag CANN Image from Quay to SWR
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retag-cann-quay-to-swr
+  cancel-in-progress: false
+
+env:
+  SOURCE_IMAGE: quay.io/ascend/cann:9.2.0-a3-ubuntu22.04-py3.12
+  TARGET_IMAGE: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.2.0-a3-ubuntu22.04-py3.12
+
+jobs:
+  retag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Login to Huawei Cloud SWR
+        uses: docker/login-action@v3
+        with:
+          registry: swr.cn-southwest-2.myhuaweicloud.com
+          username: ${{ secrets.SWR_SOUTH_2_USERNAME }}
+          password: ${{ secrets.SWR_SOUTH_2_PASSWORD }}
+
+      - name: Install skopeo
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq skopeo
+
+      - name: Copy and retag image
+        run: |
+          set -euo pipefail
+
+          echo "Source: $SOURCE_IMAGE"
+          echo "Target: $TARGET_IMAGE"
+
+          # SWR 要求 Docker V2 Schema 2，同时保留源镜像的全部多架构清单。
+          skopeo copy \
+            --retry-times 3 \
+            --multi-arch all \
+            --format v2s2 \
+            "docker://${SOURCE_IMAGE}" \
+            "docker://${TARGET_IMAGE}"
+
+      - name: Verify target image
+        run: |
+          set -euo pipefail
+          skopeo inspect --raw "docker://${TARGET_IMAGE}" > /tmp/target-manifest.json
+          cat /tmp/target-manifest.json
