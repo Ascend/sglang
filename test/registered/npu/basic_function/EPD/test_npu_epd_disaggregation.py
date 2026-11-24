@@ -1,4 +1,3 @@
-import io
 import os
 import threading
 import unittest
@@ -72,7 +71,6 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.node_logs = {}
         cls.transfer_backend = ["--disaggregation-transfer-backend", "ascend"]
         cls.rdma_devices = []
         parsed = urlparse(DEFAULT_URL_FOR_TEST)
