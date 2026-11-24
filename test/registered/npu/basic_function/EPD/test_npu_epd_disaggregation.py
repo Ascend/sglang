@@ -70,47 +70,6 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
     ]
 
     @classmethod
-    def _open_logs(cls, name):
-        """Capture one node's stdout/stderr so its log can be reported separately."""
-        out, err = io.StringIO(), io.StringIO()
-        cls.node_logs[name] = (out, err)
-        return out, err
-
-    log_tail_lines = 200
-
-    @classmethod
-    def _dump_node_logs(cls, reason):
-        """Print the tail of every node's captured output.
-
-        Printed at the end of the test output (and not only relayed live), so
-        prefill/decode logs survive log-views that drop the head of a long log.
-        """
-        for name, (out, err) in getattr(cls, "node_logs", {}).items():
-            for stream, buf in (("stdout", out), ("stderr", err)):
-                lines = buf.getvalue().splitlines()[-cls.log_tail_lines :]
-                if lines:
-                    print(
-                        f"\n===== {name} {stream} {reason} (tail) =====",
-                        flush=True,
-                    )
-                    print("\n".join(lines), flush=True)
-
-    @classmethod
-    def _kill_processes(cls):
-        for process in [
-            getattr(cls, "process_lb", None),
-            getattr(cls, "process_decode", None),
-            getattr(cls, "process_prefill", None),
-            getattr(cls, "process_encode1", None),
-            getattr(cls, "process_encode2", None),
-        ]:
-            if process:
-                try:
-                    kill_process_tree(process.pid)
-                except Exception as e:
-                    print(f"Error killing process: {e}")
-
-    @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.node_logs = {}
@@ -140,40 +99,25 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
             f"prefill={cls.prefill_port}, decode={cls.decode_port}"
         )
 
-        try:
-            t1 = threading.Thread(target=cls._start_encode1, args=(cls.encode_port1, 0))
-            t2 = threading.Thread(target=cls._start_encode2, args=(cls.encode_port2, 4))
-            t1.start()
-            t2.start()
-            t1.join()
-            t2.join()
+        t1 = threading.Thread(target=cls._start_encode1, args=(cls.encode_port1, 0))
+        t2 = threading.Thread(target=cls._start_encode2, args=(cls.encode_port2, 4))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
 
-            tp = threading.Thread(target=cls.start_prefill)
-            td = threading.Thread(target=cls.start_decode)
-            tp.start()
-            td.start()
-            tp.join()
-            td.join()
+        tp = threading.Thread(target=cls.start_prefill)
+        td = threading.Thread(target=cls.start_decode)
+        tp.start()
+        td.start()
+        tp.join()
+        td.join()
 
-            cls.wait_server_ready(
-                cls.encode_url1 + "/health", process=cls.process_encode1
-            )
-            cls.wait_server_ready(
-                cls.encode_url2 + "/health", process=cls.process_encode2
-            )
-            cls.wait_server_ready(
-                cls.prefill_url + "/health", process=cls.process_prefill
-            )
-            cls.wait_server_ready(
-                cls.decode_url + "/health", process=cls.process_decode
-            )
-            cls.launch_lb()
-        except BaseException:
-            # tearDownClass does not run when setUpClass fails, so report and
-            # clean up here, otherwise the failing node's log never shows up.
-            cls._kill_processes()
-            cls._dump_node_logs("(captured on setup failure)")
-            raise
+        cls.wait_server_ready(cls.encode_url1 + "/health", process=cls.process_encode1)
+        cls.wait_server_ready(cls.encode_url2 + "/health", process=cls.process_encode2)
+        cls.wait_server_ready(cls.prefill_url + "/health", process=cls.process_prefill)
+        cls.wait_server_ready(cls.decode_url + "/health", process=cls.process_decode)
+        cls.launch_lb()
 
     @classmethod
     def _start_encode1(cls, port, base_gpu_id):
@@ -190,14 +134,12 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
             str(base_gpu_id),
         ]
         encode_args += NPU_COMMON_ARGS
-        out, err = cls._open_logs("encode1")
         cls.process_encode1 = popen_launch_server(
             cls.model,
             base_url=f"http://{cls.base_host}:{port}",
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=encode_args,
             env=NPU_ENV,
-            return_stdout_stderr=(out, err),
         )
 
     @classmethod
@@ -215,14 +157,12 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
             str(base_gpu_id),
         ]
         encode_args += NPU_COMMON_ARGS
-        out, err = cls._open_logs("encode2")
         cls.process_encode2 = popen_launch_server(
             cls.model,
             base_url=f"http://{cls.base_host}:{port}",
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=encode_args,
             env=NPU_ENV,
-            return_stdout_stderr=(out, err),
         )
 
     @classmethod
@@ -247,14 +187,12 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
         ]
         prefill_args += cls.transfer_backend + cls.rdma_devices
         prefill_args += NPU_COMMON_ARGS
-        out, err = cls._open_logs("prefill")
         cls.process_prefill = popen_launch_server(
             cls.model,
             base_url=cls.prefill_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=prefill_args,
             env=NPU_ENV,
-            return_stdout_stderr=(out, err),
         )
 
     @classmethod
@@ -273,14 +211,12 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
         ]
         decode_args += cls.transfer_backend + cls.rdma_devices
         decode_args += NPU_COMMON_ARGS
-        out, err = cls._open_logs("decode")
         cls.process_decode = popen_launch_server(
             cls.model,
             base_url=cls.decode_url,
             timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
             other_args=decode_args,
             env=NPU_ENV,
-            return_stdout_stderr=(out, err),
         )
 
     @classmethod
@@ -294,8 +230,18 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
 
     @classmethod
     def tearDownClass(cls):
-        cls._kill_processes()
-        cls._dump_node_logs("on teardown")
+        for process in [
+            getattr(cls, "process_lb", None),
+            getattr(cls, "process_decode", None),
+            getattr(cls, "process_prefill", None),
+            getattr(cls, "process_encode1", None),
+            getattr(cls, "process_encode2", None),
+        ]:
+            if process:
+                try:
+                    kill_process_tree(process.pid)
+                except Exception as e:
+                    print(f"Error killing process: {e}")
 
 
 if __name__ == "__main__":
