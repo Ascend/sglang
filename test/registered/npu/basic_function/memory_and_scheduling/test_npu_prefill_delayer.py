@@ -246,7 +246,7 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
                     model=model,
                     messages=[{"role": "user", "content": long_prompt}],
                     max_tokens=10000,
-                    extra_body={"data_parallel_rank": 0},
+                    extra_body={"routed_dp_rank": 0},
                 )
 
             async def send_normal_request(dp_rank, req_idx):
@@ -255,7 +255,7 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
                     model=model,
                     messages=[{"role": "user", "content": "Say hi"}],
                     max_tokens=10,
-                    extra_body={"data_parallel_rank": dp_rank},
+                    extra_body={"routed_dp_rank": dp_rank},
                 )
                 elapsed = time.time() - start
                 return dp_rank, req_idx, elapsed
