@@ -40,7 +40,6 @@ SERVER_ENVS = {
     "HCCL_SOCKET_IFNAME": "lo",
     "DEEPEP_HCCL_BUFFSIZE": "384",
     "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
-    "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "1",
     "SGLANG_SET_CPU_AFFINITY": "1",
 }
 
@@ -62,6 +61,8 @@ SERVER_ARGS = [
     "--disable-radix-cache",
     "--trust-remote-code",
     "--enable-prefill-delayer",
+    "--prefill-delayer-max-delay-passes",
+    "1",
     "--max-running-requests",
     "10",
     "--max-mamba-cache-size",
