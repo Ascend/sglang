@@ -74,7 +74,7 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS = [
     80000,
     "--chunked-prefill-size",
     131072,
-    # "--enable-mixed-chunk",
+    "--enable-mixed-chunk",
     "--max-running-requests",
     192,
     "--attn-dp-size",
