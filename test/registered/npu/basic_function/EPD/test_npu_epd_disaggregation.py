@@ -76,17 +76,24 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
         cls.node_logs[name] = (out, err)
         return out, err
 
+    log_tail_lines = 200
+
     @classmethod
     def _dump_node_logs(cls, reason):
-        """Print every node's captured output, so CI logs show prefill and decode."""
-        for name, (out, err) in cls.node_logs.items():
+        """Print the tail of every node's captured output.
+
+        Printed at the end of the test output (and not only relayed live), so
+        prefill/decode logs survive log-views that drop the head of a long log.
+        """
+        for name, (out, err) in getattr(cls, "node_logs", {}).items():
             for stream, buf in (("stdout", out), ("stderr", err)):
-                text = buf.getvalue()
-                if text.strip():
+                lines = buf.getvalue().splitlines()[-cls.log_tail_lines :]
+                if lines:
                     print(
-                        f"\n===== {name} {stream} {reason} =====\n{text}",
+                        f"\n===== {name} {stream} {reason} (tail) =====",
                         flush=True,
                     )
+                    print("\n".join(lines), flush=True)
 
     @classmethod
     def _kill_processes(cls):
@@ -302,6 +309,7 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
     @classmethod
     def tearDownClass(cls):
         cls._kill_processes()
+        cls._dump_node_logs("on teardown")
 
 
 if __name__ == "__main__":
