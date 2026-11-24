@@ -13,6 +13,10 @@ from sglang.test.ascend.test_ascend_utils import (
     popen_with_error_check,
 )
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.server_fixtures.disaggregation_fixture import (
+    find_sgl_router_binary,
+    sgl_router_command,
+)
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -119,33 +123,20 @@ class RouterHAMixedWorkerFailoverTest(CustomTestCase):
     def _launch_lb(cls):
         out, err = cls._open_logs("lb")
 
-        cmd = [
-            "python3",
-            "-m",
-            "sglang_router.launch_router",
-            "--worker-urls",
-            cls.server1_url,
-            cls.server2_url,
-            "--host",
-            cls.base_host,
-            "--port",
-            str(cls.lb_port),
-            "--policy",
-            "round_robin",
-            "--health-failure-threshold",
-            "2",
-            "--health-success-threshold",
-            "2",
-            "--health-check-timeout-secs",
-            "30",
-            "--health-check-interval-secs",
-            "15",
-        ]
+        cmd = sgl_router_command(
+            find_sgl_router_binary(),
+            MODEL_PATH,
+            [cls.server1_url, cls.server2_url],
+            host=cls.base_host,
+            port=str(cls.lb_port),
+            request_timeout_secs=300,
+            extra_args=["--policy", "round_robin"],
+        )
 
         cls.processes["lb"] = popen_with_error_check(
             cmd, return_stdout_stderr=(out, err)
         )
-        cls._wait_ready(cls.lb_url + "/health")
+        cls._wait_ready(cls.lb_url + "/readiness")
         logger.info("Waiting 60 seconds for the server to fully initialize...")
         time.sleep(60)
 

@@ -130,7 +130,7 @@ MIMO_V2_5_PRO_PD_SEP_MODEL_CONFIG = {
     "decode_args": MIMO_V2_5_PRO_PD_SEP_DECODE_ARGS,
     "prefill_envs": MIMO_V2_5_PRO_PD_SEP_PREFILL_ENVS,
     "decode_envs": MIMO_V2_5_PRO_PD_SEP_DECODE_ENVS,
-    "router_args": ["--health-check-interval-secs", 3600, "--mini-lb"],
+    "router_args": ["--policy", "cache_aware"],
     "router_envs": {},
 }
 

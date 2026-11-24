@@ -110,9 +110,7 @@ MODEL_CONFIG_NOCPNOMTP = {
         "--disaggregation-mode",
         "decode",
     ],
-    "router_args": [
-        "--mini-lb",
-    ],
+    "router_args": ["--policy", "cache_aware"],
 }
 
 MODEL_CONFIG_CPNOMTTP = {

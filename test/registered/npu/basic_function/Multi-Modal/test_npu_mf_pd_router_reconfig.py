@@ -25,6 +25,10 @@ from sglang.test.ascend.test_ascend_utils import (
     popen_with_error_check,
 )
 from sglang.test.ci.ci_register import register_npu_ci
+from sglang.test.server_fixtures.disaggregation_fixture import (
+    find_sgl_router_binary,
+    sgl_router_command,
+)
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -217,38 +221,22 @@ class MFPDRouterReconfigTest(CustomTestCase):
         cls._kill_router()
         out, err = cls._open_logs("lb")
 
-        cmd = [
-            "python3",
-            "-m",
-            "sglang_router.launch_router",
-            "--pd-disaggregation",
-            "--policy",
-            "random",
-        ]
-        for name in prefill_names:
-            cmd += ["--prefill", cls.urls[name], str(cls.bootstrap_ports[name])]
-        for name in decode_names:
-            cmd += ["--decode", cls.urls[name]]
-
-        cmd += [
-            "--host",
-            cls.base_host,
-            "--port",
-            str(cls.lb_port),
-            "--health-failure-threshold",
-            "2",
-            "--health-success-threshold",
-            "2",
-            "--health-check-timeout-secs",
-            "30",
-            "--health-check-interval-secs",
-            "15",
-        ]
+        worker_urls = [cls.urls[name] for name in prefill_names]
+        worker_urls += [cls.urls[name] for name in decode_names]
+        cmd = sgl_router_command(
+            find_sgl_router_binary(),
+            MODEL_PATH,
+            worker_urls,
+            host=cls.base_host,
+            port=str(cls.lb_port),
+            request_timeout_secs=300,
+            extra_args=["--policy", "random"],
+        )
 
         cls.processes["lb"] = popen_with_error_check(
             cmd, return_stdout_stderr=(out, err)
         )
-        cls._wait_ready(f"{cls.lb_url}/health")
+        cls._wait_ready(f"{cls.lb_url}/readiness")
         cls._wait_pd_ready(prefill_names, decode_names)
 
     @classmethod

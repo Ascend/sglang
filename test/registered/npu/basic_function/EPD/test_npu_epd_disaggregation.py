@@ -12,12 +12,12 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.mmmu_vlm_kit import MMMUMixin
 from sglang.test.server_fixtures.disaggregation_fixture import (
     PDDisaggregationServerBase,
+    popen_launch_sgl_router,
 )
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     popen_launch_server,
-    popen_with_error_check,
 )
 
 NPU_COMMON_ARGS = [
@@ -285,26 +285,12 @@ class TestNpuEPDDisaggregationMultiEncoders(MMMUMixin, PDDisaggregationServerBas
 
     @classmethod
     def launch_lb(cls):
-        import shlex
-
-        lb_command = [
-            "python3",
-            "-m",
-            "sglang_router.launch_router",
-            "--pd-disaggregation",
-            "--prefill",
-            cls.prefill_url,
-            cls.bootstrap_port,
-            "--decode",
-            cls.decode_url,
-            "--host",
-            cls.base_host,
-            "--port",
-            cls.lb_port,
-        ]
-        print("Starting load balancer:", shlex.join(lb_command))
-        cls.process_lb = popen_with_error_check(lb_command)
-        cls.wait_server_ready(cls.lb_url + "/health", process=cls.process_lb)
+        cls.process_lb = popen_launch_sgl_router(
+            cls.model,
+            [cls.prefill_url, cls.decode_url],
+            host=cls.base_host,
+            port=cls.lb_port,
+        )
 
     @classmethod
     def tearDownClass(cls):

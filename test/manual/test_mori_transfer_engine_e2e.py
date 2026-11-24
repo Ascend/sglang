@@ -1,11 +1,11 @@
 import os
-import subprocess
 import unittest
 
 import requests
 
 from sglang.test.server_fixtures.disaggregation_fixture import (
     PDDisaggregationServerBase,
+    popen_launch_sgl_router,
 )
 from sglang.test.test_utils import (
     DEFAULT_SMALL_MODEL_NAME_FOR_TEST,
@@ -71,27 +71,11 @@ class TestMoriTransferEngineE2E(PDDisaggregationServerBase):
 
     @classmethod
     def launch_lb(cls):
-        lb_command = [
-            "python3",
-            "-m",
-            "sglang_router.launch_router",
-            "--pd-disaggregation",
-            "--mini-lb",
-            "--prefill",
-            cls.prefill_url,
-            "--decode",
-            cls.decode_url,
-            "--host",
-            cls.base_host,
-            "--port",
-            cls.lb_port,
-        ]
-        print("Starting load balancer:", " ".join(lb_command))
-        cls.process_lb = subprocess.Popen(lb_command, stdout=None, stderr=None)
-        cls.wait_server_ready(
-            cls.lb_url + "/health",
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            process=cls.process_lb,
+        cls.process_lb = popen_launch_sgl_router(
+            cls.model,
+            [cls.prefill_url, cls.decode_url],
+            host=cls.base_host,
+            port=cls.lb_port,
         )
 
     @classmethod
@@ -214,27 +198,11 @@ class TestMoriTransferEngineTPMismatchE2E(PDDisaggregationServerBase):
 
     @classmethod
     def launch_lb(cls):
-        lb_command = [
-            "python3",
-            "-m",
-            "sglang_router.launch_router",
-            "--pd-disaggregation",
-            "--mini-lb",
-            "--prefill",
-            cls.prefill_url,
-            "--decode",
-            cls.decode_url,
-            "--host",
-            cls.base_host,
-            "--port",
-            cls.lb_port,
-        ]
-        print("Starting load balancer:", " ".join(lb_command))
-        cls.process_lb = subprocess.Popen(lb_command, stdout=None, stderr=None)
-        cls.wait_server_ready(
-            cls.lb_url + "/health",
-            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-            process=cls.process_lb,
+        cls.process_lb = popen_launch_sgl_router(
+            cls.model,
+            [cls.prefill_url, cls.decode_url],
+            host=cls.base_host,
+            port=cls.lb_port,
         )
 
     @classmethod
