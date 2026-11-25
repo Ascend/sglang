@@ -105,6 +105,25 @@ jobs:
 #      skip_pr_test_health_check: 'true'
 #    secrets: inherit
 
+# TEMP: A5 (Ascend 950) machine is powered off for maintenance.
+# TEMP: Revert this commit (or uncomment this job block) once the A5 machines are back online.
+  nightly-acc-test-4-npu-a5:
+     name: nightly-acc-test-4-npu-a5
+     if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || contains(format(',{0},', needs.set-image-config.outputs.job_filter), ',nightly-acc-test-4-npu-a5,')) }}
+     needs: [set-image-config]
+     uses: ./.github/workflows/_npu-single-node-test-stage.yml
+     with:
+       ref: ${{ inputs.ref || '' }}
+       runner: linux-amd64-a5-4
+       test_type: 'accuracy'
+       test_suite: nightly-acc-test-4-npu-a5
+       is_nightly_pipeline_job: true
+       skip_pr_test_health_check: 'true'
+       image: ${{ needs.set-image-config.outputs.image_a5 }}
+       install_sglang_deps: false
+       device_type_for_deps: 'a5'
+       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
+
   full-poc-multi-node-mix-tests:
     name: multi-node-mix-poc
     if: ${{ always() && needs.set-image-config.result == 'success' && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
