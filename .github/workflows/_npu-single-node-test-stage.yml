@@ -231,8 +231,25 @@ jobs:
             }
 
       - name: Check npu info
+        shell: bash
         run: |
-          npu-smi info
+          # npu-smi ships with the Ascend driver, not with the container image,
+          # so it is absent on runners whose driver is not provisioned (e.g. the
+          # a5/950 pool). Try the driver tools dir before giving up, and keep
+          # this step diagnostic-only so a missing tool does not fail the job.
+          if ! command -v npu-smi >/dev/null 2>&1; then
+            for dir in /usr/local/Ascend/driver/tools /usr/local/bin; do
+              if [ -x "${dir}/npu-smi" ]; then
+                export PATH="${dir}:${PATH}"
+                break
+              fi
+            done
+          fi
+          if command -v npu-smi >/dev/null 2>&1; then
+            npu-smi info
+          else
+            echo "npu-smi not found on PATH; skipping NPU info dump (diagnostic step only)."
+          fi
 
       - name: Install sglang dependencies
         shell: bash

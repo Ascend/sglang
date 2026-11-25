@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B050'
+      image_a5:
+        description: 'The a5 running docker image of the test task.'
+        required: false
+        type: string
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B050'
       coverage_mode:
         description: 'Run in coverage mode: full and nightly basic-function/accuracy suites collect coverage (per-job artifacts); perf and multi-node suites run normally.'
         required: false
@@ -40,6 +45,8 @@ jobs:
       ref: ${{ steps.set-vars.outputs.ref }}
       job_filter: ${{ steps.set-vars.outputs.job_filter }}
       image_a3: ${{ steps.set-vars.outputs.image_a3 }}
+      image_a5: ${{ steps.set-vars.outputs.image_a5 }}
+      run_start_metadata: ${{ steps.set-vars.outputs.run_start_metadata }}
       coverage_mode: ${{ steps.set-vars.outputs.coverage_mode }}
     steps:
       # When triggered by PR, no inputs parameters are used. The latest community code is tested by default.
@@ -63,7 +70,13 @@ jobs:
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
-
+          
+          if [ -z "${{ inputs.image_a5 }}" ]; then
+            echo "image_a5=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:main-cann9.1.0-950" >> $GITHUB_OUTPUT
+          else
+            echo "image_a5=${{ inputs.image_a5 }}" >> $GITHUB_OUTPUT
+          fi
+          
           if [ -z "${{ inputs.coverage_mode }}" ]; then
             echo "coverage_mode=false" >> $GITHUB_OUTPUT
           else
@@ -139,7 +152,7 @@ jobs:
 #            test_case: test/registered/npu/accuracy/glm5_3/test_npu_glm_5_3_w8a8_16p_gpqa.py
 #            test_type: 'accuracy'
           - name: glm_5_3_w8a8_32p_in128k_out1k_prefix90_20ms
-            node_size: 4
+            node_size: 2
             test_case: test/registered/npu/accuracy/glm5_3/test_npu_glm_5_3_w8a8_32p_in128k_out1k_prefix90_20ms.py
             test_type: 'perf'
           # kimi_k3 mix tests
@@ -178,7 +191,7 @@ jobs:
             test_case: test/registered/npu/accuracy/glm5_3/test_npu_glm_5_3_w8a8_16p_gpqa_mix.py
             test_type: 'accuracy'
           - name: glm_5_3_w8a8_32p_in128k_out1k_prefix90_20ms_mix
-            node_size: 4
+            node_size: 2
             test_case: test/registered/npu/accuracy/glm5_3/test_npu_glm_5_3_w8a8_32p_in128k_out1k_prefix90_20ms_mix.py
             test_type: 'perf'
           # kimi_k3 mix tests
