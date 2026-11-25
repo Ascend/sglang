@@ -2,7 +2,7 @@
 NPU multimodal PD disaggregation test case.
 
 Deploy prefill and decode servers on two NPU cards, launch a
-sgl-router, and verify image inference through the router.
+sglang_router, and verify image inference through the router.
 """
 
 import os
@@ -104,7 +104,6 @@ class TestMultimodalPDDisaggregation(CustomTestCase):
         )
 
         cls._router_process, cls._router_url = launch_router(
-            cls._model,
             cls._prefill_url,
             cls._decode_url,
             cls._host,
@@ -121,7 +120,7 @@ class TestMultimodalPDDisaggregation(CustomTestCase):
                     pass
 
     def test_multimodal_pd_disaggregation(self):
-        """Two-server PD with sgl-router: prefill+decode."""
+        """Two-server PD with sglang_router: prefill+decode."""
         output = chat_single_image(
             self._router_url,
             self._image_b64,

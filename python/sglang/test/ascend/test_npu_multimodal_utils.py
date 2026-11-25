@@ -253,30 +253,32 @@ def launch_server(
     return process, base_url
 
 
-def launch_router(model, prefill_url, decode_url, host, port):
-    """Launch sgl-router for PD disaggregation and return (process, router_url).
+def launch_router(prefill_url, decode_url, host, port):
+    """Launch sglang_router for PD disaggregation and return (process, router_url).
 
-    Blocks until the router readiness endpoint responds.
+    Blocks until the router health-check endpoint responds.
     """
-    from sglang.test.server_fixtures.disaggregation_fixture import (
-        find_sgl_router_binary,
-        sgl_router_command,
-    )
     from sglang.utils import wait_for_http_ready
 
-    lb_command = sgl_router_command(
-        find_sgl_router_binary(),
-        model,
-        [prefill_url, decode_url],
-        host=host,
-        port=str(port),
-        request_timeout_secs=300,
-        extra_args=[],
-    )
+    lb_command = [
+        "python3",
+        "-m",
+        "sglang_router.launch_router",
+        "--pd-disaggregation",
+        "--mini-lb",
+        "--prefill",
+        prefill_url,
+        "--decode",
+        decode_url,
+        "--host",
+        host,
+        "--port",
+        str(port),
+    ]
     logger.info(f"Launching router: {shlex.join(lb_command)}")
     process = subprocess.Popen(lb_command)
     router_url = f"http://{host}:{port}"
-    wait_for_http_ready(url=router_url + "/readiness", timeout=300, process=process)
+    wait_for_http_ready(url=router_url + "/health", timeout=300, process=process)
     logger.info(f"Router {router_url} is ready")
     return process, router_url
 

@@ -13,10 +13,6 @@ from sglang.test.ascend.test_ascend_utils import (
     popen_with_error_check,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.server_fixtures.disaggregation_fixture import (
-    find_sgl_router_binary,
-    sgl_router_command,
-)
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
@@ -176,29 +172,41 @@ class PDDisaggregationVariableLengthScheduleFallbackTest(CustomTestCase):
     def _start_router(cls):
         out, err = cls._open_logs("router")
 
-        # NOTE: --prefill-policy bucket / --balance-rel-threshold /
-        # --balance-abs-threshold / --bucket-adjust-interval-secs were removed
-        # in the sgl-router refactor.
-        cmd = sgl_router_command(
-            find_sgl_router_binary(),
-            MODEL_PATH,
-            [
-                cls.urls["decode_1"],
-                cls.urls["prefill_0"],
-                cls.urls["prefill_1"],
-                cls.urls["prefill_2"],
-            ],
-            host=cls.base_host,
-            port=str(cls.router_port),
-            request_timeout_secs=300,
-            extra_args=[],
-        )
+        cmd = [
+            "python3",
+            "-m",
+            "sglang_router.launch_router",
+            "--pd-disaggregation",
+            "--decode",
+            cls.urls["decode_1"],
+            "--prefill",
+            cls.urls["prefill_0"],
+            str(cls.bootstrap_ports["prefill_0"]),
+            "--prefill",
+            cls.urls["prefill_1"],
+            str(cls.bootstrap_ports["prefill_1"]),
+            "--prefill",
+            cls.urls["prefill_2"],
+            str(cls.bootstrap_ports["prefill_2"]),
+            "--host",
+            cls.base_host,
+            "--port",
+            str(cls.router_port),
+            "--prefill-policy",
+            "bucket",
+            "--balance-rel-threshold",
+            "1.0001",
+            "--balance-abs-threshold",
+            "32",
+            "--bucket-adjust-interval-secs",
+            "5",
+        ]
 
         cls.processes["router"] = popen_with_error_check(
             cmd, return_stdout_stderr=(out, err)
         )
 
-        cls._wait_ready(f"{cls.router_url}/readiness")
+        cls._wait_ready(f"{cls.router_url}/health")
         logger.info("Waiting 60 seconds for the server to fully initialize...")
         time.sleep(60)
 

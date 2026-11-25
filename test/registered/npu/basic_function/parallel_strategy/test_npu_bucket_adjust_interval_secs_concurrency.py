@@ -134,10 +134,17 @@ MODEL_CONFIG = {
         "--load-balance-method",
         ROUND_ROBIN,
     ],
-    # NOTE: --pd-disaggregation / --prefill-policy bucket /
-    # --balance-rel-threshold / --balance-abs-threshold /
-    # --bucket-adjust-interval-secs were removed in the sgl-router refactor.
-    "router_args": ["--policy", "cache_aware"],
+    "router_args": [
+        "--pd-disaggregation",
+        "--prefill-policy",
+        "bucket",
+        "--balance-rel-threshold",
+        1.0001,
+        "--balance-abs-threshold",
+        32,
+        "--bucket-adjust-interval-secs",
+        5,
+    ],
 }
 
 
