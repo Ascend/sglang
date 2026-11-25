@@ -33,7 +33,7 @@ from sglang.test.test_utils import (
     popen_launch_pd_server,
 )
 
-register_npu_ci(est_time=400, suite="full-16-npu-a3-verify", nightly=True)
+register_npu_ci(est_time=400, suite="full-16-npu-a3", nightly=True)
 
 
 class DisaggregationTestBase(PDDisaggregationServerBase):

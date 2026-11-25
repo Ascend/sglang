@@ -19,7 +19,7 @@ from sglang.test.vlm_utils import (
     VideoOpenAITestMixin,
 )
 
-register_npu_ci(est_time=400, suite="full-4-npu-a3-verify", nightly=True)
+register_npu_ci(est_time=400, suite="full-4-npu-a3", nightly=True)
 
 
 class TestQwen3Omni30bA3bInstruct(OmniOpenAITestMixin):
