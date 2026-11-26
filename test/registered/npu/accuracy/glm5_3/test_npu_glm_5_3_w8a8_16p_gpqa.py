@@ -33,6 +33,9 @@ GLM_5_3_W8A8_16P_TWO_NODE_ENVS = {
     "GLOO_SOCKET_IFNAME": NIC_NAME,
 }
 
+# NOTE: the GLM-5.3-w8a8 MTP layer is W8A8_DYNAMIC in the checkpoint; do NOT
+# set --speculative-draft-model-quantization unquant (draft load would fail).
+# The draft inherits --quantization modelslim by default.
 GLM_5_3_W8A8_16P_TWO_NODE_OTHER_ARGS = [
     "--attention-backend",
     "ascend",
@@ -46,7 +49,6 @@ GLM_5_3_W8A8_16P_TWO_NODE_OTHER_ARGS = [
     8,
     "--chunked-prefill-size",
     65536,
-    # "--enable-mixed-chunk",
     "--max-prefill-tokens",
     280000,
     "--trust-remote-code",
@@ -74,6 +76,14 @@ GLM_5_3_W8A8_16P_TWO_NODE_OTHER_ARGS = [
     "--tool-call-parser",
     "glm47",
     "--enable-metrics",
+    "--speculative-algorithm",
+    "NEXTN",
+    "--speculative-num-steps",
+    3,
+    "--speculative-eagle-topk",
+    1,
+    "--speculative-num-draft-tokens",
+    4,
 ]
 
 GLM_5_3_W8A8_16P_TWO_NODE_MODEL_CONFIG = {

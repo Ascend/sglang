@@ -1,7 +1,7 @@
 import unittest
 
 from sglang.test.ascend.e2e.test_npu_accuracy_utils import (
-    EVALSCOPE,
+    BENCHMARK_TOOL_DEFAULT,
     TestNpuAccuracyTestCaseBase,
 )
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
@@ -10,8 +10,8 @@ from sglang.test.ascend.e2e.test_npu_performance_utils import (
 from sglang.test.ci.ci_register import register_npu_ci
 
 register_npu_ci(
-    est_time=14400,
-    suite="nightly-acc-test-4-npu-a5",
+    est_time=7200,
+    suite="nightly-acc-4-npu-a5",
     nightly=True,
 )
 
@@ -24,14 +24,14 @@ DEEPSEEK_V4_FLASH_FP8_4P_ENVS = {
     "SGLANG_DEFAULT_THINKING": "1",
     "SGLANG_DSV4_REASONING_EFFORT": "max",
     # HCCL deepep
-    "DEEPEP_HCCL_BUFFSIZE": "2560",
+    "HCCL_BUFFSIZE": "1024",
     "HCCL_SOCKET_IFNAME": "lo",
     "GLOO_SOCKET_IFNAME": "lo",
     # DeepEP long-sequence normal combine (ROUND * TOKENS >= chunked_prefill_size / tp * dp)
     "DEEPEP_NORMAL_COMBINE_ENABLE_LONG_SEQ": "1",
     "DEEPEP_NORMAL_LONG_SEQ_ROUND": "16",
     "DEEPEP_NORMAL_LONG_SEQ_PER_ROUND_TOKENS": "2048",
-    "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "256",
+    # "DEEPEP_HYBRID_DEPLOYMENT": "1",
     # dsv4
     "IS_DEEPSEEK_V4": "1",
     "USE_FUSED_HC_PRE_ASCENDC": "1",
@@ -39,6 +39,7 @@ DEEPSEEK_V4_FLASH_FP8_4P_ENVS = {
     "SGLANG_DSV4_NPU_FUSED_COMPRESSOR_PREFILL": "1",
     # skip gpu branch
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
+    "FORCE_DRAFT_MODEL_NON_QUANT": "1",
     "SGLANG_DSV4_FP4_EXPERTS": "True",
     "SGLANG_OPT_FUSE_WQA_WKV": "0",
     "SGLANG_OPT_BF16_FP32_GEMM_ALGO": "torch",
@@ -51,7 +52,7 @@ DEEPSEEK_V4_FLASH_FP8_4P_ENVS = {
     "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     "SGLANG_NPU_USE_MULTI_STREAM": "1",
     "USE_NPU_MOE_GATING_TOP_K": "1",
-    "ASCEND_LAUNCH_BLOCKING": "1",
+    "SGLANG_PROFILE_WITH_STACK": "False",
 }
 
 DEEPSEEK_V4_FLASH_FP8_4P_OTHER_ARGS = [
@@ -67,32 +68,43 @@ DEEPSEEK_V4_FLASH_FP8_4P_OTHER_ARGS = [
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.73,
+    0.72,
     "--max-running-requests",
-    32,
+    64,
     "--chunked-prefill-size",
     131072,
-    "--enable-mixed-chunk",
     "--max-prefill-tokens",
     131072,
     "--cuda-graph-bs-decode",
     1,
     2,
     4,
+    8,
+    10,
+    16,
     "--kv-cache-dtype",
     "auto",
     "--enable-dp-lm-head",
     "--disable-radix-cache",
-    "--attn-dp-size",
+    "--enable-dp-attention",
+    "--dp-size",
     4,
     "--reasoning-parser",
     "deepseek-v4",
+    "--speculative-algorithm",
+    "EAGLE",
+    "--speculative-num-steps",
+    2,
+    "--speculative-eagle-topk",
+    1,
+    "--speculative-num-draft-tokens",
+    3,
+    "--quantization",
+    "fp8",
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
     "auto",
-    "--quantization",
-    "fp8",
 ]
 
 DEEPSEEK_V4_FLASH_FP8_4P_GENERATION_CONFIG_MAX = {
@@ -107,9 +119,9 @@ DEEPSEEK_V4_FLASH_FP8_4P_GENERATION_CONFIG_MAX = {
 
 
 class TestNPUDeepSeekV4FlashFP84PGPQA(TestNpuAccuracyTestCaseBase):
-    """Test NPU accuracy for DeepSeek-V4-Flash FP8 4p GPQA."""
+    """Test NPU accuracy for DeepSeek-V4-Flash FP8 4p EAGLE GPQA."""
 
-    benchmark_tool = EVALSCOPE
+    benchmark_tool = BENCHMARK_TOOL_DEFAULT
     model = DEEPSEEK_V4_FLASH_DEFAULT_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_FP8_4P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_FP8_4P_ENVS
@@ -123,7 +135,7 @@ class TestNPUDeepSeekV4FlashFP84PGPQA(TestNpuAccuracyTestCaseBase):
     seed = 1
 
     def test_npu_deepseek_v4_flash_fp8_4p_gpqa(self):
-        """Run NPU accuracy test for DeepSeek-V4-Flash FP8 4p GPQA."""
+        """Run NPU accuracy test for DeepSeek-V4-Flash FP8 4p EAGLE GPQA."""
         self.run_accuracy()
 
 
