@@ -101,10 +101,15 @@ jobs:
       - name: Prepare code for testing
         run: |
           # copy source code to shared-disk
-          # Append run_id to isolate concurrent runs sharing the same PVC.
+          # Scope the dir by run_id AND test_config_name: every job in a run
+          # shares github.run_id, so a run_id-only path makes concurrent jobs
+          # (e.g. the two multi-node jobs in full-test-npu.yml) delete each
+          # other's tree mid-copy and fail with "Directory not empty".
           current_path=$(pwd)
-          target_path=/root/.cache/tests/sglang-${{ github.run_id }}
-          rm -rf ${target_path}
+          target_path=/root/.cache/tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }}
+          # Best-effort: a previous attempt can leave `.nfs*` placeholders for
+          # files still open on the PVC, which also yields "Directory not empty".
+          rm -rf "${target_path}" || { sleep 10; rm -rf "${target_path}" || true; }
           mkdir -p ${target_path}
           cp -r ${current_path}/* ${target_path}/
 
@@ -130,8 +135,9 @@ jobs:
         timeout-minutes: 300
         run: |
           # sglang_source_relative_path is shared-disk path
-          # Append run_id so concurrent runs do not overwrite each other on the shared PVC.
-          sglang_source_relative_path=tests/sglang-${{ github.run_id }}
+          # Must match the run_id + test_config_name scoping used in
+          # "Prepare code for testing" so concurrent jobs stay isolated.
+          sglang_source_relative_path=tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }}
           sglang_source_path=/root/.cache/${sglang_source_relative_path}
           echo "Source code path: ${sglang_source_path}"
 
@@ -249,5 +255,5 @@ jobs:
               break
             fi
           done
-          # Cleanup the run-scoped source code directory on the shared PVC.
-          rm -rf /root/.cache/tests/sglang-${{ github.run_id }} || true
+          # Cleanup this job's source code directory on the shared PVC.
+          rm -rf /root/.cache/tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }} || true
