@@ -6,6 +6,6 @@ RUN python3 -m pip install --no-cache-dir \
         memfabric-hybrid==1.5.0.dev20261124 \
         --index-url https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly/ \
     && command -v mfcli \
-    && mfcli kernel install --soc-version A5
+    && mfcli kernel install --soc-version A3
 
 CMD ["/bin/bash"]
