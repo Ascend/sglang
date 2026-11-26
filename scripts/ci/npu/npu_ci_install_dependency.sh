@@ -169,4 +169,4 @@ rm -rf python/pyproject.toml && mv python/pyproject_npu.toml python/pyproject.to
 sed -i '/"memfabric-/d' python/pyproject.toml
 ${UV_PIP_INSTALL} -v -e "python[dev_npu]"
 
-${PIP_INSTALL} "openai==2.8.0" "openai-harmony==0.0.4"
+${PIP_INSTALL} "openai==2.8.0" "openai-harmony==0.0.4" "NumPy==0.2"
