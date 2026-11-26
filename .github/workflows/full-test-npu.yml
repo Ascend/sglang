@@ -135,6 +135,7 @@ jobs:
 #      skip_pr_test_health_check: 'true'
 #    secrets: inherit
 
+
 # TEMP: A5 (Ascend 950) machine is powered off for maintenance.
 # TEMP: Revert this commit (or uncomment this job block) once the A5 machines are back online.
   nightly-acc-test-4-npu-a5:
