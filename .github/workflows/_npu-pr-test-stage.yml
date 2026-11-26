@@ -240,7 +240,7 @@ jobs:
 
           # Install missing python deps (skip if already importable).
           PYTHON_FOR_SGLANG="python"
-          PIP_INDEXES=("https://pypi.org/simple/" "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple")
+          PIP_INDEXES=("https://repo.huaweicloud.com/repository/pypi/simple/" "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple")
           install_pkg() {
             local pkg="$1"
             ok=0

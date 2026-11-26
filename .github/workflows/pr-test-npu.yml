@@ -605,8 +605,9 @@ jobs:
 
           if ! python3 -c "import regex" 2>/dev/null; then
             pip install regex \
-              -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple \
-              --retries 3 --timeout 60
+              -i https://repo.huaweicloud.com/repository/pypi/simple \
+              --retries 3 --timeout 60 \
+              || pip install regex -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
           fi
 
           python3 scripts/ci/npu/precise-test/test_selector.py \
