@@ -74,13 +74,13 @@ jobs:
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
-          
+
           if [ -z "${{ inputs.image_a5 }}" ]; then
             echo "image_a5=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B050" >> $GITHUB_OUTPUT
           else
             echo "image_a5=${{ inputs.image_a5 }}" >> $GITHUB_OUTPUT
           fi
-          
+
           if [ -z "${{ inputs.coverage_mode }}" ]; then
             echo "coverage_mode=false" >> $GITHUB_OUTPUT
           else
