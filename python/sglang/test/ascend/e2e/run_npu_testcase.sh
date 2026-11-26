@@ -25,6 +25,15 @@ else
 fi
 echo "===== Install kubernetes - End ====="
 
+echo "===== Fix pyarrow for the image NumPy version - Begin ====="
+# The NPU image ships NumPy 1.26.4 (required by torch_npu), but pyarrow>=26
+# hard-requires NumPy>=2.0 and raises ImportError when imported. Tests that
+# transitively import `datasets` (e.g. via sglang.test.test_utils) then fail
+# before running. Pin pyarrow below 26 so it stays compatible with NumPy 1.x.
+pip install "pyarrow<26" -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+echo "Pyarrow version: $(pip show pyarrow | grep Version | cut -d: -f2)"
+echo "===== Fix pyarrow for the image NumPy version - End ====="
+
 PYTHON_FOR_SGLANG="python"
 PIP_FOR_SGLANG="pip"
 if [ -n "${TRANSFORMERS_VERSION_FOR_SGLANG}" ];then
