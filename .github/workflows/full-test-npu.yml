@@ -22,12 +22,12 @@ on:
         description: 'The a3 running docker image of the test task. Must be an image with sglang preinstalled (e.g. lmsysorg/sglang:*a3*).'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B050'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B052'
       image_a5:
         description: 'The a5 running docker image of the test task.'
         required: false
         type: string
-        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B050'
+        default: 'swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B052'
       coverage_mode:
         description: 'Run in coverage mode: full and nightly basic-function/accuracy suites collect coverage (per-job artifacts); perf and multi-node suites run normally.'
         required: false
@@ -70,13 +70,13 @@ jobs:
           fi
 
           if [ -z "${{ inputs.image_a3 }}" ]; then
-            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B050" >> $GITHUB_OUTPUT
+            echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B052" >> $GITHUB_OUTPUT
           else
             echo "image_a3=${{ inputs.image_a3 }}" >> $GITHUB_OUTPUT
           fi
 
           if [ -z "${{ inputs.image_a5 }}" ]; then
-            echo "image_a5=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B050" >> $GITHUB_OUTPUT
+            echo "image_a5=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B052" >> $GITHUB_OUTPUT
           else
             echo "image_a5=${{ inputs.image_a5 }}" >> $GITHUB_OUTPUT
           fi
@@ -177,10 +177,10 @@ jobs:
 #            node_size: 4
 #            test_case: test/registered/npu/accuracy/kimi_k3/test_npu_kimi_k3_w4a8_32p_gpqa.py
 #            test_type: 'accuracy'
-#          - name: kimi_k3_w4a8_32p_mix_in16k_out1k
-#            node_size: 4
-#            test_case: test/registered/npu/performance/kimi_k3/test_npu_kimi_k3_w4a8_32p_mix_in16k_out1k.py
-#            test_type: 'perf'
+          - name: kimi_k3_w4a8_32p_mix_in16k_out1k
+            node_size: 4
+            test_case: test/registered/npu/performance/kimi_k3/test_npu_kimi_k3_w4a8_32p_mix_in16k_out1k.py
+            test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-amd64-cpu-4
@@ -216,10 +216,10 @@ jobs:
 #            node_size: 4
 #            test_case: test/registered/npu/accuracy/kimi_k3/test_npu_kimi_k3_w4a8_32p_gpqa_mix.py
 #            test_type: 'accuracy'
-#          - name: kimi_k3_w4a8_32p_mix_in16k_out1k_mix
-#            node_size: 4
-#            test_case: test/registered/npu/performance/kimi_k3/test_npu_kimi_k3_w4a8_32p_mix_in16k_out1k_mix.py
-#            test_type: 'perf'
+          - name: kimi_k3_w4a8_32p_mix_in16k_out1k_mix
+            node_size: 4
+            test_case: test/registered/npu/performance/kimi_k3/test_npu_kimi_k3_w4a8_32p_mix_in16k_out1k_mix.py
+            test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
       runner: linux-amd64-cpu-4
