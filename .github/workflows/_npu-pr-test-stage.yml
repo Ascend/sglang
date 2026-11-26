@@ -250,7 +250,7 @@ jobs:
             pip install mindstudio-probe --pre
             pip install "antlr4-python3-runtime==4.9.3" --force-reinstall --no-deps
             pip install "uvicorn[standard]"
-            pip install "openai==2.8.0" "openai-harmony==0.0.4"
+            pip install "openai==2.8.0" "openai-harmony==0.0.4" "NumPy==0.2"
             pip install pynvml
             # Install sgl-eval
             # shellcheck source=scripts/ci/utils/sgl_eval_ref.sh
