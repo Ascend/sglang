@@ -3,6 +3,7 @@ import io
 import logging
 import os
 import shlex
+import shutil
 import time
 import warnings
 from typing import ClassVar, Optional
@@ -537,3 +538,59 @@ def _maybe_set_ucx_net_devices(ib_devices) -> bool:
     os.environ["UCX_NET_DEVICES"] = net_devices
     logger.warning("Set UCX_NET_DEVICES=%s for NIXL/UCX", net_devices)
     return True
+
+
+# sgl-router fails a request that runs longer than this upstream timeout.
+# Kept here additively: the NPU e2e helpers import it (and the two helpers
+# below) from this module at module level.
+SGL_ROUTER_REQUEST_TIMEOUT_SECS = 1800
+
+
+def find_sgl_router_binary() -> str:
+    name = envs.SGLANG_TEST_PD_ROUTER_BINARY.get()
+    binary = shutil.which(name)
+    if binary is None:
+        raise FileNotFoundError(
+            f"sgl-router binary {name!r} not found: build it with "
+            "`cargo build --release --bin sgl-router` in sgl-router/, then put it "
+            "on PATH or set SGLANG_TEST_PD_ROUTER_BINARY to its path."
+        )
+    return binary
+
+
+def sgl_router_command(
+    binary: str,
+    model: str,
+    worker_urls: list[str],
+    *,
+    host: str,
+    port: str,
+    request_timeout_secs: int,
+    extra_args: list[str],
+) -> list[str]:
+    """Build the sgl-router command line for `worker_urls`.
+
+    The router reads each worker's PD role and bootstrap port from its
+    `/server_info`, so prefill and decode URLs go in one list.
+    """
+    return [
+        binary,
+        "--model-id",
+        model,
+        "--worker-urls",
+        *worker_urls,
+        "--host",
+        host,
+        "--port",
+        str(port),
+        # Workers tokenize and render chat themselves, so the router needs no
+        # tokenizer for the model under test.
+        "--no-tokenizer",
+        "--request-timeout-secs",
+        str(request_timeout_secs),
+        # The stale-request reaper (600s by default) would cut a request the
+        # request timeout still allows.
+        "--stale-request-timeout-secs",
+        str(request_timeout_secs),
+        *extra_args,
+    ]
