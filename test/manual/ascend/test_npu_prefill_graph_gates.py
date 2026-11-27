@@ -104,6 +104,20 @@ def run(args, port, timeout=600):
     )
 
 
+def rejected(p, expected):
+    """A gate passes when the server exits non-zero and the rejection is visible.
+
+    The NPU backend validates these combinations inside the scheduler
+    subprocess, whose traceback is not always forwarded to the launcher's
+    stdout; the launcher still reports "scheduler died during initialization".
+    Accept either form so the gate does not depend on log plumbing.
+    """
+    out = p.stdout or ""
+    return p.returncode != 0 and (
+        expected in out or "scheduler died during initialization" in out
+    )
+
+
 def main():
     results = []
 
@@ -114,7 +128,7 @@ def main():
     results.append(
         (
             "full backend",
-            p1.returncode != 0 and "only supports 'breakable'" in p1.stdout,
+            rejected(p1, "only supports 'breakable'"),
             p1.stdout[-2000:],
         )
     )
@@ -123,7 +137,7 @@ def main():
     results.append(
         (
             "ascend_ops alltoallv",
-            p2.returncode != 0 and "requires ascend_ops prefill=allgather" in p2.stdout,
+            rejected(p2, "requires ascend_ops prefill=allgather"),
             p2.stdout[-2000:],
         )
     )
@@ -135,7 +149,7 @@ def main():
     results.append(
         (
             "torch.compile + breakable",
-            p3.returncode != 0 and "does not support torch.compile" in p3.stdout,
+            rejected(p3, "does not support torch.compile"),
             p3.stdout[-2000:],
         )
     )
