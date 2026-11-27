@@ -55,9 +55,9 @@ ARG TORCH_NPU_INDEX_URL="https://ascend.devcloud.huaweicloud.com/pypi/simple/"
 ARG TRITON_AARCH64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/triton-ascend/20261105160244/triton_ascend-3.6.0%2Bdev20261105160244-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_34_aarch64.whl"
 ARG TRITON_X86_64="https://ascend-triton-open.obs.cn-north-4.myhuaweicloud.com/triton-ascend/20261105160244/triton_ascend-3.6.0%2Bdev20261105160244-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_34_x86_64.whl"
 
-ARG SGLANG_TAG=main
+ARG SGLANG_TAG=release/20261215
 
-ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post15
+ARG SGLANG_KERNEL_NPU_TAG=2026.11.0.post17
 
 ARG PIP_INDEX_URL="https://pypi.org/simple/"
 ARG PIP_INSTALL="python3 -m pip install --no-cache-dir"
@@ -175,7 +175,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi
 
 #Install SGLang
-RUN git clone https://github.com/sgl-project/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
+RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
