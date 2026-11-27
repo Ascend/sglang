@@ -32,6 +32,10 @@ from sglang.srt.state_capturer.routed_experts import (
 )
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+)
+from sglang.test.ascend.test_ascend_utils import (
     QWEN3_30B_A3B_INSTRUCT_2507_WEIGHTS_PATH as QWEN3_30B_A3B_INSTRUCT,
 )
 from sglang.test.ascend.test_ascend_utils import (
@@ -234,6 +238,9 @@ class _BaseNPURoutingCaptureTest(CustomTestCase):
             "--tp-size",
             str(self.tp_size),
             "--enable-return-routed-experts",
+            # /update_weights_from_disk is ADMIN_FORCE.
+            "--admin-api-key",
+            ADMIN_API_KEY,
         ]
         if self._disable_cuda_graph:
             args.append("--disable-cuda-graph")
@@ -279,7 +286,10 @@ class _BaseNPURoutingCaptureTest(CustomTestCase):
     # ── HTTP helpers ────────────────────────────────────────────────
     def _post(self, endpoint, payload, timeout=300):
         resp = requests.post(
-            f"{self.base_url}{endpoint}", json=payload, timeout=timeout
+            f"{self.base_url}{endpoint}",
+            json=payload,
+            headers=ADMIN_AUTH_HEADERS,
+            timeout=timeout,
         )
         resp.raise_for_status()
         return resp.json()
