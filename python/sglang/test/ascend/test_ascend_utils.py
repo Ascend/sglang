@@ -1196,6 +1196,17 @@ def popen_with_error_check(
     return process
 
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger(__name__)
+
+
+# HiCache L3 external-service helpers. The NPU e2e helpers import these symbols
+# at module level, so they are kept here additively (the image build ships them
+# in this same module).
 def resolve_local_ip():
     """Resolve the current node's IP for the memfabric metadata RPC server.
 
@@ -1420,11 +1431,3 @@ def maybe_start_hicache_storage_service(other_args):
         set_mooncake_master_env()
         return process
     return None
-
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-logger = logging.getLogger(__name__)
