@@ -177,6 +177,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
 #Install SGLang
 RUN git clone https://github.com/Ascend/sglang --branch ${SGLANG_TAG} /sgl-workspace/sglang && \
     cd /sgl-workspace/sglang/python && rm -rf pyproject.toml && mv pyproject_npu.toml pyproject.toml && \
+    export SETUPTOOLS_SCM_PRETEND_VERSION=0.5.21 && \
     ${PIP_INSTALL} -v -e .[all_npu]
 
 ENV ASCEND_HOME_PATH=/usr/local/Ascend/cann-${CANN_VERSION}
