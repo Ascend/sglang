@@ -95,45 +95,16 @@ jobs:
           pip3 install -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple kubernetes
           cp $KUBECTL /usr/local/sbin/
 
-      - name: Prepare pyarrow wheel for pods
-        run: |
-          # The pod has no external network: it installs every dependency from
-          # the shared cache mounted at /root/.cache/.cache (this container has
-          # the same PVC). pyarrow>=26 requires NumPy>=2.0, but the NPU image
-          # ships NumPy 1.26.4 (torch_npu), so importing `datasets` fails with
-          # "pyarrow requires NumPy 2.0 or newer". Stage a pyarrow<26 wheel for
-          # the pod's interpreter (python 3.12, aarch64) from here.
-          pyarrow_cache_dir=/root/.cache/.cache/pyarrow
-          mkdir -p "${pyarrow_cache_dir}"
-          if ls "${pyarrow_cache_dir}"/pyarrow-*.whl >/dev/null 2>&1; then
-            echo "pyarrow wheel already present in shared cache."
-          else
-            pip3 download "pyarrow<26" \
-              --only-binary=:all: --no-deps \
-              --python-version 3.12 --implementation cp \
-              --platform manylinux2014_aarch64 \
-              --platform manylinux_2_17_aarch64 \
-              --platform manylinux_2_28_aarch64 \
-              -d "${pyarrow_cache_dir}" \
-              -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-          fi
-          ls -l "${pyarrow_cache_dir}"
-
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Prepare code for testing
         run: |
           # copy source code to shared-disk
-          # Scope the dir by run_id AND test_config_name: every job in a run
-          # shares github.run_id, so a run_id-only path makes concurrent jobs
-          # (e.g. the two multi-node jobs in full-test-npu.yml) delete each
-          # other's tree mid-copy and fail with "Directory not empty".
+          # Append run_id to isolate concurrent runs sharing the same PVC.
           current_path=$(pwd)
-          target_path=/root/.cache/tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }}
-          # Best-effort: a previous attempt can leave `.nfs*` placeholders for
-          # files still open on the PVC, which also yields "Directory not empty".
-          rm -rf "${target_path}" || { sleep 10; rm -rf "${target_path}" || true; }
+          target_path=/root/.cache/tests/sglang-${{ github.run_id }}
+          rm -rf ${target_path}
           mkdir -p ${target_path}
           cp -r ${current_path}/* ${target_path}/
 
@@ -159,9 +130,8 @@ jobs:
         timeout-minutes: 300
         run: |
           # sglang_source_relative_path is shared-disk path
-          # Must match the run_id + test_config_name scoping used in
-          # "Prepare code for testing" so concurrent jobs stay isolated.
-          sglang_source_relative_path=tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }}
+          # Append run_id so concurrent runs do not overwrite each other on the shared PVC.
+          sglang_source_relative_path=tests/sglang-${{ github.run_id }}
           sglang_source_path=/root/.cache/${sglang_source_relative_path}
           echo "Source code path: ${sglang_source_path}"
 
@@ -279,5 +249,5 @@ jobs:
               break
             fi
           done
-          # Cleanup this job's source code directory on the shared PVC.
-          rm -rf /root/.cache/tests/sglang-${{ github.run_id }}-${{ inputs.test_config_name }} || true
+          # Cleanup the run-scoped source code directory on the shared PVC.
+          rm -rf /root/.cache/tests/sglang-${{ github.run_id }} || true

@@ -25,25 +25,6 @@ else
 fi
 echo "===== Install kubernetes - End ====="
 
-echo "===== Fix pyarrow for the image NumPy version - Begin ====="
-# The NPU image ships NumPy 1.26.4 (required by torch_npu), but pyarrow>=26
-# hard-requires NumPy>=2.0 and raises ImportError when imported. Tests that
-# transitively import `datasets` (e.g. via sglang.test.test_utils) then fail
-# before running. Install a pyarrow<26 wheel from the shared offline cache
-# (populated by the runner), falling back to the mirror if it is absent.
-PYARROW_CACHE_DIR=/root/.cache/.cache/pyarrow
-if ls "${PYARROW_CACHE_DIR}"/pyarrow-*.whl >/dev/null 2>&1; then
-  echo "Install pyarrow from shared cache: ${PYARROW_CACHE_DIR}"
-  python -m pip install --no-index --find-links="${PYARROW_CACHE_DIR}" "pyarrow<26"
-else
-  echo "The shared pyarrow cache does not exist: ${PYARROW_CACHE_DIR}."
-  echo "Install pyarrow online."
-  python -m pip install "pyarrow<26" -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-fi
-echo "numpy version: $(python -c 'import numpy; print(numpy.__version__)' 2>/dev/null)"
-echo "pyarrow version: $(python -m pip show pyarrow 2>/dev/null | grep Version | cut -d: -f2)"
-echo "===== Fix pyarrow for the image NumPy version - End ====="
-
 PYTHON_FOR_SGLANG="python"
 PIP_FOR_SGLANG="pip"
 if [ -n "${TRANSFORMERS_VERSION_FOR_SGLANG}" ];then
