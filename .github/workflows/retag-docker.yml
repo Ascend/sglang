@@ -1,4 +1,4 @@
-name: Build and Push CANNBot Image
+name: Build and Push CANNBot Kernel Images
 
 on:
   workflow_dispatch:
@@ -13,25 +13,33 @@ concurrency:
 env:
   SWR_REGISTRY: "swr.cn-southwest-2.myhuaweicloud.com"
   IMAGE: "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann/cann"
-  FINAL_TAG: "9.2.0-a3-ubuntu22.04-py3.12"
   DOCKERFILE: "docker/Dockerfile"
+  OS: "ubuntu22.04"
+  PYTHON_VERSION: "py3.12"
+  MEMFABRIC_VERSION: "1.5.0.dev20261124"
 
 jobs:
   build:
-    name: build ${{ matrix.platform }}
-    runs-on: ${{ matrix.runner }}
+    name: build kernel-${{ matrix.cann_version }}-${{ matrix.device_label }}-${{ matrix.platform }}
+    runs-on: ${{ matrix.platform == 'amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     timeout-minutes: 180
+
     strategy:
       fail-fast: false
+      max-parallel: 8
       matrix:
-        include:
-          - platform: amd64
-            runner: ubuntu-24.04
-          - platform: arm64
-            runner: ubuntu-24.04-arm
+        cann_version: ["9.1.0", "9.2.0"]
+        device_label: [a3, a5]
+        platform: [amd64, arm64]
+
+    env:
+      # A5 对外标签使用 a5，但基础镜像中的实际 DEVICE_TYPE 是 950。
+      BASE_DEVICE: ${{ matrix.device_label == 'a5' && '950' || 'a3' }}
+      IMAGE_TAG: kernel-${{ matrix.cann_version }}-${{ matrix.device_label }}-ubuntu22.04-py3.12
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
@@ -56,23 +64,39 @@ jobs:
           file: ${{ env.DOCKERFILE }}
           platforms: linux/${{ matrix.platform }}
 
-          # 临时 tag:
-          # 9.2.0-950-ubuntu22.04-py3.12-amd64
-          # 9.2.0-950-ubuntu22.04-py3.12-arm64
-          tags: ${{ env.IMAGE }}:${{ env.FINAL_TAG }}-${{ matrix.platform }}
+          # 单架构临时标签：
+          # kernel-9.1.0-a5-ubuntu22.04-py3.12-amd64
+          # kernel-9.1.0-a5-ubuntu22.04-py3.12-arm64
+          tags: ${{ env.IMAGE }}:${{ env.IMAGE_TAG }}-${{ matrix.platform }}
 
-          # 按现有 SWR 流水线格式推送
           outputs: type=registry,oci-mediatypes=false
 
           pull: true
           provenance: false
           sbom: false
 
+          build-args: |
+            CANN_VERSION=${{ matrix.cann_version }}
+            DEVICE_TYPE=${{ env.BASE_DEVICE }}
+            OS=${{ env.OS }}
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+            MEMFABRIC_VERSION=${{ env.MEMFABRIC_VERSION }}
+
   merge:
-    name: merge multi-arch manifest
+    name: merge kernel-${{ matrix.cann_version }}-${{ matrix.device_label }}
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        cann_version: ["9.1.0", "9.2.0"]
+        device_label: [a3, a5]
+
+    env:
+      IMAGE_TAG: kernel-${{ matrix.cann_version }}-${{ matrix.device_label }}-ubuntu22.04-py3.12
 
     steps:
       - name: Setup Docker buildx
@@ -90,10 +114,12 @@ jobs:
           set -euo pipefail
 
           docker buildx imagetools create \
-            -t "${IMAGE}:${FINAL_TAG}" \
-            "${IMAGE}:${FINAL_TAG}-amd64" \
-            "${IMAGE}:${FINAL_TAG}-arm64"
+            -t "${IMAGE}:${IMAGE_TAG}" \
+            "${IMAGE}:${IMAGE_TAG}-amd64" \
+            "${IMAGE}:${IMAGE_TAG}-arm64"
 
       - name: Verify final manifest
         run: |
-          docker buildx imagetools inspect "${IMAGE}:${FINAL_TAG}"
+          set -euo pipefail
+
+          docker buildx imagetools inspect "${IMAGE}:${IMAGE_TAG}"
