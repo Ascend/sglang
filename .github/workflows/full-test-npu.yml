@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Set image config
         id: set-vars
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
         run: |
           if [ -z "${{ inputs.ref }}" ]; then
             echo "ref=" >> $GITHUB_OUTPUT
@@ -37,7 +39,7 @@ jobs:
             echo "ref=${{ inputs.ref }}" >> $GITHUB_OUTPUT
           fi
           echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B050" >> $GITHUB_OUTPUT
-          BRANCH_LABEL="${{ github.head_ref || github.ref_name }}"
+          BRANCH_LABEL="${HEAD_REF}"
           BRANCH_LABEL="$(echo "${BRANCH_LABEL}" | tr -cd 'a-zA-Z0-9._/:' | tr '/:' '--')"
           CREATE_TIME="$(TZ=Asia/Shanghai date +%Y%m%d-%H%M)"
           echo "run_start_metadata={\"branch_label\":\"${BRANCH_LABEL}\",\"workflow_name\":\"${{ github.workflow }}\",\"create_time\":\"${CREATE_TIME}\"}" >> $GITHUB_OUTPUT
@@ -48,7 +50,6 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      self_name: sr1-acc-16-npu-a3
       runner: linux-aarch64-a3-16
       test_type: accuracy
       test_suite: nightly-acc-16-npu-a3
@@ -67,7 +68,6 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      self_name: sr1-perf-8-npu-a3
       runner: linux-aarch64-a3-800t-8
       test_type: perf
       test_suite: full-perf-8-npu-a3
@@ -86,7 +86,6 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      self_name: sr1-perf-16-npu-a3
       runner: linux-aarch64-a3-800t-16
       test_type: perf
       test_suite: full-perf-16-npu-a3
@@ -105,7 +104,6 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      self_name: sr2-acc-2-npu-a3
       runner: linux-aarch64-a3-2
       test_type: accuracy
       test_suite: full-acc-2-npu-a3
@@ -125,7 +123,6 @@ jobs:
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-single-node-test-stage.yml
     with:
-      self_name: sr3-eagle-2-npu-a3
       runner: linux-aarch64-a3-2
       test_type: accuracy
       test_suite: nightly-1-npu-a3
