@@ -58,7 +58,7 @@ OTHER_ARGS = [
     "--watchdog-timeout",
     9000,
     "--mem-fraction-static",
-    0.62,
+    0.80,
     "--prefill-max-requests",
     32,
     "--max-prefill-tokens",
@@ -92,8 +92,6 @@ OTHER_ARGS = [
     "--cuda-graph-bs-prefill",
     128,
     512,
-    1024,
-    2048,
 ]
 
 

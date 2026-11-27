@@ -67,7 +67,7 @@ def _args(tp_size: int, dp_size: int):
         "--watchdog-timeout",
         9000,
         "--mem-fraction-static",
-        0.62,
+        0.80,
         "--prefill-max-requests",
         32,
         "--max-prefill-tokens",
@@ -102,7 +102,6 @@ def _args(tp_size: int, dp_size: int):
         128,
         512,
         1024,
-        2048,
     ]
 
 
