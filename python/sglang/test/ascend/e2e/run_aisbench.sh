@@ -193,6 +193,11 @@ install_aisbench() {
             ${PIP_FOR_AISBENCH} install -r ${AISBENCH_SOURCE_PATH}/requirements/datasets/bfcl_dependencies.txt --no-index --find-links=${AISBENCH_PKG_PATH}
         fi
     fi
+    # The requirements pull numpy<2 (torch-npu ecosystem) but leave pyarrow
+    # unpinned, and the latest pyarrow imports only with numpy>=2:
+    # "ImportError: pyarrow requires NumPy 2.0 or newer, found 1.26.4".
+    # Cap pyarrow to a numpy-1.x-compatible release.
+    ${PIP_FOR_AISBENCH} install "pyarrow<16" -i ${pip_mirror_source}
     echo "===== Install aisbench in virtual env - End ====="
 }
 
