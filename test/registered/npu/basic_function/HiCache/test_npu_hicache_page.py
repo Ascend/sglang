@@ -41,7 +41,8 @@ class TestHiCachePage(CustomTestCase):
                 "write_back",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
             env={
                 **os.environ,

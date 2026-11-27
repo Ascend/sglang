@@ -88,7 +88,8 @@ MODEL_CONFIG = {
         "modelslim",
         "--disaggregation-transfer-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
     ],
     "decode_args": [
         "--disaggregation-mode",
@@ -101,7 +102,6 @@ MODEL_CONFIG = {
         16,
         "--moe-dense-tp-size",
         1,
-        "--enable-dp-attention",
         "--enable-dp-lm-head",
         "--trust-remote-code",
         "--attention-backend",

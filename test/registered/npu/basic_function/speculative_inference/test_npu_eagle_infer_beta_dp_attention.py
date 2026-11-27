@@ -54,8 +54,8 @@ class TestNpuEagleDPAttnServerSmall(CustomTestCase):
     """Test EAGLE3 with DP attention on NPU (TP=2, DP=2, 2 NPU).
 
     [Test Category] Speculative Decoding
-    [Test Target] --speculative-algorithm=EAGLE3; --tp-size 2; --dp-size 2;
-    --enable-dp-attention; --speculative-draft-model-path
+    [Test Target] --speculative-algorithm=EAGLE3; --tp-size 2; --attn-dp-size 2;
+    --speculative-draft-model-path
     """
 
     @classmethod
@@ -67,9 +67,8 @@ class TestNpuEagleDPAttnServerSmall(CustomTestCase):
             "--trust-remote-code",
             "--tp-size",
             "2",
-            "--dp-size",
+            "--attn-dp-size",
             "2",
-            "--enable-dp-attention",
             "--speculative-draft-model-path",
             cls.draft_model,
             "--speculative-algorithm",

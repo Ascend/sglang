@@ -104,7 +104,8 @@ class TestDisaggregationPrefillPPAccuracy(TestDisaggregationBase):
             "--disaggregation-transfer-backend",
             "ascend",
             "--disable-overlap-schedule",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         decode_args += cls.rdma_devices
         cls.process_decode = popen_launch_pd_server(
@@ -218,7 +219,8 @@ class TestDisaggregationDecodePPAccuracy(TestDisaggregationBase):
             "--disaggregation-transfer-backend",
             "ascend",
             "--disable-overlap-schedule",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         decode_args += cls.rdma_devices
         cls.process_decode = popen_launch_pd_server(
@@ -305,7 +307,8 @@ class TestDisaggregationPrefillPPDynamicChunkAccuracy(TestDisaggregationBase):
             "--disaggregation-transfer-backend",
             "ascend",
             "--disable-overlap-schedule",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
         decode_args += cls.rdma_devices
         cls.process_decode = popen_launch_pd_server(

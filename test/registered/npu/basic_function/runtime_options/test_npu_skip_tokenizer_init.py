@@ -50,7 +50,8 @@ class TestSkipTokenizerInit(CustomTestCase):
                     "--incremental-streaming-output",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
+                    "--disable-decode-cuda-graph",
+                    "--disable-prefill-cuda-graph",
                 ]
             ),
         )
@@ -245,7 +246,8 @@ class TestSkipTokenizerInitVLM(TestSkipTokenizerInit):
                 "--skip-tokenizer-init",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
         cls.eos_token_id = [cls.tokenizer.eos_token_id]

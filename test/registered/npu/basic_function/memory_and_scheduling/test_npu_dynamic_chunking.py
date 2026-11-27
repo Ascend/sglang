@@ -31,7 +31,8 @@ class TestDynamicChunking(CustomTestCase):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--chunked-prefill-size",
         "1024",
         "--mem-fraction-static",

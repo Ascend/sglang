@@ -144,9 +144,8 @@ class TestDisaggregationHybridAttentionGDNDPDecode(
     decode_extra_args = [
         "--tp-size",
         4,
-        "--dp-size",
+        "--attn-dp-size",
         2,
-        "--enable-dp-attention",
         "--enable-dp-lm-head",
         "--base-gpu-id",
         4,

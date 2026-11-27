@@ -9,6 +9,8 @@ import requests
 
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
     CODE_LLAMA_3_1_8B_TEXT_TO_SQL_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_FACT_GENERATION_LORA_PATH,
     LLAMA_3_1_8B_INSTRUCT_NEMOGUARD_TOPIC_CONTROL_LORA_PATH,
@@ -971,6 +973,8 @@ class LoRAUpdateServerTestSession(LoRAUpdateTestSessionBase):
             "--disable-radix-cache",
             "--attention-backend",
             "ascend",
+            "--admin-api-key",
+            ADMIN_API_KEY,
         ]
         if self.enable_lora:
             other_args.append("--enable-lora")
@@ -981,7 +985,8 @@ class LoRAUpdateServerTestSession(LoRAUpdateTestSessionBase):
                     lora_path = json.dumps(lora_path)
                 other_args.append(lora_path)
         if self.disable_cuda_graph:
-            other_args.append("--disable-cuda-graph")
+            other_args.append("--disable-decode-cuda-graph")
+            other_args.append("--disable-prefill-cuda-graph")
         if self.max_lora_rank is not None:
             other_args.extend(["--max-lora-rank", str(self.max_lora_rank)])
         if self.lora_target_modules is not None:
@@ -1021,6 +1026,7 @@ class LoRAUpdateServerTestSession(LoRAUpdateTestSessionBase):
         response = requests.post(
             DEFAULT_URL_FOR_TEST + "/load_lora_adapter",
             json={"lora_name": lora_name, "lora_path": lora_path, "pinned": pinned},
+            headers=ADMIN_AUTH_HEADERS,
         )
         if expected_error:
             self.testcase.assertEqual(
@@ -1059,6 +1065,7 @@ class LoRAUpdateServerTestSession(LoRAUpdateTestSessionBase):
         response = requests.post(
             DEFAULT_URL_FOR_TEST + "/unload_lora_adapter",
             json={"lora_name": lora_name},
+            headers=ADMIN_AUTH_HEADERS,
         )
 
         self.testcase.assertTrue(

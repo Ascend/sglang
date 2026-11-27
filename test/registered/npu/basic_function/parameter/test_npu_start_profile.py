@@ -11,7 +11,11 @@ import requests
 
 from sglang.srt.environ import envs
 from sglang.srt.utils import kill_process_tree
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
@@ -38,7 +42,14 @@ class TestStartProfile(CustomTestCase):
         envs.SGLANG_TORCH_PROFILER_DIR.set(OUTPUT_DIR)
         cls.model = LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
         cls.base_url = DEFAULT_URL_FOR_TEST
-        other_args = ["--attention-backend", "ascend", "--disable-cuda-graph"]
+        other_args = [
+            "--attention-backend",
+            "ascend",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
+            "--admin-api-key",
+            ADMIN_API_KEY,
+        ]
         cls.process = popen_launch_server(
             cls.model,
             cls.base_url,
@@ -71,6 +82,7 @@ class TestStartProfile(CustomTestCase):
         # Post /stop_profile and check the profile directory is non-empty
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/stop_profile",
+            headers=ADMIN_AUTH_HEADERS,
         )
         self._check_non_empty_profile_dir()
 
@@ -85,6 +97,7 @@ class TestStartProfile(CustomTestCase):
         response = requests.post(
             f"{DEFAULT_URL_FOR_TEST}/start_profile",
             json=kwargs if kwargs else None,
+            headers=ADMIN_AUTH_HEADERS,
         )
         self.assertEqual(response.status_code, 200)
 

@@ -28,10 +28,9 @@ class TestGsm8k(GSM8KAscendMixin, CustomTestCase):
         "ascend",
         "--cuda-graph-max-bs-decode",
         32,
-        "--enable-dp-attention",
         "--tp-size",
         2,
-        "--dp-size",
+        "--attn-dp-size",
         2,
         "--enable-tp-lm-head-all-to-all",
     ]

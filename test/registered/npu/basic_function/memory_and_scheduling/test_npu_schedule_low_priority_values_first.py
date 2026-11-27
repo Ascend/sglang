@@ -46,7 +46,8 @@ class TestLowPriorityFirstScheduling(CustomTestCase):
                 "3",  # Limit maximum queued requests to 3 (enforce request abortion when queue is full)
                 "--enable-priority-scheduling",  # Enable priority-based request scheduling (prerequisite for priority features)
                 "--schedule-low-priority-values-first",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--attention-backend",
                 "ascend",
             ],

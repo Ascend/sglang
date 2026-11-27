@@ -44,7 +44,8 @@ class TestModeImpl(CustomTestCase):
             other_args=[
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--model-impl",
                 "transformers",
                 "--prefill-max-requests",

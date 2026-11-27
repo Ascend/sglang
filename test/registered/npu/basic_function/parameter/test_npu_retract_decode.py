@@ -44,7 +44,8 @@ class TestRetractDecode(CustomTestCase):
             "128",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--mem-fraction-static",
             "0.8",
         ] + cls.other_args
@@ -130,7 +131,8 @@ class TestRetractDecodeLongOutput(CustomTestCase):
             "128",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--mem-fraction-static",
             "0.8",
         ] + cls.other_args

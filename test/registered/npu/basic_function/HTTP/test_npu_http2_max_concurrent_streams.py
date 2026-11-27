@@ -40,7 +40,8 @@ class TestHttp2MaxConcurrentStreams(CustomTestCase):
             str(HTTP2_MAX_CONCURRENT_STREAMS),
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
 
         cls.process = popen_launch_server(

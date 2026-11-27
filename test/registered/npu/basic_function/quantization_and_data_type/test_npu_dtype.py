@@ -31,7 +31,8 @@ class TestNPUDtype(CustomTestCase):
                 i,
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ]
             process = popen_launch_server(
                 self.model,

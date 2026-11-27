@@ -47,7 +47,8 @@ COMMON_ARGS = [
     MEM_FRACTION,
     "--attention-backend",
     "ascend",
-    "--disable-cuda-graph",
+    "--disable-decode-cuda-graph",
+    "--disable-prefill-cuda-graph",
 ]
 
 # 2 prefills + 2 decodes, one NPU each (TP=1)

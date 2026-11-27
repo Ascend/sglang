@@ -28,6 +28,7 @@ from sglang.test.server_fixtures.disaggregation_fixture import (
     PDDisaggregationServerBase,
 )
 from sglang.test.test_utils import (
+    ADMIN_LAUNCH_ARGS_FOR_TEST,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     popen_launch_pd_server,
 )
@@ -149,6 +150,10 @@ class TestDisaggregationAccuracy(DisaggregationTestBase, PauseResumeInPlaceMixin
 
     model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
     gsm8k_score_threshold = 0.62
+    # /pause_generation is ADMIN_FORCE: both nodes must be launched with an
+    # admin key, and PauseResumeInPlaceMixin sends the matching Bearer header.
+    prefill_extra_args = [*ADMIN_LAUNCH_ARGS_FOR_TEST]
+    decode_extra_args = [*ADMIN_LAUNCH_ARGS_FOR_TEST]
 
     @classmethod
     def setUpClass(cls):

@@ -4,7 +4,8 @@ Ported from test/sessions/test_streaming_session_swa.py.
 
 NPU adaptations:
 - model: openai/gpt-oss-20b -> openai-mirror/gpt-oss-20b (ModelScope mirror)
-- --cuda-graph-backend-prefill=disabled -> --disable-cuda-graph
+- --cuda-graph-backend-prefill=disabled -> --disable-decode-cuda-graph /
+  --disable-prefill-cuda-graph
 - --page-size 256 -> 128 (NPU page_size constraint)
 - added --attention-backend ascend
 - uses the NPU kit sglang.test.ascend.npu_streaming_session_kit
@@ -50,7 +51,8 @@ SWA_COMMON_ARGS = [
     "1",
     "--sampling-backend",
     "ascend",
-    "--disable-cuda-graph",
+    "--disable-decode-cuda-graph",
+    "--disable-prefill-cuda-graph",
 ]
 
 

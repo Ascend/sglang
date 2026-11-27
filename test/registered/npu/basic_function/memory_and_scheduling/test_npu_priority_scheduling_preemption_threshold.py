@@ -48,7 +48,8 @@ class TestPrioritySchedulingPreemptionThreshold(CustomTestCase):
                 "--enable-priority-scheduling",  # Enable priority scheduling (required for preemption)
                 "--priority-scheduling-preemption-threshold",
                 "5",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--attention-backend",
                 "ascend",
                 "--tp-size",

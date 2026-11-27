@@ -85,8 +85,7 @@ class TestMultimodalDPAttention(CustomTestCase):
         cls._process, cls._url = launch_server(
             cls._model,
             extra_args=[
-                "--enable-dp-attention",
-                "--dp-size",
+                "--attn-dp-size",
                 "2",
                 "--tp-size",
                 "2",
@@ -163,9 +162,8 @@ class TestMultimodalDpLmHead(CustomTestCase):
                 "0.4",
                 "--tp-size",
                 "2",
-                "--dp-size",
+                "--attn-dp-size",
                 "2",
-                "--enable-dp-attention",
                 "--enable-dp-lm-head",
             ],
         )

@@ -11,7 +11,11 @@ import requests
 import torch
 import torch.multiprocessing as mp
 
-from sglang.test.ascend.test_ascend_utils import LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH
+from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
+    LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
+)
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
     DEFAULT_PORT_FOR_SRT_TEST_RUNNER,
@@ -116,6 +120,9 @@ def init_process_seed(
             str(rank),
             "--tp-size",
             str(tp_size),
+            # /get_weights_by_name is ADMIN_FORCE.
+            "--admin-api-key",
+            ADMIN_API_KEY,
         ),
     )
     torch.npu.synchronize()
@@ -130,6 +137,7 @@ def init_process_seed(
                     "name": parameter_name,
                     "truncate_size": truncate_size,
                 },
+                headers=ADMIN_AUTH_HEADERS,
             ).json()
         )
     param_queue.put((f"seed_params", seed_params))
@@ -201,6 +209,9 @@ def init_process_dst(
             "--remote-instance-weight-loader-backend",
             remote_instance_loader_backend,
             "--weight-loader-disable-mmap",
+            # /get_weights_by_name is ADMIN_FORCE.
+            "--admin-api-key",
+            ADMIN_API_KEY,
         ),
     )
     torch.npu.synchronize()
@@ -215,6 +226,7 @@ def init_process_dst(
             requests.get(
                 f"{url}/get_weights_by_name",
                 json={"name": parameter_name, "truncate_size": truncate_size},
+                headers=ADMIN_AUTH_HEADERS,
             ).json()
         )
 

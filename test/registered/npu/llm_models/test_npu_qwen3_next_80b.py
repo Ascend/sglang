@@ -26,7 +26,8 @@ class TestQwen3Next80B(GSM8KAscendMixin, CustomTestCase):
     other_args = [
         "--tp-size",
         "4",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--attention-backend",
         "ascend",
         "--mem-fraction-static",

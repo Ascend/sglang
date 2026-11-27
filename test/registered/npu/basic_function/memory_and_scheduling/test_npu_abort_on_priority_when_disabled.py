@@ -35,7 +35,8 @@ class TestAbortOnPriority(CustomTestCase):
         other_args = [
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--abort-on-priority-when-disabled",
         ]
 

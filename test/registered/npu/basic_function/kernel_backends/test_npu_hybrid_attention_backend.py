@@ -29,7 +29,8 @@ DEFAULT_SERVER_ARGS = [
     "ascend",
     "--decode-attention-backend",
     "ascend",
-    "--disable-cuda-graph",
+    "--disable-decode-cuda-graph",
+    "--disable-prefill-cuda-graph",
     "--mem-fraction-static",
     0.9,
     "--tp-size",
@@ -57,8 +58,8 @@ class TestHybridAttnBackendBase(CustomTestCase):
     def setUpClass(cls):
         # disable deep gemm precompile to make launch server faster
         # please don't do this if you want to make your inference workload faster
-        os.environ["SGL_JIT_DEEPGEMM_PRECOMPILE"] = "false"
-        os.environ["SGL_ENABLE_JIT_DEEPGEMM"] = "false"
+        os.environ["SGLANG_JIT_DEEPGEMM_PRECOMPILE"] = "false"
+        os.environ["SGLANG_ENABLE_JIT_DEEPGEMM"] = "false"
         model = cls.model
         cls.process = popen_launch_server(
             model,

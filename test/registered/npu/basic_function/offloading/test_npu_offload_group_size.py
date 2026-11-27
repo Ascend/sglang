@@ -27,7 +27,8 @@ class TestOffloadGroupSize(CustomTestCase):
     OTHER_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--offload-group-size",
         "2",
         "--tp-size",
@@ -89,7 +90,8 @@ class TestOffloadMeta(TestOffloadGroupSize):
     OTHER_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--offload-group-size",
         "4",
         "--offload-num-in-group",
@@ -120,7 +122,8 @@ class TestOffloadShardedGpu(TestOffloadGroupSize):
     OTHER_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--dp-size",  # When --offload-mode = sharded_gpu, must set --dp > 1 and --tp = 1.
         "2",
         "--offload-group-size",

@@ -48,7 +48,8 @@ def setup_class(cls, enable_lora=True):
     other_args = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--max-running-requests",
         "10",
         "--disable-radix-cache",  # Disable cache for cleaner tests

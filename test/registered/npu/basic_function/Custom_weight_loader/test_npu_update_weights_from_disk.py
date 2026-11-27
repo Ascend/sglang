@@ -5,6 +5,8 @@ import requests
 import sglang as sgl
 from sglang.srt.utils import kill_process_tree
 from sglang.test.ascend.test_ascend_utils import (
+    ADMIN_API_KEY,
+    ADMIN_AUTH_HEADERS,
     LLAMA_3_2_1B_INSTRUCT_WEIGHTS_PATH,
     LLAMA_3_2_1B_WEIGHTS_PATH,
 )
@@ -92,9 +94,12 @@ class TestServerUpdateWeightsFromDisk(CustomTestCase):
                 "--trust-remote-code",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
                 "--mem-fraction-static",
                 "0.7",
+                "--admin-api-key",
+                ADMIN_API_KEY,
             ],
         )
 
@@ -127,6 +132,7 @@ class TestServerUpdateWeightsFromDisk(CustomTestCase):
                 "model_path": model_path,
                 "flush_cache": flush_cache,
             },
+            headers=ADMIN_AUTH_HEADERS,
         )
         return response.json()
 

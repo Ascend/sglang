@@ -27,7 +27,7 @@ TEST_CUSTOM_HEADER_VALUE = "test-header-value-67890"
 class BaseTestNPURequestLogger:
     log_requests_format = None
     env_vars: dict[str, str] = {}  # Env vars to set before server launch
-    request_headers: dict[str, str] = {"X-SMG-Routing-Key": TEST_ROUTING_KEY}
+    request_headers: dict[str, str] = {"X-SGL-Routing-Key": TEST_ROUTING_KEY}
 
     @classmethod
     def setUpClass(cls):
@@ -38,7 +38,8 @@ class BaseTestNPURequestLogger:
         other_args = [
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--log-requests",
             "--log-requests-level",
             "2",
@@ -168,7 +169,7 @@ class TestNPUCustomHeaderViaEnvVar(BaseTestNPURequestLogger, CustomTestCase):
     log_requests_format = "text"
     env_vars = {"SGLANG_LOG_REQUEST_HEADERS": TEST_CUSTOM_HEADER_NAME}
     request_headers = {
-        "X-SMG-Routing-Key": TEST_ROUTING_KEY,
+        "X-SGL-Routing-Key": TEST_ROUTING_KEY,
         TEST_CUSTOM_HEADER_NAME: TEST_CUSTOM_HEADER_VALUE,
     }
 
@@ -186,7 +187,7 @@ class TestNPUCustomHeaderViaEnvVar(BaseTestNPURequestLogger, CustomTestCase):
         )
         # Verify default header is still logged (env var appends, not replaces)
         self.assertIn(
-            "x-smg-routing-key",
+            "x-sgl-routing-key",
             content,
             f"Default header should still be in whitelist in {source_name}",
         )

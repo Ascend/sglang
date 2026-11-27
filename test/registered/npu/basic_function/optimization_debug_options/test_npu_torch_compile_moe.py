@@ -40,7 +40,8 @@ class TestTorchCompileMoe(CustomTestCase):
             "--torch-compile-max-bs",
             "4",
             "--enable-torch-compile",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
         ]
 
         cls.process = popen_launch_server(

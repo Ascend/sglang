@@ -40,7 +40,7 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
     [Test Category] Speculative Decoding
     [Test Target] --speculative-algorithm=EAGLE3; --speculative-draft-model-path;
     --speculative-num-steps; --speculative-eagle-topk; --speculative-num-draft-tokens;
-    --tp-size 2; --dp-size 2; --enable-dp-attention; --enable-dp-lm-head;
+    --tp-size 2; --attn-dp-size 2; --enable-dp-lm-head;
     --moe-dense-tp-size 1
     """
 
@@ -63,9 +63,8 @@ class TestNpuEAGLE3EngineDPAttention(CustomTestCase):
             cls.draft_model,
             "--tp-size",
             "2",
-            "--dp-size",
+            "--attn-dp-size",
             "2",
-            "--enable-dp-attention",
             "--enable-dp-lm-head",
             "--moe-dense-tp-size",
             "1",

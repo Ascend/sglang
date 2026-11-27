@@ -33,11 +33,12 @@ class TestQwen330Bw8a8FuseEP(GSM8KAscendMixin, CustomTestCase):
         "ascend_fuseep",
         "--fuseep-mode",
         2,
+        "--prefill-delayer-max-delay-passes",
+        100,
     ]
 
     env = {
         **os.environ,
-        "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "188416",
     }
 
@@ -74,11 +75,12 @@ class TestQwen330Bw8a8FuseEPTestQwen330Bw8a8FuseModeWithOne(
         256,
         "--chunked-prefill-size",
         256,
+        "--prefill-delayer-max-delay-passes",
+        100,
     ]
 
     env = {
         **os.environ,
-        "SGLANG_PREFILL_DELAYER_MAX_DELAY_PASSES": "100",
         "SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK": "128",
         "HCCL_BUFFSIZE": "1024",
     }

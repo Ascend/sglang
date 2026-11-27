@@ -55,7 +55,8 @@ class TestPrefillDelayerThroughputOnlineServing(CustomTestCase):
                 "lpm",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
             other_benchmark_args=dict(
                 num_prompts=500,
@@ -86,7 +87,8 @@ class TestPrefillDelayerThroughputOfflineGen(CustomTestCase):
                 "200000",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
             other_benchmark_args=dict(
                 num_prompts=800,
@@ -228,7 +230,8 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
                 "50000",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
             max_delay_passes=100,
             token_usage_low_watermark=token_usage_low_watermark,
@@ -243,7 +246,7 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
                     model=model,
                     messages=[{"role": "user", "content": long_prompt}],
                     max_tokens=10000,
-                    extra_body={"data_parallel_rank": 0},
+                    extra_body={"routed_dp_rank": 0},
                 )
 
             async def send_normal_request(dp_rank, req_idx):
@@ -252,7 +255,7 @@ class TestPrefillDelayerTokenUsageLowWatermark(CustomTestCase):
                     model=model,
                     messages=[{"role": "user", "content": "Say hi"}],
                     max_tokens=10,
-                    extra_body={"data_parallel_rank": dp_rank},
+                    extra_body={"routed_dp_rank": dp_rank},
                 )
                 elapsed = time.time() - start
                 return dp_rank, req_idx, elapsed
@@ -321,7 +324,8 @@ class TestPrefillDelayerAccuracy(CustomTestCase):
                 "4096",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
         try:
@@ -359,8 +363,7 @@ def _launch_server(
             "--trust-remote-code",
             "--tp",
             WORLD_SIZE,
-            "--enable-dp-attention",
-            "--dp",
+            "--attn-dp-size",
             WORLD_SIZE,
             "--chunked-prefill-size",
             "131072",
@@ -368,7 +371,8 @@ def _launch_server(
             "0.6",
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--enable-metrics",
             *(["--enable-prefill-delayer"] if prefill_delayer else []),
             "--prefill-delayer-max-delay-passes",

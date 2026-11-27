@@ -1,12 +1,12 @@
 import logging
 import random
-import time
 import unittest
 
 import sgl_kernel_npu
 import torch
 import torch_npu
 
+from sglang.test.ascend.npu_profiler_utils import measure_device_time_us
 from sglang.test.ci.ci_register import register_npu_ci
 
 _ = sgl_kernel_npu, torch_npu
@@ -78,19 +78,15 @@ class TestMatrixMultiplication(unittest.TestCase):
                     res1 = torch.empty((b, m * n), dtype=dtype, device="npu")
                     res2 = torch.empty((b, m, n), dtype=dtype, device="npu")
 
-                    # Measure time for golden (native) computation
-                    torch.npu.synchronize()
-                    start_time = time.time()
-                    self.compute_golden(a, b_tensor, res1, m, n)
-                    torch.npu.synchronize()
-                    golden_time = time.time() - start_time
-
-                    # Measure time for fused computation
-                    torch.npu.synchronize()
-                    start_time = time.time()
-                    torch.ops.npu.batch_matmul_transpose(a, b_tensor, res2)
-                    torch.npu.synchronize()
-                    fused_time = time.time() - start_time
+                    # Measure steady-state NPU device time (us) for both paths.
+                    # Wall-clock timing of a single cold call included launch
+                    # and first-call initialisation, not the operator cost.
+                    golden_time = measure_device_time_us(
+                        lambda: self.compute_golden(a, b_tensor, res1, m, n)
+                    )
+                    fused_time = measure_device_time_us(
+                        lambda: torch.ops.npu.batch_matmul_transpose(a, b_tensor, res2)
+                    )
 
                     # Verify result correctness for current test case
                     self.assert_tensors_basic_format(res1.view(-1, m, n), res2)
@@ -101,7 +97,7 @@ class TestMatrixMultiplication(unittest.TestCase):
 
                     # Log current test case result
                     logger.info(
-                        f"[Boundary] Shape: ({b}, {m}, {k}, {n}), dtype: {dtype}, Golden time: {golden_time:.6f}s, Fused time: {fused_time:.6f}s"
+                        f"[Boundary] Shape: ({b}, {m}, {k}, {n}), dtype: {dtype}, Golden time: {golden_time:.6f}us, Fused time: {fused_time:.6f}us"
                     )
 
     def test_random_shapes(self):
@@ -125,19 +121,15 @@ class TestMatrixMultiplication(unittest.TestCase):
                     res1 = torch.empty((b, m * n), dtype=dtype, device="npu")
                     res2 = torch.empty((b, m, n), dtype=dtype, device="npu")
 
-                    # Measure time for golden (native) computation
-                    torch.npu.synchronize()
-                    start_time = time.time()
-                    self.compute_golden(a, b_tensor, res1, m, n)
-                    torch.npu.synchronize()
-                    golden_time = time.time() - start_time
-
-                    # Measure time for fused computation
-                    torch.npu.synchronize()
-                    start_time = time.time()
-                    torch.ops.npu.batch_matmul_transpose(a, b_tensor, res2)
-                    torch.npu.synchronize()
-                    fused_time = time.time() - start_time
+                    # Measure steady-state NPU device time (us) for both paths.
+                    # Wall-clock timing of a single cold call included launch
+                    # and first-call initialisation, not the operator cost.
+                    golden_time = measure_device_time_us(
+                        lambda: self.compute_golden(a, b_tensor, res1, m, n)
+                    )
+                    fused_time = measure_device_time_us(
+                        lambda: torch.ops.npu.batch_matmul_transpose(a, b_tensor, res2)
+                    )
 
                     # Verify result correctness for current test case
                     self.assert_tensors_basic_format(res1.view(-1, m, n), res2)
@@ -150,7 +142,7 @@ class TestMatrixMultiplication(unittest.TestCase):
                         self.global_all_fused_times.append(fused_time)
                         logger.info(
                             f"[Random], Shape: Random ({b}, {m}, {k}, {n}), dtype: {dtype}, "
-                            f"Golden time: {golden_time:.6f}s, Fused time: {fused_time:.6f}s (Valid, collected)"
+                            f"Golden time: {golden_time:.6f}us, Fused time: {fused_time:.6f}us (Valid, collected)"
                         )
 
     def test_zero_values(self):
@@ -165,19 +157,13 @@ class TestMatrixMultiplication(unittest.TestCase):
                 res1 = torch.empty((b, m * n), dtype=dtype, device="npu")
                 res2 = torch.empty((b, m, n), dtype=dtype, device="npu")
 
-                # Measure time for golden (native) computation
-                torch.npu.synchronize()
-                start_time = time.time()
-                self.compute_golden(a, b_tensor, res1, m, n)
-                torch.npu.synchronize()
-                golden_time = time.time() - start_time
-
-                # Measure time for fused computation
-                torch.npu.synchronize()
-                start_time = time.time()
-                torch.ops.npu.batch_matmul_transpose(a, b_tensor, res2)
-                torch.npu.synchronize()
-                fused_time = time.time() - start_time
+                # Measure steady-state NPU device time (us) for both paths.
+                golden_time = measure_device_time_us(
+                    lambda: self.compute_golden(a, b_tensor, res1, m, n)
+                )
+                fused_time = measure_device_time_us(
+                    lambda: torch.ops.npu.batch_matmul_transpose(a, b_tensor, res2)
+                )
 
                 # Verify result correctness for current test case
                 self.assert_tensors_basic_format(res1.view(-1, m, n), res2)
@@ -189,11 +175,16 @@ class TestMatrixMultiplication(unittest.TestCase):
 
                 # Log current test case result
                 logger.info(
-                    f"[Zero] Shape: ({b}, {m}, {k}, {n}), dtype: {dtype}, Golden time: {golden_time:.6f}s, Fused time: {fused_time:.6f}s"
+                    f"[Zero] Shape: ({b}, {m}, {k}, {n}), dtype: {dtype}, Golden time: {golden_time:.6f}us, Fused time: {fused_time:.6f}us"
                 )
 
-    def test_global_performance_assertion(self):
-        """Final global performance assertion (only execute once for all test cases)"""
+    def test_zz_global_performance_assertion(self):
+        """Final global performance assertion (only execute once for all test cases)
+
+        The ``test_zz_`` prefix is deliberate: unittest and pytest both run
+        methods in alphabetical order, so this assertion must run after
+        boundary/random/zero measurements have been collected.
+        """
         # Check if global timing lists are valid
         if not self.global_all_golden_times or not self.global_all_fused_times:
             logger.warning(
@@ -201,23 +192,21 @@ class TestMatrixMultiplication(unittest.TestCase):
             )
             return
 
-        # Calculate GLOBAL average time across all test methods and cases
-        global_avg_golden_time = sum(self.global_all_golden_times) / len(
-            self.global_all_golden_times
-        )
-        global_avg_fused_time = sum(self.global_all_fused_times) / len(
-            self.global_all_fused_times
-        )
+        # Aggregate by total device time: each record is already an average
+        # per-call time, so an unweighted mean would give a (1, 1, 1, 1) case
+        # the same weight as the real model shapes this operator targets.
+        total_golden_us = sum(self.global_all_golden_times)
+        total_fused_us = sum(self.global_all_fused_times)
 
         # Calculate overall speedup ratio and assert (avoid division by zero)
-        if global_avg_golden_time > 1e-9:
+        if total_golden_us > 1e-9:
             global_overall_speedup_ratio = (
-                global_avg_golden_time - global_avg_fused_time
-            ) / global_avg_golden_time
+                total_golden_us - total_fused_us
+            ) / total_golden_us
             logger.info(
                 f"\n===== GLOBAL Overall Performance Result ====="
-                f"\nGlobal Average Golden time (all valid test cases): {global_avg_golden_time:.6f}s"
-                f"\nGlobal Average Fused time (all valid test cases): {global_avg_fused_time:.6f}s"
+                f"\nGlobal Total Golden time (all valid test cases): {total_golden_us:.6f}us"
+                f"\nGlobal Total Fused time (all valid test cases): {total_fused_us:.6f}us"
                 f"\nGlobal Overall Speedup Ratio: {global_overall_speedup_ratio:.4f}"
                 f"\nTotal valid timing records collected: {len(self.global_all_golden_times)}"
             )

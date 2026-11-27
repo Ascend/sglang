@@ -26,7 +26,6 @@ OTHER_ARGS = [
     "npu",
     "--tp-size",
     2,
-    "--enable-dp-attention",
     "--chunked-prefill-size",
     -1,
     "--max-prefill-tokens",

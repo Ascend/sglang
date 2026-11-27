@@ -39,7 +39,8 @@ class TestGpuId(CustomTestCase):
             cls.step,
             "--attention-backend",
             "ascend",
-            "--disable-cuda-graph",
+            "--disable-decode-cuda-graph",
+            "--disable-prefill-cuda-graph",
             "--dist-timeout",
             3000,
         ]

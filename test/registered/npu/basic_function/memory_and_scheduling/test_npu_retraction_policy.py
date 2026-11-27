@@ -80,7 +80,8 @@ class TestRetractionPolicyLength(BaseRetractionTest):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
         "0.31",
@@ -204,7 +205,8 @@ class TestRetractionPolicyPriority(BaseRetractionTest):
     _BASE_ARGS = [
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        "--disable-decode-cuda-graph",
+        "--disable-prefill-cuda-graph",
         "--disable-radix-cache",
         "--mem-fraction-static",
         "0.31",

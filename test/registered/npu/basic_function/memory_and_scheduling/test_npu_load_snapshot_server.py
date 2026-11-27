@@ -77,7 +77,12 @@ class TestLoadSnapshotNoDP(CustomTestCase):
     def test_shm_backend(self):
         _launch_and_check(
             self,
-            other_args=["--attention-backend", "ascend", "--disable-cuda-graph"],
+            other_args=[
+                "--attention-backend",
+                "ascend",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
+            ],
             expected_dp_size=1,
         )
 
@@ -98,7 +103,8 @@ class TestLoadSnapshotNormalDP(CustomTestCase):
                 "2",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
             expected_dp_size=2,
         )

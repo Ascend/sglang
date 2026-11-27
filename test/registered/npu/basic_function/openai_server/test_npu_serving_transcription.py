@@ -50,7 +50,8 @@ class TestServingTranscription(CustomTestCase):
             other_args=[
                 "--served-model-name",
                 "whisper",
-                "--disable-cuda-graph",
+                "--disable-decode-cuda-graph",
+                "--disable-prefill-cuda-graph",
             ],
         )
 
