@@ -414,7 +414,7 @@ def handle_kv4_compatibility(server_args: Any) -> None:
 
 
 def handle_indexer_kv_cache_compatibility(server_args: Any) -> None:
-    """Check the DSA lightning-indexer INT8 cache recipe.
+    """Check the DSA indexer INT8/MXFP8 cache recipes.
 
     npu_quant_lightning_indexer is a CANN op, so an explicitly requested
     indexer recipe only makes sense on Ascend NPU and on a model that
@@ -426,7 +426,9 @@ def handle_indexer_kv_cache_compatibility(server_args: Any) -> None:
     if cfg.indexer_kv_cache_dtype is None:
         return
 
-    if cfg.enable_hierarchical_cache:
+    if cfg.enable_hierarchical_cache and not (
+        cfg.indexer_kv_cache_dtype == "int8" and get_platform().is_npu
+    ):
         raise ValueError(
             f"--indexer-kv-cache-dtype={cfg.indexer_kv_cache_dtype} is not "
             "supported with --enable-hierarchical-cache. Disable hierarchical "

@@ -420,6 +420,15 @@ class AscendDSAAttnMultiStepDraftBackend(AscendAttnMultiStepDraftBackend):
     backend_cls = AscendDSAAttnBackend
 
 
+def _index_k_scale_cache(pool, layer_id: int):
+    """FP32/FP16 per-row scales for FP8/INT8, raw E8M0 bytes for MXFP8."""
+    if pool.indexer_quant:
+        return pool.get_index_k_scale_buffer(layer_id)
+    if pool.indexer_kv_store_mxfp8:
+        return pool.get_index_k_scale_buffer(layer_id).view(torch.uint8)
+    return None
+
+
 def _get_topk_npu(
     layer_id: int,
     query: torch.Tensor,
@@ -469,10 +478,40 @@ def _get_topk_npu(
     pool = get_token_to_kv_pool()
     kv = pool.layer_router.read(layer_id)
     pool, layer_id = kv.view, kv.view_layer_id
+    quant_mode = -1  # unquant BF16
+    weights_dtype = torch.bfloat16
+    if pool.indexer_kv_store_int8:
+        quant_mode = 2  # INT8 quant
+        weights_dtype = torch.float16
+    elif pool.indexer_quant:
+        quant_mode = 0  # FP8 per-token-head quant
+    elif pool.indexer_kv_store_mxfp8:
+        quant_mode = 1  # MXFP8 quant
+
+    indexer_kwargs = {}
+    if quant_mode != -1:
+        from sglang.srt.layers.attention.dsa.dsa_npu_indexer import (
+            _quantize_npu_indexer_activation,
+        )
+
+        scale_type = (
+            torch.float8_e8m0fnu if quant_mode == 1 else pool.index_k_scale_dtype
+        )
+        query_safe, query_descale = _quantize_npu_indexer_activation(
+            query_safe,
+            pool.indexer_hadamard_128,
+            pool.index_k_store_dtype,
+            scale_type,
+            kpool_query=True,
+        )
+        indexer_kwargs = dict(
+            q_descale=query_descale,
+            k_descale=pool.get_index_k_scale_buffer(layer_id),
+        )
     indices, _ = pool_key_indexer(
         query=query_safe,
         pool_key=pool.get_index_k_buffer(layer_id),
-        weights=weights_safe,
+        weights=weights_safe.to(weights_dtype),
         pool_tail_k=tail_lens_safe,
         actual_seq_q=query_ends_safe,
         actual_seq_k=pool_lens_safe,
@@ -482,8 +521,9 @@ def _get_topk_npu(
         topk=index_topk,
         pool_size=index_kpool,
         mask_mode=3,
-        quant_mode=-1,
+        quant_mode=quant_mode,
         return_value=False,
+        **indexer_kwargs,
     )
     result = pack_pool_key_indexer_indices(
         indices=indices[: query.shape[0]],
@@ -580,6 +620,7 @@ def _compress_write_mtp_npu(
         out_cache_loc=forward_batch.out_cache_loc,
         num_draft_tokens=plan.num_draft_tokens,
         effective_n_per_batch=plan.effective_n_per_batch,
+        scale_cache=_index_k_scale_cache(pool, layer_id),
     )
 
 
@@ -615,6 +656,7 @@ def _compress_write_decode_npu(
         out_cache_loc=forward_batch.out_cache_loc,
         pool_size=index_kpool,
         slots_per_page=pool.index_page_size,
+        scale_cache=_index_k_scale_cache(pool, layer_id),
     )
 
 
@@ -637,7 +679,7 @@ def _compress_write_extend_npu(
     plan = metadata.attn_metadata.kpool_extend_plan
     assert plan is not None, "NPU DSA extend requires kpool_extend_plan"
 
-    # NPU index cache uses BF16, so tail updates cannot reuse the GPU FP8 path.
+    # Tail rings stay BF16 in quantized mode
     writes, tails = plan.writes, plan.tails
     if not writes.is_empty:
         kpool_assemble_softmax_rotate_write_cache(
@@ -652,6 +694,7 @@ def _compress_write_extend_npu(
             tail_logical_base=writes.tail_logical_base,
             ape=compress_ape,
             loc=writes.write_loc,
+            scale_cache=_index_k_scale_cache(pool, layer_id),
         )
     if not tails.is_empty:
         scatter_kpool_tail_updates(
