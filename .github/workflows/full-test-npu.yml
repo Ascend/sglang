@@ -153,14 +153,12 @@ jobs:
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
       transformers_version: ''
-      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      accuracy_dataset: ${{ matrix.test_config.test_type == 'accuracy' && needs.set-image-config.outputs.accuracy_dataset || '' }}
       sgl_router_artifact: ${{ needs.sgl-router-build-aarch64.outputs.artifact_name }}
 
   # test pp : kimi K3
   full-poc-multi-node-mix-tests-pp:
-    name: multi-node-mix-poc-pp
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || contains(format(',{0},', needs.set-image-config.outputs.job_filter), ',full-poc-multi-node-mix-tests-pp,')) }}
+    name: multi-node-mix-poc
+    if: ${{ always() && needs.set-image-config.result == 'success' && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     strategy:
       fail-fast: false
@@ -177,22 +175,20 @@ jobs:
             test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
-      ref: ${{ needs.set-image-config.outputs.ref }}
       runner: linux-amd64-cpu-4
       test_type: ${{ matrix.test_config.test_type || 'perf' }}
       test_config_name: ${{ matrix.test_config.name }}
       node_size: ${{ matrix.test_config.node_size }}
       test_case: ${{ matrix.test_config.test_case }}
       image: ${{ needs.set-image-config.outputs.image_a3 }}
+      install_sglang_from_source: false
       prefill_decode_deployment: 'mix'
       transformers_version: ''
-      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      accuracy_dataset: ${{ matrix.test_config.test_type == 'accuracy' && needs.set-image-config.outputs.accuracy_dataset || '' }}
 
   # test dcp : kimi K3
   full-poc-multi-node-mix-tests-dcp:
-    name: multi-node-mix-poc-dcp
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || contains(format(',{0},', needs.set-image-config.outputs.job_filter), ',full-poc-multi-node-mix-tests-dcp,')) }}
+    name: multi-node-mix-poc
+    if: ${{ always() && needs.set-image-config.result == 'success' && (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     strategy:
       fail-fast: false
@@ -213,14 +209,12 @@ jobs:
             test_type: 'perf'
     uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
     with:
-      ref: ${{ needs.set-image-config.outputs.ref }}
       runner: linux-amd64-cpu-4
       test_type: ${{ matrix.test_config.test_type || 'perf' }}
       test_config_name: ${{ matrix.test_config.name }}
       node_size: ${{ matrix.test_config.node_size }}
       test_case: ${{ matrix.test_config.test_case }}
       image: ${{ needs.set-image-config.outputs.image_a3 }}
+      install_sglang_from_source: false
       prefill_decode_deployment: 'mix'
       transformers_version: ''
-      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
-      accuracy_dataset: ${{ matrix.test_config.test_type == 'accuracy' && needs.set-image-config.outputs.accuracy_dataset || '' }}
