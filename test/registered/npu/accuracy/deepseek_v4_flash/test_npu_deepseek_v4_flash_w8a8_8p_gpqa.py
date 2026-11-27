@@ -15,7 +15,7 @@ from sglang.utils import wait_for_server
 
 register_npu_ci(
     est_time=3600,
-    suite="nightly-acc-16-npu-a3",
+    suite="sr1-acc-16-npu-a3",
     nightly=True,
 )
 
@@ -79,7 +79,7 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS = [
     "--max-prefill-tokens",
     80000,
     "--chunked-prefill-size",
-    8192,
+    131072,
     "--max-running-requests",
     192,
     "--dp-size",

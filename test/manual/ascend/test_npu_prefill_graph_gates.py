@@ -89,7 +89,7 @@ def run(args, port, timeout=600):
         sys.executable,
         "-m",
         "sglang.launch_server",
-        *args,
+        *[str(x) for x in args],
         "--host",
         "127.0.0.1",
         "--port",

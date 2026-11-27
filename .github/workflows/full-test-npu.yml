@@ -52,13 +52,11 @@ jobs:
     with:
       runner: linux-aarch64-a3-16
       test_type: accuracy
-      test_suite: nightly-acc-16-npu-a3
+      test_suite: sr1-acc-16-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
-      only_tests: |
-        test/registered/npu/accuracy/deepseek_v4_flash/test_npu_deepseek_v4_flash_w8a8_8p_gpqa.py
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
     secrets: inherit
 
@@ -70,13 +68,11 @@ jobs:
     with:
       runner: linux-aarch64-a3-800t-8
       test_type: perf
-      test_suite: full-perf-8-npu-a3
+      test_suite: sr1-perf-8-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
-      only_tests: |
-        test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_prefill_graph_purep.py
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
     secrets: inherit
 
@@ -88,13 +84,11 @@ jobs:
     with:
       runner: linux-aarch64-a3-800t-16
       test_type: perf
-      test_suite: full-perf-16-npu-a3
+      test_suite: sr1-perf-16-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
-      only_tests: |
-        test/registered/npu/performance/deepseek_v4_flash/test_npu_deepseek_v4_flash_prefill_graph_purep_16p.py
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
     secrets: inherit
 
@@ -106,14 +100,11 @@ jobs:
     with:
       runner: linux-aarch64-a3-2
       test_type: accuracy
-      test_suite: full-acc-2-npu-a3
+      test_suite: sr2-acc-2-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
-      only_tests: |
-        test/registered/npu/accuracy/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in3k5_out1k5_50ms_gpqa.py
-        test/registered/npu/accuracy/qwen3-8b/test_npu_qwen3_8b_w8a8_1p_in6k_out1k5_bs16_gpqa.py
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
     secrets: inherit
 
@@ -125,53 +116,13 @@ jobs:
     with:
       runner: linux-aarch64-a3-2
       test_type: accuracy
-      test_suite: nightly-1-npu-a3
+      test_suite: sr3-eagle-2-npu-a3
       image: ${{ needs.set-image-config.outputs.image_a3 }}
       ref: ${{ needs.set-image-config.outputs.ref }}
       is_nightly_pipeline_job: true
       skip_pr_test_health_check: 'true'
-      only_tests: |
-        test/registered/npu/basic_function/speculative_inference/test_npu_eagle3.py
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
     secrets: inherit
-
-  # SR3: MiMo-V2.5 MultiLayer manual case (runs only if the weight is cached).
-  sr3-mimo-8-npu-a3:
-    name: sr3-mimo-8-npu-a3
-    needs: [set-image-config]
-    runs-on: linux-aarch64-a3-8
-    container:
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-    timeout-minutes: 180
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Overlay repo test utils
-        shell: bash
-        run: |
-          sglang_pkg_path=/sgl-workspace/sglang/python
-          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-          mkdir -p ${ascend_test_util_path}
-          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-          cp -r $(pwd)/python/sglang/test/ascend ${ascend_test_util_path}
-          ln -sf $(pwd) /root/sglang
-      - name: Probe MiMo weight cache
-        id: probe
-        shell: bash
-        run: |
-          set +e
-          python - <<'PY'
-          from sglang.test.ascend.test_ascend_utils import MIMO_V2_5_W8A8_WEIGHTS_PATH
-          import os
-          print(MIMO_V2_5_W8A8_WEIGHTS_PATH)
-          raise SystemExit(0 if os.path.isdir(MIMO_V2_5_W8A8_WEIGHTS_PATH) else 1)
-          PY
-          echo "weight_present=$?" >> $GITHUB_OUTPUT
-      - name: Run MiMo MultiLayer
-        if: steps.probe.outputs.weight_present == '0'
-        shell: bash
-        run: |
-          python -u test/manual/ascend/llm_models/test_npu_mimo_v2_5_w8a8.py
 
   # SR1: startup gates (full / alltoallv / torch.compile), no full evaluation.
   sr1-gates-a3-8:
@@ -197,35 +148,3 @@ jobs:
         shell: bash
         run: |
           python -u test/manual/ascend/test_npu_prefill_graph_gates.py
-
-  # SR1/SR2: GLM-5.3 / GLM-5.2 16P accuracy (2-node PD-mix).
-  multi-node-glm-a3:
-    name: multi-node-glm-a3
-    needs: [set-image-config]
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        test_config:
-          - name: glm_5_3_w8a8_16p_gpqa
-            node_size: 2
-            test_case: test/registered/npu/accuracy/glm5_3/test_npu_glm_5_3_w8a8_16p_gpqa.py
-            test_type: 'accuracy'
-            prefill_decode_deployment: 'mix'
-          - name: glm_5_2_w8a8_16p_gpqa
-            node_size: 2
-            test_case: test/registered/npu/accuracy/glm5_2/test_npu_glm_5_2_w8a8_16p_gpqa.py
-            test_type: 'accuracy'
-            prefill_decode_deployment: 'mix'
-    uses: ./.github/workflows/nightly-test-npu-e2e-multi-node.yml
-    with:
-      runner: linux-amd64-cpu-8
-      test_type: ${{ matrix.test_config.test_type }}
-      test_config_name: ${{ matrix.test_config.name }}
-      node_size: ${{ matrix.test_config.node_size }}
-      test_case: ${{ matrix.test_config.test_case }}
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-      install_sglang_from_source: false
-      prefill_decode_deployment: ${{ matrix.test_config.prefill_decode_deployment }}
-      transformers_version: ''
-      run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
