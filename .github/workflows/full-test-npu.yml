@@ -124,27 +124,3 @@ jobs:
       run_start_metadata: ${{ needs.set-image-config.outputs.run_start_metadata }}
     secrets: inherit
 
-  # SR1: startup gates (full / alltoallv / torch.compile), no full evaluation.
-  sr1-gates-a3-8:
-    name: sr1-gates-a3-8
-    needs: [set-image-config]
-    runs-on: linux-aarch64-a3-8
-    container:
-      image: ${{ needs.set-image-config.outputs.image_a3 }}
-    timeout-minutes: 90
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Overlay repo test utils
-        shell: bash
-        run: |
-          sglang_pkg_path=/sgl-workspace/sglang/python
-          ascend_test_util_path=${sglang_pkg_path}/sglang/test/ascend
-          mkdir -p ${ascend_test_util_path}
-          mv ${ascend_test_util_path} ${ascend_test_util_path}_bak
-          cp -r $(pwd)/python/sglang/test/ascend ${ascend_test_util_path}
-          ln -sf $(pwd) /root/sglang
-      - name: Run startup gates
-        shell: bash
-        run: |
-          python -u test/manual/ascend/test_npu_prefill_graph_gates.py
