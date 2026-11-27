@@ -102,7 +102,7 @@ jobs:
   # test pp : deepseekv4 flash
   full-perf-test-16-npu-a3-verity:
     name: full-perf-test-16-npu-a3-verity
-    if: ${{ !cancelled() && (needs.set-image-config.outputs.job_filter == 'all' || contains(format(',{0},', needs.set-image-config.outputs.job_filter), ',full-perf-test-16-npu-a3-verity,')) }}
+    if: ${{ (github.repository == 'sgl-project/sglang' || github.event_name == 'pull_request') }}
     needs: [set-image-config]
     uses: ./.github/workflows/_npu-pr-test-stage.yml
     with:

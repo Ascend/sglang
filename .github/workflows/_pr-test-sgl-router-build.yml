@@ -46,8 +46,7 @@ jobs:
           allow-unsafe-pr-checkout: ${{ github.event_name == 'pull_request_target' }}
           # What the cache key hashes, plus the actions and scripts this job runs.
           sparse-checkout: |
-            sgl-router
-            rust
+            experimental/sgl-router
             .github
             scripts/ci/utils
           sparse-checkout-cone-mode: false
@@ -60,7 +59,7 @@ jobs:
         with:
           path: sgl-router-bin/sgl-router
           # The arch is the compile runner's, as download-sgl-router reads it.
-          key: sgl-router-${{ contains(inputs.runs_on, '-arm') && 'aarch64' || 'x86_64' }}-${{ hashFiles('sgl-router/**', 'rust/Cargo.toml', 'rust/sglang-api-types/**', 'rust/sglang-processor/**', 'rust/sglang-runtime-v1-types/**', '.github/workflows/_pr-test-sgl-router-build.yml') }}
+          key: sgl-router-${{ contains(inputs.runs_on, '-arm') && 'aarch64' || 'x86_64' }}-${{ hashFiles('experimental/sgl-router/**', '.github/workflows/_pr-test-sgl-router-build.yml') }}
 
       - name: Upload binary
         if: steps.cache.outputs.cache-hit == 'true'
@@ -98,13 +97,21 @@ jobs:
       - name: Install Rust toolchain
         run: bash scripts/ci/utils/install_rustup.sh
 
+      # sgl-router lives at experimental/sgl-router and is its own cargo workspace
+      # with a committed Cargo.lock, so build the binary directly. The
+      # RUSTUP_TOOLCHAIN pin install_rustup.sh exports would outrank the router's
+      # rust-toolchain.toml, so unset it to build at the router's own toolchain.
+      # libpcre2-8 is vendored so the binary runs where the system library is absent.
       - name: Build sgl-router
-        run: bash sgl-router/scripts/build.sh sgl-router-bin/sgl-router
-
-      # The key names the rust/ crates the router builds instead of hashing all of
-      # rust/; this fails when that list falls behind sgl-router's path dependencies.
-      - name: Check the cache key covers the router's crates
-        run: python3 scripts/ci/utils/check_sgl_router_cache_key.py
+        env:
+          PCRE2_SYS_STATIC: '1'
+        run: |
+          set -euo pipefail
+          unset RUSTUP_TOOLCHAIN
+          cd experimental/sgl-router
+          cargo build --locked --release --bin sgl-router
+          install -D -m 0755 target/release/sgl-router "${GITHUB_WORKSPACE}/sgl-router-bin/sgl-router"
+          "${GITHUB_WORKSPACE}/sgl-router-bin/sgl-router" --version
 
       # The oldest test image (jammy) has glibc 2.35; a newer requirement fails at exec.
       - name: Check the binary's glibc requirement
