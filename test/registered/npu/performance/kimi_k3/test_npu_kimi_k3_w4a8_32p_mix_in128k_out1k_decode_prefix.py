@@ -20,10 +20,7 @@ register_npu_ci(
     disabled="performance testcase",
 )
 
-# Same four-node Kimi-K3-w4a8 topology as the non-DCP decode case, plus
-# decode context parallelism (tp64 / attn-dp4 / dcp2). DCP_SIZE>1 requires the
-# Ascend FIA attention path.
-KIMI_K3_W4A8_32P_DCP_ENVS = {
+KIMI_K3_W4A8_32P_ENVS = {
     "SGLANG_SET_CPU_AFFINITY": "1",
     "SGLANG_ONE_VISIBLE_DEVICE_PER_PROCESS": "1",
     "SGLANG_NPU_USE_TRITON_PREFIX_KV_CACHE_STORE": "1",
@@ -50,7 +47,7 @@ KIMI_K3_W4A8_32P_DCP_ENVS = {
     "DEEPEP_HCCL_BUFFSIZE": "1800",
 }
 
-KIMI_K3_W4A8_32P_DCP_OTHER_ARGS = [
+KIMI_K3_W4A8_32P_OTHER_ARGS = [
     "--model-loader-extra-config",
     '{"enable_multithread_load": true}',
     "--nnodes",
@@ -75,11 +72,6 @@ KIMI_K3_W4A8_32P_DCP_OTHER_ARGS = [
     "--enable-dense-mlp-attn-tp",
     "--mamba-ssm-dtype",
     "bfloat16",
-    # Decode context parallelism: shard the target MLA KV cache across DCP ranks.
-    "--dcp-size",
-    2,
-    "--dcp-comm-backend",
-    "a2a",
     "--mem-fraction-static",
     0.75,
     "--max-total-tokens",
@@ -124,21 +116,20 @@ KIMI_K3_W4A8_32P_DCP_OTHER_ARGS = [
     9000,
 ]
 
-KIMI_K3_W4A8_32P_DCP_MODEL_CONFIG = {
+KIMI_K3_W4A8_32P_MODEL_CONFIG = {
     "model_path": KIMI_K3_W4A8_MODEL_PATH,
-    "other_args": KIMI_K3_W4A8_32P_DCP_OTHER_ARGS,
-    "node_envs": KIMI_K3_W4A8_32P_DCP_ENVS,
+    "other_args": KIMI_K3_W4A8_32P_OTHER_ARGS,
+    "node_envs": KIMI_K3_W4A8_32P_ENVS,
 }
 
 
-class TestNPUKimiK3W4A832PDCPMixIn128kOut1kDecodePrefix(
+class TestNPUKimiK3W4A832PMixIn128kOut1kDecodePrefix(
     TestNpuPerfMultiNodePdMixTestCaseBase
 ):
-    """128k-in / 1k-out pure decode at C6 over a 99% shared prefix with DCP=2;
-    gate: mean TPOT <= 30 ms (+1 ms tolerance) and output throughput >= 140 token/s.
-    The same gates as the non-DCP case assert that DCP holds the low-latency bar."""
+    """128k-in / 1k-out pure decode at C6 over a 99% shared prefix; gate:
+    mean TPOT <= 30 ms (+1 ms tolerance) and output throughput >= 140 token/s."""
 
-    model_config = KIMI_K3_W4A8_32P_DCP_MODEL_CONFIG
+    model_config = KIMI_K3_W4A8_32P_MODEL_CONFIG
     benchmark_tool = AISBENCHMARK
     dataset_type = AISBENCHMARK_DATASET_GSM8K
     dataset_path = None
@@ -152,8 +143,8 @@ class TestNPUKimiK3W4A832PDCPMixIn128kOut1kDecodePrefix(
     tpot = 30.0
     output_token_throughput = 140.0
 
-    def test_npu_kimi_k3_w4a8_32p_dcp_mix_in128k_out1k_decode_prefix(self):
-        """Run the 128k pure-decode low-latency TPOT acceptance test with DCP=2."""
+    def test_npu_kimi_k3_w4a8_32p_mix_in128k_out1k_decode_prefix(self):
+        """Run the 128k pure-decode low-latency TPOT acceptance test."""
         self.run_throughput()
 
 

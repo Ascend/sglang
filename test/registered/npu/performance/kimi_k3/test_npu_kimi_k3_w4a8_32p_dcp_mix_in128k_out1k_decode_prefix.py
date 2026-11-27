@@ -77,7 +77,7 @@ KIMI_K3_W4A8_32P_DCP_OTHER_ARGS = [
     "bfloat16",
     # Decode context parallelism: shard the target MLA KV cache across DCP ranks.
     "--dcp-size",
-    1,
+    2,
     "--dcp-comm-backend",
     "a2a",
     "--mem-fraction-static",
