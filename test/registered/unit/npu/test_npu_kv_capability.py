@@ -158,6 +158,8 @@ def _build_pool(
     index_head_dim=INDEX_HEAD_DIM,
     indexer_layer_ids=None,
     dcp_size=1,
+    qk_rope_head_dim=QK_ROPE_HEAD_DIM,
+    kv_cache_dim=PACKED_KV_CACHE_DIM,
     **kwargs,
 ):
     capability = resolve_kv_capability(
@@ -174,7 +176,7 @@ def _build_pool(
             page_size=4,
             dtype=dtype,
             kv_lora_rank=KV_LORA_RANK,
-            qk_rope_head_dim=QK_ROPE_HEAD_DIM,
+            qk_rope_head_dim=qk_rope_head_dim,
             layer_num=layer_num,
             device="cpu",
             enable_memory_saver=False,
@@ -183,27 +185,31 @@ def _build_pool(
             start_layer=start_layer,
             end_layer=start_layer + layer_num,
             indexer_layer_ids=indexer_layer_ids,
-            kv_cache_dim=PACKED_KV_CACHE_DIM if capability.main_kv_packed else None,
+            kv_cache_dim=kv_cache_dim if capability.main_kv_packed else None,
             kv_capability=capability,
             **kwargs,
         )
 
 
 class TestNpuMlaPoolLayout(CustomTestCase):
-    def assertLayerIdsAlign(self, pool, expected):
+    def assertLayerIdsAlign(self, pool, expected, expected_state):
         ptrs, _, item_lens = pool.get_contiguous_buf_infos()
         layer_ids = pool.get_kv_layer_ids()
         self.assertEqual(layer_ids, expected)
         self.assertEqual(len(layer_ids), len(ptrs))
         self.assertEqual(len(layer_ids), len(item_lens))
-        self.assertEqual(len(layer_ids), len(pool.get_dcp_remote_decode_layout()))
+        state_ptrs, _, state_item_lens = pool.get_state_buf_infos()
+        state_layer_ids = pool.get_state_layer_ids()
+        self.assertEqual(state_layer_ids, expected_state)
+        self.assertEqual(len(state_layer_ids), len(state_ptrs))
+        self.assertEqual(len(state_layer_ids), len(state_item_lens))
+        self.assertTrue(set(ptrs).isdisjoint(state_ptrs))
 
     def test_packed_pool_layer_ids_match_the_pd_entries(self):
-        """The packed record transfers no V buffers; the layer ids used to list
-        K and V per layer and so outnumbered the PD entries (8 ids, 6 buffers)."""
+        """Packed KV has no V entries; indexer keys/scales register as state."""
         pool = _build_pool(FP8)
         self.assertEqual(pool.v_buffer.shape[-1], 0)
-        self.assertLayerIdsAlign(pool, [0, 1] * 3)
+        self.assertLayerIdsAlign(pool, [0, 1], [0, 1] * 2)
 
     def test_int8_pool_transfers_packed_k_and_bf16_index_k(self):
         """INT8 main KV is the packed record; the indexer stays BF16 with no
@@ -213,13 +219,15 @@ class TestNpuMlaPoolLayout(CustomTestCase):
         self.assertEqual(pool.v_buffer.shape[-1], 0)
         self.assertEqual(pool.index_k_buffer.dtype, torch.bfloat16)
         self.assertIsNone(pool.index_k_scale_buffer)
-        self.assertLayerIdsAlign(pool, [0, 1] * 2)
+        self.assertLayerIdsAlign(pool, [0, 1], [0, 1])
         _, _, item_lens = pool.get_contiguous_buf_infos()
         page_size = pool.page_size
         self.assertEqual(
             item_lens,
-            [PACKED_KV_CACHE_DIM * page_size] * 2
-            + [INDEX_HEAD_DIM * 2 * page_size] * 2,
+            [PACKED_KV_CACHE_DIM * page_size] * 2,
+        )
+        self.assertEqual(
+            pool.get_state_buf_infos()[2], [INDEX_HEAD_DIM * 2 * page_size] * 2
         )
 
     def test_int8_main_kv_composes_with_the_int8_indexer(self):
@@ -230,14 +238,16 @@ class TestNpuMlaPoolLayout(CustomTestCase):
         self.assertEqual(pool.k_buffer.dtype, INT8)
         self.assertEqual(pool.index_k_buffer.dtype, INT8)
         self.assertEqual(pool.index_k_scale_buffer.dtype, torch.float16)
-        self.assertLayerIdsAlign(pool, [0, 1] * 3)
+        self.assertLayerIdsAlign(pool, [0, 1], [0, 1] * 2)
         _, _, item_lens = pool.get_contiguous_buf_infos()
         page_size = pool.page_size
         self.assertEqual(
             item_lens,
-            [PACKED_KV_CACHE_DIM * page_size] * 2
-            + [INDEX_HEAD_DIM * page_size] * 2
-            + [2 * page_size] * 2,
+            [PACKED_KV_CACHE_DIM * page_size] * 2,
+        )
+        self.assertEqual(
+            pool.get_state_buf_infos()[2],
+            [INDEX_HEAD_DIM * page_size] * 2 + [2 * page_size] * 2,
         )
 
     def test_fp8_record_keeps_its_own_quantized_indexer(self):
@@ -252,18 +262,19 @@ class TestNpuMlaPoolLayout(CustomTestCase):
         """Index K entries carry indexer_layer_ids (compact layout), unpacked
         pools keep their V entries, and a combined buffer has one per layer."""
         cases = (
-            (FP8, {"indexer_layer_ids": (5,)}, [4, 5, 5, 5]),
-            (torch.bfloat16, {"indexer_layer_ids": (5,)}, [4, 5, 4, 5, 5]),
+            (FP8, {"indexer_layer_ids": (5,)}, [4, 5], [5, 5]),
+            (torch.bfloat16, {"indexer_layer_ids": (5,)}, [4, 5, 4, 5], [5]),
             (
                 torch.bfloat16,
                 {"index_head_dim": None, "use_combined_kv_buffer": True},
                 [4, 5],
+                [],
             ),
         )
-        for dtype, kwargs, expected in cases:
+        for dtype, kwargs, expected, expected_state in cases:
             with self.subTest(dtype=dtype, kwargs=kwargs):
                 pool = _build_pool(dtype, start_layer=4, **kwargs)
-                self.assertLayerIdsAlign(pool, expected)
+                self.assertLayerIdsAlign(pool, expected, expected_state)
 
     def test_combined_packed_buffer_gives_a_bf16_rope_placeholder(self):
         """A combined buffer holds only the packed record. As in the split
@@ -281,7 +292,7 @@ class TestNpuMlaPoolLayout(CustomTestCase):
                 self.assertEqual(v_cache.dtype, torch.bfloat16)
                 self.assertEqual(v_cache.shape, (*k_cache.shape[:-1], 0))
                 # PD still moves only the combined record, one entry per layer.
-                self.assertLayerIdsAlign(pool, [0, 1])
+                self.assertLayerIdsAlign(pool, [0, 1], [0, 1] * (2 if arch35 else 1))
 
     def test_combined_unpacked_buffer_keeps_its_rope_slice(self):
         """Without the packed record, the combined buffer's rope cache stays
@@ -371,7 +382,12 @@ class TestHostPoolMirrorsTheDevicePool(CustomTestCase):
         self.addCleanup(host.destroy)
         return host
 
-    def test_int8_main_kv_mirrors_with_and_without_the_int8_indexer(self):
+    # This layout test does not depend on the CI worker's RAM allowance.
+    @patch(
+        "sglang.srt.mem_cache.pool_host.base.available_host_memory_bytes",
+        return_value=16 * 1024**3,
+    )
+    def test_int8_main_kv_mirrors_with_and_without_the_int8_indexer(self, _memory):
         # (main dtype, arch35, indexer recipe, index K dtype, scale dtype)
         cases = (
             (INT8, False, None, torch.bfloat16, None),
@@ -791,7 +807,7 @@ class TestPackedKvWriteAndSparseRead(_MockedNpuOpsTestCase):
             with self.subTest(dtype=dtype):
                 self.torch_npu.reset_mock()
                 pool = _build_pool(dtype, arch35=arch35)
-                quant_attn, bf16_attn = self._decode(pool)
+                _, quant_attn, bf16_attn = self._decode(pool)
                 bf16_attn.assert_not_called()
                 self.assertEqual(
                     self.torch_npu.npu_dynamic_quant.call_args.kwargs["dst_type"],
@@ -819,7 +835,7 @@ class TestPackedKvWriteAndSparseRead(_MockedNpuOpsTestCase):
                 pool.start_layer = 0
                 pool.use_mla = True
                 self.assertFalse(hasattr(pool, "store_dtype"))
-                quant_attn, bf16_attn = self._decode(pool)
+                _, quant_attn, bf16_attn = self._decode(pool)
                 bf16_attn.assert_not_called()
                 key = quant_attn.call_args.kwargs["key"]
                 self.assertEqual(key.dtype, dtype)
@@ -864,17 +880,37 @@ class TestPackedKvWriteAndSparseRead(_MockedNpuOpsTestCase):
                 kv_cache_dim=dim64,
                 kv_capability=capability,
             )
-        quant_attn, _ = self._decode(pool)
+        _, quant_attn, _ = self._decode(pool)
         latent = self.torch_npu.npu_dynamic_quant.call_args.args[0]
         self.assertEqual(latent.shape[-1], 64)
         written = self.torch_npu.npu_scatter_nd_update_.call_args.args[2]
         self.assertEqual(written.shape[-1], dim64)
         self.assertEqual(quant_attn.call_args.kwargs["tile_size"], 64)
 
-    def _decode(self, pool):
+    def test_rope0_int8_passes_the_compact_record_to_the_custom_reader(self):
+        """A 528-byte row must reach the reader that accepts empty query RoPE."""
+        pool = _build_pool(INT8, arch35=False, qk_rope_head_dim=0, kv_cache_dim=528)
+        expected = torch.ones(2, 4, KV_LORA_RANK, dtype=torch.bfloat16)
+        with patch(
+            "sgl_kernel_npu.operators.attention.kv_quant_sparse_flash_attention",
+            return_value=(expected, None, None),
+        ) as custom_reader:
+            result, _, _ = self._decode(pool, qk_rope_head_dim=0)
+
+        self.assertIs(result, expected)
+        written = self.torch_npu.npu_scatter_nd_update_.call_args.args[2]
+        self.assertEqual((written.dtype, written.shape[-1]), (INT8, 528))
+        kwargs = custom_reader.call_args.kwargs
+        self.assertEqual(kwargs["query_rope"].shape, (2, 4, 0))
+        key = kwargs["packed_kv"]
+        self.assertEqual((key.dtype, key.shape[-1]), (INT8, 528))
+        self.assertEqual(key.data_ptr(), pool.get_kv_buffer(1)[0].data_ptr())
+        self.assertFalse(kwargs["return_softmax_lse"])
+
+    def _decode(self, pool, *, qk_rope_head_dim=QK_ROPE_HEAD_DIM):
         backend = object.__new__(AscendAttnBackend)
         backend.kv_lora_rank = KV_LORA_RANK
-        backend.qk_rope_head_dim = QK_ROPE_HEAD_DIM
+        backend.qk_rope_head_dim = qk_rope_head_dim
         backend.token_to_kv_pool = pool
         backend.dsa_dcp_target = False
         backend.speculative_num_draft_tokens = None
@@ -882,8 +918,10 @@ class TestPackedKvWriteAndSparseRead(_MockedNpuOpsTestCase):
             block_tables=torch.zeros(2, 4, dtype=torch.int32),
             actual_seq_lengths_kv=torch.tensor([5, 6], dtype=torch.int32),
         )
-        layer = SimpleNamespace(layer_id=1, tp_k_head_num=1, scaling=0.1)
         tokens, heads = 2, 4
+        layer = SimpleNamespace(
+            layer_id=1, tp_k_head_num=1, tp_q_head_num=heads, scaling=0.1
+        )
         bf16 = torch.bfloat16
         quant_attn = MagicMock(name="npu_kv_quant_sparse_flash_attention")
         bf16_attn = MagicMock(name="npu_sparse_flash_attention")
@@ -900,18 +938,18 @@ class TestPackedKvWriteAndSparseRead(_MockedNpuOpsTestCase):
                 return_value=None,
             ),
         ):
-            backend.forward_sparse(
+            result = backend.forward_sparse(
                 torch.zeros(tokens, heads, KV_LORA_RANK, dtype=bf16),
                 torch.zeros(tokens, KV_LORA_RANK, dtype=bf16),
                 None,
                 layer,
                 _decode_forward_batch(self.out_cache_loc),
                 save_kv_cache=True,
-                q_rope=torch.zeros(tokens, heads, QK_ROPE_HEAD_DIM, dtype=bf16),
-                k_rope=torch.zeros(tokens, QK_ROPE_HEAD_DIM, dtype=bf16),
+                q_rope=torch.zeros(tokens, heads, qk_rope_head_dim, dtype=bf16),
+                k_rope=torch.zeros(tokens, qk_rope_head_dim, dtype=bf16),
                 topk_indices=torch.zeros(tokens, 8, dtype=torch.int32),
             )
-        return quant_attn, bf16_attn
+        return result, quant_attn, bf16_attn
 
 
 class _FakeRope:

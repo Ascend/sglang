@@ -10,6 +10,7 @@ from sglang.srt.hardware_backend.npu.kv_capability import (
     PackedQuantKvCapability,
     resolve_npu_kv_capability,
 )
+from sglang.srt.hardware_backend.npu.utils import is_npu_arch35
 from sglang.srt.layers.dcp.layout import localize_dcp_indices
 from sglang.srt.mem_cache.kv_cache_dtype import (
     QUANT_MODE_TOKEN_INT8,
@@ -794,6 +795,7 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         self.kv_lora_rank = kv_lora_rank
         self.qk_rope_head_dim = qk_rope_head_dim
         self.index_head_dim = index_head_dim
+        self._use_scatter_hp = not is_npu_arch35()
         self.enable_sparsity_driven_kv_offload = (
             envs.SGLANG_NPU_ENABLE_SPARSE_KV_OFFLOAD.get()
         )
@@ -1150,7 +1152,6 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             indices,
             self.dcp_size,
             self.dcp_rank,
-            self.page_size,
         )
         return local_indices[local_indices >= 0]
 
@@ -1329,73 +1330,56 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             return buf.view(torch.float8_e8m0fnu)
         return buf
 
+    def _scatter_cache(self, cache, indices, updates):
+        if not self._use_scatter_hp:
+            torch_npu.npu_scatter_nd_update_(cache, indices, updates)
+            return
+
+        try:
+            from sgl_kernel_npu.operators.mem_cache import scatter_nd_update_
+        except ImportError:
+            torch_npu.npu_scatter_nd_update_(cache, indices, updates)
+            return
+
+        scatter_nd_update_(cache, indices, updates, impl="ascendc")
+
     def set_index_k_scale_buffer(self, layer_id: int, loc, scale):
         assert scale.dtype == self.index_k_scale_dtype, (
             f"input scale has to be {scale.dtype=} but it is {self.index_k_scale_dtype=}"
         )
-        torch_npu.npu_scatter_nd_update_(
+        self._scatter_cache(
             self.index_k_scale_buffer[self._get_indexer_slot(layer_id)].view(-1, 1),
             loc.view(-1, 1),
             scale.view(-1, 1),
         )
 
-    def _get_disagg_buffer_entries(self):
-        """Return (buffer, uses_global_slots, layer_id) entries in PD transfer order."""
-        self._raise_if_native_kv_cache_disabled()
-        global_kv = self.is_draft_worker
-        kv_layer_ids = self._kv_buffer_layer_ids()
-        if self.use_combined_kv_buffer:
-            return [
-                (buffer, global_kv, layer_id)
-                for buffer, layer_id in zip(self.kv_buffer, kv_layer_ids, strict=True)
-            ]
-        entries = [
-            (buffer, global_kv, layer_id)
-            for buffer, layer_id in zip(self.k_buffer, kv_layer_ids, strict=True)
-        ]
-        if not self.dsa_kv_cache_store_c8:
-            entries += [
-                (buffer, global_kv, layer_id)
-                for buffer, layer_id in zip(self.v_buffer, kv_layer_ids, strict=True)
-            ]
-        if self.index_head_dim is not None:
-            entries += [
-                (buffer, True, layer_id)
-                for buffer, layer_id in zip(
-                    self.index_k_buffer, self.indexer_layer_ids, strict=True
-                )
-            ]
-            if self.index_k_scale_buffer is not None:
-                entries += [
-                    (buffer, True, layer_id)
-                    for buffer, layer_id in zip(
-                        self.index_k_scale_buffer, self.indexer_layer_ids, strict=True
-                    )
-                ]
-        return entries
-
     # for disagg
     def get_contiguous_buf_infos(self):
-        entries = self._get_disagg_buffer_entries()
+        self._raise_if_native_kv_cache_disabled()
+        buffers = list(self.kv_buffer if self.use_combined_kv_buffer else self.k_buffer)
+        if self._pd_kv_buffer_groups == 2:
+            buffers += list(self.v_buffer)
+        page_scale = self.dcp_size if self.is_draft_worker else 1
         return (
-            [buffer.data_ptr() for buffer, _, _ in entries],
-            [buffer.nbytes for buffer, _, _ in entries],
-            [
-                buffer[0].nbytes * (self.dcp_size if uses_global_slots else 1)
-                for buffer, uses_global_slots, _ in entries
-            ],
+            [buffer.data_ptr() for buffer in buffers],
+            [buffer.nbytes for buffer in buffers],
+            [buffer[0].nbytes * page_scale for buffer in buffers],
         )
 
-    def get_dcp_remote_decode_layout(self) -> list[bool]:
-        """Whether each PD entry uses allocator-global slots on decode."""
-        return [
-            uses_global_slots
-            for _, uses_global_slots, _ in self._get_disagg_buffer_entries()
-        ]
+    def configure_pd_dcp(self, kv_args):
+        if self.is_draft_worker:
+            return
+        kv_args.kv_buf_groups = self._pd_kv_buffer_groups
+
+    @property
+    def _pd_kv_buffer_groups(self):
+        packed = self.use_combined_kv_buffer or getattr(
+            self, "dsa_kv_cache_store_fp8", False
+        )
+        return 1 if packed else 2
 
     def get_kv_layer_ids(self):
-        """Global layer id per PD entry, aligned with get_contiguous_buf_infos()."""
-        return [layer_id for _, _, layer_id in self._get_disagg_buffer_entries()]
+        return list(self._kv_buffer_layer_ids()) * self._pd_kv_buffer_groups
 
     def get_state_layer_ids(self):
         return list(self.indexer_layer_ids) * (
@@ -1435,13 +1419,24 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         loc, _, _ = unwrap_write_loc(loc_info)
         self._raise_if_native_kv_cache_disabled()
         layer_id = layer.layer_id
+        self._set_kv_buffer_npu(layer, layer_id, loc, cache_k, cache_v)
+
+    def _set_kv_buffer_npu(
+        self,
+        layer: "RadixAttention",
+        layer_id: int,
+        loc: torch.Tensor,
+        cache_k: torch.Tensor,
+        cache_v: Optional[torch.Tensor],
+    ):
+        """Write a layer's KV on the separated/combined/NZ ascend layouts."""
         if self.dsa_kv_cache_store_c8:
             if cache_v is None:
                 cache_k, cache_v = cache_k.split(
                     [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1
                 )
             packed = self._pack_dsa_quant_kv_cache(cache_k, cache_v)
-            torch_npu.npu_scatter_nd_update_(
+            self._scatter_cache(
                 self.k_buffer[self._kv_local_offset(layer_id)].view(
                     -1, 1, self.kv_cache_dim
                 ),
@@ -1467,7 +1462,7 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             cache_v = cache_v.view(self.store_dtype)
 
         if self.use_combined_kv_buffer:
-            torch_npu.npu_scatter_nd_update_(
+            self._scatter_cache(
                 self.get_combined_kv_buffer(layer_id).view(
                     -1, 1, self.kv_cache_dim + self.kr_cache_dim
                 ),
@@ -1482,7 +1477,7 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             self._set_fia_nz_kv_buffer(layer_id, loc, cache_k, cache_v)
             return
 
-        torch_npu.npu_scatter_nd_update_(
+        self._scatter_cache(
             self.k_buffer[self._kv_local_offset(layer_id)].view(
                 -1, 1, self.kv_lora_rank
             ),
@@ -1490,13 +1485,30 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             cache_k.view(-1, 1, self.kv_lora_rank),
         )
         if self.qk_rope_head_dim > 0:
-            torch_npu.npu_scatter_nd_update_(
+            self._scatter_cache(
                 self.v_buffer[self._kv_local_offset(layer_id)].view(
                     -1, 1, self.qk_rope_head_dim
                 ),
                 loc.view(-1, 1),
                 cache_v.view(-1, 1, self.qk_rope_head_dim),
             )
+
+    def set_mla_kv_buffer(
+        self,
+        layer,
+        loc_info,
+        cache_k_nope: torch.Tensor,
+        cache_k_rope: torch.Tensor,
+        layer_id_override: Optional[int] = None,
+    ):
+        # The GPU base class writes the fused self.kv_buffer, which the ascend
+        # separated/combined/NZ layouts do not have; use the ordinary NPU path.
+        loc, _, _ = unwrap_write_loc(loc_info)
+        self._raise_if_native_kv_cache_disabled()
+        layer_id = (
+            layer_id_override if layer_id_override is not None else layer.layer_id
+        )
+        self._set_kv_buffer_npu(layer, layer_id, loc, cache_k_nope, cache_k_rope)
 
     def _set_fia_nz_kv_buffer(
         self,
@@ -1559,7 +1571,7 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
             if self.store_dtype != self.dtype:
                 index_k = index_k.view(self.store_dtype)
 
-        torch_npu.npu_scatter_nd_update_(
+        self._scatter_cache(
             self.index_k_buffer[self._get_indexer_slot(layer_id)].view(
                 -1, 1, self.index_head_dim
             ),
@@ -1791,6 +1803,9 @@ class NPUDSATokenToKVPool(NPUMLATokenToKVPool):
         assert index_kpool == 1, (
             "The Ascend hybrid DSA pool does not support index_kpool > 1 yet"
         )
+        # Hybrid PD registration also queries the optional compressed-tail state.
+        # Ascend currently only supports the uncompressed index layout above.
+        self.kpool_use_compress = False
         if skip_topk_layers is None:
             # Default (and draft-worker) pools index every full-attention layer.
             indexer_layer_ids = None

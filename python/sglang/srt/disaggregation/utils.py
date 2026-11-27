@@ -20,6 +20,7 @@ from typing import (
     Sequence,
     Tuple,
     Type,
+    Union,
     overload,
 )
 
@@ -30,7 +31,7 @@ import torch.distributed as dist
 
 from sglang.srt.configs.model_config import get_dsa_mtp_topk_width, is_deepseek_dsa
 from sglang.srt.disaggregation.base import KVPoll
-from sglang.srt.disaggregation.mode import FAKE_BOOTSTRAP_HOST
+from sglang.srt.disaggregation.mode import FAKE_BOOTSTRAP_HOST, DisaggregationMode
 from sglang.srt.distributed.communication_tags import P2PTag
 from sglang.srt.distributed.parallel_state import GroupCoordinator
 from sglang.srt.distributed.pp_sync_window import PPSyncSendWindow
@@ -49,6 +50,10 @@ if TYPE_CHECKING:
         CommonKVManager,
         CommonKVReceiver,
         CommonKVSender,
+    )
+    from sglang.srt.managers.io_struct import (
+        GenerateReqInput,
+        TokenizedGenerateReqInput,
     )
     from sglang.srt.managers.schedule_batch import Req
     from sglang.srt.mem_cache.kv.storage import KVStorage
@@ -337,6 +342,45 @@ def _is_fake_transfer(req: Req) -> bool:
         req.bootstrap_host is None
         and get_disagg().disaggregation_transfer_backend == "fake"
     )
+
+
+def lacks_decode_peer(
+    req: Union[Req, GenerateReqInput, TokenizedGenerateReqInput],
+    *,
+    disaggregation_mode: DisaggregationMode,
+    transfer_backend: TransferBackend,
+) -> bool:
+    """Whether a request to a prefill server names no bootstrap host, so that
+    no decode can find its KV. The caller passes its own mode and backend."""
+    return (
+        req.bootstrap_host is None
+        and disaggregation_mode == DisaggregationMode.PREFILL
+        and transfer_backend != TransferBackend.FAKE
+    )
+
+
+def answered_by_prefill(
+    req: Req,
+    *,
+    disaggregation_mode: DisaggregationMode,
+    transfer_backend: TransferBackend,
+) -> bool:
+    """Whether the prefill server answers this admitted request by itself: it
+    has no decode peer, and asks for no more than the token prefill samples.
+
+    Distinct from ``Req.is_prefill_only`` (max_new_tokens == 0, no sampling):
+    this is true for a one-token request as well."""
+    if not lacks_decode_peer(
+        req,
+        disaggregation_mode=disaggregation_mode,
+        transfer_backend=transfer_backend,
+    ):
+        return False
+    assert req.sampling_params.max_new_tokens in (0, 1), (
+        f"{req.rid=} has no decode peer but asks for "
+        f"{req.sampling_params.max_new_tokens} tokens"
+    )
+    return True
 
 
 def pre_alloc_fill_len(req: Req) -> int:
@@ -1059,6 +1103,12 @@ def get_kv_class(
         return KVArgs
 
     if transfer_backend == TransferBackend.MOONCAKE:
+        if class_type == KVClassType.MANAGER and is_npu():
+            from sglang.srt.hardware_backend.npu.disaggregation import (
+                NPUMooncakeKVManager,
+            )
+
+            return NPUMooncakeKVManager
         from sglang.srt.disaggregation.mooncake import (
             MooncakeKVBootstrapServer,
             MooncakeKVManager,
@@ -1816,8 +1866,7 @@ def get_kv_transfer_buf_infos(storage: KVStorage | StaticKVStorage):
 
 
 def _wire_state_type(state_type) -> Enum:
-    # A plan names a state type by its wire value; a static pool's
-    # hardware-specific component (Ascend's) arrives as its own enum member.
+    # Plans use wire strings, while static pools supply enum members.
     from sglang.srt.disaggregation.base.conn import StateType
 
     return state_type if isinstance(state_type, Enum) else StateType(state_type)
@@ -1934,7 +1983,7 @@ def setup_state_kv_args(
         is_mla_backend(owner_view) and StateType.MAMBA in kv_args.state_types
     )
     if isinstance(owner_view, NPUMLATokenToKVPool):
-        kv_args.kv_buf_groups = 3 if owner_view.index_head_dim is not None else 2
+        owner_view.configure_pd_dcp(kv_args)
         kv_args.hidden_kv_layers = total_kv_layers
         kv_args.draft_kv_layers = (
             _token_kv_view(draft_token_to_kv_pool).layer_num

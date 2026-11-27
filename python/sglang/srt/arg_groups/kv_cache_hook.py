@@ -25,9 +25,6 @@ from sglang.srt.runtime_context import attn_dp_enabled_of, get_platform
 
 logger = logging.getLogger(__name__)
 
-# RoPE width the native sparse attention kernel reads from the packed record.
-_INT8_KV_ROPE_HEAD_DIM = 64
-
 _NVFP4_PREFILL_BACKEND = {
     "fp8_e4m3": "flashinfer",
     "nvfp4": "trtllm_mha",
@@ -186,12 +183,12 @@ def handle_int8_kv_cache_compatibility(server_args: Any) -> None:
             f"{hf_config.architectures[0]} is not a DSA model. Use "
             "--kv-cache-dtype bf16 or auto."
         )
-    if model_config.qk_rope_head_dim not in (0, _INT8_KV_ROPE_HEAD_DIM):
+    rope_dim = model_config.qk_rope_head_dim
+    if rope_dim not in (0, 64):
         raise ValueError(
             "--kv-cache-dtype int8 needs a DSA model with qk_rope_head_dim "
-            f"0 or {_INT8_KV_ROPE_HEAD_DIM}; this model has "
-            f"qk_rope_head_dim={model_config.qk_rope_head_dim}. Use "
-            "--kv-cache-dtype bf16 or auto."
+            f"0 or 64; this model has qk_rope_head_dim={rope_dim}. "
+            "Use --kv-cache-dtype bf16 or auto."
         )
     if model_config.dtype != torch.bfloat16:
         raise ValueError(
@@ -199,6 +196,11 @@ def handle_int8_kv_cache_compatibility(server_args: Any) -> None:
             "record stores its RoPE in BF16 and is read with a BF16 query; got "
             f"{model_config.dtype}. Use --dtype bfloat16, or --kv-cache-dtype "
             "bf16 or auto."
+        )
+    if rope_dim == 0 and envs.SGLANG_NPU_USE_MLAPO.get():
+        raise ValueError(
+            "RoPE0 with --kv-cache-dtype int8 requires the regular KV writer. "
+            "Unset SGLANG_NPU_USE_MLAPO to use the compact INT8 record."
         )
 
 

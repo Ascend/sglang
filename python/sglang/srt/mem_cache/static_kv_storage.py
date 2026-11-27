@@ -742,6 +742,10 @@ class StaticKVStorage:
             )
         return tuple(usage)
 
+    def kv_bytes_usage(self, full_tokens: int, swa_tokens: int) -> None:
+        # Static pools are sized one by one, not out of one byte budget.
+        return None
+
     # -- what a PD peer registers --
 
     def view(self, sub_pool: str) -> Any:
@@ -876,19 +880,21 @@ class _StaticStateEntries(msgspec.Struct, frozen=True, kw_only=True):
 
 def _static_owner_region(token_to_kv_pool) -> Region:
     """The KV entries a static pool registers."""
+    from sglang.srt.hardware_backend.npu.memory_pool_npu import NPUMLATokenToKVPool
     from sglang.srt.mem_cache.memory_pool import MiniMaxSparseKVPool
 
     if isinstance(token_to_kv_pool, MiniMaxSparseKVPool):
         ptrs, lens, item_lens = token_to_kv_pool.get_sparse_kv_buf_infos()
     else:
         ptrs, lens, item_lens = token_to_kv_pool.get_contiguous_buf_infos()
-    # A pool wrapping one token KV view (its other layers hold state), or a
-    # MiniMax sparse pool whose main KV holds only its sparse layers, reports
+    # Wrapped pools, MiniMax sparse pools, and NPU MLA/DSV4 pools report
     # per-entry layer ids for the peers to pair by.
     layer_ids = (
         token_to_kv_pool.get_kv_layer_ids()
         if token_to_kv_pool.layer_router.wrapped_view() is not None
         or isinstance(token_to_kv_pool, MiniMaxSparseKVPool)
+        or isinstance(token_to_kv_pool, NPUMLATokenToKVPool)
+        or (is_npu() and _is_dsv4_npu(token_to_kv_pool))
         else ()
     )
     return Region(
@@ -1017,11 +1023,15 @@ def _static_state_entries(
                 router.view(IdSpaceKind.SLIDING_WINDOW), MHATokenToKVPool
             ):
                 swa_kv_layout = router.view(IdSpaceKind.SLIDING_WINDOW).kv_cache_layout
+            swa_layer_ids = None
+            if is_npu() and _is_dsv4_npu(token_to_kv_pool):
+                swa_layer_ids = token_to_kv_pool.get_swa_state_layer_ids()
             add(
                 StateType.SWA,
                 data_ptrs,
                 data_lens,
                 item_lens,
+                layer_ids=swa_layer_ids,
                 kv_layout=swa_kv_layout,
                 # Read when asked, as the window's view was: not every pool
                 # with window state keeps a window pool of its own.
@@ -1098,7 +1108,20 @@ def _static_state_entries(
             )
             # Hybrid DSA pools keep their index cache and kpool tail in the
             # full-attention sub-pool rather than in the Mamba state above.
-            if getattr(token_to_kv_pool, "use_dsa", False):
+            if getattr(token_to_kv_pool, "use_dsa", False) and isinstance(
+                token_to_kv_pool.full_kv_pool, NPUMLATokenToKVPool
+            ):
+                from sglang.srt.hardware_backend.npu.disaggregation import (
+                    register_npu_indexer_state,
+                )
+
+                register_npu_indexer_state(
+                    add,
+                    token_to_kv_pool.full_kv_pool,
+                    draft_token_to_kv_pool,
+                    total_kv_layers,
+                )
+            elif getattr(token_to_kv_pool, "use_dsa", False):
                 dsa_pool = token_to_kv_pool.full_kv_pool
                 dsa_ptrs, dsa_lens, dsa_item_lens = dsa_pool.get_state_buf_infos()
                 tail_ptrs, tail_lens, tail_item_lens = (
@@ -1119,9 +1142,7 @@ def _static_state_entries(
                     tail_ptrs = list(tail_ptrs) + list(draft_tail_ptrs)
                     tail_lens = list(tail_lens) + list(draft_tail_lens)
                     tail_item_lens = list(tail_item_lens) + list(draft_tail_item_lens)
-                # NPU includes index buffers in its main KV entries.
-                if not isinstance(dsa_pool, NPUMLATokenToKVPool):
-                    add(StateType.DSA, dsa_ptrs, dsa_lens, dsa_item_lens)
+                add(StateType.DSA, dsa_ptrs, dsa_lens, dsa_item_lens)
                 if tail_ptrs:
                     add(StateType.DSA_TAIL, tail_ptrs, tail_lens, tail_item_lens)
             if isinstance(token_to_kv_pool, QSATokenToKVPool):
@@ -1179,12 +1200,18 @@ def _static_state_entries(
                     compressed_item_lens,
                     layer_ids=compressed_layer_ids,
                 )
-        elif isinstance(token_to_kv_pool, (DSATokenToKVPool, NPUMLATokenToKVPool)):
-            tail_ptrs, tail_lens, tail_item_lens = [], [], []
-            if isinstance(token_to_kv_pool, DSATokenToKVPool):
-                tail_ptrs, tail_lens, tail_item_lens = (
-                    token_to_kv_pool.get_compress_tail_buf_infos()
-                )
+        elif isinstance(token_to_kv_pool, NPUMLATokenToKVPool):
+            from sglang.srt.hardware_backend.npu.disaggregation import (
+                register_npu_indexer_state,
+            )
+
+            register_npu_indexer_state(
+                add, token_to_kv_pool, draft_token_to_kv_pool, total_kv_layers
+            )
+        elif isinstance(token_to_kv_pool, DSATokenToKVPool):
+            tail_ptrs, tail_lens, tail_item_lens = (
+                token_to_kv_pool.get_compress_tail_buf_infos()
+            )
             if draft_token_to_kv_pool is not None and isinstance(
                 draft_token_to_kv_pool, DSATokenToKVPool
             ):
@@ -1202,34 +1229,19 @@ def _static_state_entries(
                 tail_ptrs = tail_ptrs + draft_tail_ptrs
                 tail_lens = tail_lens + draft_tail_lens
                 tail_item_lens = tail_item_lens + draft_tail_item_lens
-            # An NPU MLA pool sends its index and tail with the KV (PD reads
-            # its buffer groups from the pool), so it adds no state entry.
-            if not isinstance(token_to_kv_pool, NPUMLATokenToKVPool):
-                add(StateType.DSA, data_ptrs, data_lens, item_lens)
-                if tail_ptrs:
-                    add(StateType.DSA_TAIL, tail_ptrs, tail_lens, tail_item_lens)
+            add(StateType.DSA, data_ptrs, data_lens, item_lens)
+            if tail_ptrs:
+                add(StateType.DSA_TAIL, tail_ptrs, tail_lens, tail_item_lens)
 
     if is_npu() and _is_dsv4_npu(token_to_kv_pool):
-        from sglang.srt.disaggregation.ascend.conn import AscendStateType
-
         c128_ptrs, c128_lens, c128_item_lens = token_to_kv_pool.get_c128_kv_buf_infos()
         if c128_ptrs:
             add(
-                AscendStateType.DSV4_C128,
+                StateType.DSV4_C128,
                 c128_ptrs,
                 c128_lens,
                 c128_item_lens,
-            )
-
-        # Register C4 state by row on both A3 and Ascend 950 so prefill and
-        # decode can pair logical positions even when their ring sizes differ.
-        c4_ptrs, c4_lens, c4_item_lens = token_to_kv_pool.get_c4_state_buf_infos()
-        if c4_ptrs:
-            add(
-                AscendStateType.DSV4_C4_STATE,
-                c4_ptrs,
-                c4_lens,
-                c4_item_lens,
+                layer_ids=token_to_kv_pool.get_c128_layer_ids(),
             )
 
     # DSV4 NextN shares the target allocator, so target and draft use the same
