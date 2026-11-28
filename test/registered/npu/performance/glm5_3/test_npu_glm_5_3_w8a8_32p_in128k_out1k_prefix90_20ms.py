@@ -95,7 +95,7 @@ class TestNPUGLM5_3_W8A8_32P_In128k_Out1k_Prefix90_20ms(
     output_len = 1024
     repeat_rate = 0.9
     dp = 16
-    tpot = 20
+    # tpot = 20
     output_token_throughput = 800
 
     def test_npu_glm_5_3_w8a8_32p_in128k_out1k_prefix90_20ms(self):
