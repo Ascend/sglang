@@ -17,6 +17,8 @@ from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.kits.abort_timeout_kit import AbortAllMixin, WaitingTimeoutMixin
 from sglang.test.kits.pause_generation_kit import PauseResumeInPlaceMixin
 from sglang.test.test_utils import (
+    ADMIN_HEADERS_FOR_TEST,
+    ADMIN_LAUNCH_ARGS_FOR_TEST,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
@@ -58,7 +60,7 @@ def _run_and_check_memory_leak_npu(
         "debug",
         "--attention-backend",
         "ascend",
-        "--disable-cuda-graph",
+        
     ]
     if disable_radix_cache:
         other_args += ["--disable-radix-cache"]
@@ -151,7 +153,11 @@ class TestAbort(CustomTestCase):
         p = multiprocessing.Process(target=process_func)
         p.start()
         time.sleep(0.5)
-        p.terminate()
+        # SIGTERM is not honored in the NPU CI environment, so p.terminate()
+        # leaves the client process alive; its sockets stay open, the server
+        # never observes a disconnect and no request is ever aborted.
+        p.kill()
+        p.join()
         time.sleep(10)
 
     def test_memory_leak(self):
@@ -194,7 +200,10 @@ class TestAbortWithApiKey(CustomTestCase):
         p = multiprocessing.Process(target=process_func)
         p.start()
         time.sleep(0.5)
-        p.terminate()
+        # SIGTERM is not honored in the NPU CI environment; force-kill so the
+        # server sees the client disconnect and aborts the running requests.
+        p.kill()
+        p.join()
         time.sleep(10)
 
     def test_memory_leak_with_api_key(self):
@@ -211,6 +220,7 @@ class TestAbortWithApiKey(CustomTestCase):
 
 
 class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCase):
+    abort_request_headers = ADMIN_HEADERS_FOR_TEST
     @classmethod
     def setUpClass(cls):
         cls.model = LLAMA_3_1_8B_INSTRUCT_WEIGHTS_PATH
@@ -224,7 +234,8 @@ class TestSchedulerControl(AbortAllMixin, PauseResumeInPlaceMixin, CustomTestCas
                 "8",
                 "--attention-backend",
                 "ascend",
-                "--disable-cuda-graph",
+                *ADMIN_LAUNCH_ARGS_FOR_TEST,
+                
             ],
         )
 
@@ -337,7 +348,7 @@ class TestAbortAllWithRetraction(CustomTestCase):
                     "random",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
+                    
                 ],
             )
 
@@ -428,7 +439,7 @@ class TestAbortWithWaitingTimeout(WaitingTimeoutMixin, CustomTestCase):
                     "--max-running-requests=1",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
+                    
                 ],
             )
 
@@ -454,7 +465,7 @@ class TestAbortWithRunningTimeout(CustomTestCase):
                     "--skip-server-warmup",
                     "--attention-backend",
                     "ascend",
-                    "--disable-cuda-graph",
+                    
                 ],
             )
 

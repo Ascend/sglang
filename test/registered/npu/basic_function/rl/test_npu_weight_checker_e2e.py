@@ -18,9 +18,11 @@ from sglang.srt.utils import MultiprocessingSerializer, kill_process_tree
 from sglang.test.ascend.test_ascend_utils import QWEN3_0_6B_WEIGHTS_PATH
 from sglang.test.ci.ci_register import register_npu_ci
 from sglang.test.test_utils import (
+    ADMIN_LAUNCH_ARGS_FOR_TEST,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
     CustomTestCase,
+    admin_post,
     popen_launch_server,
 )
 
@@ -76,6 +78,7 @@ class TestWeightCheckerE2E(CustomTestCase):
                 "--disable-cuda-graph",
                 "--model-checksum",
                 "Qwen/Qwen3-0.6B",
+                *ADMIN_LAUNCH_ARGS_FOR_TEST,
             ],
             return_stdout_stderr=(cls.out_file, cls.err_file),
         )
@@ -92,15 +95,15 @@ class TestWeightCheckerE2E(CustomTestCase):
         # checksum action iterates over all model weights on NPU and is much
         # slower than snapshot/compare, so allow a generous timeout.
         timeout = 600 if action == "checksum" else 120
-        return requests.post(
+        return admin_post(
             f"{self.url}/weights_checker", json={"action": action}, timeout=timeout
         )
 
     def _update_weights(
         self, named_tensors: List[Tuple[str, torch.Tensor]]
     ) -> requests.Response:
-        requests.post(f"{self.url}/begin_weight_update", json={}, timeout=120)
-        resp = requests.post(
+        admin_post(f"{self.url}/begin_weight_update", json={}, timeout=120)
+        resp = admin_post(
             f"{self.url}/update_weights_from_tensor",
             json={
                 "serialized_named_tensors": [
@@ -110,7 +113,7 @@ class TestWeightCheckerE2E(CustomTestCase):
             },
             timeout=120,
         )
-        requests.post(f"{self.url}/end_weight_update", json={}, timeout=120)
+        admin_post(f"{self.url}/end_weight_update", json={}, timeout=120)
         return resp
 
     def test_a_snapshot_then_compare_unchanged_succeeds(self):
