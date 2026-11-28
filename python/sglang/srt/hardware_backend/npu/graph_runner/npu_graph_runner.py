@@ -44,6 +44,7 @@ from sglang.srt.distributed.parallel_state import (
     GroupCoordinator,
 )
 from sglang.srt.environ import envs
+from sglang.srt.hardware_backend.npu.attention.dcp import get_mla_dcp_backend
 from sglang.srt.model_executor.runner import DecodeCudaGraphRunner
 from sglang.srt.model_executor.runner.decode_cuda_graph_runner import (
     build_replay_fb_view,
@@ -160,12 +161,25 @@ class NPUGraphRunner(DecodeCudaGraphRunner):
     def _create_device_graph(self):
         return torch.npu.NPUGraph()
 
+    def _dense_mla_dcp_target(self) -> bool:
+        # Dense-MLA DCP (e.g. Kimi-K3) rebinds the graph from the backend's
+        # rank-local KV lengths instead of the replicated global seq_lens.
+        return bool(
+            getattr(
+                get_mla_dcp_backend(self._replay_attn_backend()),
+                "dense_mla_dcp_target",
+                False,
+            )
+        )
+
     def _uses_v2_seq_len_update(self):
         # IDLE DP ranks replay the same target-verify graph as active ranks.
         # Select the handler from the captured graph, not the runtime mode;
         # a V1 update key is ignored by V2 and leaves stale KV lengths behind.
         return self.if_use_v2 or (
-            self.use_fias_v2_bsnd and self.capture_forward_mode.is_target_verify()
+            self.use_fias_v2_bsnd
+            and self.capture_forward_mode.is_target_verify()
+            and not self._dense_mla_dcp_target()
         )
 
     def _capture_graph(self, graph, pool, stream, run_once_fn):
@@ -399,9 +413,19 @@ class NPUGraphRunner(DecodeCudaGraphRunner):
                     )
                     seq_lens = seq_lens_cpu.tolist() + [0] * (self.bs - self.raw_bs)
             else:
-                seq_lens = forward_batch.seq_lens.cpu().tolist() + [0] * (
-                    self.bs - self.raw_bs
-                )
+                # Dense-MLA DCP (e.g. Kimi-K3) rebinds the graph with the
+                # rank-local KV lengths computed by the attention backend,
+                # not the replicated global seq_lens.
+                mla_backend = get_mla_dcp_backend(self._replay_attn_backend())
+                if getattr(mla_backend, "dense_mla_dcp_target", False):
+                    seq_lens = list(
+                        mla_backend.forward_metadata.seq_lens_cpu_list[: self.raw_bs]
+                    )
+                    seq_lens = seq_lens + [0] * (self.bs - len(seq_lens))
+                else:
+                    seq_lens = forward_batch.seq_lens.cpu().tolist() + [0] * (
+                        self.bs - self.raw_bs
+                    )
             output = self.backend.replay_with_input_update(
                 graph_key,
                 seq_lens=seq_lens,

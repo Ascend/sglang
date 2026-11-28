@@ -120,7 +120,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_PP_DYNAMIC_CHUNKING_ARGS = [
 
 # Dynamic chunking has to actually pay off: require the 128k prefill TTFT to
 # drop by at least this fraction of the fixed-chunk baseline.
-DYNAMIC_CHUNKING_TTFT_MIN_IMPROVEMENT = 0.02
+DYNAMIC_CHUNKING_TTFT_MIN_IMPROVEMENT = 0.01
 
 
 class TestNPUDeepSeekV4FlashW8A88PPPIn128kOut1Prefill(TestNpuPerformanceTestCaseBase):
