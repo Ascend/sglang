@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import functools
 import logging
 import math
@@ -26,6 +27,7 @@ from sglang.srt.hardware_backend.npu.attention.dsv4_prefill_graph import (
 from sglang.srt.hardware_backend.npu.dsv4.dsv4_rope import Dsv4NpuRoPE, rope_cos_sin
 from sglang.srt.hardware_backend.npu.utils import is_npu_arch35
 from sglang.srt.layers.cp.base import get_cp_strategy
+from sglang.srt.layers.cp.utils import cp_materialize_global_token_order
 from sglang.srt.model_executor.cuda_graph_config import (
     Backend,
     Phase,
@@ -1319,8 +1321,8 @@ class LowRatioCompressAscendBackendMixin:
 
     Mirrors ``DeepseekV4AttnBackend.forward_low_ratio_sources`` but keeps its own
     orchestration: ``deepseek_v4_backend`` imports Triton kernels at module scope,
-    and the two generations differ in kernels and cache row formats. The
-    context-parallel and prefill-graph branches are CUDA-only.
+    and the two generations differ in kernels and cache row formats. CP uses full-sequence
+    compression and rank-local index queries.
 
     Unlike CUDA, the compress step hands its pre-RoPE ``latent`` to the index
     step, because ``indexer_prologue_k`` projects the index K from that latent.
@@ -1352,6 +1354,18 @@ class LowRatioCompressAscendBackendMixin:
         if layer.layer_id == self.tail_source_kv_layer_id:
             run_compressor = False
 
+        if getattr(self.forward_metadata, "dsv41_cp_kv_lens", None) is not None:
+            self._forward_low_ratio_sources_cp(
+                layer=layer,
+                x=x,
+                q_lora=q_lora,
+                positions=positions,
+                forward_batch=forward_batch,
+                run_compressor=run_compressor,
+                run_indexer=run_indexer,
+            )
+            return
+
         query_tokens = self._dsv41_a3_query_tokens(forward_batch)
         if query_tokens is not None:
             # TP-only padding is not an extra query in the last request. Keep
@@ -1367,6 +1381,42 @@ class LowRatioCompressAscendBackendMixin:
             # latent may be None here: the index step checks it (a tail layer
             # whose compressor was skipped only scores against the stored K).
             self._low_ratio_index_topk(layer, latent, x, q_lora, pos, forward_batch)
+
+    def _forward_low_ratio_sources_cp(
+        self, *, layer, x, q_lora, positions, forward_batch, run_compressor, run_indexer
+    ) -> None:
+        # C2 pairs are adjacent in the logical sequence, not in a CP shard.
+        # Replicate the compressed history and pending pair state on every rank,
+        # so decode/verify can use the ordinary request-major cache layout.
+        if run_compressor and layer.compressor is not None:
+            x_global = cp_materialize_global_token_order(
+                x.contiguous(), forward_batch, torch.cuda.current_stream()
+            )
+            with self.use_dsv4_cp_full_metadata(forward_batch):
+                # Match the row extent used by _build_dsv41_ratio_metadata,
+                # including any physical rows required by the compressor ABI.
+                target_rows = min(
+                    forward_batch.positions.numel(), forward_batch.out_cache_loc.numel()
+                )
+                query_tokens = self._dsv41_a3_query_tokens(forward_batch)
+                if query_tokens is not None:
+                    target_rows = min(target_rows, query_tokens)
+                if x_global.shape[0] < target_rows:
+                    x_global = F.pad(
+                        x_global, (0, 0, 0, target_rows - x_global.shape[0])
+                    )
+                latent = self._low_ratio_compress(
+                    layer, x_global[:target_rows], forward_batch.positions, forward_batch
+                )
+                if run_indexer and layer.indexer is not None and layer.indexer.owns_k:
+                    self._dsv41_index_k_store(layer, latent)
+        elif run_indexer and layer.indexer is not None and layer.indexer.owns_k:
+            raise RuntimeError("DeepSeek-V4.1 CP index K requires its compressor")
+
+        if run_indexer and layer.indexer is not None:
+            self._low_ratio_index_topk(
+                layer, None, x, q_lora, positions, forward_batch, store_index_k=False
+            )
 
     def _low_ratio_compress(self, layer, x, pos, forward_batch):
         """Project, normalize and RoPE one ratio-1/2 compressed latent, then
@@ -1451,7 +1501,8 @@ class LowRatioCompressAscendBackendMixin:
         pos,
         forward_batch,
         *,
-        rows_per_request=None,  # NOTE: only used under CP (unsupported here)
+        rows_per_request=None,
+        store_index_k: bool = True,
     ) -> None:
         """Store the indexer K from ``latent`` and score it with QLI.
 
@@ -1461,7 +1512,7 @@ class LowRatioCompressAscendBackendMixin:
         indexer = layer.indexer
         ratio = layer.compress_ratio
         fm = self.forward_metadata
-        if indexer.owns_k:
+        if indexer.owns_k and store_index_k:
             self._dsv41_index_k_store(layer, latent)
         if indexer.is_candidate_source:
             # Level one: the plain top-k this layer attends with, plus the
@@ -1799,6 +1850,9 @@ class LowRatioCompressAscendBackendMixin:
         the prefix length), so it reads ``seq_lens_cpu_int``, which the seq
         refresh writes on both the eager path and graph replay.
         """
+        local_lens = getattr(self.forward_metadata, "dsv41_cp_kv_lens", None)
+        if local_lens is not None:
+            return local_lens.to(torch.int64)
         mode = getattr(forward_batch, "forward_mode", None)
         if mode is None or not mode.is_target_verify():
             return forward_batch.seq_lens.to(torch.int64)
@@ -1987,6 +2041,8 @@ class LowRatioCompressAscendBackendMixin:
         ``_refresh_graph_seq_metadata``); both the in-graph and eager recompute
         read it.
         """
+        if getattr(fm, "dsv41_cp_live_mask", None) is not None:
+            return fm.dsv41_cp_live_mask
         precomputed = getattr(fm, "dsv41_live_mask_buf", None)
         if precomputed is not None and int(precomputed.numel()) == t:
             return precomputed
@@ -2109,6 +2165,9 @@ class LowRatioCompressAscendBackendMixin:
         mode = getattr(forward_batch, "forward_mode", None)
         if is_npu_arch35() or mode is None:
             return None
+        local_lens = getattr(self.forward_metadata, "dsv41_cp_kv_lens", None)
+        if local_lens is not None:
+            return local_lens.numel()
         if mode.is_target_verify():
             # Fixed-width verify may be graph-captured: use host geometry.
             width = int(forward_batch.spec_info.draft_token_num)
@@ -2121,6 +2180,9 @@ class LowRatioCompressAscendBackendMixin:
 
     def _dsv41_a3_kv_lengths(self, forward_batch, *, metadata=None):
         fm = self.forward_metadata if metadata is None else metadata
+        cp_kv_lens = getattr(fm, "dsv41_cp_kv_lens", None)
+        if cp_kv_lens is not None:
+            return cp_kv_lens
         mode = getattr(forward_batch, "forward_mode", None)
         # DSpark keeps committed lengths on the device batch during verification.
         # The backend normalizes actual_seq_lengths_kv to include all query rows;
@@ -2204,10 +2266,12 @@ class LowRatioCompressAscendBackendMixin:
             )
             # Padded graph rows have no real cache slot, even if an operator
             # leaves the result of a zero-length request unspecified.
-            live = (
-                forward_batch.out_cache_loc.reshape(-1)[: attention_q.shape[0]]
-                >= self.page_size
-            )
+            live = getattr(fm, "dsv41_cp_live_mask", None)
+            if live is None:
+                live = (
+                    forward_batch.out_cache_loc.reshape(-1)[: attention_q.shape[0]]
+                    >= self.page_size
+                )
             attn_out = attn_out.masked_fill(~live[:, None, None], 0)
             if attn_out.shape[0] < q.shape[0]:
                 attn_out = F.pad(
@@ -2247,7 +2311,10 @@ class LowRatioCompressAscendBackendMixin:
                     "must run before this layer."
                 )
             # Reserved by the operator; derived so the value stays live.
-            compressed_lens = (forward_batch.seq_lens // compress_ratio).to(torch.int32)
+            kv_lens = getattr(fm, "dsv41_cp_kv_lens", None)
+            if kv_lens is None:
+                kv_lens = forward_batch.seq_lens
+            compressed_lens = (kv_lens // compress_ratio).to(torch.int32)
             cmp_kv = pool.get_compress_buffer(layer.layer_id, False).view(torch.uint8)
             cmp_bt = getattr(fm, f"c{compress_ratio}_page_table").to(torch.int32)
             attn_kwargs.update(
@@ -2821,6 +2888,14 @@ class DeepseekV4AscendAttnBackend(
         "c128_state_loc",
         "start_pos",
         "seqused",
+        "c1_page_table",
+        "c2_page_table",
+        "c1_index_page_table",
+        "c2_index_page_table",
+        "c1_topk_indices",
+        "c2_topk_indices",
+        "dsv41_cp_kv_lens",
+        "dsv41_cp_live_mask",
     )
 
     supports_ragged_verify_graph = True
@@ -3116,7 +3191,7 @@ class DeepseekV4AscendAttnBackend(
         return indices, torch.where(row_valid, lengths, 0)
 
     def prepare_dsv4_cp_metadata(self, forward_batch: ForwardBatch) -> None:
-        if getattr(forward_batch, "dsv4_cp_metadata_prepared", False):
+        if getattr(self.forward_metadata, "dsv4_cp_full_fields", None) is not None:
             return
         if getattr(forward_batch, "attn_cp_metadata", None) is None:
             return
@@ -3226,11 +3301,40 @@ class DeepseekV4AscendAttnBackend(
             0, local_t + 1, dtype=torch.int32, device=device
         )
         fm.actual_seq_lengths_kv = seqused_kv
-        fm.kernel_metadata = self._kernel_metadata_from_parts(
-            bs=local_t,
-            actual_seq_lengths_q_pa=fm.actual_seq_lengths_q_pa,
-            actual_seq_lengths_kv=fm.actual_seq_lengths_kv,
-        )
+        if self._dsv4_has_low_ratio:
+            # Each strided query is a one-token sequence ending at its actual
+            # position. This preserves both SWA and compressed causal bounds.
+            slots = forward_batch.out_cache_loc.reshape(-1)
+            slot_live = F.pad(
+                slots >= self.page_size, (0, max(0, num_tokens - slots.numel()))
+            )
+            live = valid_rows.clone()
+            live[: local_idx.numel()] &= slot_live.index_select(0, local_idx)
+            fm.dsv41_cp_live_mask = live
+            fm.dsv41_cp_kv_lens = torch.where(live, seqused_kv, 1)
+            fm.actual_seq_lengths_kv = fm.dsv41_cp_kv_lens
+            # Padding must never dereference an unallocated request page. Page
+            # zero is reserved; the resulting query output is masked to zero.
+            fm.swa_page_table = torch.where(live[:, None], fm.swa_page_table, 0)
+            for ratio in self._dsv41_low_ratios():
+                for suffix in ("page_table", "index_page_table"):
+                    field = f"c{ratio}_{suffix}"
+                    table = _select_rows(full_fields[field])
+                    setattr(fm, field, torch.where(live[:, None], table, 0))
+            fm.kernel_metadata = {}
+            # Builders consume positions and sequence lengths in the same
+            # one-query-per-row geometry as the local page tables.
+            local_batch = copy.copy(forward_batch)
+            local_batch.positions = local_positions
+            local_batch.batch_size = local_t
+            local_batch.seq_lens = fm.actual_seq_lengths_kv
+            fm.kernel_metadata = self._compute_kernel_metadata(local_batch)
+        else:
+            fm.kernel_metadata = self._kernel_metadata_from_parts(
+                bs=local_t,
+                actual_seq_lengths_q_pa=fm.actual_seq_lengths_q_pa,
+                actual_seq_lengths_kv=fm.actual_seq_lengths_kv,
+            )
         if self._dsv4_has_c4:
             fm.c4_topk_indices = torch.full(
                 (local_t, self._dsv4_index_topk),
@@ -3239,7 +3343,6 @@ class DeepseekV4AscendAttnBackend(
                 device=device,
             )
 
-        forward_batch.dsv4_cp_metadata_prepared = True
         forward_batch.dsv4_cp_global_positions = global_positions
         forward_batch.dsv4_cp_local_positions = local_positions
 
