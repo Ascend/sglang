@@ -4,18 +4,18 @@ import unittest
 from urllib.parse import urlparse
 
 from sglang.srt.utils import kill_process_tree
+from sglang.srt.utils.network import wait_port_available
 from sglang.test.ascend.e2e.test_npu_performance_utils import (
     AISBENCHMARK_DATASET_DEFAULT,
     BENCHMARK_TOOL_DEFAULT,
     DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
-    TTFT_TOLERANCE,
     TestNpuPerformanceTestCaseBase,
     assert_metrics,
     retry,
     run_bench_serving,
 )
 from sglang.test.ci.ci_register import register_npu_ci
-from sglang.test.test_utils import DEFAULT_URL_FOR_TEST
+from sglang.test.test_utils import DEFAULT_URL_FOR_TEST, dump_metric
 from sglang.utils import wait_for_server
 
 register_npu_ci(est_time=9600, suite="full-perf-test-16-npu-a3-verity", nightly=True)
@@ -66,6 +66,10 @@ DEEPSEEK_V4_FLASH_W8A8_8P_PP_ENVS = {
     "SGLANG_DISAGG_PREFILL_EARLY_SEND_CACHED_PREFIX": "1",
 }
 
+# Shared by both runs so that --enable-dynamic-chunking is the only variable in
+# the baseline-vs-dynamic comparison.
+CHUNKED_PREFILL_SIZE = 16384
+
 # Server launch arguments for DSV4-Flash W8A8 single-node 8p PP PD-mix.
 DEEPSEEK_V4_FLASH_W8A8_8P_PP_OTHER_ARGS = [
     "--page-size",
@@ -88,7 +92,7 @@ DEEPSEEK_V4_FLASH_W8A8_8P_PP_OTHER_ARGS = [
     "--max-running-requests",
     256,
     "--chunked-prefill-size",
-    16384,
+    CHUNKED_PREFILL_SIZE,
     "--pp-size",
     8,
     "--attn-dp-size",
@@ -106,15 +110,17 @@ DEEPSEEK_V4_FLASH_W8A8_8P_PP_OTHER_ARGS = [
     "round_robin",
 ]
 
-# The second run differs from the first by this flag only, so the TTFT, TPOT and
-# throughput comparison is single-variable. Tuning follows the
-# pipeline-parallelism guide: with dynamic chunking the initial
-# --chunked-prefill-size is best set to 2-3x the optimal fixed size, so re-tune
-# the shared value above if needed.
+# The second run differs from the first by this flag only -- both build on
+# DEEPSEEK_V4_FLASH_W8A8_8P_PP_OTHER_ARGS and thus share CHUNKED_PREFILL_SIZE --
+# so the TTFT, TPOT and throughput comparison stays single-variable.
 DEEPSEEK_V4_FLASH_W8A8_8P_PP_DYNAMIC_CHUNKING_ARGS = [
     *DEEPSEEK_V4_FLASH_W8A8_8P_PP_OTHER_ARGS,
     "--enable-dynamic-chunking",
 ]
+
+# Dynamic chunking has to actually pay off: require the 128k prefill TTFT to
+# drop by at least this fraction of the fixed-chunk baseline.
+DYNAMIC_CHUNKING_TTFT_MIN_IMPROVEMENT = 0.02
 
 
 class TestNPUDeepSeekV4FlashW8A88PPPIn128kOut1Prefill(TestNpuPerformanceTestCaseBase):
@@ -122,8 +128,9 @@ class TestNPUDeepSeekV4FlashW8A88PPPIn128kOut1Prefill(TestNpuPerformanceTestCase
     twice through the same bench_serving flow as the single-run DSV4-Flash 8p
     case (131072 in / 1 out, 32 fixed-seed prompts, C1 with 1 warmup request).
     The first run uses the launch-script config, the second adds
-    --enable-dynamic-chunking, and the case asserts that dynamic chunking does
-    not make the reported TTFT worse than the baseline beyond TTFT_TOLERANCE."""
+    --enable-dynamic-chunking. Both TTFTs are recorded as metrics, and the case
+    asserts that dynamic chunking lowers the reported TTFT by at least
+    DYNAMIC_CHUNKING_TTFT_MIN_IMPROVEMENT."""
 
     benchmark_tool = BENCHMARK_TOOL_DEFAULT
     dataset_type = AISBENCHMARK_DATASET_DEFAULT
@@ -151,14 +158,20 @@ class TestNPUDeepSeekV4FlashW8A88PPPIn128kOut1Prefill(TestNpuPerformanceTestCase
     def _launch_server(cls, other_args):
         """(Re)launch the server with `other_args`, reusing the launch command of
         the single-run DSV4-Flash 8p case."""
+        _, host, port = cls.base_url.split(":")
+
         if getattr(cls, "process", None) is not None:
             kill_process_tree(cls.process.pid)
+            cls.process = None
+            # kill_process_tree() only reaps the process tree; the listening
+            # socket (and the NPU/HCCL device memory behind it) is released
+            # asynchronously, so wait for the port before rebinding it below.
+            wait_port_available(int(port), "server port", timeout_s=120)
 
         env = os.environ.copy()
         if cls.envs:
             env.update(cls.envs)
 
-        _, host, port = cls.base_url.split(":")
         command = [
             "python3",
             "-m",
@@ -176,8 +189,8 @@ class TestNPUDeepSeekV4FlashW8A88PPPIn128kOut1Prefill(TestNpuPerformanceTestCase
 
     def test_npu_deepseek_v4_flash_w8a8_8p_pp_in128k_out1_prefill(self):
         """Benchmark the launch-script config, benchmark it again with
-        --enable-dynamic-chunking, then assert that dynamic chunking does not
-        make TTFT worse than the baseline beyond the noise tolerance."""
+        --enable-dynamic-chunking, record both TTFTs, then assert that dynamic
+        chunking lowers TTFT by at least DYNAMIC_CHUNKING_TTFT_MIN_IMPROVEMENT."""
         baseline = self._run_throughput_and_collect()
 
         self._launch_server(DEEPSEEK_V4_FLASH_W8A8_8P_PP_DYNAMIC_CHUNKING_ARGS)
@@ -185,14 +198,28 @@ class TestNPUDeepSeekV4FlashW8A88PPPIn128kOut1Prefill(TestNpuPerformanceTestCase
 
         baseline_ttft = self._ttft(baseline, "baseline")
         dynamic_ttft = self._ttft(dynamic, "dynamic_chunking")
-        # A single cold pair of runs still jitters by a couple of percent, so
-        # allow TTFT_TOLERANCE (baseline * 1.02) instead of a strict "<".
-        self.assertLessEqual(
+
+        # Both runs write to metrics.json (ttft + ttft_baseline), so the
+        # comparison is recorded instead of only asserted.
+        labels = {"test_case": self.__class__.__name__, "type": "perf"}
+        dump_metric(
+            "ttft_baseline",
+            baseline_ttft,
+            labels={**labels, "config": "baseline"},
+        )
+        dump_metric(
+            "ttft",
             dynamic_ttft,
-            baseline_ttft * TTFT_TOLERANCE,
-            "--enable-dynamic-chunking made the 128k prefill TTFT worse than the "
-            f"{TTFT_TOLERANCE:.2f}x tolerance: baseline={baseline_ttft:.1f} ms, "
-            f"dynamic_chunking={dynamic_ttft:.1f} ms",
+            labels={**labels, "config": "dynamic_chunking"},
+        )
+
+        threshold = baseline_ttft * (1 - DYNAMIC_CHUNKING_TTFT_MIN_IMPROVEMENT)
+        self.assertLess(
+            dynamic_ttft,
+            threshold,
+            "--enable-dynamic-chunking did not lower the 128k prefill TTFT by at "
+            f"least {DYNAMIC_CHUNKING_TTFT_MIN_IMPROVEMENT:.0%}: "
+            f"baseline={baseline_ttft:.1f} ms, dynamic_chunking={dynamic_ttft:.1f} ms",
         )
 
     @retry()
