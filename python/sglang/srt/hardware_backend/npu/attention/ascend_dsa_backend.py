@@ -490,20 +490,39 @@ def _get_topk_npu(
 
     indexer_kwargs = {}
     if quant_mode != -1:
-        from sglang.srt.layers.attention.dsa.dsa_npu_indexer import (
-            _quantize_npu_indexer_activation,
-        )
+        if quant_mode == 1:
+            from sgl_kernel_npu.operators.activation import dynamic_mx_quant
 
-        scale_type = (
-            torch.float8_e8m0fnu if quant_mode == 1 else pool.index_k_scale_dtype
-        )
-        query_safe, query_descale = _quantize_npu_indexer_activation(
-            query_safe,
-            pool.indexer_hadamard_128,
-            pool.index_k_store_dtype,
-            scale_type,
-            kpool_query=True,
-        )
+            query_shape = query_safe.shape
+            head_dim = query_shape[-1]
+            query_safe, query_descale = dynamic_mx_quant(
+                query_safe.reshape(-1, head_dim),
+                dst_type=pool.index_k_store_dtype,
+                axis=-1,
+            )
+            query_safe = query_safe.view(query_shape)
+            # Pack one E8M0 scale per 32 channels in pairs for the indexer.
+            scale_shape = query_shape[:-1] + (head_dim // 64, 2)
+            query_descale = query_descale.reshape(scale_shape).view(
+                torch.float8_e8m0fnu
+            )
+        else:
+            from sglang.srt.layers.attention.dsa.dsa_npu_indexer import (
+                _quantize_npu_indexer_activation,
+            )
+
+            query_safe, query_descale = _quantize_npu_indexer_activation(
+                query_safe,
+                pool.indexer_hadamard_128,
+                pool.index_k_store_dtype,
+                pool.index_k_scale_dtype,
+                kpool_query=True,
+            )
+            if quant_mode == 2:
+                # PI requires positive descales, including padding rows.
+                query_descale = torch.where(
+                    query_descale > 0, query_descale, torch.ones_like(query_descale)
+                )
         indexer_kwargs = dict(
             q_descale=query_descale,
             k_descale=pool.get_index_k_scale_buffer(layer_id),
