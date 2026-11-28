@@ -387,7 +387,17 @@ class NPUGraphRunner(DecodeCudaGraphRunner):
             is_deepseek_dsa(self.model_runner.model_config.hf_config)
             or is_deepseek_v4(self.model_runner.model_config.hf_config)
         ):
-            if forward_batch.forward_mode.is_target_verify():
+            # Dense-MLA DCP (e.g. Kimi-K3) rebinds the graph with the
+            # rank-local KV lengths computed by the attention backend, not
+            # the replicated global seq_lens; this takes precedence over
+            # both the target-verify and plain-decode paths.
+            mla_backend = get_mla_dcp_backend(self._replay_attn_backend())
+            if getattr(mla_backend, "dense_mla_dcp_target", False):
+                seq_lens = list(
+                    mla_backend.forward_metadata.seq_lens_cpu_list[: self.raw_bs]
+                )
+                seq_lens = seq_lens + [0] * (self.bs - len(seq_lens))
+            elif forward_batch.forward_mode.is_target_verify():
                 # Only DFlash refreshes forward_metadata.seq_lens_cpu_list at
                 # replay; other algorithms keep the capture-time list, so
                 # recompute from the live batch as before — reading the
@@ -413,19 +423,9 @@ class NPUGraphRunner(DecodeCudaGraphRunner):
                     )
                     seq_lens = seq_lens_cpu.tolist() + [0] * (self.bs - self.raw_bs)
             else:
-                # Dense-MLA DCP (e.g. Kimi-K3) rebinds the graph with the
-                # rank-local KV lengths computed by the attention backend,
-                # not the replicated global seq_lens.
-                mla_backend = get_mla_dcp_backend(self._replay_attn_backend())
-                if getattr(mla_backend, "dense_mla_dcp_target", False):
-                    seq_lens = list(
-                        mla_backend.forward_metadata.seq_lens_cpu_list[: self.raw_bs]
-                    )
-                    seq_lens = seq_lens + [0] * (self.bs - len(seq_lens))
-                else:
-                    seq_lens = forward_batch.seq_lens.cpu().tolist() + [0] * (
-                        self.bs - self.raw_bs
-                    )
+                seq_lens = forward_batch.seq_lens.cpu().tolist() + [0] * (
+                    self.bs - self.raw_bs
+                )
             output = self.backend.replay_with_input_update(
                 graph_key,
                 seq_lens=seq_lens,
