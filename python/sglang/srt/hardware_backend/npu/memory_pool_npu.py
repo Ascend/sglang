@@ -12,10 +12,7 @@ from sglang.srt.hardware_backend.npu.kv_capability import (
 )
 from sglang.srt.hardware_backend.npu.utils import is_npu_arch35
 from sglang.srt.layers.dcp.layout import localize_dcp_indices
-from sglang.srt.mem_cache.kv_cache_dtype import (
-    QUANT_MODE_TOKEN_INT8,
-    QUANT_MODE_TOKEN_MXFP8,
-)
+from sglang.srt.mem_cache.kv_cache_dtype import QUANT_MODE_TOKEN_INT8
 from sglang.srt.mem_cache.memory_pool import (
     MHATokenToKOnlyPool,
     MHATokenToKVPool,
@@ -24,7 +21,7 @@ from sglang.srt.mem_cache.memory_pool import (
     get_tensor_size_bytes,
     unwrap_write_loc,
 )
-from sglang.srt.runtime_context import get_memory, get_parallel
+from sglang.srt.runtime_context import get_parallel
 from sglang.srt.utils import get_bool_env_var
 from sglang.srt.utils.async_probe import maybe_detect_oob
 from sglang.srt.utils.device import is_npu
@@ -854,21 +851,8 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         self.kv_cache_dim = kv_cache_dim if self.dsa_kv_cache_store_c8 else kv_lora_rank
         self.kr_cache_dim = 0 if self.dsa_kv_cache_store_c8 else qk_rope_head_dim
 
-        # --indexer-kv-cache-dtype opts into a quantized indexer K cache
-        if (
-            indexer_quant_mode in (QUANT_MODE_TOKEN_INT8, QUANT_MODE_TOKEN_MXFP8)
-            and get_memory().enable_hierarchical_cache
-            and not (
-                indexer_quant_mode == QUANT_MODE_TOKEN_INT8
-                and dtype in (torch.bfloat16, torch.int8)
-            )
-        ):
-            raise ValueError(
-                "A quantized indexer cache with --enable-hierarchical-cache "
-                "requires an INT8 indexer with BF16 or INT8 main KV."
-            )
-        # The recipe applies wherever the main KV does not already quantize the
-        # indexer: the arch35 FP8 record does, the INT8 record does not.
+        if dtype == torch.int8 and indexer_quant_mode is None:
+            indexer_quant_mode = QUANT_MODE_TOKEN_INT8
         self.indexer_kv_store_int8 = (
             indexer_quant_mode == QUANT_MODE_TOKEN_INT8
             and index_head_dim is not None
@@ -877,22 +861,9 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
         self.indexer_quant = self.indexer_kv_store_int8 or (
             kv_capability is not None and kv_capability.indexer_quant
         )
-        self.indexer_kv_store_mxfp8 = (
-            indexer_quant_mode == QUANT_MODE_TOKEN_MXFP8
-            and not (kv_capability is not None and kv_capability.indexer_quant)
-            and index_head_dim is not None
-        )
-        if self.indexer_kv_store_mxfp8 and index_kpool <= 1:
-            raise ValueError(
-                "The NPU LightningIndexer does not support MXFP8 index cache; "
-                "--indexer-kv-cache-dtype=mxfp8 requires KPool (index_kpool > 1)."
-            )
         if self.indexer_kv_store_int8:
             self.index_k_store_dtype = torch.int8
             self.index_k_scale_dtype = torch.float16
-        elif self.indexer_kv_store_mxfp8:
-            self.index_k_store_dtype = torch.float8_e4m3fn
-            self.index_k_scale_dtype = torch.uint8  # e8m0 scale
         else:
             index_k_dtype = (
                 dtype if kv_capability is None else kv_capability.indexer_kv_dtype
@@ -1054,31 +1025,19 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
                     dtype=self.index_k_store_dtype,
                     device=self.device,
                 )
-                if self.num_indexer_layers > 0:
-                    if self.indexer_quant:
-                        from sglang.srt.layers.attention.dsa.dsa_npu_indexer import (
-                            create_npu_hadamard_128,
-                        )
+                if self.indexer_quant and self.num_indexer_layers > 0:
+                    from sglang.srt.layers.attention.dsa.dsa_npu_indexer import (
+                        create_npu_hadamard_128,
+                    )
 
-                        self.index_k_scale_buffer = torch.zeros(
-                            (*self.index_k_buffer.shape[:-2], 1),
-                            dtype=self.index_k_scale_dtype,
-                            device=self.device,
-                        )
-                        self.indexer_hadamard_128 = create_npu_hadamard_128(
-                            self.index_head_dim, self.device
-                        )
-                    elif self.indexer_kv_store_mxfp8:
-                        # MXFP8: E8M0 scales per 32 elements, no Hadamard; pair-packed as [D/64, 2].
-                        self.index_k_scale_buffer = torch.zeros(
-                            (
-                                *self.index_k_buffer.shape[:-1],
-                                self.index_head_dim // 64,
-                                2,
-                            ),
-                            dtype=torch.uint8,
-                            device=self.device,
-                        )
+                    self.index_k_scale_buffer = torch.zeros(
+                        (*self.index_k_buffer.shape[:-2], 1),
+                        dtype=self.index_k_scale_dtype,
+                        device=self.device,
+                    )
+                    self.indexer_hadamard_128 = create_npu_hadamard_128(
+                        self.index_head_dim, self.device
+                    )
 
     def get_index_k_with_scale_buffer(self, layer_id: int) -> torch.Tensor:
         # Return the index-key cache, which stores compressed keys in KPool mode.
@@ -1325,10 +1284,7 @@ class NPUMLATokenToKVPool(MLATokenToKVPool):
     def get_index_k_scale_buffer(self, layer_id: int):
         if self.layer_transfer_counter is not None:
             self.layer_transfer_counter.wait_until(layer_id - self.start_layer)
-        buf = self.index_k_scale_buffer[self._get_indexer_slot(layer_id)]
-        if self.indexer_kv_store_mxfp8:
-            return buf.view(torch.float8_e8m0fnu)
-        return buf
+        return self.index_k_scale_buffer[self._get_indexer_slot(layer_id)]
 
     def _scatter_cache(self, cache, indices, updates):
         if not self._use_scatter_hp:

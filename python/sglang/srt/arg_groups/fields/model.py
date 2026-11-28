@@ -256,14 +256,11 @@ class Model(msgspec.Struct):
         Arg(
             help=(
                 "Quantization recipe for the DSA indexer KV cache "
-                "(Ascend NPU only). None disables the quantized indexer cache "
-                'and keeps the default indexer behavior. "int8" stores the '
-                "indexer keys in INT8 with FP16 scales to speed up the "
-                'lightning indexer and the KPool indexer. "mxfp8" stores the '
-                "indexer keys in MXFP8 (E4M3FN) with per-32-element E8M0 "
-                "scales on Ascend A5 for the KPool indexer."
+                "(Ascend NPU only). With an INT8 main KV cache, the indexer "
+                'also defaults to INT8. "int8" stores the indexer keys in INT8 '
+                "with FP16 scales for the lightning indexer and KPool."
             ),
-            choices=["int8", "mxfp8"],
+            choices=["int8"],
         ),
     ] = None
     qsa_indexer_dtype: A[
