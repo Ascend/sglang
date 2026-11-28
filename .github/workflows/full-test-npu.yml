@@ -168,7 +168,7 @@ jobs:
           - name: kimi_k3_w4a8_32p_mix_in128k_out1_prefill_pp_baseline
             node_size: 4
             test_case: test/registered/npu/performance/kimi_k3/test_npu_kimi_k3_w4a8_32p_mix_in128k_out1_prefill_pp_baseline.py
-            test_type: 'accuracy'
+            test_type: 'perf'
           - name: kimi_k3_w4a8_32p_mix_in128k_out1_prefill_pp_dynamic_chunking
             node_size: 4
             test_case: test/registered/npu/performance/kimi_k3/test_npu_kimi_k3_w4a8_32p_mix_in128k_out1_prefill_pp_dynamic_chunking.py
