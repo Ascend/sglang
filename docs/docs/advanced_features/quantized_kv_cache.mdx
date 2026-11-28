@@ -42,15 +42,14 @@ NPUs without an FP8 KV cache, such as Ascend 910B (A2). Each
 token's MLA KV is stored as one packed record (INT8 latent, BF16 rope,
 per-128-element FP32 scales; 656 bytes per layer for a 512-rank latent instead
 of 1152 in BF16), which the NPU sparse attention kernel reads back directly.
-The DSA indexer K cache stays BF16 by default; add
-`--indexer-kv-cache-dtype int8` to store it as INT8 as well, under that
-recipe's own restrictions. On Ascend, INT8 index caches can use HiCache
+An INT8 main KV cache also uses an INT8 DSA indexer K cache by default.
+On Ascend, INT8 index caches can use HiCache
 with BF16 or INT8 main KV, both for the standard LightningIndexer
 (`index_kpool=1`, including DeepSeek-V3.2) and the KPool indexer.
 Combine `--kv-cache-dtype int8`, `--indexer-kv-cache-dtype int8` and
 `--enable-hierarchical-cache` to enable HiCache with both caches quantized.
 The host cache preserves the packed MLA record, INT8 indexer keys and FP16
-indexer scales. MXFP8 index caches do not support HiCache.
+indexer scales.
 Packed INT8 main KV supports speculative decoding,
 prefill context parallelism and HiCache.
 For RoPE64 models, `SGLANG_NPU_USE_MLAPO` enables MLAProlog writes during decode.

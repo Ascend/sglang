@@ -757,7 +757,6 @@ class DefaultPoolConfigurator(MemoryPoolConfigurator):
             )
             from sglang.srt.mem_cache.kv_cache_dtype import (
                 QUANT_MODE_TOKEN_INT8,
-                QUANT_MODE_TOKEN_MXFP8,
                 resolve_indexer_quant_mode,
             )
 
@@ -767,15 +766,9 @@ class DefaultPoolConfigurator(MemoryPoolConfigurator):
                 indexer_quant_mode = resolve_indexer_quant_mode(
                     kvc.server_args.indexer_kv_cache_dtype, dtype
                 )
-                if indexer_quant_mode == QUANT_MODE_TOKEN_INT8:
+                if dtype == torch.int8 or indexer_quant_mode == QUANT_MODE_TOKEN_INT8:
                     indexer_size_per_token = ceil_div(
                         index_head_dim + torch._utils._element_size(torch.float16),
-                        get_dsa_index_kpool(kvc.model_config.hf_config),
-                    )
-                    element_size = 1
-                elif indexer_quant_mode == QUANT_MODE_TOKEN_MXFP8:
-                    indexer_size_per_token = ceil_div(
-                        index_head_dim + index_head_dim // 32,
                         get_dsa_index_kpool(kvc.model_config.hf_config),
                     )
                     element_size = 1
@@ -783,8 +776,6 @@ class DefaultPoolConfigurator(MemoryPoolConfigurator):
                     indexer_size_per_token = ceil_div(
                         index_head_dim, get_dsa_index_kpool(kvc.model_config.hf_config)
                     )
-                    # The unquantized indexer keeps its own dtype, which stays
-                    # BF16 under an INT8 main KV.
                     element_size = torch._utils._element_size(
                         resolve_npu_kv_capability(dtype).indexer_kv_dtype
                     )
