@@ -38,7 +38,8 @@ jobs:
           else
             echo "ref=${{ inputs.ref }}" >> $GITHUB_OUTPUT
           fi
-          echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B050" >> $GITHUB_OUTPUT
+          # TEMP (validation only): use the B060 image for the SR1/SR2/SR3 jobs.
+          echo "image_a3=swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B060" >> $GITHUB_OUTPUT
           BRANCH_LABEL="${HEAD_REF}"
           BRANCH_LABEL="$(echo "${BRANCH_LABEL}" | tr -cd 'a-zA-Z0-9._/:' | tr '/:' '--')"
           CREATE_TIME="$(TZ=Asia/Shanghai date +%Y%m%d-%H%M)"
