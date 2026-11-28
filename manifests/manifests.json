@@ -2,12 +2,12 @@
   "manifests": [
     {
       "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B060",
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B060",
       "dockerfile": "docker/npu_cann9.2.0.Dockerfile",
-      "generated_at": "2026-11-28T02:23:11.774192+00:00",
+      "generated_at": "2026-11-28T02:25:08.441172+00:00",
       "build_args": {
         "CANN_VERSION": "9.2.0",
-        "DEVICE_TYPE": "a3",
+        "DEVICE_TYPE": "950",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.12",
         "SGLANG_TAG": "release/20261215",
@@ -55,12 +55,12 @@
     },
     {
       "schema_version": 1,
-      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-950-B060",
+      "image": "swr.cn-southwest-2.myhuaweicloud.com/base_image/dockerhub/lmsysorg/sglang:cann9.2.0-a3-B060",
       "dockerfile": "docker/npu_cann9.2.0.Dockerfile",
-      "generated_at": "2026-11-27T16:38:24.923084+00:00",
+      "generated_at": "2026-11-28T02:23:11.774192+00:00",
       "build_args": {
         "CANN_VERSION": "9.2.0",
-        "DEVICE_TYPE": "950",
+        "DEVICE_TYPE": "a3",
         "OS": "ubuntu22.04",
         "PYTHON_VERSION": "py3.12",
         "SGLANG_TAG": "release/20261215",
@@ -85,7 +85,7 @@
         }
       ],
       "declared_pip_pins": [
-        "memfabric-hybrid==1.5.0.dev20261124",
+        "memfabric-hybrid==1.5.0.dev20261127",
         "torch==2.13.0"
       ],
       "sglang": {
