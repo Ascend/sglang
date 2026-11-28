@@ -1,0 +1,13 @@
+{
+    "model_path": "/path/to/model",
+    "target_device": "npu",
+    "tp_size": 4,
+    "ep_size": 4,
+    "test_mode": "quick",
+    "server_port": 8000,
+    "timeout_seconds": 300,
+    "context_length": 4096,
+    "max_running_requests": 16,
+    "launch_command": "python -m sglang.launch_server --model-path ... --tp 4 --ep 4 --port 8000",
+    "architecture_type": "MoE-MLA"
+}
