@@ -26,6 +26,10 @@ if python -c "import evalscope" >/dev/null 2>&1; then
     fi
     # Only skip the install when the env really imports evalscope.
     if ${PYTHON_FOR_EVALSCOPE} -c "import evalscope" >/dev/null 2>&1; then
+        # Reusing system evalscope also reuses the system datasets; pin it to
+        # modelscope's constraint (<=4.8.4) so cached MMMU metadata parses
+        # (newer datasets makes Value(dtype=...) required).
+        python -m pip install --force-reinstall --no-deps "datasets<=4.8.4"
         exit 0
     fi
     echo "The env cannot provide evalscope, install it instead."
