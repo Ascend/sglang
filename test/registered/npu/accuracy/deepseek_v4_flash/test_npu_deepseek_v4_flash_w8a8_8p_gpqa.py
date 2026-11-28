@@ -15,8 +15,14 @@ from sglang.utils import wait_for_server
 
 register_npu_ci(
     est_time=3600,
-    suite="nightly-acc-16-npu-a3",
+    suite="full-acc-16-npu-a3-mix",
     nightly=True,
+)
+
+# Nightly is also PR-triggered, so exclude it by workflow ref; every other caller
+# (local runs, full test) still gets the full run.
+_is_pr_pipeline = os.environ.get("GITHUB_EVENT_NAME") == "pull_request" and (
+    "nightly-test-npu.yml" not in os.environ.get("GITHUB_WORKFLOW_REF", "")
 )
 
 DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS = {
@@ -31,7 +37,6 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS = {
     # skip gpu branch
     "SGLANG_OPT_FP8_WO_A_GEMM": "0",
     "SGLANG_OPT_USE_OVERLAP_STORE_CACHE": "False",
-    "FORCE_DRAFT_MODEL_NON_QUANT": "1",
     "SGLANG_DSV4_FP4_EXPERTS": "False",
     "SGLANG_OPT_FUSE_WQA_WKV": "0",
     "SGLANG_OPT_BF16_FP32_GEMM_ALGO": "torch",
@@ -39,11 +44,6 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS = {
     "SGLANG_OPT_USE_TILELANG_MHC_PRE": "False",
     "SGLANG_OPT_DEEPGEMM_HC_PRENORM": "False",
     "SGLANG_OPT_USE_TILELANG_MHC_POST": "False",
-    # DSPARK
-    "SGLANG_RAGGED_VERIFY_MODE": "static",
-    "SGLANG_DSPARK_FAST_KERNEL": "0",
-    # mtp
-    "SGLANG_ENABLE_OVERLAP_PLAN_STREAM": "1",
     # deepep
     "DEEP_NORMAL_MODE_USE_INT8_QUANT": "1",
     "DEEPEP_HCCL_BUFFSIZE": "2500",
@@ -52,12 +52,6 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS = {
     # war barrier
     "SGLANG_ENABLE_WAR_BARRIER": "1",
     "SGLANG_FORCE_COARSE_WAR_BARRIER": "1",
-    # ZBAL
-    # "SGLANG_ZBAL_LOCAL_MEM_SIZE": "61000",
-    # "SGLANG_ENABLE_TP_MEMORY_INBALANCE_CHECK": "0",
-    # "ZBAL_NPU_ALLOC_CONF": "use_vmm_for_static_memory:True",
-    # "SGLANG_ZBAL_BOOTSTRAP_URL": "tcp://127.0.0.1:14699",
-    # "ZBAL_ENABLE_GRAPH": "1",
 }
 
 DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS = [
@@ -80,11 +74,11 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS = [
     80000,
     "--chunked-prefill-size",
     131072,
+    "--enable-mixed-chunk",
     "--max-running-requests",
     192,
-    "--dp-size",
+    "--attn-dp-size",
     16,
-    "--enable-dp-attention",
     "--moe-a2a-backend",
     "deepep",
     "--deepep-mode",
@@ -96,18 +90,6 @@ DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS = [
     "bfloat16",
     "--load-balance-method",
     "round_robin",
-    "--speculative-algorithm",
-    "DSPARK",
-    "--speculative-draft-model-path",
-    DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH,
-    "--speculative-draft-model-quantization",
-    "modelslim",
-    "--speculative-draft-attention-backend",
-    "ascend",
-    "--speculative-num-draft-tokens",
-    7,
-    "--speculative-dspark-block-size",
-    6,
     "--cuda-graph-bs-decode",
     1,
     2,
@@ -137,10 +119,11 @@ class TestNPUDeepSeekV4FlashW8A88PGPQA(TestNpuAccuracyTestCaseBase):
     model = DEEPSEEK_V4_FLASH_0731_W8A8_MODEL_PATH
     other_args = DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_OTHER_ARGS
     envs = DEEPSEEK_V4_FLASH_W8A8_DSPARK_8P_ENVS
-    accuracy = 0.874
-    datasets = ["gpqa_diamond"]
+    accuracy = 0.93 if _is_pr_pipeline else 0.874
+    datasets = ["gsm8k"] if _is_pr_pipeline else ["gpqa_diamond"]
     few_shot_num = 0
     generation_config = DEEPSEEK_V4_FLASH_W8A8_GENERATION_CONFIG_HIGH
+    limit = 300 if _is_pr_pipeline else 100000
     eval_batch_size = 128
     stream = True
     timeout = 6000
