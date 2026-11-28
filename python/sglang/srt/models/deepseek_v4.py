@@ -4671,8 +4671,12 @@ class DeepseekV4Model(nn.Module):
             if (
                 local_positions is not None
                 and positions.shape[0] == local_positions.shape[0]
+                and getattr(self.config, "model_type", None) != "deepseek_v41"
             ):
                 forward_batch.positions = positions
+            # V4.1's Engram hashes the full prompt and its compressor restores
+            # global request metadata. Keep the batch positions global; attention
+            # receives the CP-local positions explicitly from the runner.
 
         # Reset Compressor's per-step freqs_cis cache from any previous step.
         for _attr in ("freqs_cis_c4", "freqs_cis_c128"):
