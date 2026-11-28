@@ -1,0 +1,47 @@
+{
+    "_comment": "test-validator 输出契约。与 prompts/test_validator.md、scripts/generate_report.py 保持一致。",
+    "status": "passed",
+    "feature_matrix": {
+        "basic_inference": {
+            "status": "passed",
+            "evidence": "logs/feature_basic.log",
+            "command": "python scripts/run_tests.py --port 8000 --mode full ..."
+        },
+        "aclgraph": {
+            "status": "passed",
+            "evidence": "logs/feature_aclgraph.log",
+            "command": "python -m sglang.launch_server ... --enable-torch-compile"
+        },
+        "deepep": {
+            "status": "skipped",
+            "evidence": "architecture-analyst 预判 unsupported",
+            "command": ""
+        },
+        "dp_attention": {
+            "status": "passed",
+            "evidence": "logs/feature_dp_attention.log",
+            "command": "..."
+        },
+        "mtp": {
+            "status": "unsupported",
+            "evidence": "模型未提供 MTP 权重",
+            "command": ""
+        },
+        "multimodal": {
+            "status": "skipped",
+            "evidence": "纯文本模型",
+            "command": ""
+        }
+    },
+    "capacity_baseline": {
+        "max_context_len": 131072,
+        "max_batch_size": 16,
+        "test_command": "python -m sglang.bench_serving --dataset-name random ...",
+        "throughput_tokens_per_sec": 1234.5,
+        "latency_p50_ms": 567.8,
+        "latency_p99_ms": 789.0,
+        "evidence": "logs/capacity_128k_bs16.log"
+    },
+    "regressions": [],
+    "notes": ""
+}

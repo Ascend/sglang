@@ -1,0 +1,53 @@
+{
+    "_comment": "architecture-analyst 输出契约。与 prompts/model_analyzer.md、agents/architecture-analyst.md、scripts/generate_report.py 保持一致。",
+    "model_name": "Qwen2.5-7B",
+    "architecture": "qwen2",
+    "hf_architecture": "Qwen2ForCausalLM",
+    "model_class": "decoder-only",
+    "params_b": 7.0,
+    "hidden_size": 4096,
+    "num_layers": 32,
+    "num_attention_heads": 32,
+    "num_kv_heads": 32,
+    "intermediate_size": 11008,
+    "vocab_size": 152064,
+    "rope_theta": 10000.0,
+    "max_position": 32768,
+    "tie_word_embeddings": false,
+    "torch_dtype": "bfloat16",
+
+    "reference_model": "Qwen2ForCausalLM",
+    "reference_file": "python/sglang/srt/models/qwen2.py",
+    "similarity": "high",
+    "diff_summary": "与参考实现一致,无需额外分支",
+    "adapter_strategy": "direct_use",
+    "requires_new_adapter": false,
+
+    "reference_audit": {
+        "verdict": "delta|parity|no_reference|not_run",
+        "references": [],
+        "device_methods_only_in_reference": [],
+        "device_imports_only_in_reference": []
+    },
+
+    "parallel_config_suggestion": {
+        "tp_size": 8,
+        "dp_size": 1,
+        "ep_size": 1,
+        "pp_size": 1,
+        "rationale": "7B bf16 单机 8 卡可容纳权重与 KV Cache"
+    },
+
+    "feature_compatibility": {
+        "aclgraph": "supported",
+        "deepep": "unsupported",
+        "dp_attention": "supported",
+        "mtp": "unknown",
+        "multimodal": "na"
+    },
+
+    "launch_command_template": "python -m sglang.launch_server --model-path {model_path} --tp 8 --device npu --port 8000",
+    "risks": [
+        "未验证 MTP;若使用 speculative decoding 需额外测试"
+    ]
+}

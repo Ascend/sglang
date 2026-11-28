@@ -1,0 +1,53 @@
+{
+  "$schema_version": "2.0",
+  "$description": "Output schema for precision-rca sub-agent (sglang-npu-adapter skill, Step 6.5). P5 writes this. Status enum is the source of truth.",
+
+  "status": "fixed | located_needs_human_fix | located_inconclusive | cannot_reproduce | hf_load_failed | launch_failed_handoff",
+
+  "failure_class": "prefill_first_token | decode_after_first | random_undefined | cannot_reproduce",
+
+  "first_bad_layer": null,
+  "first_bad_module": null,
+  "first_bad_op": null,
+
+  "fix_type": "native_replace | sglang_code_fix | none",
+
+  "drift_before_fix": {
+    "max_abs": null,
+    "cosine": null,
+    "top1_match_rate": null
+  },
+  "drift_after_fix": {
+    "max_abs": null,
+    "cosine": null,
+    "top1_match_rate": null
+  },
+
+  "replacements": [
+    {
+      "rank": 1,
+      "name": "<op identifier>",
+      "category": "dtype | fused_kernel | quantization | weight_loading | communication | graph_capture | rope_implementation",
+      "source": "sglang | operator",
+      "drift_before": null,
+      "drift_after": null,
+      "fixed_bool": false,
+      "verdict": "supports | rejects | inconclusive",
+      "evidence": "<short note: native impl swapped, drift dropped from X to Y>",
+      "log_file": "precision/replacements/rep_001_<name>.json",
+      "confidence": "high | medium | low"
+    }
+  ],
+
+  "patch_file": null,
+  "native_impl_file": null,
+
+  "operator_escalation": {
+    "applicable": false,
+    "escalate_to": null,
+    "vendor_reference": null,
+    "workaround": null
+  },
+
+  "env_fingerprint_path": "precision/env_fingerprint.json"
+}
